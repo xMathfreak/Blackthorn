@@ -1,0 +1,89 @@
+#include "Engine/Engine.h"
+
+#include <glad/glad.h>
+
+namespace Blackthorn {
+
+Engine::Engine() {}
+
+Engine::~Engine() {
+	shutdown();
+}
+
+bool Engine::init(const std::string & title, int width, int height) {
+	if (initialized) {
+		return false;
+	}
+
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
+
+	SDL_InitFlags initFlags = SDL_INIT_VIDEO;
+	if (!SDL_Init(initFlags)) {
+		SDL_LogError(SDL_LOG_CATEGORY_ERROR, "SDL_CreateWindow failed: %s", SDL_GetError());
+		return false;
+	}
+
+	SDL_WindowFlags windowFlags = SDL_WINDOW_MAXIMIZED | SDL_WINDOW_RESIZABLE | SDL_WINDOW_OPENGL;
+	window = SDL_CreateWindow(title.c_str(), width, height, windowFlags);
+	if (!window) {
+		SDL_LogError(SDL_LOG_CATEGORY_ERROR, "SDL_CreateWindow failed: %s", SDL_GetError());
+		SDL_Quit();
+		return false;
+	}
+
+	glContext = SDL_GL_CreateContext(window);
+	if (!glContext) {
+		SDL_LogError(SDL_LOG_CATEGORY_ERROR, "SDL_GL_CreateContext failed: %s", SDL_GetError());
+		SDL_DestroyWindow(window);
+		SDL_Quit();
+		return false;
+	}
+
+	if (!SDL_GL_MakeCurrent(window, glContext)) {
+		SDL_LogError(SDL_LOG_CATEGORY_ERROR, "SDL_GL_MakeCurrent failed: %s", SDL_GetError());
+		SDL_GL_DestroyContext(glContext);
+		SDL_DestroyWindow(window);
+		SDL_Quit();
+		return false;
+	}
+
+	if (!gladLoadGLLoader((GLADloadproc)SDL_GL_GetProcAddress)) {
+		SDL_LogError(SDL_LOG_CATEGORY_ERROR, "Failed to initialize GLAD");
+		SDL_GL_DestroyContext(glContext);
+		SDL_DestroyWindow(window);
+		SDL_Quit();
+		return false;
+	}
+
+	#ifdef DEBUG
+	SDL_Log("OpenGL Version: %s", glGetString(GL_VERSION));
+	SDL_Log("GLSL Version: %s", glGetString(GL_SHADING_LANGUAGE_VERSION));
+	SDL_Log("Renderer: %s", glGetString(GL_RENDERER));
+	#endif
+
+	initialized = true;
+	return true;
+}
+
+void Engine::shutdown() {
+	if (!initialized)
+		return;
+
+	if (glContext) {
+		SDL_GL_DestroyContext(glContext);
+		glContext = nullptr;
+	}
+
+	if (window) {
+		SDL_DestroyWindow(window);
+		window = nullptr;
+	}
+
+	SDL_Quit();
+	initialized = false;
+}
+
+}
