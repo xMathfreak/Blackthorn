@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16.0)
 project(BlackthornEngine VERSION 0.1.0)
-project(Blackthorn LANGUAGES C CXX)
+project(Blackthorn LANGUAGES CXX)
 
 file(GLOB_RECURSE ENGINE_SOURCES
 	"${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp"
@@ -32,15 +32,14 @@ target_include_directories(${PROJECT_NAME}
 		${CMAKE_CURRENT_SOURCE_DIR}/private
 )
 
-target_link_directories(${PROJECT_NAME}
+target_link_libraries(${PROJECT_NAME}
 	PUBLIC
 		glm::glm
-
-	PRIVATE
-		glad
-		OpenGL:GL
 		SDL3::SDL3
+    	SDL3_image::SDL3_image
+		glad
 		glfw
+		OpenGL::GL
 )
 
 if (WIN32)
