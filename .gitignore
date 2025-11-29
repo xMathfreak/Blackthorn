@@ -1,0 +1,15 @@
+.cache/
+assets/
+build/
+third_party/
+lib/
+
+!engine/include/assets/
+!engine/src/assets/
+
+*.cfg
+*.dll
+*.sublime-workspace
+*.sublime-project
+.clang-tidy
+compile_commands.json
