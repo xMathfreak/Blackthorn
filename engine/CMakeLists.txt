@@ -1,6 +1,5 @@
 cmake_minimum_required(VERSION 3.16.0)
-project(BlackthornEngine VERSION 0.1.0)
-project(Blackthorn LANGUAGES CXX)
+project(BlackthornEngine VERSION 0.1.0 LANGUAGES CXX)
 
 file(GLOB_RECURSE ENGINE_SOURCES
 	"${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp"
@@ -39,19 +38,36 @@ target_link_libraries(${PROJECT_NAME}
     	SDL3_image::SDL3_image
 		glad
 		glfw
+		
+	PRIVATE
 		OpenGL::GL
 )
 
-if (WIN32)
+if(WIN32)
+	# Copy DLL to output directory after build
 	add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
 		COMMAND ${CMAKE_COMMAND} -E copy_if_different
 		$<TARGET_FILE:${PROJECT_NAME}>
+		${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+	)
+	
+	# Copy SDL3 DLL if it exists
+	add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E copy_if_different
+		$<TARGET_FILE:SDL3::SDL3>
+		${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+	)
+	
+	# Copy SDL3_image DLL if it exists
+	add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E copy_if_different
+		$<TARGET_FILE:SDL3_image::SDL3_image>
 		${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
 	)
 endif()
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
 	OUTPUT_NAME "BlackthornEngine"
-	# DEBUG_POSTFIX "d"
-	PREFIX ""
+	DEBUG_POSTFIX "d"
+	LINKER_LANGUAGE CXX
 )

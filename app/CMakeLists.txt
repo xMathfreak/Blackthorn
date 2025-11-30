@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16.0)
-project(App)
+project(App VERSION 0.1.0 LANGUAGES CXX)
 
 file(GLOB_RECURSE APP_SOURCES
 	"${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp"
@@ -37,4 +37,5 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
 	OUTPUT_NAME "Game"
+	RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
 )
