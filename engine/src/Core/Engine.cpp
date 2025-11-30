@@ -7,23 +7,23 @@ namespace Blackthorn {
 Engine::Engine()
 	: initialized(false)
 	, running(false)
-	, glContext(nullptr)
 	, window(nullptr)
+	, glContext(nullptr)
 {}
 
 Engine::~Engine() {
 	shutdown();
 }
 
-bool Engine::init(const EngineConfig& config) {
+bool Engine::init(const EngineConfig& cfg) {
 	if (initialized) {
 		return false;
 	}
 
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, config.render.openglMajor);
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, config.render.openglMinor);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, cfg.render.openglMajor);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, cfg.render.openglMinor);
 
 	SDL_InitFlags initFlags = SDL_INIT_VIDEO;
 	if (!SDL_Init(initFlags)) {
@@ -32,7 +32,7 @@ bool Engine::init(const EngineConfig& config) {
 	}
 
 	SDL_WindowFlags windowFlags = SDL_WINDOW_MAXIMIZED | SDL_WINDOW_RESIZABLE | SDL_WINDOW_OPENGL;
-	window = SDL_CreateWindow(config.window.title.c_str(), config.window.width, config.window.height, windowFlags);
+	window = SDL_CreateWindow(cfg.window.title.c_str(), cfg.window.width, cfg.window.height, windowFlags);
 	if (!window) {
 		SDL_LogError(SDL_LOG_CATEGORY_ERROR, "SDL_CreateWindow failed: %s", SDL_GetError());
 		SDL_Quit();
@@ -63,7 +63,7 @@ bool Engine::init(const EngineConfig& config) {
 		return false;
 	}
 
-	#ifdef DEBUG
+	#ifdef BLACKTHORN_DEBUG
 	SDL_Log("OpenGL Version: %s", glGetString(GL_VERSION));
 	SDL_Log("GLSL Version: %s", glGetString(GL_SHADING_LANGUAGE_VERSION));
 	SDL_Log("Renderer: %s", glGetString(GL_RENDERER));

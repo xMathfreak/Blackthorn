@@ -15,7 +15,7 @@ public:
 	Engine(const Engine&) = delete;
 	Engine& operator=(const Engine&) = delete;
 
-	bool init(const EngineConfig& config = EngineConfig());
+	bool init(const EngineConfig& cfg = EngineConfig());
 	void shutdown();
 
 	void run();

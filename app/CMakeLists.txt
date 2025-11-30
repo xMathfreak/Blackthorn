@@ -14,6 +14,21 @@ add_executable(${PROJECT_NAME}
 	${APP_HEADERS}
 )
 
+target_compile_definitions(${PROJECT_NAME}
+	PRIVATE
+		$<$<CONFIG:Debug>:BLACKTHORN_DEBUG>
+		$<$<CONFIG:Release>:BLACKTHORN_RELEASE>
+)
+
+target_compile_options(${PROJECT_NAME} PRIVATE
+	-Wall
+	-Wextra
+	-Wpedantic
+	-Wno-unused-parameter
+	-Wshadow
+	-Wduplicated-cond
+)
+
 target_include_directories(${PROJECT_NAME}
 	PRIVATE
 		${CMAKE_CURRENT_SOURCE_DIR}/include
@@ -39,3 +54,9 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 	OUTPUT_NAME "Game"
 	RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
 )
+
+if (CMAKE_BUILD_TYPE STREQUAL "Release" AND CMAKE_INTERPROCEDURAL_OPTIMIZATION)
+	set_target_properties(${PROJECT_NAME} PROPERTIES
+		INTERPROCEDURAL_OPTIMIZATION TRUE
+	)
+endif()
