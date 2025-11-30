@@ -1,6 +1,7 @@
-#include <iostream>
+#include "engine/include/Core/Engine.h"
 
 int main(int argc, char const *argv[]) {
-	std::cout << "Hello World" << std::endl;
+	Blackthorn::Engine engine;
+	engine.init();
 	return 0;
 }

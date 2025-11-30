@@ -1,7 +1,8 @@
 #pragma once
 
-#include "Engine/Export.h"
-#include <string>
+#include "Core/EngineConfig.h"
+#include "Core/Export.h"
+
 #include <SDL3/SDL.h>
 
 namespace Blackthorn {
@@ -14,13 +15,19 @@ public:
 	Engine(const Engine&) = delete;
 	Engine& operator=(const Engine&) = delete;
 
-	bool init(const std::string & title = "Blackthorn Engine", int width = 1280, int height = 720);
+	bool init(const EngineConfig& config = EngineConfig());
 	void shutdown();
-private:
-	bool initialized = false;
-	bool running = false;
 
-	SDL_Window* window = nullptr;
+	void run();
+	bool isRunning() const { return running; }
+	void stop() { running = false; }
+private:
+	bool initialized;
+	bool running;
+
+	EngineConfig config;
+
+	SDL_Window* window;
 	SDL_GLContext glContext;
 };
 

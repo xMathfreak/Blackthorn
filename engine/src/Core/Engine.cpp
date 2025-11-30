@@ -1,33 +1,38 @@
-#include "Engine/Engine.h"
+#include "Core/Engine.h"
 
 #include <glad/glad.h>
 
 namespace Blackthorn {
 
-Engine::Engine() {}
+Engine::Engine()
+	: initialized(false)
+	, running(false)
+	, glContext(nullptr)
+	, window(nullptr)
+{}
 
 Engine::~Engine() {
 	shutdown();
 }
 
-bool Engine::init(const std::string & title, int width, int height) {
+bool Engine::init(const EngineConfig& config) {
 	if (initialized) {
 		return false;
 	}
 
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, config.render.openglMajor);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, config.render.openglMinor);
 
 	SDL_InitFlags initFlags = SDL_INIT_VIDEO;
 	if (!SDL_Init(initFlags)) {
-		SDL_LogError(SDL_LOG_CATEGORY_ERROR, "SDL_CreateWindow failed: %s", SDL_GetError());
+		SDL_LogError(SDL_LOG_CATEGORY_ERROR, "SDL_Init failed: %s", SDL_GetError());
 		return false;
 	}
 
 	SDL_WindowFlags windowFlags = SDL_WINDOW_MAXIMIZED | SDL_WINDOW_RESIZABLE | SDL_WINDOW_OPENGL;
-	window = SDL_CreateWindow(title.c_str(), width, height, windowFlags);
+	window = SDL_CreateWindow(config.window.title.c_str(), config.window.width, config.window.height, windowFlags);
 	if (!window) {
 		SDL_LogError(SDL_LOG_CATEGORY_ERROR, "SDL_CreateWindow failed: %s", SDL_GetError());
 		SDL_Quit();
