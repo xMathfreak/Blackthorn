@@ -89,6 +89,72 @@ void Engine::shutdown() {
 
 	SDL_Quit();
 	initialized = false;
+	running = false;
+}
+
+void Engine::render(float alpha) {
+
+}
+
+void Engine::processEvents() {
+	SDL_Event event;
+	while (SDL_PollEvent(&event)) {
+		switch (event.type) {
+			case SDL_EVENT_QUIT:
+				running = false;
+				break;
+		}
+	}
+}
+
+void Engine::update(float dt) {
+
+}
+
+void Engine::fixedUpdate(float dt) {
+
+}
+
+void Engine::run() {
+	Uint64 lastFrameTime = SDL_GetPerformanceCounter();
+	float accumulatedTime = 0.0f;
+	const float frequency = static_cast<float>(SDL_GetPerformanceFrequency());
+
+	running = true;
+
+	while (running) {
+		Uint64 currentTime = SDL_GetPerformanceCounter();
+		float frameTime = static_cast<float>(currentTime - lastFrameTime) / frequency;
+		lastFrameTime = currentTime;
+
+		if (frameTime > config.timing.maxDeltaTime)
+			frameTime = config.timing.maxDeltaTime;
+
+		accumulatedTime += frameTime;
+
+		processEvents();
+
+		while (accumulatedTime >= config.timing.fixedDeltaTime) {
+			fixedUpdate(config.timing.fixedDeltaTime);
+			accumulatedTime -= config.timing.fixedDeltaTime;
+		}
+
+		update(frameTime);
+
+		float alpha = accumulatedTime / config.timing.fixedDeltaTime;
+		render(alpha);
+
+		if (config.timing.capFrameRate) {
+			float targetFrameTime = 1.0f / config.timing.targetFPS;
+			Uint64 endTime = SDL_GetPerformanceCounter();
+			float elapsedTime = static_cast<float>(endTime - currentTime) / frequency;
+
+			if (elapsedTime < targetFrameTime) {
+				Uint32 delay = static_cast<Uint32>((targetFrameTime - elapsedTime) * 1000.0f);
+				SDL_Delay(delay);
+			}
+		}
+	}
 }
 
 }

@@ -21,7 +21,7 @@ struct BLACKTHORN_API RenderConfig {
 
 struct BLACKTHORN_API TimingConfig {
 	float fixedDeltaTime = 1.0f / 60.0f;
-	float maxDeltaTile = 0.1f;
+	float maxDeltaTime = 0.25f;
 	bool capFrameRate = false;
 	int targetFPS = 60;
 };

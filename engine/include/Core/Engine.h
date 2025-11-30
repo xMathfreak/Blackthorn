@@ -21,6 +21,11 @@ public:
 	void run();
 	bool isRunning() const { return running; }
 	void stop() { running = false; }
+
+	void fixedUpdate(float dt);
+	void processEvents();
+	void render(float alpha);
+	void update(float dt);
 private:
 	bool initialized;
 	bool running;
