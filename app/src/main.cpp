@@ -2,7 +2,11 @@
 
 int main(int argc, char const *argv[]) {
 	Blackthorn::Engine engine;
-	engine.init();
+
+	if (!engine.init())
+		return -1;
+
 	engine.run();
+	
 	return 0;
 }

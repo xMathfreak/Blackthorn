@@ -30,6 +30,10 @@ private:
 	bool initialized;
 	bool running;
 
+	bool windowFocused;
+
+	float fps;
+
 	EngineConfig config;
 
 	SDL_Window* window;

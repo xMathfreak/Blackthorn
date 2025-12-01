@@ -7,6 +7,7 @@ namespace Blackthorn {
 Engine::Engine()
 	: initialized(false)
 	, running(false)
+	, windowFocused(true)
 	, window(nullptr)
 	, glContext(nullptr)
 {}
@@ -17,8 +18,11 @@ Engine::~Engine() {
 
 bool Engine::init(const EngineConfig& cfg) {
 	if (initialized) {
+		SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "Engine already initialized.");
 		return false;
 	}
+
+	config = cfg;
 
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
@@ -64,9 +68,24 @@ bool Engine::init(const EngineConfig& cfg) {
 	}
 
 	#ifdef BLACKTHORN_DEBUG
-	SDL_Log("OpenGL Version: %s", glGetString(GL_VERSION));
-	SDL_Log("GLSL Version: %s", glGetString(GL_SHADING_LANGUAGE_VERSION));
-	SDL_Log("Renderer: %s", glGetString(GL_RENDERER));
+		SDL_Log("OpenGL Version: %s", glGetString(GL_VERSION));
+		SDL_Log("GLSL Version: %s", glGetString(GL_SHADING_LANGUAGE_VERSION));
+		SDL_Log("Renderer: %s", glGetString(GL_RENDERER));
+		SDL_Log("Vendor: %s", glGetString(GL_VENDOR));
+		GLint maxTextureSize;
+		glGetIntegerv(GL_MAX_TEXTURE_SIZE, &maxTextureSize);
+		SDL_Log("Max Texture Size: %d", maxTextureSize);
+
+		GLint maxVertexAttribs;
+		glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &maxVertexAttribs);
+		SDL_Log("Max Vertex Attributes: %d", maxVertexAttribs);
+		int actualDepthSize, actualStencilSize, actualMSAASamples;
+		SDL_GL_GetAttribute(SDL_GL_DEPTH_SIZE, &actualDepthSize);
+		SDL_GL_GetAttribute(SDL_GL_STENCIL_SIZE, &actualStencilSize);
+		SDL_GL_GetAttribute(SDL_GL_MULTISAMPLESAMPLES, &actualMSAASamples);
+		SDL_Log("Depth Buffer: %d bits (requested %d)", actualDepthSize, cfg.render.depthBits);
+		SDL_Log("Stencil Buffer: %d bits (requested %d)", actualStencilSize, cfg.render.stencilBits);
+		SDL_Log("MSAA Samples: %dx (requested %dx)", actualMSAASamples, cfg.render.msaaSamples);
 	#endif
 
 	initialized = true;
@@ -93,7 +112,9 @@ void Engine::shutdown() {
 }
 
 void Engine::render(float alpha) {
+	glClear(GL_COLOR_BUFFER_BIT);
 
+	SDL_GL_SwapWindow(window);
 }
 
 void Engine::processEvents() {
@@ -102,6 +123,12 @@ void Engine::processEvents() {
 		switch (event.type) {
 			case SDL_EVENT_QUIT:
 				running = false;
+				break;
+			case SDL_EVENT_WINDOW_FOCUS_GAINED:
+				windowFocused = true;
+				break;
+			case SDL_EVENT_WINDOW_FOCUS_LOST:
+				windowFocused = false;
 				break;
 		}
 	}
@@ -116,35 +143,87 @@ void Engine::fixedUpdate(float dt) {
 }
 
 void Engine::run() {
+	if (!initialized) {
+		SDL_LogError(SDL_LOG_CATEGORY_ERROR, "Cannot run engine: Not initialized");
+		return;
+	}
+
 	Uint64 lastFrameTime = SDL_GetPerformanceCounter();
 	float accumulatedTime = 0.0f;
 	const float frequency = static_cast<float>(SDL_GetPerformanceFrequency());
 
 	running = true;
 
+	#ifdef BLACKTHORN_DEBUG
+		Uint64 lastFPSTime = lastFrameTime;
+		int frameCount = 0;
+		fps = 0;
+	#endif
+
 	while (running) {
 		Uint64 currentTime = SDL_GetPerformanceCounter();
 		float frameTime = static_cast<float>(currentTime - lastFrameTime) / frequency;
 		lastFrameTime = currentTime;
 
-		if (frameTime > config.timing.maxDeltaTime)
+		if (frameTime > config.timing.maxDeltaTime) {
+			#ifdef BLACKTHORN_DEBUG
+				SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+					"Frame time capped: %.3f -> %.3f",
+					frameTime, config.timing.maxDeltaTime
+				);
+			#endif
+
 			frameTime = config.timing.maxDeltaTime;
+		}
 
 		accumulatedTime += frameTime;
 
 		processEvents();
 
+		if (!windowFocused) {
+			Uint32 unfocusedDelay = static_cast<Uint32>(1000.0f / config.timing.unfocusedFPS);
+			SDL_Delay(unfocusedDelay);
+			continue;
+		}
+
+		int fixedUpdateCount = 0;
+
 		while (accumulatedTime >= config.timing.fixedDeltaTime) {
 			fixedUpdate(config.timing.fixedDeltaTime);
 			accumulatedTime -= config.timing.fixedDeltaTime;
+			fixedUpdateCount++;
+
+			if (fixedUpdateCount > config.timing.maxFixedUpdates) {
+				#ifdef BLACKTHORN_DEBUG
+					SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+						"Too many fixed updates in one frame (%d)",
+						fixedUpdateCount
+					);
+				#endif
+
+				accumulatedTime = 0.0f;
+				break;
+			}
 		}
+
 
 		update(frameTime);
 
 		float alpha = accumulatedTime / config.timing.fixedDeltaTime;
 		render(alpha);
 
-		if (config.timing.capFrameRate) {
+		#ifdef BLACKTHORN_DEBUG
+			frameCount++;
+			float elapsedFPSTime = static_cast<float>(currentTime - lastFPSTime) / frequency;
+			if (elapsedFPSTime > 1.0f) {
+				fps = frameCount / elapsedFPSTime;
+				SDL_Log("FPS: %.2f (Frame Time: %.3fms)", fps, (1000.0f / fps));
+				frameCount = 0;
+				lastFPSTime = currentTime;
+			}
+		#endif
+
+		if (config.timing.capFrameRate && !config.window.vsync) {
 			float targetFrameTime = 1.0f / config.timing.targetFPS;
 			Uint64 endTime = SDL_GetPerformanceCounter();
 			float elapsedTime = static_cast<float>(endTime - currentTime) / frequency;
