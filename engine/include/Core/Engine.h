@@ -2,6 +2,7 @@
 
 #include "Core/EngineConfig.h"
 #include "Core/Export.h"
+#include "Graphics/Renderer.h"
 
 #include <SDL3/SDL.h>
 
@@ -38,6 +39,7 @@ private:
 
 	SDL_Window* window;
 	SDL_GLContext glContext;
+	std::unique_ptr<Graphics::Renderer> renderer;
 };
 
 }

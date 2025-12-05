@@ -1,4 +1,5 @@
 #include "Core/Engine.h"
+#include "glm/ext/matrix_clip_space.hpp"
 
 #include <glad/glad.h>
 
@@ -67,6 +68,14 @@ bool Engine::init(const EngineConfig& cfg) {
 		return false;
 	}
 
+	try {
+		renderer = std::make_unique<Graphics::Renderer>();
+	} catch (const std::exception& e) {
+
+	}
+
+	glViewport(0, 0, config.window.width, config.window.height);
+
 	#ifdef BLACKTHORN_DEBUG
 		SDL_Log("OpenGL Version: %s", glGetString(GL_VERSION));
 		SDL_Log("GLSL Version: %s", glGetString(GL_SHADING_LANGUAGE_VERSION));
@@ -112,7 +121,24 @@ void Engine::shutdown() {
 }
 
 void Engine::render(float alpha) {
-	glClear(GL_COLOR_BUFFER_BIT);
+	glClearColor(0.1f, 0.1f, 0.12f, 1.0f);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	glm::mat4 projection = glm::ortho(
+	0.0f, (float)config.window.width,
+	0.0f, (float)config.window.height,
+	-1.0f, 1.0f
+	);
+
+	renderer->beginScene(projection);
+
+	#ifdef BLACKTHORN_DEBUG
+		SDL_FRect testRect = {100.0f, 100.0f, 100.0f, 100.0f};
+		SDL_FColor testColor = {1.0f, 0.0f, 1.0f, 1.0f};
+		renderer->drawQuad(testRect, 0, 0, testColor);
+	#endif
+
+	renderer->endScene();
 
 	SDL_GL_SwapWindow(window);
 }
@@ -123,6 +149,11 @@ void Engine::processEvents() {
 		switch (event.type) {
 			case SDL_EVENT_QUIT:
 				running = false;
+				break;
+			case SDL_EVENT_WINDOW_RESIZED:
+				config.window.width = event.window.data1;
+				config.window.height = event.window.data2;
+				glViewport(0, 0, event.window.data1, event.window.data2);
 				break;
 			case SDL_EVENT_WINDOW_FOCUS_GAINED:
 				windowFocused = true;
