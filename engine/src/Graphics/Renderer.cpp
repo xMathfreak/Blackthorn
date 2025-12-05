@@ -113,7 +113,7 @@ void Renderer::flush() {
 
 	for (Uint32 i = 0; i < textureSlotIndex; ++i) {
 		if (textureSlots[i])
-			textureSlots[i]->bind();
+			textureSlots[i]->bind(i);
 	}
 
 	shader->bind();
@@ -141,14 +141,16 @@ void Renderer::draw(const SDL_FRect& rect, float z, float rotation, const SDL_FC
 	float texIndex = 0.0f;
 
 	if (texture) {
+		bool found = false;
 		for (Uint32 i = 1; i < textureSlotIndex; ++i) {
 			if (textureSlots[i] == texture) {
 				texIndex = static_cast<float>(i);
+				found = true;
 				break;
 			}
 		}
 
-		if (texIndex == 0.0f) {
+		if (!found) {
 			if (textureSlotIndex >= MAX_TEXTURE_SLOTS)
 				nextBatch();
 
@@ -166,15 +168,20 @@ void Renderer::draw(const SDL_FRect& rect, float z, float rotation, const SDL_FC
 		float texWidth = static_cast<float>(texture->getWidth());
 		float texHeight = static_cast<float>(texture->getHeight());
 
-		textureCoords[0] = { srcRect->x / texWidth, srcRect->y / texHeight };
-		textureCoords[1] = { (srcRect->x + srcRect->w) / texWidth, srcRect->y / texHeight };
-		textureCoords[2] = { (srcRect->x + srcRect->w) / texWidth, (srcRect->y + srcRect->h) / texHeight };
-		textureCoords[3] = { srcRect->x / texWidth, (srcRect->y + srcRect->h) / texHeight };
+		float u0 = srcRect->x / texWidth;
+		float v0 = 1.0f - (srcRect->y / texHeight);
+		float u1 = (srcRect->x + srcRect->w) / texWidth;
+		float v1 = 1.0f - ((srcRect->y + srcRect->h) / texHeight);
+
+		textureCoords[0] = { u0, v1 };
+		textureCoords[1] = { u1, v1 };
+		textureCoords[2] = { u1, v0 };
+		textureCoords[3] = { u0, v0 };
 	} else {
-		textureCoords[0] = { 0.0f, 0.0f };
-		textureCoords[1] = { 1.0f, 0.0f };
-		textureCoords[2] = { 1.0f, 1.0f };
-		textureCoords[3] = { 0.0f, 1.0f };
+		textureCoords[0] = { 0.0f, 1.0f };
+		textureCoords[1] = { 1.0f, 1.0f };
+		textureCoords[2] = { 1.0f, 0.0f };
+		textureCoords[3] = { 0.0f, 0.0f };
 	}
 
 	if (rotation != 0.0f) {
