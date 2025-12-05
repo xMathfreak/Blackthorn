@@ -1,9 +1,10 @@
 .cache/
-assets/
+assets/*
 build/
 third_party/
 lib/
 
+!assets/shaders/
 !engine/include/assets/
 !engine/src/assets/
 
