@@ -23,6 +23,12 @@ bool Engine::init(const EngineConfig& cfg) {
 		return false;
 	}
 
+	SDL_InitFlags initFlags = SDL_INIT_VIDEO;
+	if (!SDL_Init(initFlags)) {
+		SDL_LogError(SDL_LOG_CATEGORY_ERROR, "SDL_Init failed: %s", SDL_GetError());
+		return false;
+	}
+	
 	config = cfg;
 
 	#ifdef BLACKTHORN_DEBUG
@@ -44,12 +50,6 @@ bool Engine::init(const EngineConfig& cfg) {
 	if (cfg.render.msaaSamples > 0) {
 		SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
 		SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, cfg.render.msaaSamples);
-	}
-
-	SDL_InitFlags initFlags = SDL_INIT_VIDEO;
-	if (!SDL_Init(initFlags)) {
-		SDL_LogError(SDL_LOG_CATEGORY_ERROR, "SDL_Init failed: %s", SDL_GetError());
-		return false;
 	}
 
 	SDL_WindowFlags windowFlags = SDL_WINDOW_MAXIMIZED | SDL_WINDOW_RESIZABLE | SDL_WINDOW_OPENGL;
