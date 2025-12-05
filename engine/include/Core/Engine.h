@@ -27,6 +27,9 @@ public:
 	void processEvents();
 	void render(float alpha);
 	void update(float dt);
+
+	SDL_Window* getWindow() const { return window; }
+	Graphics::Renderer* getRenderer() const { return renderer.get(); }
 private:
 	bool initialized;
 	bool running;
