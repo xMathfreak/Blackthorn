@@ -67,7 +67,7 @@ void Renderer::initQuadBuffers() {
 	QuadEBO->setData(indices);
 	VAO::unbind();
 
-	#ifdef BLACKTHORN_API
+	#ifdef BLACKTHORN_DEBUG
 		SDL_Log("Renderer Quad buffers initialized");
 	#endif
 }
