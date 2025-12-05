@@ -28,6 +28,27 @@ target_compile_definitions(${PROJECT_NAME}
 		$<$<CONFIG:Release>:BLACKTHORN_RELEASE>
 )
 
+if (CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64|amd64")
+	target_compile_definitions(${PROJECT_NAME} PUBLIC
+		GLM_FORCE_SIMD_AVX
+		GLM_FORCE_DEFAULT_ALIGNED_GENTYPES
+	)
+
+	target_compile_options(${PROJECT_NAME} PRIVATE -mavx)
+
+elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "i686|i386|x86")
+	target_compile_definitions(${PROJECT_NAME} PUBLIC
+		GLM_FORCE_SIMD_SSE2
+		GLM_FORCE_DEFAULT_ALIGNED_GENTYPES
+	)
+
+	target_compile_options(${PROJECT_NAME} PRIVATE -msse2)
+else()
+	target_compile_definitions(${PROJECT_NAME} PUBLIC
+		GLM_FORCE_INTRINSICS
+	)
+endif()
+
 target_compile_options(${PROJECT_NAME} PRIVATE
 	-Wall
 	-Wextra
