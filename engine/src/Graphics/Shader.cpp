@@ -54,7 +54,7 @@ GLuint Shader::compileShader(const std::string& source, GLenum type) {
 
 		glDeleteShader(shader);
 
-		std::string errorMsg = std::string(shaderTypeToString(shader)) + " shader compilation failed:\n" + log;
+		std::string errorMsg = std::string(shaderTypeToString(type)) + " shader compilation failed:\n" + log;
 
 		#ifdef BLACKTHORN_DEBUG
 			SDL_LogError(SDL_LOG_CATEGORY_RENDER, "%s", errorMsg.c_str());
@@ -64,7 +64,7 @@ GLuint Shader::compileShader(const std::string& source, GLenum type) {
 	}
 
 	#ifdef BLACKTHORN_DEBUG
-		SDL_Log("%s shader compiled successfully.", shaderTypeToString(shader));
+		SDL_Log("%s shader compiled successfully.", shaderTypeToString(type));
 	#endif
 
 	return shader;
