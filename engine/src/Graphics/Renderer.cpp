@@ -188,21 +188,21 @@ void Renderer::draw(const SDL_FRect& rect, float z, float rotation, const SDL_FC
 		float centerX = rect.x + rect.w * 0.5f;
 		float centerY = rect.y + rect.h * 0.5f;
 
-		glm::mat4 transform = 
-			glm::translate(glm::mat4(1.0f), glm::vec3(centerX, centerY, z))
-			* glm::rotate(glm::mat4(1.0f), rotation, glm::vec3(0.0f, 0.0f, 1.0f))
-			* glm::scale(glm::mat4(1.0f), glm::vec3(rect.w, rect.h, 1.0f));
+		float cosR = std::cos(rotation);
+		float sinR = std::sin(rotation);
 
-		glm::vec4 vertexPositions[4] = {
-		{ -0.5f, -0.5f, 0.0f, 1.0f },
-		{  0.5f, -0.5f, 0.0f, 1.0f },
-		{  0.5f,  0.5f, 0.0f, 1.0f },
-		{ -0.5f,  0.5f, 0.0f, 1.0f }
+		glm::vec2 corners[4] = {
+			{ -rect.w * 0.5f, -rect.h * 0.5f },
+			{ rect.w * 0.5f, -rect.h * 0.5f },
+			{ rect.w * 0.5f, rect.h * 0.5f },
+			{ -rect.w * 0.5f, rect.h * 0.5f }
 		};
 
 		for (int i = 0; i < 4; ++i) {
-			glm::vec4 transformedPos = transform * vertexPositions[i];
-			quadBufferPtr->position = glm::vec3(transformedPos);
+			float rotX = corners[i].x * cosR - corners[i].y * sinR;
+			float rotY = corners[i].x * sinR + corners[i].y * cosR;
+
+			quadBufferPtr->position = {centerX + rotX, centerY + rotY, z};
 			quadBufferPtr->color = glmColor;
 			quadBufferPtr->texCoords = textureCoords[i];
 			quadBufferPtr->texIndex = texIndex;
