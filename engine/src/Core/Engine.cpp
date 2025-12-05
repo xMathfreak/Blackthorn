@@ -25,10 +25,26 @@ bool Engine::init(const EngineConfig& cfg) {
 
 	config = cfg;
 
+	#ifdef BLACKTHORN_DEBUG
+		SDL_Log("Initializing Blackthorn Engine");
+		SDL_SetLogPriority(SDL_LOG_CATEGORY_APPLICATION, SDL_LOG_PRIORITY_VERBOSE);
+	#else
+		SDL_SetLogPriority(SDL_LOG_CATEGORY_APPLICATION, SDL_LOG_PRIORITY_INFO);
+	#endif
+
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, cfg.render.openglMajor);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, cfg.render.openglMinor);
+
+	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, cfg.render.depthBits);
+	SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, cfg.render.stencilBits);
+
+	if (cfg.render.msaaSamples > 0) {
+		SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
+		SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, cfg.render.msaaSamples);
+	}
 
 	SDL_InitFlags initFlags = SDL_INIT_VIDEO;
 	if (!SDL_Init(initFlags)) {
@@ -37,6 +53,9 @@ bool Engine::init(const EngineConfig& cfg) {
 	}
 
 	SDL_WindowFlags windowFlags = SDL_WINDOW_MAXIMIZED | SDL_WINDOW_RESIZABLE | SDL_WINDOW_OPENGL;
+	if (cfg.window.fullscreen)
+		windowFlags |= SDL_WINDOW_FULLSCREEN;
+
 	window = SDL_CreateWindow(cfg.window.title.c_str(), cfg.window.width, cfg.window.height, windowFlags);
 	if (!window) {
 		SDL_LogError(SDL_LOG_CATEGORY_ERROR, "SDL_CreateWindow failed: %s", SDL_GetError());
@@ -68,13 +87,32 @@ bool Engine::init(const EngineConfig& cfg) {
 		return false;
 	}
 
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+	if (cfg.render.msaaSamples > 0)
+		glEnable(GL_MULTISAMPLE);
+
+	if (cfg.window.vsync)
+		SDL_GL_SetSwapInterval(1);
+
+	glViewport(0, 0, config.window.width, config.window.height);
+
 	try {
 		renderer = std::make_unique<Graphics::Renderer>();
 	} catch (const std::exception& e) {
+		SDL_LogError(
+			SDL_LOG_CATEGORY_RENDER,
+			"Failed to initialize Renderer: %s",
+			e.what()
+		);
 
+		SDL_GL_DestroyContext(glContext);
+		SDL_DestroyWindow(window);
+		SDL_Quit();
+
+		return false;
 	}
-
-	glViewport(0, 0, config.window.width, config.window.height);
 
 	#ifdef BLACKTHORN_DEBUG
 		SDL_Log("OpenGL Version: %s", glGetString(GL_VERSION));
@@ -95,6 +133,22 @@ bool Engine::init(const EngineConfig& cfg) {
 		SDL_Log("Depth Buffer: %d bits (requested %d)", actualDepthSize, cfg.render.depthBits);
 		SDL_Log("Stencil Buffer: %d bits (requested %d)", actualStencilSize, cfg.render.stencilBits);
 		SDL_Log("MSAA Samples: %dx (requested %dx)", actualMSAASamples, cfg.render.msaaSamples);
+
+		#if defined(GLM_FORCE_SIMD_AVX2)
+			SDL_Log("GLM using AVX2 SIMD");
+		#elif defined(GLM_FORCE_SIMD_AVX)
+			SDL_Log("GLM using AVX SIMD");
+		#elif defined(GLM_FORCE_SIMD_SSE42)
+			SDL_Log("GLM using SSE4.2 SIMD");
+		#elif defined(GLM_FORCE_SIMD_SSE41)
+			SDL_Log("GLM using SSE4.1 SIMD");
+		#elif defined(GLM_FORCE_SIMD_SSE3)
+			SDL_Log("GLM using SSE3 SIMD");
+		#elif defined(GLM_FORCE_SIMD_SSE2)
+			SDL_Log("GLM using SSE2 SIMD");
+		#else
+			SDL_Log("GLM using scalar math (no SIMD)");
+		#endif
 	#endif
 
 	initialized = true;
