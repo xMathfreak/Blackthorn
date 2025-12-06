@@ -41,14 +41,16 @@ private:
 	SDL_FRect viewBounds{0, 0, 0, 0};
 	bool cullingEnabled = true;
 
-	Vertex2D* quadBuffer = nullptr;
+	std::unique_ptr<Vertex2D[]> quadBuffer;
 	Vertex2D* quadBufferPtr = nullptr;
 	Uint32 quadIndexCount = 0;
 
 	std::array<const Texture*, MAX_TEXTURE_SLOTS> textureSlots;
 	Uint32 textureSlotIndex = 1;
 
-	glm::mat4 viewProjectionMatrix;
+	glm::mat4 projectionMatrix;
+	glm::mat4 viewMatrix;
+
 
 	void initShader();
 	void initQuadBuffers();
@@ -58,28 +60,10 @@ private:
 	void nextBatch();
 	void flush();
 
-	inline bool isVisible(const SDL_FRect& rect, float rotation = 0.0f) const {
-		if (!cullingEnabled)
-			return true;
+	inline bool isVisible(const SDL_FRect& rect, float rotation = 0.0f) const;
 
-		if (rotation == 0.0f)
-			return SDL_HasRectIntersectionFloat(&rect, &viewBounds);
-
-		float cx = rect.x + rect.w * 0.5f;
-		float cy = rect.y + rect.h * 0.5f;
-
-		float radius = std::sqrt(rect.w * rect.w + rect.h * rect.h) * 0.5f;
-
-		return (
-			cx + radius >= viewBounds.x &&
-			cx - radius <= viewBounds.x + viewBounds.w &&
-			cy + radius >= viewBounds.y &&
-			cy - radius <= viewBounds.y + viewBounds.h
-		);
-	}
-
-	static glm::vec4 toGLMColor(const SDL_FColor& color);
-	static glm::vec2 toGLMVec2(float x, float y);
+	static inline constexpr glm::vec4 toGLMColor(const SDL_FColor& color);
+	static inline constexpr glm::vec2 toGLMVec2(float x, float y);
 
 	void draw(const SDL_FRect& rect, float z, float rotation, const SDL_FColor& color, const Texture* texture, const SDL_FRect* srcRect);
 public:
@@ -89,14 +73,20 @@ public:
 	Renderer(const Renderer&) = delete;
 	Renderer& operator=(const Renderer&) = delete;
 
-	void beginScene(const glm::mat4& projectionMatrix);
+	void beginScene();
 	void endScene();
 
-	void setViewBounds(float left, float bottom, float width, float height) {
-		viewBounds = { left, bottom, width, height };
-	}
+	void setProjection(int width, int height);
+	void setProjection(const glm::mat4& projection);
+	void setView(const glm::mat4& view);
 
 	void setCullingEnabled(bool enabled) { cullingEnabled = enabled; }
+
+	bool isCullingEnabled() const { return cullingEnabled; }
+	glm::mat4 getViewProjectionMatrix() const { return projectionMatrix * viewMatrix; }
+	const glm::mat4& getViewMatrix() const { return viewMatrix; }
+	const glm::mat4& getProjectionMatrix() const { return projectionMatrix; }
+	const SDL_FRect& getViewBounds() const { return viewBounds; }
 
 	void drawQuad(
 		const SDL_FRect& rect,

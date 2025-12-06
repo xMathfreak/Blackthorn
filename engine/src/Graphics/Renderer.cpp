@@ -4,18 +4,19 @@
 
 namespace Blackthorn::Graphics {
 
-glm::vec4 Renderer::toGLMColor(const SDL_FColor& color) {
+inline constexpr glm::vec4 Renderer::toGLMColor(const SDL_FColor& color) {
 	return glm::vec4(color.r, color.g, color.b, color.a);
 }
 
-glm::vec2 Renderer::toGLMVec2(float x, float y) {
+inline constexpr glm::vec2 Renderer::toGLMVec2(float x, float y) {
 	return glm::vec2(x, y);
 }
 
 Renderer::Renderer()
-	: viewProjectionMatrix(1.0f)
+	: projectionMatrix(1.0f)
+	, viewMatrix(1.0f)
 {
-	quadBuffer = new Vertex2D[MAX_VERTICES];
+	quadBuffer = std::make_unique<Vertex2D[]>(MAX_VERTICES);
 
 	initQuadBuffers();
 	initShader();
@@ -38,7 +39,7 @@ Renderer::Renderer()
 }
 
 Renderer::~Renderer() {
-	delete[] quadBuffer;
+
 }
 
 void Renderer::initQuadBuffers() {
@@ -98,9 +99,12 @@ void Renderer::initWhiteTexture() {
 }
 
 void Renderer::startBatch() {
-	quadBufferPtr = quadBuffer;
+	quadBufferPtr = quadBuffer.get();
 	quadIndexCount = 0;
 	textureSlotIndex = 1;
+
+	for (Uint32 i = 1; i < MAX_TEXTURE_SLOTS; ++i)
+		textureSlots[i] = nullptr;
 }
 
 void Renderer::nextBatch() {
@@ -113,27 +117,30 @@ void Renderer::flush() {
 		return;
 
 	Uint32 dataSize = static_cast<Uint32>(
-		reinterpret_cast<Uint8*>(quadBufferPtr) - reinterpret_cast<Uint8*>(quadBuffer)
+		reinterpret_cast<Uint8*>(quadBufferPtr) - reinterpret_cast<Uint8*>(quadBuffer.get())
 	);
 
 	QuadVBO->bind();
-	glBufferSubData(GL_ARRAY_BUFFER, 0, dataSize, quadBuffer);
+	glBufferSubData(GL_ARRAY_BUFFER, 0, dataSize, quadBuffer.get());
 
 	for (Uint32 i = 0; i < textureSlotIndex; ++i) {
 		if (textureSlots[i])
 			textureSlots[i]->bind(i);
 	}
 
-	shader->bind();
+	static GLuint lastShaderID = 0;
+
+	if (shader->id() != lastShaderID) {
+		shader->bind();
+		lastShaderID = shader->id();
+	}
+
 	QuadVAO->bind();
 
 	glDrawElements(GL_TRIANGLES, quadIndexCount, GL_UNSIGNED_INT, nullptr);
 }
 
-void Renderer::beginScene(const glm::mat4& projectionMatrix) {
-	viewProjectionMatrix = projectionMatrix;
-	globalUBO->updateViewProjection(projectionMatrix);
-
+void Renderer::beginScene() {
 	startBatch();
 }
 
@@ -142,7 +149,7 @@ void Renderer::endScene() {
 }
 
 void Renderer::draw(const SDL_FRect& rect, float z, float rotation, const SDL_FColor& color, const Texture* texture, const SDL_FRect* srcRect) {
-	if (!isVisible(rect))
+	if (!isVisible(rect, rotation))
 		return;
 
 	if (quadIndexCount >= MAX_INDICES)
@@ -173,25 +180,28 @@ void Renderer::draw(const SDL_FRect& rect, float z, float rotation, const SDL_FC
 	glm::vec4 glmColor = toGLMColor(color);
 
 	glm::vec2 textureCoords[4];
+	constexpr glm::vec2 defaultTexCoords[4] = {
+		{ 0.0f, 1.0f },
+		{ 1.0f, 1.0f },
+		{ 1.0f, 0.0f },
+		{ 0.0f, 0.0f }
+	};
 
 	if (srcRect && texture) {
-		float texWidth = static_cast<float>(texture->getWidth());
-		float texHeight = static_cast<float>(texture->getHeight());
+		float invTexWidth = 1.0f / texture->getWidth();
+		float invTexHeight = 1.0f / texture->getHeight();
 
-		float u0 = srcRect->x / texWidth;
-		float v0 = 1.0f - (srcRect->y / texHeight);
-		float u1 = (srcRect->x + srcRect->w) / texWidth;
-		float v1 = 1.0f - ((srcRect->y + srcRect->h) / texHeight);
+		float u0 = srcRect->x * invTexWidth;
+		float v0 = 1.0f - (srcRect->y * invTexHeight);
+		float u1 = (srcRect->x + srcRect->w) * invTexWidth;
+		float v1 = 1.0f - ((srcRect->y + srcRect->h) * invTexHeight);
 
 		textureCoords[0] = { u0, v1 };
 		textureCoords[1] = { u1, v1 };
 		textureCoords[2] = { u1, v0 };
 		textureCoords[3] = { u0, v0 };
 	} else {
-		textureCoords[0] = { 0.0f, 1.0f };
-		textureCoords[1] = { 1.0f, 1.0f };
-		textureCoords[2] = { 1.0f, 0.0f };
-		textureCoords[3] = { 0.0f, 0.0f };
+		std::memcpy(textureCoords, defaultTexCoords, sizeof(textureCoords));
 	}
 
 	if (rotation != 0.0f) {
@@ -201,11 +211,14 @@ void Renderer::draw(const SDL_FRect& rect, float z, float rotation, const SDL_FC
 		float cosR = std::cos(rotation);
 		float sinR = std::sin(rotation);
 
+		float halfW = rect.w * 0.5f;
+		float halfH = rect.h * 0.5f;
+
 		glm::vec2 corners[4] = {
-			{ -rect.w * 0.5f, -rect.h * 0.5f },
-			{ rect.w * 0.5f, -rect.h * 0.5f },
-			{ rect.w * 0.5f, rect.h * 0.5f },
-			{ -rect.w * 0.5f, rect.h * 0.5f }
+			{ -halfW, -halfH },
+			{  halfW, -halfH },
+			{  halfW,  halfH },
+			{ -halfW,  halfH }
 		};
 
 		for (int i = 0; i < 4; ++i) {
@@ -257,6 +270,49 @@ void Renderer::drawQuad(const SDL_FRect& rect, float rotation, float z, const SD
 
 void Renderer::drawTexture(const Texture& texture, const SDL_FRect& dest, const SDL_FRect* src, float rotation, float z, const SDL_FColor& tint) {
 	draw(dest, z, rotation, tint, &texture, src);
+}
+
+void Renderer::setProjection(int width, int height) {
+	projectionMatrix = glm::ortho(
+		0.0f, static_cast<float>(width),
+		0.0f, static_cast<float>(height),
+		-1.0f, 1.0f
+	);
+
+	viewBounds = { 0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height) };
+	globalUBO->updateViewProjection(getViewProjectionMatrix());
+}
+
+void Renderer::setProjection(const glm::mat4& projection) {
+	projectionMatrix = projection;
+	glm::vec4 topRight = glm::inverse(projection) * glm::vec4(1.0f, 1.0f, 0.0f, 1.0f);
+	viewBounds = { 0.0f, 0.0f, topRight.x, topRight.y };
+	globalUBO->updateViewProjection(getViewProjectionMatrix());
+}
+
+void Renderer::setView(const glm::mat4& view) {
+	viewMatrix = view;
+	globalUBO->updateViewProjection(getViewProjectionMatrix());
+}
+
+inline bool Renderer::isVisible(const SDL_FRect& rect, float rotation) const  {
+	if (!cullingEnabled)
+		return true;
+
+	if (rotation == 0.0f)
+		return SDL_HasRectIntersectionFloat(&rect, &viewBounds);
+
+	float cx = rect.x + rect.w * 0.5f;
+	float cy = rect.y + rect.h * 0.5f;
+
+	float radius = std::sqrt(rect.w * rect.w + rect.h * rect.h) * 0.5f;
+
+	return (
+		cx + radius >= viewBounds.x &&
+		cx - radius <= viewBounds.x + viewBounds.w &&
+		cy + radius >= viewBounds.y &&
+		cy - radius <= viewBounds.y + viewBounds.h
+	);
 }
 
 } // namespace Blackthorn::Graphics

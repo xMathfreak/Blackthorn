@@ -1,5 +1,4 @@
 #include "Core/Engine.h"
-#include "glm/ext/matrix_clip_space.hpp"
 
 #include <glad/glad.h>
 
@@ -178,18 +177,13 @@ void Engine::render(float alpha) {
 	glClearColor(0.1f, 0.1f, 0.12f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	glm::mat4 projection = glm::ortho(
-	0.0f, (float)config.window.width,
-	0.0f, (float)config.window.height,
-	-1.0f, 1.0f
-	);
-
-	renderer->beginScene(projection);
+	renderer->beginScene();
 
 	#ifdef BLACKTHORN_DEBUG
 		SDL_FRect testRect = {100.0f, 100.0f, 100.0f, 100.0f};
-		SDL_FColor testColor = {1.0f, 0.0f, 1.0f, 1.0f};
-		renderer->drawQuad(testRect, 0, 0, testColor);
+		Graphics::Texture tex("assets/image.png");
+		// SDL_FColor testColor = {1.0f, 0.0f, 1.0f, 1.0f};
+		renderer->drawTexture(tex, testRect);
 	#endif
 
 	renderer->endScene();
@@ -208,6 +202,7 @@ void Engine::processEvents() {
 				config.window.width = event.window.data1;
 				config.window.height = event.window.data2;
 				glViewport(0, 0, event.window.data1, event.window.data2);
+				renderer->setProjection(event.window.data1, event.window.data2);
 				break;
 			case SDL_EVENT_WINDOW_FOCUS_GAINED:
 				windowFocused = true;
