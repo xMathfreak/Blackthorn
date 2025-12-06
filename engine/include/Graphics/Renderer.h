@@ -3,6 +3,7 @@
 #include "Core/Export.h"
 #include "Graphics/Shader.h"
 #include "Graphics/Texture.h"
+#include <Graphics/GlobalUBO.h>
 #include "Graphics/EBO.h"
 #include "Graphics/VAO.h"
 #include "Graphics/VBO.h"
@@ -33,6 +34,7 @@ private:
 	std::unique_ptr<VAO> QuadVAO;
 	std::unique_ptr<VBO> QuadVBO;
 	std::unique_ptr<Shader> shader;
+	std::unique_ptr<GlobalUBO> globalUBO;
 
 	std::unique_ptr<Texture> whiteTexture;
 
