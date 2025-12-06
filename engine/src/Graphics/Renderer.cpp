@@ -21,6 +21,14 @@ Renderer::Renderer()
 	initShader();
 	initWhiteTexture();
 
+	globalUBO = std::make_unique<GlobalUBO>();
+	globalUBO->bind(0);
+
+	shader->bind();
+	GLuint blockIndex = glGetUniformBlockIndex(shader->id(), "GlobalData");
+	if (blockIndex != GL_INVALID_INDEX)
+		glUniformBlockBinding(shader->id(), blockIndex, 0);
+
 	textureSlots.fill(nullptr);
 	textureSlots[0] = whiteTexture.get();
 
@@ -124,8 +132,7 @@ void Renderer::flush() {
 
 void Renderer::beginScene(const glm::mat4& projectionMatrix) {
 	viewProjectionMatrix = projectionMatrix;
-	shader->bind();
-	shader->setMat4("u_ViewProjection", glm::value_ptr(viewProjectionMatrix));
+	globalUBO->updateViewProjection(projectionMatrix);
 
 	startBatch();
 }
