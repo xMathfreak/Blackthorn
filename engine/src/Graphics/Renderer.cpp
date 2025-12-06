@@ -135,6 +135,9 @@ void Renderer::endScene() {
 }
 
 void Renderer::draw(const SDL_FRect& rect, float z, float rotation, const SDL_FColor& color, const Texture* texture, const SDL_FRect* srcRect) {
+	if (!isVisible(rect))
+		return;
+
 	if (quadIndexCount >= MAX_INDICES)
 		nextBatch();
 
@@ -248,6 +251,5 @@ void Renderer::drawQuad(const SDL_FRect& rect, float rotation, float z, const SD
 void Renderer::drawTexture(const Texture& texture, const SDL_FRect& dest, const SDL_FRect* src, float rotation, float z, const SDL_FColor& tint) {
 	draw(dest, z, rotation, tint, &texture, src);
 }
-
 
 } // namespace Blackthorn::Graphics

@@ -36,6 +36,9 @@ private:
 
 	std::unique_ptr<Texture> whiteTexture;
 
+	SDL_FRect viewBounds{0, 0, 0, 0};
+	bool cullingEnabled = true;
+
 	Vertex2D* quadBuffer = nullptr;
 	Vertex2D* quadBufferPtr = nullptr;
 	Uint32 quadIndexCount = 0;
@@ -53,6 +56,26 @@ private:
 	void nextBatch();
 	void flush();
 
+	inline bool isVisible(const SDL_FRect& rect, float rotation = 0.0f) const {
+		if (!cullingEnabled)
+			return true;
+
+		if (rotation == 0.0f)
+			return SDL_HasRectIntersectionFloat(&rect, &viewBounds);
+
+		float cx = rect.x + rect.w * 0.5f;
+		float cy = rect.y + rect.h * 0.5f;
+
+		float radius = std::sqrt(rect.w * rect.w + rect.h * rect.h) * 0.5f;
+
+		return (
+			cx + radius >= viewBounds.x &&
+			cx - radius <= viewBounds.x + viewBounds.w &&
+			cy + radius >= viewBounds.y &&
+			cy - radius <= viewBounds.y + viewBounds.h
+		);
+	}
+
 	static glm::vec4 toGLMColor(const SDL_FColor& color);
 	static glm::vec2 toGLMVec2(float x, float y);
 
@@ -66,6 +89,12 @@ public:
 
 	void beginScene(const glm::mat4& projectionMatrix);
 	void endScene();
+
+	void setViewBounds(float left, float bottom, float width, float height) {
+		viewBounds = { left, bottom, width, height };
+	}
+
+	void setCullingEnabled(bool enabled) { cullingEnabled = enabled; }
 
 	void drawQuad(
 		const SDL_FRect& rect,
