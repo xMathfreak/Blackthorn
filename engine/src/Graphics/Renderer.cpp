@@ -22,7 +22,7 @@ Renderer::Renderer()
 	initShader();
 	initWhiteTexture();
 
-	globalUBO = std::make_unique<GlobalUBO>();
+	globalUBO = std::make_unique<UBO<GlobalData>>();
 	globalUBO->bind(0);
 
 	shader->bind();
@@ -280,19 +280,25 @@ void Renderer::setProjection(int width, int height) {
 	);
 
 	viewBounds = { 0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height) };
-	globalUBO->updateViewProjection(getViewProjectionMatrix());
+
+	globalUBO->getData().viewProjection = getViewProjectionMatrix();
+	globalUBO->uploadField(&GlobalData::viewProjection);
 }
 
 void Renderer::setProjection(const glm::mat4& projection) {
 	projectionMatrix = projection;
 	glm::vec4 topRight = glm::inverse(projection) * glm::vec4(1.0f, 1.0f, 0.0f, 1.0f);
 	viewBounds = { 0.0f, 0.0f, topRight.x, topRight.y };
-	globalUBO->updateViewProjection(getViewProjectionMatrix());
+
+	globalUBO->getData().viewProjection = getViewProjectionMatrix();
+	globalUBO->uploadField(&GlobalData::viewProjection);
 }
 
 void Renderer::setView(const glm::mat4& view) {
 	viewMatrix = view;
-	globalUBO->updateViewProjection(getViewProjectionMatrix());
+	
+	globalUBO->getData().viewProjection = getViewProjectionMatrix();
+	globalUBO->uploadField(&GlobalData::viewProjection);
 }
 
 inline bool Renderer::isVisible(const SDL_FRect& rect, float rotation) const  {

@@ -3,8 +3,8 @@
 #include "Core/Export.h"
 #include "Graphics/Shader.h"
 #include "Graphics/Texture.h"
-#include <Graphics/GlobalUBO.h>
 #include "Graphics/EBO.h"
+#include <Graphics/UBO.h>
 #include "Graphics/VAO.h"
 #include "Graphics/VBO.h"
 
@@ -23,6 +23,10 @@ struct Vertex2D {
 	float texIndex;
 };
 
+struct GlobalData {
+	alignas(16) glm::mat4 viewProjection;
+};
+
 class BLACKTHORN_API Renderer {
 private:
 	static constexpr Uint32 MAX_QUADS = 2 << 13;
@@ -34,7 +38,8 @@ private:
 	std::unique_ptr<VAO> QuadVAO;
 	std::unique_ptr<VBO> QuadVBO;
 	std::unique_ptr<Shader> shader;
-	std::unique_ptr<GlobalUBO> globalUBO;
+
+	std::unique_ptr<UBO<GlobalData>> globalUBO;
 
 	std::unique_ptr<Texture> whiteTexture;
 
