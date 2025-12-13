@@ -23,10 +23,6 @@ struct Vertex2D {
 	float texIndex;
 };
 
-struct GlobalData {
-	alignas(16) glm::mat4 viewProjection;
-};
-
 class BLACKTHORN_API Renderer {
 private:
 	static constexpr Uint32 MAX_QUADS = 2 << 13;
@@ -38,6 +34,10 @@ private:
 	std::unique_ptr<VAO> QuadVAO;
 	std::unique_ptr<VBO> QuadVBO;
 	std::unique_ptr<Shader> shader;
+
+	struct GlobalData {
+		alignas(16) glm::mat4 viewProjection;
+	};
 
 	std::unique_ptr<UBO<GlobalData>> globalUBO;
 
@@ -55,7 +55,6 @@ private:
 
 	glm::mat4 projectionMatrix;
 	glm::mat4 viewMatrix;
-
 
 	void initShader();
 	void initQuadBuffers();

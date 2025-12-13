@@ -25,7 +25,6 @@ Renderer::Renderer()
 	globalUBO = std::make_unique<UBO<GlobalData>>();
 	globalUBO->bind(0);
 
-	shader->bind();
 	GLuint blockIndex = glGetUniformBlockIndex(shader->id(), "GlobalData");
 	if (blockIndex != GL_INVALID_INDEX)
 		glUniformBlockBinding(shader->id(), blockIndex, 0);
