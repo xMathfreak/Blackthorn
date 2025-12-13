@@ -86,6 +86,7 @@ bool Engine::init(const EngineConfig& cfg) {
 		return false;
 	}
 
+
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
@@ -95,7 +96,7 @@ bool Engine::init(const EngineConfig& cfg) {
 	if (cfg.window.vsync)
 		SDL_GL_SetSwapInterval(1);
 
-	glViewport(0, 0, config.window.width, config.window.height);
+	glViewport(0, 0, cfg.window.width, cfg.window.height);
 
 	try {
 		renderer = std::make_unique<Graphics::Renderer>();
@@ -114,40 +115,7 @@ bool Engine::init(const EngineConfig& cfg) {
 	}
 
 	#ifdef BLACKTHORN_DEBUG
-		SDL_Log("OpenGL Version: %s", glGetString(GL_VERSION));
-		SDL_Log("GLSL Version: %s", glGetString(GL_SHADING_LANGUAGE_VERSION));
-		SDL_Log("Renderer: %s", glGetString(GL_RENDERER));
-		SDL_Log("Vendor: %s", glGetString(GL_VENDOR));
-		GLint maxTextureSize;
-		glGetIntegerv(GL_MAX_TEXTURE_SIZE, &maxTextureSize);
-		SDL_Log("Max Texture Size: %d", maxTextureSize);
-
-		GLint maxVertexAttribs;
-		glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &maxVertexAttribs);
-		SDL_Log("Max Vertex Attributes: %d", maxVertexAttribs);
-		int actualDepthSize, actualStencilSize, actualMSAASamples;
-		SDL_GL_GetAttribute(SDL_GL_DEPTH_SIZE, &actualDepthSize);
-		SDL_GL_GetAttribute(SDL_GL_STENCIL_SIZE, &actualStencilSize);
-		SDL_GL_GetAttribute(SDL_GL_MULTISAMPLESAMPLES, &actualMSAASamples);
-		SDL_Log("Depth Buffer: %d bits (requested %d)", actualDepthSize, cfg.render.depthBits);
-		SDL_Log("Stencil Buffer: %d bits (requested %d)", actualStencilSize, cfg.render.stencilBits);
-		SDL_Log("MSAA Samples: %dx (requested %dx)", actualMSAASamples, cfg.render.msaaSamples);
-
-		#if defined(GLM_FORCE_SIMD_AVX2)
-			SDL_Log("GLM using AVX2 SIMD");
-		#elif defined(GLM_FORCE_SIMD_AVX)
-			SDL_Log("GLM using AVX SIMD");
-		#elif defined(GLM_FORCE_SIMD_SSE42)
-			SDL_Log("GLM using SSE4.2 SIMD");
-		#elif defined(GLM_FORCE_SIMD_SSE41)
-			SDL_Log("GLM using SSE4.1 SIMD");
-		#elif defined(GLM_FORCE_SIMD_SSE3)
-			SDL_Log("GLM using SSE3 SIMD");
-		#elif defined(GLM_FORCE_SIMD_SSE2)
-			SDL_Log("GLM using SSE2 SIMD");
-		#else
-			SDL_Log("GLM using scalar math (no SIMD)");
-		#endif
+		logEngineInfo();
 	#endif
 
 	initialized = true;
@@ -314,6 +282,44 @@ void Engine::run() {
 			}
 		}
 	}
+}
+
+void Engine::logEngineInfo() {
+	SDL_Log("OpenGL Version: %s", glGetString(GL_VERSION));
+	SDL_Log("GLSL Version: %s", glGetString(GL_SHADING_LANGUAGE_VERSION));
+	SDL_Log("Renderer: %s", glGetString(GL_RENDERER));
+	SDL_Log("Vendor: %s", glGetString(GL_VENDOR));
+
+	GLint maxTextureSize;
+	glGetIntegerv(GL_MAX_TEXTURE_SIZE, &maxTextureSize);
+	SDL_Log("Max Texture Size: %d", maxTextureSize);
+
+	GLint maxVertexAttribs;
+	glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &maxVertexAttribs);
+	SDL_Log("Max Vertex Attributes: %d", maxVertexAttribs);
+	int actualDepthSize, actualStencilSize, actualMSAASamples;
+	SDL_GL_GetAttribute(SDL_GL_DEPTH_SIZE, &actualDepthSize);
+	SDL_GL_GetAttribute(SDL_GL_STENCIL_SIZE, &actualStencilSize);
+	SDL_GL_GetAttribute(SDL_GL_MULTISAMPLESAMPLES, &actualMSAASamples);
+	SDL_Log("Depth Buffer: %d bits (requested %d)", actualDepthSize, config.render.depthBits);
+	SDL_Log("Stencil Buffer: %d bits (requested %d)", actualStencilSize, config.render.stencilBits);
+	SDL_Log("MSAA Samples: %dx (requested %dx)", actualMSAASamples, config.render.msaaSamples);
+
+	#if defined(GLM_FORCE_SIMD_AVX2)
+		SDL_Log("GLM using AVX2 SIMD");
+	#elif defined(GLM_FORCE_SIMD_AVX)
+		SDL_Log("GLM using AVX SIMD");
+	#elif defined(GLM_FORCE_SIMD_SSE42)
+		SDL_Log("GLM using SSE4.2 SIMD");
+	#elif defined(GLM_FORCE_SIMD_SSE41)
+		SDL_Log("GLM using SSE4.1 SIMD");
+	#elif defined(GLM_FORCE_SIMD_SSE3)
+		SDL_Log("GLM using SSE3 SIMD");
+	#elif defined(GLM_FORCE_SIMD_SSE2)
+		SDL_Log("GLM using SSE2 SIMD");
+	#else
+		SDL_Log("GLM using scalar math (no SIMD)");
+	#endif
 }
 
 }
