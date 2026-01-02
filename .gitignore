@@ -1,7 +1,6 @@
 .cache/
 assets/*
 build/
-third_party/
 lib/
 
 !assets/shaders/

@@ -72,7 +72,7 @@ target_link_libraries(${PROJECT_NAME}
 	PUBLIC
 		glm::glm
 		SDL3::SDL3
-    	SDL3_image::SDL3_image
+		SDL3_image::SDL3_image
 		glad
 		glfw
 		
