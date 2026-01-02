@@ -209,14 +209,15 @@ public:
 
 		if (!smallestList) {
 			static std::vector<Entity> empty;
-			return View<Components...>(this, requiredMask, &empty);
+			return Detail::View<Components...>(this, requiredMask, &empty);
 		}
 
-		return View<Components...>(this, requiredMask, smallestList);
+		return Detail::View<Components...>(this, requiredMask, smallestList);
 	}
 };
 
 namespace Detail {
+
 template <typename... Components>
 class View {
 private: 
@@ -248,18 +249,19 @@ public:
 
 private:
 	template <typename Component>
-	auto getComponentForView(Entity entity) {
+	decltype(auto) getComponentForView(Entity entity) {
 		using Raw = Detail::RawType<Component>;
 
 		if constexpr (std::is_pointer_v<Component>) {
-			return pool->getComponent<Raw>();
+			return pool->getComponent<Raw>(entity);
 		} else {
 			Raw* comp = pool->getComponent<Raw>(entity);
 			assert(comp != nullptr);
-			return *comp;
+			return (*comp);
 		}
 	}
 };
+
 } // namespace Blackthorn::ECS::Detail
 
 } // namespace Blackthorn::ECS
