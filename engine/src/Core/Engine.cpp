@@ -1,4 +1,6 @@
 #include "Core/Engine.h"
+#include "ECS/Systems/KinematicsSystem.h"
+#include "ECS/Systems/RenderSystem.h"
 
 #include <glad/glad.h>
 
@@ -118,8 +120,15 @@ bool Engine::init(const EngineConfig& cfg) {
 		logEngineInfo();
 	#endif
 
+	initDefaultSystems();
+
 	initialized = true;
 	return true;
+}
+
+void Engine::initDefaultSystems() {
+	world.addSystem<ECS::Systems::KinematicsSystem>();
+	world.addSystem<ECS::Systems::RenderSystem>(*renderer.get());
 }
 
 void Engine::shutdown() {
@@ -154,6 +163,8 @@ void Engine::render(float alpha) {
 		renderer->drawTexture(tex, testRect);
 	#endif
 
+	world.render(alpha);
+
 	renderer->endScene();
 
 	SDL_GL_SwapWindow(window);
@@ -183,11 +194,11 @@ void Engine::processEvents() {
 }
 
 void Engine::update(float dt) {
-
+	world.update(dt);
 }
 
 void Engine::fixedUpdate(float dt) {
-
+	world.fixedUpdate(dt);
 }
 
 void Engine::run() {

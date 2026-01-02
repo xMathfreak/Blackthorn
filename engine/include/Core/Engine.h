@@ -3,6 +3,7 @@
 #include "Core/EngineConfig.h"
 #include "Core/Export.h"
 #include "Graphics/Renderer.h"
+#include "ECS/World.h"
 
 #include <SDL3/SDL.h>
 
@@ -32,6 +33,7 @@ public:
 
 	SDL_Window* getWindow() const { return window; }
 	Graphics::Renderer* getRenderer() const { return renderer.get(); }
+	ECS::World& getWorld() { return world; }
 private:
 	bool initialized;
 	bool running;
@@ -45,6 +47,9 @@ private:
 	SDL_Window* window;
 	SDL_GLContext glContext;
 	std::unique_ptr<Graphics::Renderer> renderer;
+	ECS::World world;
+
+	void initDefaultSystems();
 };
 
 }
