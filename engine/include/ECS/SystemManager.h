@@ -3,6 +3,7 @@
 #include "Core/Export.h"
 #include "ECS/ISystem.h"
 
+#include <algorithm>
 #include <vector>
 
 namespace Blackthorn::ECS::Systems {
@@ -26,6 +27,51 @@ public:
 		ptr->init(&pool);
 		systems.push_back(std::move(system));
 		return ptr;
+	}
+
+	template <typename System>
+	System* get() {
+		auto it = std::find_if(
+			systems.begin(),
+			systems.end(),
+			[](const std::unique_ptr<ISystem>& system) {
+				return dynamic_cast<System*>(system.get()) != nullptr;
+			}
+		);
+
+		if (it != systems.end())
+			return dynamic_cast<System*>(it->get());
+
+		return nullptr;
+	}
+
+	template <typename System>
+	void remove() {
+		auto it = std::remove_if(
+			systems.begin(),
+			systems.end(),
+			[](const std::unique_ptr<ISystem>& system) {
+				return dynamic_cast<System*>(system.get()) != nullptr;
+			}
+		);
+
+		if (it != systems.end())
+			systems.erase(it, systems.end());
+	}
+
+	void update(float dt) {
+		for (auto& system: systems)
+			system->update(&pool, dt);
+	}
+
+	void fixedUpdate(float dt) {
+		for (auto& system: systems)
+			system->fixedUpdate(&pool, dt);
+	}
+
+	void render(float alpha) {
+		for (auto& system: systems)
+			system->render(&pool, alpha);
 	}
 };
 
