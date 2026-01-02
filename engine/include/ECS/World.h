@@ -15,6 +15,16 @@ public:
 
 	~World() {}
 
+	World(const World&) = delete;
+	World& operator=(const World&) = delete;
+
+	World(World&& other)
+		: pool(std::move(other.pool))
+		, systemManager(pool)
+	{}
+
+	World& operator=(World&& other) = delete;
+
 	Entity createEntity() {
 		return pool.create();
 	}
