@@ -5,6 +5,7 @@
 #include "Assets/IAssetLoader.h"
 #include "Assets/IAssetStorage.h"
 #include "Core/Export.h"
+#include "SDL3/SDL_log.h"
 
 #include <filesystem>
 #include <string>
@@ -41,7 +42,6 @@ public:
 		if (loaderIt == loaders.end())
 			return nullptr;
 
-		// auto* lw = static_cast<LoaderWrapper<AssetType>*>(loaderIt->second.get());
 		LoaderWrapper<AssetType>* lw = static_cast<LoaderWrapper<AssetType>*>(loaderIt->second.get());
 		std::unique_ptr<AssetType> asset = lw->loader->load(path);
 
@@ -184,9 +184,10 @@ public:
 		if (pathIt == assetPaths.end())
 			return false;
 
+		std::string path = pathIt->second;
 		unload<AssetType>(id);
 
-		return load<AssetType>(id, pathIt->second) != nullptr;
+		return load<AssetType>(id, path) != nullptr;
 	}
 
 	template <typename AssetType>
@@ -197,18 +198,29 @@ public:
 			return 0;
 
 		std::vector<std::pair<std::string, std::string>> toReload;
+
 		for (const auto& id : storage->getAllIDs()) {
 			auto pathIt = assetPaths.find(id);
-
 			if (pathIt != assetPaths.end())
 				toReload.emplace_back(id, pathIt->second);
 		}
 
 		size_t reloaded = 0;
+
 		for (const auto& [id, path] : toReload) {
-			if (reload<AssetType>(id))
+			unload<AssetType>(id);
+			if (load<AssetType>(id, path) != nullptr)
 				++reloaded;
 		}
+
+		return reloaded;
+	}
+
+	template <typename... Types>
+	size_t reloadAllTyped() {
+		size_t reloaded = 0;
+
+		((reloaded += reloadAll<Types>()), ...);
 
 		return reloaded;
 	}
