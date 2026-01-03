@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Core/Export.h"
+
 #include <string>
 
 namespace Blackthorn::Assets {
@@ -7,7 +9,7 @@ namespace Blackthorn::Assets {
 class AssetManager;
 
 template <typename AssetType>
-class AssetHandle {
+class BLACKTHORN_API AssetHandle {
 public:
 	AssetHandle()
 		: id("")

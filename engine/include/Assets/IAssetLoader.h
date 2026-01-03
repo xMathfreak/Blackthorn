@@ -1,12 +1,14 @@
 #pragma once
 
+#include "Core/Export.h"
+
 #include <memory>
 #include <vector>
 
 namespace Blackthorn::Assets {
 
 template <typename AssetType>
-class IAssetLoader {
+class BLACKTHORN_API IAssetLoader {
 public:
 	virtual ~IAssetLoader() = default;
 	virtual std::unique_ptr<AssetType> load(const std::string& path) = 0;

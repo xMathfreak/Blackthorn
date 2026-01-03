@@ -1,11 +1,13 @@
 #pragma once
 
+#include "Core/Export.h"
+
 #include <string>
 #include <vector>
 
 namespace Blackthorn::Assets {
 
-class IAssetStorage {
+class BLACKTHORN_API IAssetStorage {
 public:
 	virtual ~IAssetStorage() = default;
 	virtual size_t size() const = 0;

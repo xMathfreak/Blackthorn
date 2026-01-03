@@ -5,7 +5,6 @@
 #include "Assets/IAssetLoader.h"
 #include "Assets/IAssetStorage.h"
 #include "Core/Export.h"
-#include "SDL3/SDL_log.h"
 
 #include <filesystem>
 #include <string>
