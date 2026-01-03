@@ -190,6 +190,17 @@ void Engine::processEvents() {
 			case SDL_EVENT_WINDOW_FOCUS_LOST:
 				windowFocused = false;
 				break;
+			case SDL_EVENT_KEY_DOWN:
+				#ifdef BLACKTHORN_DEBUG
+					if (event.key.key == SDLK_F5) {
+						size_t reloadCount = assetManager.reloadAllTyped<Graphics::Texture>();
+						SDL_Log("Reloaded %llu assets", reloadCount);
+					}
+				#endif
+				
+				break;
+			default:
+				break;
 		}
 	}
 }
