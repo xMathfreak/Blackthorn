@@ -1,9 +1,10 @@
 #pragma once
 
+#include "Assets/AssetManager.h"
 #include "Core/EngineConfig.h"
 #include "Core/Export.h"
-#include "Graphics/Renderer.h"
 #include "ECS/World.h"
+#include "Graphics/Renderer.h"
 
 #include <SDL3/SDL.h>
 
@@ -31,9 +32,10 @@ public:
 
 	void logEngineInfo();
 
+	Assets::AssetManager& getAssetManager() { return assetManager; }
+	ECS::World& getWorld() { return world; }
 	SDL_Window* getWindow() const { return window; }
 	Graphics::Renderer* getRenderer() const { return renderer.get(); }
-	ECS::World& getWorld() { return world; }
 private:
 	bool initialized;
 	bool running;
@@ -44,12 +46,14 @@ private:
 
 	EngineConfig config;
 
+	Assets::AssetManager assetManager;
+	ECS::World world;
 	SDL_Window* window;
 	SDL_GLContext glContext;
 	std::unique_ptr<Graphics::Renderer> renderer;
-	ECS::World world;
 
 	void initDefaultSystems();
+	void initAssetLoaders();
 };
 
 }

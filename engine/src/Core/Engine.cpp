@@ -1,4 +1,5 @@
 #include "Core/Engine.h"
+#include "Assets/Loaders/TextureLoader.h"
 #include "ECS/Systems/KinematicsSystem.h"
 #include "ECS/Systems/RenderSystem.h"
 
@@ -120,6 +121,7 @@ bool Engine::init(const EngineConfig& cfg) {
 		logEngineInfo();
 	#endif
 
+	initAssetLoaders();
 	initDefaultSystems();
 
 	initialized = true;
@@ -129,6 +131,12 @@ bool Engine::init(const EngineConfig& cfg) {
 void Engine::initDefaultSystems() {
 	world.addSystem<ECS::Systems::KinematicsSystem>();
 	world.addSystem<ECS::Systems::RenderSystem>(*renderer.get());
+}
+
+void Engine::initAssetLoaders() {
+	assetManager.registerLoader<Graphics::Texture>(
+		std::make_unique<Graphics::TextureLoader>()
+	);
 }
 
 void Engine::shutdown() {
@@ -155,13 +163,6 @@ void Engine::render(float alpha) {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	renderer->beginScene();
-
-	#ifdef BLACKTHORN_DEBUG
-		SDL_FRect testRect = {100.0f, 100.0f, 100.0f, 100.0f};
-		Graphics::Texture tex("assets/image.png");
-		// SDL_FColor testColor = {1.0f, 0.0f, 1.0f, 1.0f};
-		renderer->drawTexture(tex, testRect);
-	#endif
 
 	world.render(alpha);
 
