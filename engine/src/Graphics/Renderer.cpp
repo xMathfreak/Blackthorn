@@ -127,13 +127,7 @@ void Renderer::flush() {
 			textureSlots[i]->bind(i);
 	}
 
-	static GLuint lastShaderID = 0;
-
-	if (shader->id() != lastShaderID) {
-		shader->bind();
-		lastShaderID = shader->id();
-	}
-
+	shader->bind();
 	QuadVAO->bind();
 
 	glDrawElements(GL_TRIANGLES, quadIndexCount, GL_UNSIGNED_INT, nullptr);
