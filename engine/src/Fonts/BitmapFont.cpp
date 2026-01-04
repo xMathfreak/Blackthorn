@@ -1,0 +1,511 @@
+#include "Fonts/BitmapFont.h"
+
+#include <algorithm>
+#include <cstring>
+#include <fstream>
+#include <sstream>
+
+namespace Blackthorn {
+
+std::shared_ptr<Graphics::Shader> BitmapFont::fontShader = nullptr;
+Uint32 BitmapFont::fontShaderRefCount = 0;
+
+namespace Internal {
+
+size_t TextCacheKey::hash() const noexcept {
+	size_t h = 0;
+
+	h ^= std::hash<std::string>{}(text);
+	h ^= std::hash<float>{}(scale) << 1;
+	h ^= std::hash<float>{}(maxWidth) << 2;
+	h ^= static_cast<size_t>(alignment) << 3;
+
+	Uint32 packedColor = 
+		(static_cast<Uint8>(color.r * 255.0f) << 24) |
+		(static_cast<Uint8>(color.g * 255.0f) << 16) |
+		(static_cast<Uint8>(color.b * 255.0f) << 8) |
+		(static_cast<Uint8>(color.a * 255.0f));
+
+	h ^= packedColor << 4;
+
+	return h;
+}
+
+} // namespace Internal
+
+BitmapFont::~BitmapFont() {
+	clearCache();
+
+	fontShaderRefCount--;
+	if (fontShaderRefCount == 0)
+		cleanupShader();
+}
+
+BitmapFont::BitmapFont(BitmapFont&& other) noexcept
+	: texture(std::move(other.texture))
+	, glyphs(std::move(other.glyphs))
+	, lineHeight(other.lineHeight)
+	, spaceWidth(other.spaceWidth)
+	, tabWidth(other.tabWidth)
+	, cache(std::move(other.cache))
+	, cacheOrder(std::move(other.cacheOrder))
+	, maxCacheSize(other.maxCacheSize)
+{}
+
+BitmapFont& BitmapFont::operator=(BitmapFont&& other) noexcept {
+	if (this != &other) {
+		texture = std::move(other.texture);
+		glyphs = std::move(other.glyphs);
+		lineHeight = other.lineHeight;
+		spaceWidth = other.spaceWidth;
+		tabWidth = other.tabWidth;
+		cache = std::move(other.cache);
+		cacheOrder = std::move(other.cacheOrder);
+		maxCacheSize = other.maxCacheSize;
+	}
+
+	return *this;
+}
+
+bool BitmapFont::loadFromFile(const std::string& texturePath, const std::string& metricsPath) {
+	texture = std::make_unique<Graphics::Texture>(texturePath);
+
+	if (!texture->isValid()) {
+		#ifdef BLACKTHORN_DEBUG
+			SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to load font texture: %s", texturePath.c_str());
+		#endif
+
+		return false;
+	}
+
+	std::ifstream file(metricsPath);
+
+	if (!file.is_open()) {
+		#ifdef BLACKTHORN_DEBUG
+			SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to load font metrics: %s", metricsPath.c_str());
+		#endif
+
+		return false;
+	}
+
+	std::string line;
+	while (std::getline(file, line)) {
+		if (line.empty() || line[0] == '#')
+			continue;
+
+		std::istringstream iss(line);
+		std::string command;
+
+		iss >> command;
+
+		if (command == "common" || command == "global") {
+			std::string key;
+			while (iss >> key) {
+				size_t eq = key.find('=');
+				if (eq != std::string::npos) {
+					std::string name = key.substr(0, eq);
+					int value = std::stoi(key.substr(eq + 1));
+
+					if (name == "lineHeight") {
+						lineHeight = static_cast<float>(value);
+					}
+				}
+			}
+		} else if (command == "char") {
+			Uint32 id = 0;
+			Glyph glyph{};
+
+			std::string key;
+			while (iss >> key) {
+				size_t eq = key.find('=');
+				if (eq != std::string::npos) {
+					std::string name = key.substr(0, eq);
+					std::string token = key.substr(eq + 1);
+					
+					if (token.empty())
+						continue;
+
+					int value = 0;
+					try {
+						value = std::stoi(token);
+					} catch(const std::invalid_argument&) {
+						#ifdef BLACKTHORN_DEBUG
+							SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "Invalid character %s in font metrics %s", token.c_str(), metricsPath.c_str());
+						#endif
+
+						continue;
+					}
+
+					if (name == "id") {
+						id = value;
+					} else if (name == "x") {
+						glyph.rect.x = value;
+					} else if (name == "y") {
+						glyph.rect.y = value;
+					} else if (name == "width" || name == "w") {
+						glyph.rect.w = value;
+					} else if (name == "height" || name == "h") {
+						glyph.rect.h = value;
+					} else if (name == "xoffset") {
+						glyph.xOffset = value;
+					} else if (name == "yoffset") {
+						glyph.yOffset = value;
+					} else if (name == "xadvance") {
+						glyph.xAdvance = value;
+					}
+				}
+			}
+
+			if (id == 0) {
+				#ifdef BLACKTHORN_DEBUG
+					SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "Skipping glyph with missing or invalid id in %s", metricsPath.c_str());
+				#endif
+
+				continue;
+			}
+
+			glyphs[id] = glyph;
+		}
+	}
+
+	if (glyphs.count(' ')) {
+		spaceWidth = glyphs[' '].xAdvance;
+	} else {
+		spaceWidth = lineHeight * 0.25f;
+	}
+
+	tabWidth = spaceWidth * 4.0f;
+
+	#ifdef BLACKTHORN_DEBUG
+		SDL_Log("BitmapFont loaded %llu glyphs from %s, lineHeight=%.1f", glyphs.size(), metricsPath.c_str(), lineHeight);
+	#endif
+
+	return true;
+}
+
+bool BitmapFont::loadFromBMFont(const std::string& bmfPath) {
+	return false;
+}
+
+float BitmapFont::computeLineWidth(std::string_view line, float scale) const {
+	float width = 0.0f;
+
+	for (char c : line) {
+		if (c == ' ') {
+			width += spaceWidth * scale;
+		} else if (c == '\t') {
+			width += tabWidth * scale;
+		} else {
+			auto it = glyphs.find(static_cast<Uint32>(c));
+			if (it != glyphs.end())
+				width += it->second.xAdvance * scale;
+		}
+	}
+
+	return width;
+}
+
+void BitmapFont::wrapText(std::string_view text, float scale, float maxWidth, std::vector<std::string_view>& outLines) const {
+	outLines.clear();
+
+	if (maxWidth <= 0.0f) {
+		size_t start = 0;
+		for (size_t i = 0; i < text.length(); ++i) {
+			if (text[i] == '\n') {
+				outLines.push_back(text.substr(start, i - start));
+				start = i + 1;
+			}
+		}
+
+		if (start < text.length())
+			outLines.push_back(text.substr(start));
+
+		return;
+	}
+
+	size_t lineStart = 0;
+	size_t lastSpace = 0;
+	float currentWidth = 0.0f;
+
+	for (size_t i = 0; i < text.length(); ++i) {
+		char c = text[i];
+
+		if (c == '\n') {
+			outLines.push_back(text.substr(lineStart, i - lineStart));
+			lineStart = i + 1;
+			lastSpace = i + 1;
+			currentWidth = 0.0f;
+			continue;
+		}
+
+		float charWidth = 0.0f;
+		if (c == ' ') {
+			charWidth = spaceWidth * scale;
+			lastSpace = i;
+		} else if (c == '\t') {
+			charWidth = tabWidth * scale;
+		} else {
+			auto it = glyphs.find(static_cast<Uint32>(c));
+			if (it != glyphs.end())
+				charWidth = it->second.xAdvance * scale;
+		}
+
+		currentWidth += charWidth;
+
+		if (currentWidth > maxWidth) {
+			if (lastSpace > lineStart) {
+				outLines.push_back(text.substr(lineStart, lastSpace - lineStart));
+				lineStart = lastSpace + 1;
+				i = lastSpace;
+			} else {
+				outLines.push_back(text.substr(lineStart, i - lineStart));
+				lineStart = i;
+			}
+
+			currentWidth = 0.0f;
+		}
+	}
+
+	if (lineStart < text.length())
+		outLines.push_back(text.substr(lineStart));
+}
+
+TextMetrics BitmapFont::computeMetrics(std::string_view text, float scale, float maxWidth) const {
+	lineBuffer.clear();
+	wrapText(text, scale, maxWidth, lineBuffer);
+
+	float maxLineWidth = 0.0f;
+	for (const auto& line : lineBuffer) {
+		float lineWidth = computeLineWidth(line, scale);
+		maxLineWidth = std::max(maxLineWidth, lineWidth);
+	}
+
+	return {
+		maxLineWidth,
+		lineHeight * scale * lineBuffer.size(),
+		lineBuffer.size()
+	};
+}
+
+TextMetrics BitmapFont::measure(std::string_view text, float scale, float maxWidth) const {
+	return computeMetrics(text, scale, maxWidth);
+}
+
+void BitmapFont::clearCache() {
+	for (auto& [key, cached] : cache) {
+		cached.vao.destroy();
+		cached.vbo.destroy();
+	}
+
+	cache.clear();
+	cacheOrder.clear();
+}
+
+void BitmapFont::evictOldestCache() {
+	if (cacheOrder.empty())
+		return;
+
+	const Internal::TextCacheKey& oldest = cacheOrder.back();
+	auto it = cache.find(oldest);
+
+	if (it != cache.end()) {
+		it->second.vao.destroy();
+		it->second.vbo.destroy();
+		cache.erase(it);
+	}
+
+	cacheOrder.pop_back();
+}
+
+BitmapFont::CachedText& BitmapFont::getCache(const Internal::TextCacheKey& key){
+	auto it = cache.find(key);
+
+	if (it != cache.end()) {
+		cacheOrder.erase(
+			std::remove(cacheOrder.begin(), cacheOrder.end(), key),
+			cacheOrder.end()
+		);
+
+		cacheOrder.push_front(key);
+		return it->second;
+	}
+
+	if (cache.size() >= maxCacheSize)
+		evictOldestCache();
+
+	CachedText cached;
+
+	vertexBuffer.clear();
+	generateVertices(key.text, 0, 0, key.scale, key.maxWidth, key.color, key.alignment, vertexBuffer, true);
+
+	cached.vao.create();
+	cached.vbo.create();
+
+	cached.vao.bind();
+	cached.vbo.setData(vertexBuffer.data(), vertexBuffer.size() * sizeof(TextVertex), GL_STATIC_DRAW);
+
+	cached.vao.enableAttrib(0, 3, GL_FLOAT, sizeof(TextVertex), offsetof(TextVertex, position));
+	cached.vao.enableAttrib(1, 4, GL_FLOAT, sizeof(TextVertex), offsetof(TextVertex, color));
+	cached.vao.enableAttrib(2, 2, GL_FLOAT, sizeof(TextVertex), offsetof(TextVertex, texCoord));
+
+	Graphics::VAO::unbind();
+
+	cached.vertexCount = vertexBuffer.size();
+
+	cache[key] = std::move(cached);
+	cacheOrder.push_front(key);
+
+	return cache[key];
+}
+
+void BitmapFont::generateVertices(std::string_view text, float x, float y, float scale, float maxWidth, const SDL_FColor& color, TextAlign alignment, std::vector<TextVertex>& outVertices, bool flipY) const {
+	lineBuffer.clear();
+	wrapText(text, scale, maxWidth, lineBuffer);
+
+	outVertices.clear();
+	outVertices.reserve(lineBuffer.size() * text.length() * 6);
+
+	float currentY = y;
+	float texWidth = static_cast<float>(texture->getWidth());
+	float texHeight = static_cast<float>(texture->getHeight());
+
+	for (const auto& line : lineBuffer) {
+		float lineWidth = computeLineWidth(line, scale);
+		float currentX = x;
+
+		switch (alignment) {
+			case TextAlign::TopCenter:
+			case TextAlign::Center:
+			case TextAlign::BottomCenter:
+				currentX -= lineWidth * 0.5f;
+				break;
+			case TextAlign::TopRight:
+			case TextAlign::CenterRight:
+			case TextAlign::BottomRight:
+				currentX -= lineWidth;
+			default:
+				break;
+		}
+
+		for (char c : line) {
+			if (c == ' ') {
+				currentX += spaceWidth * scale;
+				continue;
+			} else if (c == '\t') {
+				currentX += tabWidth * scale;
+				continue;
+			}
+
+			auto it = glyphs.find(static_cast<Uint32>(c));
+			if (it == glyphs.end())
+				continue;
+
+			const Glyph& glyph = it->second;
+
+			float glyphX = currentX + glyph.xOffset * scale;
+			float glyphY = currentY + glyph.yOffset * scale;
+			float glyphW = glyph.rect.w * scale;
+			float glyphH = glyph.rect.h * scale;
+
+			float u0 = glyph.rect.x / texWidth;
+			float u1 = (glyph.rect.x + glyph.rect.w) / texWidth;
+			float v0, v1;
+
+			if (flipY) {
+				v0 = (glyph.rect.y + glyph.rect.h) / texHeight;
+				v1 = glyph.rect.y / texHeight;
+			} else {
+				v0 = 1.0f - glyph.rect.y / texHeight;
+				v1 = 1.0f - (glyph.rect.y + glyph.rect.h) / texHeight;
+			}
+
+			glm::vec4 glmColor(color.r, color.g, color.b, color.a);
+
+			outVertices.push_back({{glyphX, glyphY, 0.0f}, {u0, v0}, glmColor});
+			outVertices.push_back({{glyphX + glyphW, glyphY, 0.0f}, {u1, v0}, glmColor});
+			outVertices.push_back({{glyphX + glyphW, glyphY + glyphH, 0.0f}, {u1, v1}, glmColor});
+			
+			outVertices.push_back({{glyphX, glyphY, 0.0f}, {u0, v0}, glmColor});
+			outVertices.push_back({{glyphX + glyphW, glyphY + glyphH, 0.0f}, {u1, v1}, glmColor});
+			outVertices.push_back({{glyphX, glyphY + glyphH, 0.0f}, {u0, v1}, glmColor});
+
+			currentX += glyph.xAdvance * scale;
+		}
+
+		currentY += lineHeight * scale;
+	}
+}
+
+void BitmapFont::draw(std::string_view text, const glm::vec2& position, float scale, float maxWidth, const SDL_FColor& color, TextAlign alignment) {
+	if (!isLoaded())
+		return;
+
+	vertexBuffer.clear();
+	generateVertices(text, position.x, position.y, scale, maxWidth, color, alignment, vertexBuffer);
+
+	if (vertexBuffer.empty())
+		return;
+
+	const float texWidth = texture->getWidth();
+	const float texHeight = texture->getHeight();
+
+	for (size_t i = 0; i < vertexBuffer.size(); i += 6) {
+		const TextVertex* v = &vertexBuffer[i];
+
+		SDL_FRect src{
+			v[0].texCoord.x * texWidth,
+			v[0].texCoord.y * texHeight,
+			(v[1].texCoord.x - v[0].texCoord.x) * texWidth,
+			(v[2].texCoord.y - v[0].texCoord.y) * texHeight
+		};
+
+		SDL_FRect dest{
+			v[0].position.x,
+			v[0].position.y,
+			(v[1].position.x - v[0].position.x),
+			(v[2].position.y - v[0].position.y)
+		};
+
+		renderer->drawTexture(*texture, dest, &src, 0.0f, 0.0f, color);
+	}
+}
+
+void BitmapFont::drawCached(std::string_view text, const glm::vec2& position, float scale, float maxWidth, const SDL_FColor& color, TextAlign alignment) {
+	if (!isLoaded())
+		return;
+
+	Internal::TextCacheKey key {
+		std::string(text), scale, maxWidth, color, alignment
+	};
+
+	CachedText& cached = getCache(key);
+
+	if (cached.vertexCount == 0)
+		return;
+
+	fontShader->bind();
+	fontShader->setVec2("u_Offset", position.x, position.y);
+
+	texture->bind();
+	cached.vao.bind();
+	
+	glDrawArrays(GL_TRIANGLES, 0, cached.vertexCount);
+	Graphics::VAO::unbind();
+	Graphics::Shader::unbind();
+}
+
+void BitmapFont::initializeShader() {
+	if (!fontShader) {
+		fontShader = std::make_shared<Graphics::Shader>("assets/shaders/font.vert", "assets/shaders/font.frag");
+
+		#ifdef BLACKTHORN_DEBUG
+			SDL_Log("Font Shader initialized");
+		#endif
+	}
+}
+
+void BitmapFont::cleanupShader() {
+	fontShader.reset();
+}
+
+} // namespace Blackthorn
