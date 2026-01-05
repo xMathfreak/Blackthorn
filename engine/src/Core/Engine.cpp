@@ -1,4 +1,6 @@
 #include "Core/Engine.h"
+#include "Assets/Loaders/BitmapFontLoader.h"
+#include "Fonts/BitmapFont.h"
 #include "Assets/Loaders/TextureLoader.h"
 #include "ECS/Systems/KinematicsSystem.h"
 #include "ECS/Systems/RenderSystem.h"
@@ -137,6 +139,10 @@ void Engine::initAssetLoaders() {
 	assetManager.registerLoader<Graphics::Texture>(
 		std::make_unique<Graphics::TextureLoader>()
 	);
+
+	assetManager.registerLoader<BitmapFont>(
+		std::make_unique<BitmapFontLoader>(renderer.get())
+	);
 }
 
 void Engine::shutdown() {
@@ -193,7 +199,7 @@ void Engine::processEvents() {
 			case SDL_EVENT_KEY_DOWN:
 				#ifdef BLACKTHORN_DEBUG
 					if (event.key.key == SDLK_F5) {
-						size_t reloadCount = assetManager.reloadAllTyped<Graphics::Texture>();
+						size_t reloadCount = assetManager.reloadAllTyped<Graphics::Texture, BitmapFont>();
 						SDL_Log("Reloaded %llu assets", reloadCount);
 					}
 				#endif
