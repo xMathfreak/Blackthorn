@@ -1,15 +1,17 @@
 #pragma once
 
+#include "Core/Export.h"
+
 #include <memory>
 
 namespace Blackthorn::Assets {
 
-struct LoadParams {
+struct BLACKTHORN_API LoadParams {
 	virtual ~LoadParams() = default;
 	virtual std::unique_ptr<LoadParams> clone() const = 0;
 };
 
-struct PathLoadParams final : LoadParams {
+struct BLACKTHORN_API PathLoadParams final : LoadParams {
 	std::string path;
 
 	explicit PathLoadParams(std::string p) 
