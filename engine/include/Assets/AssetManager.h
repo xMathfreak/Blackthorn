@@ -34,25 +34,15 @@ public:
 	AssetType* load(const std::string& id, const LoadParams& params) {
 		std::type_index type = std::type_index(typeid(AssetType));
 
-		if (has<AssetType>(id))
-			return get<AssetType>(id);
-
-		auto loaderIt = loaders.find(type);
-		if (loaderIt == loaders.end())
+		auto it = loaders.find(type);
+		if (it == loaders.end())
 			return nullptr;
 
-		LoaderWrapper<AssetType>* lw = static_cast<LoaderWrapper<AssetType>*>(loaderIt->second.get());
-		std::unique_ptr<AssetType> asset = lw->loader->load(params);
-
-		if (!asset)
+		if (!it->second->load(*this, id, params))
 			return nullptr;
-
-		AssetType* rawPtr = asset.get();
-		getStorage<AssetType>()->add(id, std::move(asset));
 
 		assetParams[id] = params.clone();
-
-		return rawPtr;
+		return get<AssetType>(id);
 	}
 
 	template <typename AssetType>
@@ -284,6 +274,8 @@ private:
 	class ILoaderWrapper {
 	public:
 		virtual ~ILoaderWrapper() = default;
+		virtual bool load(AssetManager& manager, const std::string& id, const LoadParams& params) = 0;
+		virtual std::vector<std::string> getSupportedExtensions() const = 0;
 	};
 
 	template <typename AssetType>
@@ -293,6 +285,24 @@ private:
 			: loader(std::move(l))
 		{}
 
+		bool load(AssetManager& manager, const std::string& id, const LoadParams& params) override {
+			if (manager.has<AssetType>(id))
+				return true;
+
+			auto asset = loader->load(params);
+
+			if (!asset)
+				return false;
+
+			manager.getStorage<AssetType>()->add(id, std::move(asset));
+			return true;
+		}
+
+		std::vector<std::string> getSupportedExtensions() const override {
+			return loader->getSupportedExtensions();
+		}
+
+	private:
 		std::unique_ptr<IAssetLoader<AssetType>> loader;
 	};
 
