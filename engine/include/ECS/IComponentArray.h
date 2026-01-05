@@ -1,9 +1,9 @@
 #pragma once
 
+#include <vector>
+
 #include "Core/Export.h"
 #include "ECS/Entity.h"
-
-#include <vector>
 
 namespace Blackthorn::ECS {
 

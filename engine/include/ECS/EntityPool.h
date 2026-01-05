@@ -1,11 +1,11 @@
 #pragma once
 
+#include <array>
+#include <memory>
+
 #include "Core/Export.h"
 #include "ECS/ComponentArray.h"
 #include "ECS/Detail.h"
-
-#include <array>
-#include <memory>
 
 namespace Blackthorn::ECS {
 

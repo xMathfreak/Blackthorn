@@ -1,8 +1,8 @@
 #pragma once
 
-#include "Core/Export.h"
-
 #include <memory>
+
+#include "Core/Export.h"
 
 namespace Blackthorn::Assets {
 

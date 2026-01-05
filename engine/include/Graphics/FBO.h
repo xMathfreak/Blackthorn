@@ -1,16 +1,16 @@
 #pragma once
 
-#include "Core/Export.h"
-#include <Graphics/Texture.h>
+#include <memory>
 
 #include <glad/glad.h>
 
-#include <memory>
+#include "Core/Export.h"
+#include "Graphics/Texture.h"
 
 namespace Blackthorn::Graphics {
 
 /**
- * @brief RAII Wrapper class for an OpenGL Frame Buffer Object with a color attachment.
+ * @brief RAII wrapper class for an OpenGL Frame Buffer Object with a color attachment.
  * 
  * The frame buffer owns s single color texture attachment, which can be sampled after rendering.
  * 

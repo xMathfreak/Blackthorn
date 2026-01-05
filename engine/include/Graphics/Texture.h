@@ -1,10 +1,10 @@
 #pragma once
 
-#include "Core/Export.h"
+#include <string>
 
 #include <glad/glad.h>
 
-#include <string>
+#include "Core/Export.h"
 
 namespace Blackthorn::Graphics {
 
@@ -18,6 +18,9 @@ enum class TextureFilter {
 	Linear
 };
 
+/**
+ * @brief Texture wrapping modes.
+ */
 enum class TextureWrap {
 	/// Repeat texture coordinates
 	Repeat,

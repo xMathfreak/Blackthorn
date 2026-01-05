@@ -85,7 +85,7 @@ public:
 	const std::vector<Entity>& entities() const override { return dense; }
 
 	T& getByIndex(size_t i) { return components[i]; }
-	const T& getByIndex(size_t i) const { return components[i];  }
+	const T& getByIndex(size_t i) const { return components[i]; }
 };
 
 } // namespace Blackthorn::ECS

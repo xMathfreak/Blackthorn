@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Core/Export.h"
+
 #include <string>
 
 namespace Blackthorn {

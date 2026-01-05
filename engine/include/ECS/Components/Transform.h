@@ -1,8 +1,8 @@
 #pragma once
 
-#include "Core/Export.h"
-
 #include <glm/glm.hpp>
+
+#include "Core/Export.h"
 
 namespace Blackthorn::ECS::Components {
 

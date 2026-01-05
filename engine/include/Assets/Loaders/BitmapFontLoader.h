@@ -4,7 +4,7 @@
 #include "Fonts/BitmapFont.h"
 #include "Graphics/Renderer.h"
 
-namespace Blackthorn {
+namespace Blackthorn::Fonts {
 
 struct BLACKTHORN_API BitmapParams : Assets::LoadParams {
 	std::string texturePath;

@@ -1,18 +1,18 @@
 #pragma once
 
+#include <array>
+#include <memory>
+
+#include <glm/glm.hpp>
+#include <SDL3/SDL.h>
+
 #include "Core/Export.h"
+#include "Graphics/EBO.h"
 #include "Graphics/Shader.h"
 #include "Graphics/Texture.h"
-#include "Graphics/EBO.h"
 #include <Graphics/UBO.h>
 #include "Graphics/VAO.h"
 #include "Graphics/VBO.h"
-
-#include <SDL3/SDL.h>
-#include <glm/glm.hpp>
-
-#include <array>
-#include <memory>
 
 namespace Blackthorn::Graphics {
 

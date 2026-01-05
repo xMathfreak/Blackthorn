@@ -1,16 +1,16 @@
 #pragma once
 
-#include "Core/Export.h"
+#include <string>
+#include <unordered_map>
 
 #include <glad/glad.h>
 
-#include <string>
-#include <unordered_map>
+#include "Core/Export.h"
 
 namespace Blackthorn::Graphics {
 
 /**
- * @brief RAII Wrapper for an OpenGL shader program.
+ * @brief RAII wrapper for an OpenGL shader program.
  * 
  * This class owns the linked program object and automatically deletes
  * it on destruction. Uniform locations are cached after first lookup

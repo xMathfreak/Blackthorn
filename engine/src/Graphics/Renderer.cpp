@@ -51,10 +51,10 @@ void Renderer::initQuadBuffers() {
 
 	glBufferData(GL_ARRAY_BUFFER, MAX_VERTICES * sizeof(Vertex2D), nullptr, GL_DYNAMIC_DRAW);
 
-    QuadVAO->enableAttrib(0, 3, GL_FLOAT, sizeof(Vertex2D), offsetof(Vertex2D, position));
-    QuadVAO->enableAttrib(1, 4, GL_FLOAT, sizeof(Vertex2D), offsetof(Vertex2D, color));
-    QuadVAO->enableAttrib(2, 2, GL_FLOAT, sizeof(Vertex2D), offsetof(Vertex2D, texCoords));
-    QuadVAO->enableAttrib(3, 1, GL_FLOAT, sizeof(Vertex2D), offsetof(Vertex2D, texIndex));
+	QuadVAO->enableAttrib(0, 3, GL_FLOAT, sizeof(Vertex2D), offsetof(Vertex2D, position));
+	QuadVAO->enableAttrib(1, 4, GL_FLOAT, sizeof(Vertex2D), offsetof(Vertex2D, color));
+	QuadVAO->enableAttrib(2, 2, GL_FLOAT, sizeof(Vertex2D), offsetof(Vertex2D, texCoords));
+	QuadVAO->enableAttrib(3, 1, GL_FLOAT, sizeof(Vertex2D), offsetof(Vertex2D, texIndex));
 
 	std::vector<GLuint> indices;
 	indices.reserve(MAX_INDICES);
@@ -294,7 +294,7 @@ void Renderer::setView(const glm::mat4& view) {
 	globalUBO->uploadField(&GlobalData::viewProjection);
 }
 
-inline bool Renderer::isVisible(const SDL_FRect& rect, float rotation) const  {
+inline bool Renderer::isVisible(const SDL_FRect& rect, float rotation) const {
 	if (!cullingEnabled)
 		return true;
 

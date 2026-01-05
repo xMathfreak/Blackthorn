@@ -1,10 +1,10 @@
 #pragma once
 
-#include "Core/Export.h"
-#include "ECS/ISystem.h"
-
 #include <algorithm>
 #include <vector>
+
+#include "Core/Export.h"
+#include "ECS/ISystem.h"
 
 namespace Blackthorn::ECS::Systems {
 

@@ -1,11 +1,11 @@
 #pragma once
 
-#include "Core/Export.h"
-#include "Scene/IScene.h"
-
 #include <functional>
 #include <memory>
 #include <vector>
+
+#include "Core/Export.h"
+#include "Scene/IScene.h"
 
 namespace Blackthorn::Scene {
 

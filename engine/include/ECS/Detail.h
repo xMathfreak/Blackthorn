@@ -1,9 +1,9 @@
 #pragma once
 
-#include <ECS/Entity.h>
-
 #include <atomic>
 #include <cassert>
+
+#include "ECS/Entity.h"
 
 namespace Blackthorn::ECS::Detail {
 	constexpr Uint32 MAX_ENTITIES = 8192;

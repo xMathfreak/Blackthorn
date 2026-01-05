@@ -5,7 +5,7 @@
 #include <fstream>
 #include <sstream>
 
-namespace Blackthorn {
+namespace Blackthorn::Fonts {
 
 std::shared_ptr<Graphics::Shader> BitmapFont::fontShader = nullptr;
 Uint32 BitmapFont::fontShaderRefCount = 0;
@@ -499,7 +499,7 @@ void BitmapFont::initializeShader() {
 		fontShader = std::make_shared<Graphics::Shader>("assets/shaders/font.vert", "assets/shaders/font.frag");
 
 		#ifdef BLACKTHORN_DEBUG
-			SDL_Log("Font Shader initialized");
+			SDL_Log("Fonts Shader initialized");
 		#endif
 	}
 }

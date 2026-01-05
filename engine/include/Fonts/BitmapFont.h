@@ -1,5 +1,12 @@
 #pragma once
 
+#include <deque>
+#include <memory>
+#include <string>
+
+#include <glm/glm.hpp>
+#include <SDL3/SDL.h>
+
 #include "Core/Export.h"
 #include "Graphics/Renderer.h"
 #include "Graphics/Shader.h"
@@ -7,14 +14,7 @@
 #include "Graphics/VAO.h"
 #include "Graphics/VBO.h"
 
-#include <deque>
-#include <glm/glm.hpp>
-#include <SDL3/SDL.h>
-
-#include <memory>
-#include <string>
-
-namespace Blackthorn {
+namespace Blackthorn::Fonts {
 
 enum class TextAlign {
 	TopLeft,
@@ -69,18 +69,18 @@ struct TextCacheKey {
 
 } // namespace Internal
 
-} // namespace Blackthorn
+} // namespace Blackthorn::Fonts
 
 namespace std {
 	template <>
-	struct hash<Blackthorn::Internal::TextCacheKey> {
-		size_t operator()(const Blackthorn::Internal::TextCacheKey& key) const noexcept {
+	struct hash<Blackthorn::Fonts::Internal::TextCacheKey> {
+		size_t operator()(const Blackthorn::Fonts::Internal::TextCacheKey& key) const noexcept {
 			return key.hash();
 		}
 	};
 } // namespace std
 
-namespace Blackthorn {
+namespace Blackthorn::Fonts {
 
 class BLACKTHORN_API BitmapFont {
 private:
@@ -160,4 +160,4 @@ public:
 	static void cleanupShader();
 };
 
-} // namespace Blackthorn
+} // namespace Blackthorn::Fonts

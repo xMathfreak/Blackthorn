@@ -1,19 +1,18 @@
 #pragma once
 
-#include "Core/Export.h"
+#include <utility>
 
+#include <glad/glad.h>
 #ifdef BLACKTHORN_DEBUG
 	#include <SDL3/SDL.h>
 #endif
 
-#include <glad/glad.h>
-
-#include <utility>
+#include "Core/Export.h"
 
 namespace Blackthorn::Graphics {
 
 /**
- * @brief RAII Wrapper for an OpenGL Uniform Buffer Object.
+ * @brief RAII wrapper for an OpenGL Uniform Buffer Object.
  * 
  * Manages the lifetime and data synchronization of a uniform buffer storing
  * a trivially copyable C++ struct.

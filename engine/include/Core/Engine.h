@@ -1,12 +1,12 @@
 #pragma once
 
+#include <SDL3/SDL.h>
+
 #include "Assets/AssetManager.h"
 #include "Core/EngineConfig.h"
 #include "Core/Export.h"
 #include "ECS/World.h"
 #include "Graphics/Renderer.h"
-
-#include <SDL3/SDL.h>
 
 namespace Blackthorn {
 

@@ -1,9 +1,9 @@
 #pragma once
 
-#include "Assets/IAssetStorage.h"
-
 #include <memory>
 #include <unordered_map>
+
+#include "Assets/IAssetStorage.h"
 
 namespace Blackthorn::Assets {
 

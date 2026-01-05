@@ -1,15 +1,15 @@
 #pragma once
 
-#include "Assets/AssetHandle.h"
-#include "Assets/AssetStorage.h"
-#include "Assets/IAssetLoader.h"
-#include "Assets/IAssetStorage.h"
-#include "Core/Export.h"
-
 #include <filesystem>
 #include <string>
 #include <typeindex>
 #include <unordered_map>
+
+#include "Core/Export.h"
+#include "Assets/AssetHandle.h"
+#include "Assets/AssetStorage.h"
+#include "Assets/IAssetLoader.h"
+#include "Assets/IAssetStorage.h"
 
 namespace Blackthorn::Assets {
 

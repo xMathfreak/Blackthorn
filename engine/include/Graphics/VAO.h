@@ -1,14 +1,13 @@
 #pragma once
 
-#include "Core/Export.h"
+#include <vector>
 
 #include <glad/glad.h>
-
 #ifdef BLACKTHORN_DEBUG
 	#include <SDL3/SDL.h>
 #endif
 
-#include <vector>
+#include "Core/Export.h"
 
 namespace Blackthorn::Graphics {
 
@@ -39,7 +38,7 @@ struct VertexAttribute {
 };
 
 /**
- * @brief RAII Wrapper for an OpenGL Vertex Array Object.
+ * @brief RAII wrapper for an OpenGL Vertex Array Object.
  * 
  * Copying is disallowed to enforce unique ownership of the OpenGL
  * resource. Move semantics are supported.

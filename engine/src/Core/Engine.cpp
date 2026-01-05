@@ -1,11 +1,12 @@
 #include "Core/Engine.h"
+
+#include <glad/glad.h>
+
 #include "Assets/Loaders/BitmapFontLoader.h"
-#include "Fonts/BitmapFont.h"
 #include "Assets/Loaders/TextureLoader.h"
 #include "ECS/Systems/KinematicsSystem.h"
 #include "ECS/Systems/RenderSystem.h"
-
-#include <glad/glad.h>
+#include "Fonts/BitmapFont.h"
 
 namespace Blackthorn {
 
@@ -140,8 +141,8 @@ void Engine::initAssetLoaders() {
 		std::make_unique<Graphics::TextureLoader>()
 	);
 
-	assetManager.registerLoader<BitmapFont>(
-		std::make_unique<BitmapFontLoader>(renderer.get())
+	assetManager.registerLoader<Fonts::BitmapFont>(
+		std::make_unique<Fonts::BitmapFontLoader>(renderer.get())
 	);
 }
 
@@ -169,7 +170,7 @@ void Engine::render(float alpha) {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	renderer->beginScene();
-
+	
 	world.render(alpha);
 
 	renderer->endScene();
@@ -199,7 +200,7 @@ void Engine::processEvents() {
 			case SDL_EVENT_KEY_DOWN:
 				#ifdef BLACKTHORN_DEBUG
 					if (event.key.key == SDLK_F5) {
-						size_t reloadCount = assetManager.reloadAllTyped<Graphics::Texture, BitmapFont>();
+						size_t reloadCount = assetManager.reloadAllTyped<Graphics::Texture, Fonts::BitmapFont>();
 						SDL_Log("Reloaded %llu assets", reloadCount);
 					}
 				#endif
@@ -351,4 +352,4 @@ void Engine::logEngineInfo() {
 	#endif
 }
 
-}
+} // namespace Blackthorn

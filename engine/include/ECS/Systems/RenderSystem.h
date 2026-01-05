@@ -2,8 +2,8 @@
 
 #include "Graphics/Renderer.h"
 #include "ECS/Components/Kinematics.h"
-#include "ECS/Components/Transform.h"
 #include "ECS/Components/Sprite.h"
+#include "ECS/Components/Transform.h"
 #include "ECS/ISystem.h"
 
 namespace Blackthorn::ECS::Systems {
