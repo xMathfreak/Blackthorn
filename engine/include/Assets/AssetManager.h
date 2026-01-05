@@ -31,7 +31,7 @@ public:
 	}
 
 	template <typename AssetType>
-	AssetType* load(const std::string& id, const std::string& path) {
+	AssetType* load(const std::string& id, const LoadParams& params) {
 		std::type_index type = std::type_index(typeid(AssetType));
 
 		if (has<AssetType>(id))
@@ -42,7 +42,7 @@ public:
 			return nullptr;
 
 		LoaderWrapper<AssetType>* lw = static_cast<LoaderWrapper<AssetType>*>(loaderIt->second.get());
-		std::unique_ptr<AssetType> asset = lw->loader->load(path);
+		std::unique_ptr<AssetType> asset = lw->loader->load(params);
 
 		if (!asset)
 			return nullptr;
@@ -50,10 +50,15 @@ public:
 		AssetType* rawPtr = asset.get();
 		getStorage<AssetType>()->add(id, std::move(asset));
 
-		assetPaths[id] = path;
-		pathToID[path] = id;
+		assetParams[id] = params.clone();
 
 		return rawPtr;
+	}
+
+	template <typename AssetType>
+	AssetType* load(const std::string& id, const std::string& path) {
+		PathLoadParams params(path);
+		return load<AssetType>(id, params);
 	}
 
 	template <typename AssetType>
@@ -153,7 +158,7 @@ public:
 
 		if (storage) {
 			storage->remove(id);
-			assetPaths.erase(id);
+			assetParams.erase(id);
 		}
 	}
 
@@ -162,7 +167,7 @@ public:
 		auto* storage = getStorage<AssetType>();
 		if (storage) {
 			for (const auto& id : storage->getAllIDs())
-				assetPaths.erase(id);
+				assetParams.erase(id);
 
 			storage->clear();
 		}
@@ -172,21 +177,20 @@ public:
 		for (auto& [type, storage] : storages)
 			storage->clear();
 
-		assetPaths.clear();
-		pathToID.clear();
+		assetParams.clear();
 		aliases.clear();
 	}
 
 	template <typename AssetType>
 	bool reload(const std::string& id) {
-		auto pathIt = assetPaths.find(id);
-		if (pathIt == assetPaths.end())
+		auto pathIt = assetParams.find(id);
+		if (pathIt == assetParams.end())
 			return false;
 
-		std::string path = pathIt->second;
+		auto paramCopy = pathIt->second->clone();
 		unload<AssetType>(id);
 
-		return load<AssetType>(id, path) != nullptr;
+		return load<AssetType>(id, *paramCopy) != nullptr;
 	}
 
 	template <typename AssetType>
@@ -196,19 +200,27 @@ public:
 		if (!storage)
 			return 0;
 
-		std::vector<std::pair<std::string, std::string>> toReload;
+		struct ReloadItem {
+			std::string id;
+			std::unique_ptr<LoadParams> param;
+		};
+
+		std::vector<ReloadItem> toReload;
+		toReload.reserve(storage->size());
 
 		for (const auto& id : storage->getAllIDs()) {
-			auto pathIt = assetPaths.find(id);
-			if (pathIt != assetPaths.end())
-				toReload.emplace_back(id, pathIt->second);
+			auto it = assetParams.find(id);
+			if (it != assetParams.end()) {
+				toReload.push_back({id, it->second->clone()});
+			}
 		}
 
 		size_t reloaded = 0;
 
-		for (const auto& [id, path] : toReload) {
-			unload<AssetType>(id);
-			if (load<AssetType>(id, path) != nullptr)
+		for (auto& item : toReload) {
+			unload<AssetType>(item.id);
+
+			if (load<AssetType>(item.id, *item.param))
 				++reloaded;
 		}
 
@@ -247,7 +259,7 @@ public:
 	template <typename AssetType>
 	std::vector<std::string> getAllIDs() const {
 		auto* storage = getStorage<AssetType>();
-		return storage ? storage->getAllIDs : std::vector<std::string>{};
+		return storage ? storage->getAllIDs() : std::vector<std::string>{};
 	}
 
 private:
@@ -287,8 +299,7 @@ private:
 	std::unordered_map<std::type_index, std::unique_ptr<IAssetStorage>> storages;
 	std::unordered_map<std::type_index, std::unique_ptr<ILoaderWrapper>> loaders;
 
-	std::unordered_map<std::string, std::string> assetPaths;
-	std::unordered_map<std::string, std::string> pathToID;
+	std::unordered_map<std::string, std::unique_ptr<LoadParams>> assetParams;
 
 	std::unordered_map<std::string, std::string> aliases;
 

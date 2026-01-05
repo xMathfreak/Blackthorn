@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Assets/LoadParams.h"
 #include "Core/Export.h"
 
 #include <memory>
@@ -11,7 +12,7 @@ template <typename AssetType>
 class BLACKTHORN_API IAssetLoader {
 public:
 	virtual ~IAssetLoader() = default;
-	virtual std::unique_ptr<AssetType> load(const std::string& path) = 0;
+	virtual std::unique_ptr<AssetType> load(const LoadParams& params) = 0;
 	virtual std::vector<std::string> getSupportedExtensions() const = 0;
 };
 
