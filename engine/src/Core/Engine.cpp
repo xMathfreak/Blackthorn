@@ -4,8 +4,6 @@
 
 #include "Assets/Loaders/BitmapFontLoader.h"
 #include "Assets/Loaders/TextureLoader.h"
-#include "ECS/Systems/KinematicsSystem.h"
-#include "ECS/Systems/RenderSystem.h"
 #include "Fonts/BitmapFont.h"
 
 namespace Blackthorn {
@@ -125,15 +123,9 @@ bool Engine::init(const EngineConfig& cfg) {
 	#endif
 
 	initAssetLoaders();
-	initDefaultSystems();
 
 	initialized = true;
 	return true;
-}
-
-void Engine::initDefaultSystems() {
-	world.addSystem<ECS::Systems::KinematicsSystem>();
-	world.addSystem<ECS::Systems::RenderSystem>(*renderer.get());
 }
 
 void Engine::initAssetLoaders() {
@@ -171,7 +163,7 @@ void Engine::render(float alpha) {
 
 	renderer->beginScene();
 	
-	world.render(alpha);
+	sceneManager.render(alpha);
 
 	renderer->endScene();
 
@@ -181,6 +173,8 @@ void Engine::render(float alpha) {
 void Engine::processEvents() {
 	SDL_Event event;
 	while (SDL_PollEvent(&event)) {
+		inputManager.handleEvent(event);
+
 		switch (event.type) {
 			case SDL_EVENT_QUIT:
 				running = false;
@@ -213,11 +207,12 @@ void Engine::processEvents() {
 }
 
 void Engine::update(float dt) {
-	world.update(dt);
+	inputManager.update(dt);
+	sceneManager.update(dt);
 }
 
 void Engine::fixedUpdate(float dt) {
-	world.fixedUpdate(dt);
+	sceneManager.fixedUpdate(dt);
 }
 
 void Engine::run() {

@@ -5,8 +5,9 @@
 #include "Assets/AssetManager.h"
 #include "Core/EngineConfig.h"
 #include "Core/Export.h"
-#include "ECS/World.h"
+#include "Input/InputManager.h"
 #include "Graphics/Renderer.h"
+#include "Scene/SceneManager.h"
 
 namespace Blackthorn {
 
@@ -33,26 +34,26 @@ public:
 	void logEngineInfo();
 
 	Assets::AssetManager& getAssetManager() { return assetManager; }
-	ECS::World& getWorld() { return world; }
-	SDL_Window* getWindow() const { return window; }
 	Graphics::Renderer* getRenderer() const { return renderer.get(); }
+	Input::InputManager& getInputManager() { return inputManager; }
+	Scene::SceneManager& getSceneManager() { return sceneManager; }
+	SDL_Window* getWindow() const { return window; }
+
 private:
 	bool initialized;
 	bool running;
 
+	float fps;
+	EngineConfig config;
 	bool windowFocused;
 
-	float fps;
-
-	EngineConfig config;
-
 	Assets::AssetManager assetManager;
-	ECS::World world;
+	std::unique_ptr<Graphics::Renderer> renderer;
+	Input::InputManager inputManager;
+	Scene::SceneManager sceneManager;
 	SDL_Window* window;
 	SDL_GLContext glContext;
-	std::unique_ptr<Graphics::Renderer> renderer;
 
-	void initDefaultSystems();
 	void initAssetLoaders();
 };
 
