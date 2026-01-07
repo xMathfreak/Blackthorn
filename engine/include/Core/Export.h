@@ -13,5 +13,5 @@
 		#define BLACKTHORN_API
 	#endif
 #else
-	#define BLACKBLACKTHORN_API
+	#define BLACKTHORN_API
 #endif
