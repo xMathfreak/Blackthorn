@@ -99,14 +99,14 @@ public:
 		if (button >= mouseButtons.size())
 			return false;
 
-		return mouseButtons[button] ==  ButtonState::Pressed;
+		return mouseButtons[button] == ButtonState::Pressed;
 	}
 
 	bool isMouseButtonReleased(Uint8 button) const {
 		if (button >= mouseButtons.size())
 			return false;
 
-		return mouseButtons[button] ==  ButtonState::Released;
+		return mouseButtons[button] == ButtonState::Released;
 	}
 
 	void registerAction(const std::string& action, SDL_Keycode key, SDL_Keycode altKey = SDLK_UNKNOWN) {

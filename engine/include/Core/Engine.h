@@ -55,6 +55,7 @@ private:
 	SDL_GLContext glContext;
 
 	void initAssetLoaders();
+	void cleanupInitialization();
 };
 
 }

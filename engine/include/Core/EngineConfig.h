@@ -18,8 +18,8 @@ struct BLACKTHORN_API WindowConfig {
 struct BLACKTHORN_API RenderConfig {
 	int openglMajor = 3;
 	int openglMinor = 3;
-	int depthBits = 24;
-	int stencilBits = 8;
+	int depthBits = 16;
+	int stencilBits = 0;
 	int msaaSamples = 0;
 };
 

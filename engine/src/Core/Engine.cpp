@@ -76,17 +76,13 @@ bool Engine::init(const EngineConfig& cfg) {
 
 	if (!SDL_GL_MakeCurrent(window, glContext)) {
 		SDL_LogError(SDL_LOG_CATEGORY_ERROR, "SDL_GL_MakeCurrent failed: %s", SDL_GetError());
-		SDL_GL_DestroyContext(glContext);
-		SDL_DestroyWindow(window);
-		SDL_Quit();
+		cleanupInitialization();
 		return false;
 	}
 
 	if (!gladLoadGLLoader((GLADloadproc)SDL_GL_GetProcAddress)) {
 		SDL_LogError(SDL_LOG_CATEGORY_ERROR, "Failed to initialize GLAD");
-		SDL_GL_DestroyContext(glContext);
-		SDL_DestroyWindow(window);
-		SDL_Quit();
+		cleanupInitialization();
 		return false;
 	}
 
@@ -111,9 +107,7 @@ bool Engine::init(const EngineConfig& cfg) {
 			e.what()
 		);
 
-		SDL_GL_DestroyContext(glContext);
-		SDL_DestroyWindow(window);
-		SDL_Quit();
+		cleanupInitialization();
 
 		return false;
 	}
@@ -125,6 +119,11 @@ bool Engine::init(const EngineConfig& cfg) {
 	initAssetLoaders();
 
 	initialized = true;
+
+	#ifdef BLACKTHORN_DEBUG
+		SDL_Log("Blackthorn Engine initialized successfully");
+	#endif
+
 	return true;
 }
 
@@ -191,18 +190,14 @@ void Engine::processEvents() {
 			case SDL_EVENT_WINDOW_FOCUS_LOST:
 				windowFocused = false;
 				break;
-			case SDL_EVENT_KEY_DOWN:
-				#ifdef BLACKTHORN_DEBUG
-					if (event.key.key == SDLK_F5) {
-						size_t reloadCount = assetManager.reloadAllTyped<Graphics::Texture, Fonts::BitmapFont>();
-						SDL_Log("Reloaded %llu assets", reloadCount);
-					}
-				#endif
-				
-				break;
 			default:
 				break;
 		}
+
+		#ifdef BLACKTHORN_DEBUG
+			if (inputManager.isKeyPressed(SDLK_F5))
+				assetManager.reloadAllTyped<Graphics::Texture, Fonts::BitmapFont>();
+		#endif
 	}
 }
 
@@ -345,6 +340,20 @@ void Engine::logEngineInfo() {
 	#else
 		SDL_Log("GLM using scalar math (no SIMD)");
 	#endif
+}
+
+void Engine::cleanupInitialization() {
+	if (glContext) {
+		SDL_GL_DestroyContext(glContext);
+		glContext = nullptr;
+	}
+
+	if (window) {
+		SDL_DestroyWindow(window);
+		window = nullptr;
+	}
+
+	SDL_Quit();
 }
 
 } // namespace Blackthorn
