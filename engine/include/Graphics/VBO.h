@@ -124,7 +124,7 @@ public:
 
 		#ifdef BLACKTHORN_DEBUG
 			SDL_Log(
-				"VBO %u: Uploaded %zu bytes (%zu elements of size %zu)",
+				"VBO %u: Uploaded %lld bytes (%lld elements of size %lld)",
 				id, size, data.size(), sizeof(T)
 			);
 		#endif
@@ -167,7 +167,7 @@ public:
 			#ifdef BLACKTHORN_DEBUG
 				SDL_LogError(
 					SDL_LOG_CATEGORY_RENDER,
-					"VBO %u: Update would overflow buffer (offset %zu + data %zu > buffer %zu)",
+					"VBO %u: Update would overflow buffer (offset %lld + data %lld > buffer %lld)",
 					id, offset, dataSize, size
 				);
 			#endif

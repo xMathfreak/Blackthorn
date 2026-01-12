@@ -194,7 +194,7 @@ public:
 			#ifdef BLACKTHORN_DEBUG
 				SDL_LogError(
 					SDL_LOG_CATEGORY_RENDER, 
-					"EBO %u: Update would overflow buffer (offset %zu + data %zu > buffer %zu)", 
+					"EBO %u: Update would overflow buffer (offset %lld + data %lld > buffer %lld)", 
 					id, offsetInBytes, dataSize, size
 				);
 			#endif
