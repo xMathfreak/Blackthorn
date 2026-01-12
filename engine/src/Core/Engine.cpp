@@ -4,6 +4,7 @@
 
 #include "Assets/Loaders/BitmapFontLoader.h"
 #include "Assets/Loaders/TextureLoader.h"
+#include "Debug/Profiler.h"
 #include "Fonts/BitmapFont.h"
 
 namespace Blackthorn {
@@ -35,7 +36,7 @@ bool Engine::init(const EngineConfig& cfg) {
 	config = cfg;
 
 	#ifdef BLACKTHORN_DEBUG
-		SDL_Log("Initializing Blackthorn Engine");
+		SDL_Log("========= Initializing Blackthorn Engine ==========");
 		SDL_SetLogPriority(SDL_LOG_CATEGORY_APPLICATION, SDL_LOG_PRIORITY_VERBOSE);
 	#else
 		SDL_SetLogPriority(SDL_LOG_CATEGORY_APPLICATION, SDL_LOG_PRIORITY_INFO);
@@ -86,7 +87,6 @@ bool Engine::init(const EngineConfig& cfg) {
 		return false;
 	}
 
-
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
@@ -98,8 +98,20 @@ bool Engine::init(const EngineConfig& cfg) {
 
 	glViewport(0, 0, cfg.window.width, cfg.window.height);
 
+	#ifdef BLACKTHORN_DEBUG
+		logEngineInfo();
+	#endif
+
 	try {
+		#ifdef BLACKTHORN_DEBUG
+			SDL_Log("============== Initializing Renderer ==============");
+		#endif
+
 		renderer = std::make_unique<Graphics::Renderer>();
+
+		#ifdef BLACKTHORN_DEBUG
+			SDL_Log("===================================================");
+		#endif
 	} catch (const std::exception& e) {
 		SDL_LogError(
 			SDL_LOG_CATEGORY_RENDER,
@@ -112,16 +124,12 @@ bool Engine::init(const EngineConfig& cfg) {
 		return false;
 	}
 
-	#ifdef BLACKTHORN_DEBUG
-		logEngineInfo();
-	#endif
-
 	initAssetLoaders();
 
 	initialized = true;
 
 	#ifdef BLACKTHORN_DEBUG
-		SDL_Log("Blackthorn Engine initialized successfully");
+		SDL_Log("=== Blackthorn Engine initialization successful ===");
 	#endif
 
 	return true;
@@ -216,6 +224,8 @@ void Engine::run() {
 		return;
 	}
 
+	PROFILE_SCOPE("Frame");
+
 	Uint64 lastFrameTime = SDL_GetPerformanceCounter();
 	float accumulatedTime = 0.0f;
 	const float frequency = static_cast<float>(SDL_GetPerformanceFrequency());
@@ -223,12 +233,14 @@ void Engine::run() {
 	running = true;
 
 	#ifdef BLACKTHORN_DEBUG
-		Uint64 lastFPSTime = lastFrameTime;
-		int frameCount = 0;
-		fps = 0;
+		auto& profiler = Debug::Profiler::instance();
 	#endif
 
 	while (running) {
+		#ifdef BLACKTHORN_DEBUG
+			profiler.beginFrame();
+		#endif
+
 		Uint64 currentTime = SDL_GetPerformanceCounter();
 		float frameTime = static_cast<float>(currentTime - lastFrameTime) / frequency;
 		lastFrameTime = currentTime;
@@ -246,9 +258,16 @@ void Engine::run() {
 
 		accumulatedTime += frameTime;
 
-		processEvents();
+		{
+			PROFILE_SCOPE("Events");
+			processEvents();
+		}
 
 		if (!windowFocused) {
+			#ifdef BLACKTHORN_DEBUG
+				profiler.endFrame();
+			#endif
+			
 			Uint32 unfocusedDelay = static_cast<Uint32>(1000.0f / config.timing.unfocusedFPS);
 			SDL_Delay(unfocusedDelay);
 			continue;
@@ -256,38 +275,48 @@ void Engine::run() {
 
 		int fixedUpdateCount = 0;
 
-		while (accumulatedTime >= config.timing.fixedDeltaTime) {
-			fixedUpdate(config.timing.fixedDeltaTime);
-			accumulatedTime -= config.timing.fixedDeltaTime;
-			fixedUpdateCount++;
+		{
+			PROFILE_SCOPE("Fixed Update Loop");
+			while (accumulatedTime >= config.timing.fixedDeltaTime) {
+				PROFILE_SCOPE("Fixed Update");
+				fixedUpdate(config.timing.fixedDeltaTime);
+				accumulatedTime -= config.timing.fixedDeltaTime;
+				fixedUpdateCount++;
 
-			if (fixedUpdateCount > config.timing.maxFixedUpdates) {
-				#ifdef BLACKTHORN_DEBUG
-					SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
-						"Too many fixed updates in one frame (%d)",
-						fixedUpdateCount
-					);
-				#endif
+				if (fixedUpdateCount > config.timing.maxFixedUpdates) {
+					#ifdef BLACKTHORN_DEBUG
+						SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+							"Too many fixed updates in one frame (%d)",
+							fixedUpdateCount
+						);
+					#endif
 
-				accumulatedTime = 0.0f;
-				break;
+					accumulatedTime = 0.0f;
+					break;
+				}
 			}
 		}
 
-
-		update(frameTime);
+		{
+			PROFILE_SCOPE("Update");
+			update(frameTime);
+		}
 
 		float alpha = accumulatedTime / config.timing.fixedDeltaTime;
-		render(alpha);
+		{
+			PROFILE_SCOPE("Render");
+			render(alpha);
+		}
 
 		#ifdef BLACKTHORN_DEBUG
-			frameCount++;
-			float elapsedFPSTime = static_cast<float>(currentTime - lastFPSTime) / frequency;
-			if (elapsedFPSTime > 1.0f) {
-				fps = frameCount / elapsedFPSTime;
-				SDL_Log("FPS: %.2f (Frame Time: %.3fms)", fps, (1000.0f / fps));
-				frameCount = 0;
-				lastFPSTime = currentTime;
+			static float logCounter = 0.0f;
+			logCounter += frameTime;
+			
+			profiler.endFrame();
+			
+			if (logCounter >= config.debug.profilingLogInterval) {
+				logProfilingInfo();
+				logCounter = 0;
 			}
 		#endif
 
@@ -305,6 +334,7 @@ void Engine::run() {
 }
 
 void Engine::logEngineInfo() {
+	SDL_Log("=================== Engine Info ===================");
 	SDL_Log("OpenGL Version: %s", glGetString(GL_VERSION));
 	SDL_Log("GLSL Version: %s", glGetString(GL_SHADING_LANGUAGE_VERSION));
 	SDL_Log("Renderer: %s", glGetString(GL_RENDERER));
@@ -340,6 +370,8 @@ void Engine::logEngineInfo() {
 	#else
 		SDL_Log("GLM using scalar math (no SIMD)");
 	#endif
+
+	SDL_Log("===================================================");
 }
 
 void Engine::cleanupInitialization() {
@@ -355,5 +387,38 @@ void Engine::cleanupInitialization() {
 
 	SDL_Quit();
 }
+
+#ifdef BLACKTHORN_DEBUG
+	void Engine::logProfilingInfo() {
+		auto& profiler = Debug::Profiler::instance();
+
+		SDL_Log("====== Performance Stats (60 frames average) ======");
+		SDL_Log("Frame Time: %.2f ms (%.1f FPS)",
+			profiler.getAverageFrameTime(60),
+			1000.0f / profiler.getAverageFrameTime(60)
+		);
+
+		auto scopeNames = profiler.getAllScopeNames();
+		for (const auto& name : scopeNames) {
+			auto stats = profiler.getStats(name, 60);
+
+			if (stats.average > 0.1f) {
+				SDL_Log(" %s: %.2f ms (min: %.2f, max: %.2f, calls: %d)",
+					name.c_str(),
+					stats.average,
+					stats.min,
+					stats.max,
+					stats.callCount
+				);
+			}
+		}
+
+		SDL_Log("===================================================");
+	}
+
+	float Engine::getFPS() const {
+		return 1000.0f / Debug::Profiler::instance().getAverageFrameTime(60);
+	}
+#endif
 
 } // namespace Blackthorn

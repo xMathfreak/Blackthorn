@@ -32,10 +32,17 @@ struct BLACKTHORN_API TimingConfig {
 	int unfocusedFPS = 10;
 };
 
+struct DebugConfig {
+	float profilingLogInterval = 1.0f;
+};
+
 struct BLACKTHORN_API EngineConfig {
 	WindowConfig window;
 	RenderConfig render;
 	TimingConfig timing;
+	
+	DebugConfig  debug;
 };
+
 
 }

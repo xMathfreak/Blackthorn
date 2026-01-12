@@ -43,7 +43,6 @@ private:
 	bool initialized;
 	bool running;
 
-	float fps;
 	EngineConfig config;
 	bool windowFocused;
 
@@ -56,6 +55,11 @@ private:
 
 	void initAssetLoaders();
 	void cleanupInitialization();
+
+	#ifdef BLACKTHORN_DEBUG
+		void logProfilingInfo();
+		float getFPS() const;
+	#endif
 };
 
 }
