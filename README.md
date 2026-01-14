@@ -10,7 +10,8 @@ The project is split into a sample game application and a reusable library.
 - C++20-compatible compiler
 - OpenGL
 - SDL3
-- SDL3_image
+- SDL_image
+- SDL_ttf
 
 These are expected to be installed on your system and discoverable via `find_package`.
 
@@ -32,7 +33,7 @@ git submodule update --init --recursive
 ## Building
 ### Debug Build
 ```bash
-cmake -S . -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DCMAKE_BUILD_TYPE=Debug
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
 cmake --build build --config Debug
 ```
 This build:
@@ -42,7 +43,7 @@ This build:
 
 ### Release Build
 ```bash
-cmake -S . -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DCMAKE_BUILD_TYPE=Release
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build --config Release
 ```
 This build:
@@ -52,7 +53,7 @@ This build:
 ### Compile Commands (Optional)
 To generate `compile_commands.json` for IDEs and tooling:
 ```bash
-cmake -S . -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+cmake -S . -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=1
 ```
 This file will appear in the `/build` directory.
 ### Run the executable
