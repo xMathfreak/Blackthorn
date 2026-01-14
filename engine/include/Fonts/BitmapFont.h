@@ -4,10 +4,8 @@
 #include <memory>
 #include <string>
 
-#include <glm/glm.hpp>
-#include <SDL3/SDL.h>
-
 #include "Core/Export.h"
+#include "Fonts/Font.h"
 #include "Graphics/Renderer.h"
 #include "Graphics/Shader.h"
 #include "Graphics/Texture.h"
@@ -16,29 +14,11 @@
 
 namespace Blackthorn::Fonts {
 
-enum class TextAlign {
-	TopLeft,
-	TopCenter,
-	TopRight,
-	CenterLeft,
-	Center,
-	CenterRight,
-	BottomLeft,
-	BottomCenter,
-	BottomRight
-};
-
 struct Glyph {
 	SDL_FRect rect;
 	Sint16 xOffset;
 	Sint16 yOffset;
 	Sint16 xAdvance;
-};
-
-struct TextMetrics {
-	float width;
-	float height;
-	size_t lineCount;
 };
 
 struct TextVertex {
@@ -82,7 +62,7 @@ namespace std {
 
 namespace Blackthorn::Fonts {
 
-class BLACKTHORN_API BitmapFont {
+class BLACKTHORN_API BitmapFont : public Font {
 private:
 	static std::shared_ptr<Graphics::Shader> fontShader;
 	static Uint32 fontShaderRefCount;
@@ -141,16 +121,16 @@ public:
 	bool loadFromFile(const std::string& texturePath, const std::string& metricsPath);
 	bool loadFromBMFont(const std::string& bmfPath);
 
-	void draw(std::string_view text, const glm::vec2& position, float scale = 1.0f, float maxWidth = 0.0f, const SDL_FColor& color = {1.0f, 1.0f, 1.0f, 1.0f}, TextAlign alignment = TextAlign::TopLeft);
-	void drawCached(std::string_view text, const glm::vec2& position, float scale = 1.0f, float maxWidth = 0.0f, const SDL_FColor& color = {1.0f, 1.0f, 1.0f, 1.0f}, TextAlign alignment = TextAlign::TopLeft);
+	void draw(std::string_view text, const glm::vec2& position, float scale = 1.0f, float maxWidth = 0.0f, const SDL_FColor& color = {1.0f, 1.0f, 1.0f, 1.0f}, TextAlign alignment = TextAlign::TopLeft) override;
+	void drawCached(std::string_view text, const glm::vec2& position, float scale = 1.0f, float maxWidth = 0.0f, const SDL_FColor& color = {1.0f, 1.0f, 1.0f, 1.0f}, TextAlign alignment = TextAlign::TopLeft) override;
 
-	TextMetrics measure(std::string_view text, float scale = 1.0f, float maxWidth = 0.0f) const;
+	TextMetrics measure(std::string_view text, float scale = 1.0f, float maxWidth = 0.0f) const override;
 
 	void setCacheSize(size_t maxSize) { maxCacheSize = maxSize; }
 	size_t getCacheSize() const { return cache.size(); }
 	void invalidateCache() { clearCache(); }
 
-	float getLineHeight() const { return lineHeight; }
+	float getLineHeight() const override { return lineHeight; }
 	float getSpaceWidth() const { return spaceWidth; }
 	float getTabWidth() const { return tabWidth; }
 	bool isLoaded() const { return texture != nullptr; }
