@@ -165,4 +165,4 @@ private:
 	}
 };
 
-} // Blackthorn::Input
+} // namespace Blackthorn::Input

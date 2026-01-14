@@ -36,4 +36,4 @@ private:
 	AssetManager* manager;
 };
 
-} // namesace Blackthorn::Assets
+} // namespace Blackthorn::Assets
