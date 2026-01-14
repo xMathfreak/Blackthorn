@@ -41,6 +41,7 @@ option(BLACKTHORN_BUILD_APP "Build sample application" ON)
 find_package(OpenGL REQUIRED)
 find_package(SDL3 REQUIRED)
 find_package(SDL3_image REQUIRED)
+find_package(SDL3_ttf REQUIRED)
 
 add_subdirectory(third_party)
 add_subdirectory(engine)

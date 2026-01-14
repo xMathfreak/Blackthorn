@@ -73,6 +73,7 @@ target_link_libraries(${PROJECT_NAME}
 		glm::glm
 		SDL3::SDL3
 		SDL3_image::SDL3_image
+		SDL3_ttf::SDL3_ttf
 		glad
 		glfw
 		
@@ -99,6 +100,13 @@ if(WIN32)
 	add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
 		COMMAND ${CMAKE_COMMAND} -E copy_if_different
 		$<TARGET_FILE:SDL3_image::SDL3_image>
+		${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+	)
+
+	# Copy SDL3_image DLL if it exists
+	add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E copy_if_different
+		$<TARGET_FILE:SDL3_ttf::SDL3_ttf>
 		${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
 	)
 endif()
