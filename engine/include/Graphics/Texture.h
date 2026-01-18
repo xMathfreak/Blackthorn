@@ -3,6 +3,7 @@
 #include <string>
 
 #include <glad/glad.h>
+#include <SDL3/SDL.h>
 
 #include "Core/Export.h"
 
@@ -153,6 +154,15 @@ public:
 	 * @return True on success, false otherwise.
 	 */
 	bool loadFromFile(const std::string& path, const TextureParams& parameters = TextureParams());
+
+	/**
+	 * @brief Loads texture data from an SDL Surface.
+	 * @param surface The SDL_Surface pointer.
+	 * @param parameters Texture sampling and wrapping parameters.
+	 * @return True on success, false otherwise.
+	 * @note This method does not destroy the SDL_Surface passed to it.
+	 */
+	bool loadFromSurface(SDL_Surface* surface, const TextureParams& parameters = TextureParams());
 
 	/**
 	 * @brief Loads texture data from memory.

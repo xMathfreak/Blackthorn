@@ -2,10 +2,6 @@
 
 #include <SDL3_image/SDL_image.h>
 
-#ifdef BLACKTHORN_DEBUG
-	#include <SDL3/SDL.h>
-#endif
-
 namespace Blackthorn::Graphics {
 
 GLenum Texture::toGLFilter(TextureFilter filter) {
@@ -97,6 +93,9 @@ Texture& Texture::operator=(Texture&& other) noexcept {
 }
 
 bool Texture::loadFromFile(const std::string& path, const TextureParams& parameters) {
+	if (id != 0)
+		glDeleteTextures(1, &id);
+
 	this->params = parameters;
 
 	SDL_Surface* surface = IMG_Load(path.c_str());
@@ -104,7 +103,7 @@ bool Texture::loadFromFile(const std::string& path, const TextureParams& paramet
 		#ifdef BLACKTHORN_DEBUG
 			SDL_LogError(
 				SDL_LOG_CATEGORY_RENDER,
-				"Failed to load texture '%s': '%s",
+				"Failed to load texture '%s': '%s'",
 				path.c_str(), SDL_GetError()
 			);
 		#endif
@@ -148,16 +147,74 @@ bool Texture::loadFromFile(const std::string& path, const TextureParams& paramet
 
 	glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width, height, 0, format, GL_UNSIGNED_BYTE, surface->pixels);
 
+	applyParams();
+
 	if (params.generateMipmaps)
 		glGenerateMipmap(GL_TEXTURE_2D);
 
-	applyParams();
 	SDL_DestroySurface(surface);
 
 	return true;
 }
 
+bool Texture::loadFromSurface(SDL_Surface* surface, const TextureParams& parameters) {
+	if (id != 0)
+		glDeleteTextures(1, &id);
+
+	if (!surface)
+		return false;
+
+	this->params = parameters;
+	SDL_Surface* uploadSurface = surface;
+
+	GLenum format = GL_RGBA;
+	GLenum internalFormat = GL_RGBA8;
+
+	switch (surface->format) {
+		case SDL_PIXELFORMAT_RGB24:
+			format = GL_RGB;
+			internalFormat = GL_RGB8;
+			channels = 3;
+			break;
+		case SDL_PIXELFORMAT_RGBA32:
+			format = GL_RGBA;
+			internalFormat = GL_RGBA8;
+			channels = 4;
+			break;
+		default:
+			uploadSurface = SDL_ConvertSurface(surface, SDL_PIXELFORMAT_RGBA32);
+			if (!uploadSurface)
+				return false;
+
+			format = GL_RGBA;
+			internalFormat = GL_RGBA8;
+			channels = 4;
+			break;
+	}
+
+	width = uploadSurface->w;
+	height = uploadSurface->h;
+
+	glGenTextures(1, &id);
+	glBindTexture(GL_TEXTURE_2D, id);
+
+	glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width, height, 0, format, GL_UNSIGNED_BYTE, uploadSurface->pixels);
+
+	applyParams();
+
+	if (params.generateMipmaps)
+		glGenerateMipmap(GL_TEXTURE_2D);
+
+	if (uploadSurface != surface)
+		SDL_DestroySurface(uploadSurface);
+
+	return true;
+}
+
 bool Texture::loadFromMemory(int w, int h, int ch, const void* data, const TextureParams& parameters) {
+	if (id != 0)
+		glDeleteTextures(1, &id);
+
 	if (data == nullptr || w <= 0 || h <= 0 || ch < 1 || ch > 4) {
 		#ifdef BLACKTHORN_DEBUG
 			SDL_LogError(SDL_LOG_CATEGORY_RENDER, "Invalid texture parameters");
@@ -200,10 +257,10 @@ bool Texture::loadFromMemory(int w, int h, int ch, const void* data, const Textu
 
 	glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width, height, 0, format, GL_UNSIGNED_BYTE, data);
 
+	applyParams();
+
 	if (params.generateMipmaps)
 		glGenerateMipmap(GL_TEXTURE_2D);
-
-	applyParams();
 
 	return true;
 }
