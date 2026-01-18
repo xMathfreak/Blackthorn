@@ -20,6 +20,10 @@ Renderer::Renderer()
 
 	initQuadBuffers();
 	initShader();
+
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+	glPixelStorei(GL_PACK_ALIGNMENT, 1);
+
 	initWhiteTexture();
 
 	globalUBO = std::make_unique<UBO<GlobalData>>();
