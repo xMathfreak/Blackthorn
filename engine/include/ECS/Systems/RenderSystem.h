@@ -9,10 +9,10 @@
 namespace Blackthorn::ECS::Systems {
 
 class BLACKTHORN_API RenderSystem : public ISystem {
-	Graphics::Renderer& renderer;
+	Graphics::Renderer* renderer;
 
 public:
-	BLACKTHORN_API RenderSystem(Graphics::Renderer& ren) : renderer(ren) {}
+	BLACKTHORN_API RenderSystem(Graphics::Renderer* ren) : renderer(ren) {}
 
 	void render(ECS::EntityPool* pool, float alpha) override {
 		auto view = pool->view<Components::Sprite, Components::Transform, Components::Kinematics*>();
@@ -34,7 +34,7 @@ public:
 			if (s.flipY)
 				s.dest.y *= -1;
 
-			renderer.drawTexture(*s.texture, s.dest, &s.src, t.angle, s.zOrder);
+			renderer->drawTexture(*s.texture, s.dest, &s.src, t.angle, s.zOrder);
 		});
 	}
 };
