@@ -7,7 +7,7 @@
 
 namespace Blackthorn::Fonts {
 
-std::shared_ptr<Graphics::Shader> BitmapFont::fontShader = nullptr;
+std::shared_ptr<Graphics::Shader> BitmapFont::shader = nullptr;
 Uint32 BitmapFont::fontShaderRefCount = 0;
 
 namespace Internal {
@@ -342,11 +342,11 @@ BitmapFont::CachedText& BitmapFont::getCache(const Internal::TextCacheKey& key){
 	cached.vbo.create();
 
 	cached.vao.bind();
-	cached.vbo.setData(vertexBuffer.data(), vertexBuffer.size() * sizeof(TextVertex), GL_STATIC_DRAW);
+	cached.vbo.setData(vertexBuffer.data(), vertexBuffer.size() * sizeof(Vertex), GL_STATIC_DRAW);
 
-	cached.vao.enableAttrib(0, 3, GL_FLOAT, sizeof(TextVertex), offsetof(TextVertex, position));
-	cached.vao.enableAttrib(1, 4, GL_FLOAT, sizeof(TextVertex), offsetof(TextVertex, color));
-	cached.vao.enableAttrib(2, 2, GL_FLOAT, sizeof(TextVertex), offsetof(TextVertex, texCoord));
+	cached.vao.enableAttrib(0, 3, GL_FLOAT, sizeof(Vertex), offsetof(Vertex, position));
+	cached.vao.enableAttrib(1, 4, GL_FLOAT, sizeof(Vertex), offsetof(Vertex, color));
+	cached.vao.enableAttrib(2, 2, GL_FLOAT, sizeof(Vertex), offsetof(Vertex, texCoord));
 
 	Graphics::VAO::unbind();
 
@@ -358,7 +358,7 @@ BitmapFont::CachedText& BitmapFont::getCache(const Internal::TextCacheKey& key){
 	return cache[key];
 }
 
-void BitmapFont::generateVertices(std::string_view text, float x, float y, float scale, float maxWidth, const SDL_FColor& color, TextAlign alignment, std::vector<TextVertex>& outVertices, bool flipY) const {
+void BitmapFont::generateVertices(std::string_view text, float x, float y, float scale, float maxWidth, const SDL_FColor& color, TextAlign alignment, std::vector<Vertex>& outVertices, bool flipY) const {
 	lineBuffer.clear();
 	wrapText(text, scale, maxWidth, lineBuffer);
 
@@ -450,7 +450,7 @@ void BitmapFont::draw(std::string_view text, const glm::vec2& position, float sc
 	const float texHeight = texture->getHeight();
 
 	for (size_t i = 0; i < vertexBuffer.size(); i += 6) {
-		const TextVertex* v = &vertexBuffer[i];
+		const Vertex* v = &vertexBuffer[i];
 
 		SDL_FRect src{
 			v[0].texCoord.x * texWidth,
@@ -483,8 +483,8 @@ void BitmapFont::drawCached(std::string_view text, const glm::vec2& position, fl
 	if (cached.vertexCount == 0)
 		return;
 
-	fontShader->bind();
-	fontShader->setVec2("u_Offset", position.x, position.y);
+	shader->bind();
+	shader->setVec2("u_Offset", position.x, position.y);
 
 	texture->bind();
 	cached.vao.bind();
@@ -495,17 +495,17 @@ void BitmapFont::drawCached(std::string_view text, const glm::vec2& position, fl
 }
 
 void BitmapFont::initializeShader() {
-	if (!fontShader) {
-		fontShader = std::make_shared<Graphics::Shader>("assets/shaders/font.vert", "assets/shaders/font.frag");
+	if (!shader) {
+		shader = std::make_shared<Graphics::Shader>("assets/shaders/font.vert", "assets/shaders/font.frag");
 
 		#ifdef BLACKTHORN_DEBUG
-			SDL_Log("Fonts Shader initialized");
+			SDL_Log("BitmapFont Shader initialized");
 		#endif
 	}
 }
 
 void BitmapFont::cleanupShader() {
-	fontShader.reset();
+	shader.reset();
 }
 
 } // namespace Blackthorn

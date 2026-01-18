@@ -14,19 +14,6 @@
 
 namespace Blackthorn::Fonts {
 
-struct Glyph {
-	SDL_FRect rect;
-	Sint16 xOffset;
-	Sint16 yOffset;
-	Sint16 xAdvance;
-};
-
-struct TextVertex {
-	glm::vec3 position;
-	glm::vec2 texCoord;
-	glm::vec4 color;
-};
-
 namespace Internal {
 
 struct TextCacheKey {
@@ -64,7 +51,29 @@ namespace Blackthorn::Fonts {
 
 class BLACKTHORN_API BitmapFont : public Font {
 private:
-	static std::shared_ptr<Graphics::Shader> fontShader;
+	struct Glyph {
+		SDL_FRect rect;
+		Sint16 xOffset;
+		Sint16 yOffset;
+		Sint16 xAdvance;
+	};
+
+	struct Vertex {
+		glm::vec3 position;
+		glm::vec2 texCoord;
+		glm::vec4 color;
+	};
+
+	struct CachedText {
+		Graphics::VAO vao;
+		Graphics::VBO vbo;
+		size_t vertexCount = 0;
+		float width = 0;
+		float height = 0;
+	};
+
+private:
+	static std::shared_ptr<Graphics::Shader> shader;
 	static Uint32 fontShaderRefCount;
 	Graphics::Renderer* renderer = nullptr;
 
@@ -75,26 +84,18 @@ private:
 	float spaceWidth = 0.0f;
 	float tabWidth = 0.0f;
 
-	struct CachedText {
-		Graphics::VAO vao;
-		Graphics::VBO vbo;
-		size_t vertexCount = 0;
-		float width = 0;
-		float height = 0;
-	};
-
 	std::unordered_map<Internal::TextCacheKey, CachedText> cache;
 	std::deque<Internal::TextCacheKey> cacheOrder;
 	size_t maxCacheSize = 128;
 
 	mutable std::vector<std::string_view> lineBuffer;
 	mutable std::vector<float> lineWidthBuffer;
-	mutable std::vector<TextVertex> vertexBuffer;
+	mutable std::vector<Vertex> vertexBuffer;
 
 	void wrapText(std::string_view text, float scale, float maxWidth, std::vector<std::string_view>& outLines) const;
 	float computeLineWidth(std::string_view line, float scale) const;
 	TextMetrics computeMetrics(std::string_view text, float scale, float maxWidth) const;
-	void generateVertices(std::string_view text, float x, float y, float scale, float maxWidth, const SDL_FColor& color, TextAlign alignment, std::vector<TextVertex>& outVertices, bool flipY = false) const;
+	void generateVertices(std::string_view text, float x, float y, float scale, float maxWidth, const SDL_FColor& color, TextAlign alignment, std::vector<Vertex>& outVertices, bool flipY = false) const;
 
 	CachedText& getCache(const Internal::TextCacheKey& key);
 	void evictOldestCache();
