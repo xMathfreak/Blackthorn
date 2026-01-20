@@ -496,7 +496,7 @@ void BitmapFont::drawCached(std::string_view text, const glm::vec2& position, fl
 
 void BitmapFont::initializeShader() {
 	if (!shader) {
-		shader = std::make_shared<Graphics::Shader>("assets/shaders/font.vert", "assets/shaders/font.frag");
+		shader = std::make_shared<Graphics::Shader>("assets/shaders/font_bitmap.vert", "assets/shaders/font_bitmap.frag");
 
 		#ifdef BLACKTHORN_DEBUG
 			SDL_Log("BitmapFont Shader initialized");
