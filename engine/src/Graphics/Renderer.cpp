@@ -123,6 +123,7 @@ void Renderer::flush() {
 		reinterpret_cast<Uint8*>(quadBufferPtr) - reinterpret_cast<Uint8*>(quadBuffer.get())
 	);
 
+	QuadEBO->bind();
 	QuadVBO->bind();
 	glBufferSubData(GL_ARRAY_BUFFER, 0, dataSize, quadBuffer.get());
 
