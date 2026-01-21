@@ -7,6 +7,7 @@
 
 #include <SDL3_ttf/SDL_ttf.h>
 
+#include "Core/Export.h"
 #include "Fonts/Font.h"
 #include "Graphics/Renderer.h"
 #include "Graphics/Texture.h"
@@ -17,7 +18,7 @@
 
 namespace Blackthorn::Fonts {
 
-class TrueTypeFont : public Font {
+class BLACKTHORN_API TrueTypeFont : public Font {
 public:
 	TrueTypeFont(Graphics::Renderer* renderer);
 	~TrueTypeFont() override;
@@ -42,19 +43,14 @@ private:
 	struct Glyph {
 		glm::vec2 size;
 		glm::vec2 bearing;
-		float advance;
 		glm::vec4 uv;
+		float advance;
 	};
 
 	struct Vertex {
 		glm::vec2 position;
-		glm::vec4 color;
 		glm::vec2 texCoord;
-	};
-
-	struct GlyphBatch {
-		GLsizei indices = 0;
-		std::vector<Vertex> vertices;
+		glm::vec4 color;
 	};
 
 	struct LayoutGlyph {
@@ -69,38 +65,36 @@ private:
 
 private:
 	static std::shared_ptr<Graphics::Shader> shader;
-	static Uint32 shaderRefCount;
-	static void initShader();
-	static void cleanShader();
+	void initShader();
+
+	static constexpr Uint32 MAX_TEXT_GLYPHS = 2048;
+	static constexpr Uint32 MAX_VERTICES = MAX_TEXT_GLYPHS * 4;
+	static constexpr Uint32 MAX_INDICES = MAX_TEXT_GLYPHS * 6;
 
 	std::unique_ptr<Graphics::EBO> ebo;
 	std::unique_ptr<Graphics::VAO> vao;
 	std::unique_ptr<Graphics::VBO> vbo;
-
-	static constexpr Uint32 MAX_GLYPHS = 1 << 11;
-	static constexpr Uint32 MAX_VERTICES = MAX_GLYPHS * 4;
-	static constexpr Uint32 MAX_INDICES = MAX_GLYPHS * 6;
-
 	void initBuffers();
 
 	Graphics::Renderer* renderer;
-	TTF_Font* font;
+	TTF_Font* font = nullptr;
 
 	static constexpr int ATLAS_SIZE = 1024;
 	std::unique_ptr<Graphics::Texture> atlas;
-	glm::ivec2 atlasCursor;
-	int atlasRowHeight;
+	glm::ivec2 atlasCursor{0, 0};
+	int atlasRowHeight = 0;
 
-	int fontSize;	
-	float lineHeight;
+	float lineHeight = 0.0f;
 
 	std::unordered_map<char32_t, Glyph> glyphCache;
+
+private:
 	const Glyph& getGlyph(char32_t codePoint);
-
-	void buildTextGeometry(const std::string& text, float x, float y, const glm::vec4& color, float scale, float maxWidth, std::vector<GlyphBatch>& batches);
-	void renderBatches(const std::vector<GlyphBatch>& batches, float x, float y, const glm::vec4& color, float scale);
-	std::vector<char32_t> utf8To32(const std::string& utf8) const;
-
+	
+	void buildTextGeometry(std::string_view text, float maxWidth, const glm::vec4& color, std::vector<Vertex>& outVertices, GLsizei& outIndexCount);
+	void render(const std::vector<Vertex>& vertices, GLsizei indexCount, const glm::vec2& position, float scale, const glm::vec4& color);
+	
+	std::vector<char32_t> utf8To32(std::string_view utf8) const;
 	std::vector<LayoutLine> layoutText(const std::vector<char32_t>& text, float maxWidth);
 };
 

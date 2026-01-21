@@ -4,32 +4,17 @@
 namespace Blackthorn::Fonts {
 
 std::shared_ptr<Graphics::Shader> TrueTypeFont::shader = nullptr;
-Uint32 TrueTypeFont::shaderRefCount = 0;
 
 TrueTypeFont::TrueTypeFont(Graphics::Renderer* ren)
-	: ebo(nullptr)
-	, vao(nullptr)
-	, vbo(nullptr)
-	, renderer(ren)
-	, font(nullptr)
-	, atlasCursor({0, 0})
-	, atlasRowHeight(0)
-	, fontSize(0)
-	, lineHeight(0)
+	: renderer(ren)
 {
-	if (shaderRefCount == 0)
+	if (!shader)
 		initShader();
 
-	shaderRefCount++;
 	initBuffers();
 }
 
 TrueTypeFont::~TrueTypeFont() {
-	shaderRefCount--;
-
-	if (shaderRefCount == 0)
-		cleanShader();
-
 	if (font)
 		TTF_CloseFont(font);
 }
@@ -44,11 +29,6 @@ void TrueTypeFont::initShader() {
 	}
 }
 
-void TrueTypeFont::cleanShader() {
-	if (shader)
-		shader.reset();
-}
-
 bool TrueTypeFont::loadFromFile(const std::string& filePath, int pointSize) {
 	font = TTF_OpenFont(filePath.c_str(), pointSize);
 	if (!font) {
@@ -56,7 +36,6 @@ bool TrueTypeFont::loadFromFile(const std::string& filePath, int pointSize) {
 		return false;
 	}
 
-	fontSize = pointSize;
 	lineHeight = TTF_GetFontLineSkip(font);
 
 	atlas = std::make_unique<Graphics::Texture>();
@@ -82,9 +61,10 @@ void TrueTypeFont::draw(std::string_view text, const glm::vec2& position, float 
 	if (!font || text.empty())
 		return;
 
-	std::vector<GlyphBatch> batches;
-	buildTextGeometry(std::string(text), position.x, position.y, {color.r, color.g, color.b, color.a}, scale, maxWidth, batches);
-	renderBatches(batches, position.x, position.y, {color.r, color.g, color.b, color.a}, scale);
+	std::vector<Vertex> vertices;
+	GLsizei indices = 0;
+	buildTextGeometry(text, maxWidth, {color.r, color.g, color.b, color.a}, vertices, indices);
+	render(vertices, indices, position, scale, {color.r, color.g, color.b, color.a});
 }
 
 void TrueTypeFont::drawCached(std::string_view text, const glm::vec2& position, float scale, float maxWidth, const SDL_FColor& color, TextAlign alignment) {
@@ -221,9 +201,9 @@ const TrueTypeFont::Glyph& TrueTypeFont::getGlyph(char32_t codePoint) {
 	return glyphCache[codePoint];
 }
 
-void TrueTypeFont::buildTextGeometry(const std::string& text, float x, float y, const glm::vec4& color, float scale, float maxWidth, std::vector<GlyphBatch>& batches) {
-	batches.clear();
-	GlyphBatch batch;
+void TrueTypeFont::buildTextGeometry(std::string_view text, float maxWidth, const glm::vec4& color, std::vector<Vertex>& outVertices, GLsizei& outIndexCount) {
+	outVertices.clear();
+	outIndexCount = 0;
 
 	auto codePoints = utf8To32(text);
 	auto lines = layoutText(codePoints, maxWidth);
@@ -234,40 +214,45 @@ void TrueTypeFont::buildTextGeometry(const std::string& text, float x, float y, 
 		for (const auto& lg : line.glyphs) {	
 			const Glyph& glyph = *lg.glyph;
 
-			if (glyph.size.x == 0)
-				continue;
-
 			float xPos = lg.pos.x;
 			float yPos = cursorY;
 
 			float w = glyph.size.x;
 			float h = glyph.size.y;
 
+			if (w == 0 || h == 0) {
+				outVertices.push_back({{xPos, yPos}, {0, 0}, color});
+				outVertices.push_back({{xPos, yPos}, {0, 0}, color});
+				outVertices.push_back({{xPos, yPos}, {0, 0}, color});
+				outVertices.push_back({{xPos, yPos}, {0, 0}, color});
+				outIndexCount += 6;
+				
+				continue;
+			}
+
 			const auto& uv = glyph.uv;
 
-			batch.vertices.push_back({{xPos,     yPos},     color, {uv.x, uv.w}});
-			batch.vertices.push_back({{xPos + w, yPos},     color, {uv.z, uv.w}});
-			batch.vertices.push_back({{xPos + w, yPos + h}, color, {uv.z, uv.y}});
-			batch.vertices.push_back({{xPos,     yPos + h}, color, {uv.x, uv.y}});
+			outVertices.push_back({{xPos,     yPos},     {uv.x, uv.w}, color});
+			outVertices.push_back({{xPos + w, yPos},     {uv.z, uv.w}, color});
+			outVertices.push_back({{xPos + w, yPos + h}, {uv.z, uv.y}, color});
+			outVertices.push_back({{xPos,     yPos + h}, {uv.x, uv.y}, color});
 
-			batch.indices += 6;
+			outIndexCount += 6;
 
 		}
 
 		cursorY += lineHeight;
 	}
-	
-	batches.push_back(std::move(batch));
 }
 
-void TrueTypeFont::renderBatches(const std::vector<GlyphBatch>& batches, float x, float y, const glm::vec4& color, float scale) {
-	if (batches.empty())
+void TrueTypeFont::render(const std::vector<Vertex>& vertices, GLsizei indexCount, const glm::vec2& position, float scale, const glm::vec4& color) {
+	if (vertices.empty())
 		return;
 
 	shader->bind();
 
 	shader->setMat4("u_Projection", glm::value_ptr(renderer->getViewProjectionMatrix()));
-	shader->setVec2("u_Position", x, y);
+	shader->setVec2("u_Position", position.x, position.y);
 	shader->setFloat("u_Scale", scale);
 	shader->setVec4("u_Color", color.x, color.y, color.z, color.w);
 	shader->setInt("u_Texture", 0);
@@ -277,14 +262,12 @@ void TrueTypeFont::renderBatches(const std::vector<GlyphBatch>& batches, float x
 	ebo->bind();
 	atlas->bind();
 
-	const auto& batch = batches.front();
+	vbo->updateData(vertices);
 
-	vbo->updateData(batch.vertices);
-
-	glDrawElements(GL_TRIANGLES, batch.indices, GL_UNSIGNED_INT, nullptr);
+	glDrawElements(GL_TRIANGLES, indexCount, GL_UNSIGNED_INT, nullptr);
 }
 
-std::vector<char32_t> TrueTypeFont::utf8To32(const std::string& utf8) const {
+std::vector<char32_t> TrueTypeFont::utf8To32(std::string_view utf8) const {
 	std::vector<char32_t> result;
 	result.reserve(utf8.size());
 
