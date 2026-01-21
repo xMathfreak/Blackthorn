@@ -86,6 +86,8 @@ private:
 
 	float lineHeight = 0.0f;
 
+	static constexpr Uint32 TAB_SPACES = 4;
+
 	std::unordered_map<char32_t, Glyph> glyphCache;
 
 private:

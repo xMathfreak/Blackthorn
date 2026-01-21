@@ -326,11 +326,28 @@ std::vector<TrueTypeFont::LayoutLine> TrueTypeFont::layoutText(const std::vector
 		cursorX = 0;
 	};
 
+	const Glyph& spaceGlyph = getGlyph(U' ');
+	float spaceAdvance = spaceGlyph.advance;
+
 	for (size_t i = 0; i < text.size(); ++i) {
 		char32_t c = text[i];
 
 		if (c == U'\n') {
 			newLine();
+			continue;
+		}
+
+		if (c == U'\t') {
+			float tabWidth = TAB_SPACES * spaceAdvance;
+			float nextTabStop = std::ceil(cursorX / tabWidth) * tabWidth;
+
+			if (nextTabStop == cursorX)
+				nextTabStop += tabWidth;
+
+			if (maxWidth >= 0.0f && nextTabStop > maxWidth)
+				newLine();
+
+			cursorX = nextTabStop;
 			continue;
 		}
 
