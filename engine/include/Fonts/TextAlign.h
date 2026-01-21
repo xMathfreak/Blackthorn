@@ -3,15 +3,9 @@
 namespace Blackthorn::Fonts {
 
 enum class TextAlign {
-	TopLeft,
-	TopCenter,
-	TopRight,
-	CenterLeft,
+	Left,
 	Center,
-	CenterRight,
-	BottomLeft,
-	BottomCenter,
-	BottomRight
+	Right
 };
 
 } // namespace Blackthorn::Fonts

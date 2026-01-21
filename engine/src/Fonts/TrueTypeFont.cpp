@@ -63,7 +63,7 @@ void TrueTypeFont::draw(std::string_view text, const glm::vec2& position, float 
 
 	std::vector<Vertex> vertices;
 	GLsizei indices = 0;
-	buildTextGeometry(text, maxWidth, {color.r, color.g, color.b, color.a}, vertices, indices);
+	buildTextGeometry(text, maxWidth, {color.r, color.g, color.b, color.a}, alignment, vertices, indices);
 	render(vertices, indices, position, scale, {color.r, color.g, color.b, color.a});
 }
 
@@ -201,7 +201,7 @@ const TrueTypeFont::Glyph& TrueTypeFont::getGlyph(char32_t codePoint) {
 	return glyphCache[codePoint];
 }
 
-void TrueTypeFont::buildTextGeometry(std::string_view text, float maxWidth, const glm::vec4& color, std::vector<Vertex>& outVertices, GLsizei& outIndexCount) {
+void TrueTypeFont::buildTextGeometry(std::string_view text, float maxWidth, const glm::vec4& color, TextAlign alignment, std::vector<Vertex>& outVertices, GLsizei& outIndexCount) {
 	outVertices.clear();
 	outIndexCount = 0;
 
@@ -211,14 +211,28 @@ void TrueTypeFont::buildTextGeometry(std::string_view text, float maxWidth, cons
 	float cursorY = 0.0f;
 
 	for (const auto& line : lines) {
+		float offsetX = 0.0f;
+
+		switch (alignment) {
+			case TextAlign::Center:
+				offsetX -= line.width * 0.5f;
+				break;
+			case TextAlign::Right:
+				offsetX -= line.width;
+				break;
+			default:
+				break;
+		}
+
 		for (const auto& lg : line.glyphs) {	
 			const Glyph& glyph = *lg.glyph;
 
-			float xPos = lg.pos.x;
+			float xPos = lg.pos.x + offsetX;
 			float yPos = cursorY;
 
 			float w = glyph.size.x;
 			float h = glyph.size.y;
+
 
 			if (w == 0 || h == 0) {
 				outVertices.push_back({{xPos, yPos}, {0, 0}, color});
@@ -370,6 +384,5 @@ std::vector<TrueTypeFont::LayoutLine> TrueTypeFont::layoutText(const std::vector
 	
 	return lines;
 }
-
 
 } // namespace Blackthorn::Fonts

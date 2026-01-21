@@ -28,8 +28,8 @@ public:
 
 	bool loadFromFile(const std::string& filePath, int pointSize);
 
-	void draw(std::string_view text, const glm::vec2& position, float scale = 1.0f, float maxWidth = 0.0f, const SDL_FColor& color = {1.0f, 1.0f, 1.0f, 1.0f}, TextAlign alignment = TextAlign::TopLeft) override;
-	void drawCached(std::string_view text, const glm::vec2& position, float scale = 1.0f, float maxWidth = 0.0f, const SDL_FColor& color = {1.0f, 1.0f, 1.0f, 1.0f}, TextAlign alignment = TextAlign::TopLeft) override;
+	void draw(std::string_view text, const glm::vec2& position, float scale = 1.0f, float maxWidth = 0.0f, const SDL_FColor& color = {1.0f, 1.0f, 1.0f, 1.0f}, TextAlign alignment = TextAlign::Left) override;
+	void drawCached(std::string_view text, const glm::vec2& position, float scale = 1.0f, float maxWidth = 0.0f, const SDL_FColor& color = {1.0f, 1.0f, 1.0f, 1.0f}, TextAlign alignment = TextAlign::Left) override;
 	
 	TextMetrics measure(std::string_view text, float scale, float maxWidth) const override;
 	float getLineHeight() const override;
@@ -93,10 +93,11 @@ private:
 private:
 	const Glyph& getGlyph(char32_t codePoint);
 	
-	void buildTextGeometry(std::string_view text, float maxWidth, const glm::vec4& color, std::vector<Vertex>& outVertices, GLsizei& outIndexCount);
+	void buildTextGeometry(std::string_view text, float maxWidth, const glm::vec4& color, TextAlign alignment,std::vector<Vertex>& outVertices, GLsizei& outIndexCount);
 	void render(const std::vector<Vertex>& vertices, GLsizei indexCount, const glm::vec2& position, float scale, const glm::vec4& color);
 	
 	std::vector<char32_t> utf8To32(std::string_view utf8) const;
+
 	std::vector<LayoutLine> layoutText(const std::vector<char32_t>& text, float maxWidth);
 };
 

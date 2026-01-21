@@ -374,14 +374,10 @@ void BitmapFont::generateVertices(std::string_view text, float x, float y, float
 		float currentX = x;
 
 		switch (alignment) {
-			case TextAlign::TopCenter:
 			case TextAlign::Center:
-			case TextAlign::BottomCenter:
 				currentX -= lineWidth * 0.5f;
 				break;
-			case TextAlign::TopRight:
-			case TextAlign::CenterRight:
-			case TextAlign::BottomRight:
+			case TextAlign::Right:
 				currentX -= lineWidth;
 			default:
 				break;
