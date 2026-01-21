@@ -125,7 +125,7 @@ public:
 	void draw(std::string_view text, const glm::vec2& position, float scale = 1.0f, float maxWidth = 0.0f, const SDL_FColor& color = {1.0f, 1.0f, 1.0f, 1.0f}, TextAlign alignment = TextAlign::Left) override;
 	void drawCached(std::string_view text, const glm::vec2& position, float scale = 1.0f, float maxWidth = 0.0f, const SDL_FColor& color = {1.0f, 1.0f, 1.0f, 1.0f}, TextAlign alignment = TextAlign::Left) override;
 
-	TextMetrics measure(std::string_view text, float scale = 1.0f, float maxWidth = 0.0f) const override;
+	TextMetrics measure(std::string_view text, float scale = 1.0f, float maxWidth = 0.0f) override;
 
 	void setCacheSize(size_t maxSize) { maxCacheSize = maxSize; }
 	size_t getCacheSize() const { return cache.size(); }

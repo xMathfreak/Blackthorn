@@ -31,7 +31,7 @@ public:
 	void draw(std::string_view text, const glm::vec2& position, float scale = 1.0f, float maxWidth = 0.0f, const SDL_FColor& color = {1.0f, 1.0f, 1.0f, 1.0f}, TextAlign alignment = TextAlign::Left) override;
 	void drawCached(std::string_view text, const glm::vec2& position, float scale = 1.0f, float maxWidth = 0.0f, const SDL_FColor& color = {1.0f, 1.0f, 1.0f, 1.0f}, TextAlign alignment = TextAlign::Left) override;
 	
-	TextMetrics measure(std::string_view text, float scale, float maxWidth) const override;
+	TextMetrics measure(std::string_view text, float scale, float maxWidth) override;
 	float getLineHeight() const override;
 
 	void setStyle(TTF_FontStyleFlags style);

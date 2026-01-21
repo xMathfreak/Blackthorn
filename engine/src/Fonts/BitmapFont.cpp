@@ -287,7 +287,7 @@ TextMetrics BitmapFont::computeMetrics(std::string_view text, float scale, float
 	};
 }
 
-TextMetrics BitmapFont::measure(std::string_view text, float scale, float maxWidth) const {
+TextMetrics BitmapFont::measure(std::string_view text, float scale, float maxWidth) {
 	return computeMetrics(text, scale, maxWidth);
 }
 

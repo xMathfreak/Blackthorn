@@ -71,8 +71,25 @@ void TrueTypeFont::drawCached(std::string_view text, const glm::vec2& position, 
 
 }
 
-TextMetrics TrueTypeFont::measure(std::string_view text, float scale, float maxWidth) const {
-	return {};
+TextMetrics TrueTypeFont::measure(std::string_view text, float scale, float maxWidth) {
+	TextMetrics metrics{0.0f, 0.0f, 0};
+
+	if (!font || text.empty())
+		return metrics;
+
+	auto codePoints = utf8To32(text);
+	auto lines = layoutText(codePoints, maxWidth);
+
+	metrics.lineCount = lines.size();
+	metrics.height = lines.size() * lineHeight * scale;
+
+	float maxLineWidth = 0.0f;
+	for (const auto& line : lines)
+		maxLineWidth = std::max(maxLineWidth, line.width);
+
+	metrics.width = maxLineWidth * scale;
+
+	return metrics;
 }
 
 float TrueTypeFont::getLineHeight() const {
@@ -382,7 +399,7 @@ std::vector<TrueTypeFont::LayoutLine> TrueTypeFont::layoutText(const std::vector
 
 	}
 	
-	return lines;
+	return lines;	
 }
 
 } // namespace Blackthorn::Fonts
