@@ -68,7 +68,20 @@ void TrueTypeFont::draw(std::string_view text, const glm::vec2& position, float 
 }
 
 void TrueTypeFont::drawCached(std::string_view text, const glm::vec2& position, float scale, float maxWidth, const SDL_FColor& color, TextAlign alignment) {
+	if (!font || text.empty())
+		return;
 
+	std::string key(text);
+
+	auto it = textCache.find(key);
+	if (it == textCache.end()) {
+		CachedText cacheEntry;
+		buildTextGeometry(text, maxWidth, {color.r, color.g, color.b, color.a}, alignment, cacheEntry.vertices, cacheEntry.indexCount);
+
+		it = textCache.emplace(std::move(key), std::move(cacheEntry)).first;
+	}
+
+	render(it->second.vertices, it->second.indexCount, position, scale, {color.r, color.g, color.b, color.a});
 }
 
 TextMetrics TrueTypeFont::measure(std::string_view text, float scale, float maxWidth) {

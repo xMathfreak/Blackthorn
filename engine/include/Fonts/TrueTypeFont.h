@@ -63,6 +63,11 @@ private:
 		float width = 0.0f;
 	};
 
+	struct CachedText {
+		std::vector<Vertex> vertices;
+		GLsizei indexCount = 0;
+	};
+
 private:
 	static std::shared_ptr<Graphics::Shader> shader;
 	void initShader();
@@ -89,6 +94,7 @@ private:
 	static constexpr Uint32 TAB_SPACES = 4;
 
 	std::unordered_map<char32_t, Glyph> glyphCache;
+	std::unordered_map<std::string, CachedText> textCache;
 
 private:
 	const Glyph& getGlyph(char32_t codePoint);
