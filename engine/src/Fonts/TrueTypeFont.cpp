@@ -1,5 +1,4 @@
 #include "Fonts/TrueTypeFont.h"
-#include "glm/gtc/type_ptr.hpp"
 
 namespace Blackthorn::Fonts {
 
@@ -65,7 +64,7 @@ void TrueTypeFont::draw(std::string_view text, const glm::vec2& position, float 
 
 	std::vector<Vertex> vertices;
 	GLsizei indices = 0;
-	buildTextGeometry(text, maxWidth, {color.r, color.g, color.b, color.a}, alignment, vertices, indices);
+	buildTextGeometry(text, maxWidth, alignment, vertices, indices);
 	render(vertices, indices, position, scale, {color.r, color.g, color.b, color.a});
 }
 
@@ -73,17 +72,19 @@ void TrueTypeFont::drawCached(std::string_view text, const glm::vec2& position, 
 	if (!font || text.empty())
 		return;
 
-	std::string key(text);
+	std::string key = std::string(text) + "|"
+					+ std::to_string(maxWidth) + "|"
+					+ std::to_string(static_cast<int>(alignment));
 
-	auto it = textCache.find(key);
-	if (it == textCache.end()) {
+	CachedText* cached = textCache.get(key);
+	if (!cached) {
 		CachedText cacheEntry;
-		buildTextGeometry(text, maxWidth, {color.r, color.g, color.b, color.a}, alignment, cacheEntry.vertices, cacheEntry.indexCount);
-
-		it = textCache.emplace(std::move(key), std::move(cacheEntry)).first;
+		buildTextGeometry(text, maxWidth, alignment, cacheEntry.vertices, cacheEntry.indexCount);
+		textCache.put(key, std::move(cacheEntry));
+		cached = textCache.get(key);
 	}
 
-	render(it->second.vertices, it->second.indexCount, position, scale, {color.r, color.g, color.b, color.a});
+	render(cached->vertices, cached->indexCount, position, scale, {color.r, color.g, color.b, color.a});
 }
 
 TextMetrics TrueTypeFont::measure(std::string_view text, float scale, float maxWidth) {
@@ -232,7 +233,7 @@ const TrueTypeFont::Glyph& TrueTypeFont::getGlyph(char32_t codePoint) {
 	return glyphCache[codePoint];
 }
 
-void TrueTypeFont::buildTextGeometry(std::string_view text, float maxWidth, const glm::vec4& color, TextAlign alignment, std::vector<Vertex>& outVertices, GLsizei& outIndexCount) {
+void TrueTypeFont::buildTextGeometry(std::string_view text, float maxWidth, TextAlign alignment, std::vector<Vertex>& outVertices, GLsizei& outIndexCount) {
 	outVertices.clear();
 	outIndexCount = 0;
 
@@ -296,7 +297,6 @@ void TrueTypeFont::render(const std::vector<Vertex>& vertices, GLsizei indexCoun
 
 	shader->bind();
 
-	shader->setMat4("u_Projection", glm::value_ptr(renderer->getViewProjectionMatrix()));
 	shader->setVec2("u_Position", position.x, position.y);
 	shader->setFloat("u_Scale", scale);
 	shader->setVec4("u_Color", color.x, color.y, color.z, color.w);

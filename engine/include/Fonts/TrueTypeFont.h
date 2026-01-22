@@ -15,6 +15,7 @@
 #include "Graphics/EBO.h"
 #include "Graphics/VAO.h"
 #include "Graphics/VBO.h"
+#include "Utils/LRUCache.h"
 
 namespace Blackthorn::Fonts {
 
@@ -93,12 +94,14 @@ private:
 	static constexpr Uint32 TAB_SPACES = 4;
 
 	std::unordered_map<char32_t, Glyph> glyphCache;
-	std::unordered_map<std::string, CachedText> textCache;
+
+	static constexpr Uint32 MAX_CACHED_TEXT = 256;
+	Utils::LRUCache<std::string, CachedText> textCache{MAX_CACHED_TEXT};
 
 private:
 	const Glyph& getGlyph(char32_t codePoint);
 	
-	void buildTextGeometry(std::string_view text, float maxWidth, const glm::vec4& color, TextAlign alignment,std::vector<Vertex>& outVertices, GLsizei& outIndexCount);
+	void buildTextGeometry(std::string_view text, float maxWidth, TextAlign alignment,std::vector<Vertex>& outVertices, GLsizei& outIndexCount);
 	void render(const std::vector<Vertex>& vertices, GLsizei indexCount, const glm::vec2& position, float scale, const glm::vec4& color);
 	
 	std::vector<char32_t> utf8To32(std::string_view utf8) const;
