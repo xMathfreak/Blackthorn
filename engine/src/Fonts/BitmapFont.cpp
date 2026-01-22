@@ -8,7 +8,6 @@
 namespace Blackthorn::Fonts {
 
 std::shared_ptr<Graphics::Shader> BitmapFont::shader = nullptr;
-Uint32 BitmapFont::fontShaderRefCount = 0;
 
 namespace Internal {
 
@@ -33,12 +32,11 @@ size_t TextCacheKey::hash() const noexcept {
 
 } // namespace Internal
 
-BitmapFont::~BitmapFont() {
-	clearCache();
-
-	fontShaderRefCount--;
-	if (fontShaderRefCount == 0)
-		cleanupShader();
+BitmapFont::BitmapFont(Graphics::Renderer* ren)
+	: renderer(ren)
+{
+	if (shader == nullptr)
+		initializeShader();
 }
 
 BitmapFont::BitmapFont(BitmapFont&& other) noexcept
@@ -48,8 +46,6 @@ BitmapFont::BitmapFont(BitmapFont&& other) noexcept
 	, spaceWidth(other.spaceWidth)
 	, tabWidth(other.tabWidth)
 	, cache(std::move(other.cache))
-	, cacheOrder(std::move(other.cacheOrder))
-	, maxCacheSize(other.maxCacheSize)
 {}
 
 BitmapFont& BitmapFont::operator=(BitmapFont&& other) noexcept {
@@ -60,8 +56,6 @@ BitmapFont& BitmapFont::operator=(BitmapFont&& other) noexcept {
 		spaceWidth = other.spaceWidth;
 		tabWidth = other.tabWidth;
 		cache = std::move(other.cache);
-		cacheOrder = std::move(other.cacheOrder);
-		maxCacheSize = other.maxCacheSize;
 	}
 
 	return *this;
@@ -291,87 +285,20 @@ TextMetrics BitmapFont::measure(std::string_view text, float scale, float maxWid
 	return computeMetrics(text, scale, maxWidth);
 }
 
-void BitmapFont::clearCache() {
-	for (auto& [key, cached] : cache) {
-		cached.vao.destroy();
-		cached.vbo.destroy();
-	}
-
-	cache.clear();
-	cacheOrder.clear();
-}
-
-void BitmapFont::evictOldestCache() {
-	if (cacheOrder.empty())
-		return;
-
-	const Internal::TextCacheKey& oldest = cacheOrder.back();
-	auto it = cache.find(oldest);
-
-	if (it != cache.end()) {
-		it->second.vao.destroy();
-		it->second.vbo.destroy();
-		cache.erase(it);
-	}
-
-	cacheOrder.pop_back();
-}
-
-BitmapFont::CachedText& BitmapFont::getCache(const Internal::TextCacheKey& key){
-	auto it = cache.find(key);
-
-	if (it != cache.end()) {
-		cacheOrder.erase(
-			std::remove(cacheOrder.begin(), cacheOrder.end(), key),
-			cacheOrder.end()
-		);
-
-		cacheOrder.push_front(key);
-		return it->second;
-	}
-
-	if (cache.size() >= maxCacheSize)
-		evictOldestCache();
-
-	CachedText cached;
-
-	vertexBuffer.clear();
-	generateVertices(key.text, 0, 0, key.scale, key.maxWidth, key.color, key.alignment, vertexBuffer, true);
-
-	cached.vao.create();
-	cached.vbo.create();
-
-	cached.vao.bind();
-	cached.vbo.setData(vertexBuffer.data(), vertexBuffer.size() * sizeof(Vertex), GL_STATIC_DRAW);
-
-	cached.vao.enableAttrib(0, 3, GL_FLOAT, sizeof(Vertex), offsetof(Vertex, position));
-	cached.vao.enableAttrib(1, 4, GL_FLOAT, sizeof(Vertex), offsetof(Vertex, color));
-	cached.vao.enableAttrib(2, 2, GL_FLOAT, sizeof(Vertex), offsetof(Vertex, texCoord));
-
-	Graphics::VAO::unbind();
-
-	cached.vertexCount = vertexBuffer.size();
-
-	cache[key] = std::move(cached);
-	cacheOrder.push_front(key);
-
-	return cache[key];
-}
-
-void BitmapFont::generateVertices(std::string_view text, float x, float y, float scale, float maxWidth, const SDL_FColor& color, TextAlign alignment, std::vector<Vertex>& outVertices, bool flipY) const {
+void BitmapFont::generateVertices(std::string_view text, float scale, float maxWidth, TextAlign alignment, std::vector<Vertex>& outVertices, bool flipY) const {
 	lineBuffer.clear();
 	wrapText(text, scale, maxWidth, lineBuffer);
 
 	outVertices.clear();
 	outVertices.reserve(lineBuffer.size() * text.length() * 6);
 
-	float currentY = y;
+	float currentY = 0.0f;
 	float texWidth = static_cast<float>(texture->getWidth());
 	float texHeight = static_cast<float>(texture->getHeight());
 
 	for (const auto& line : lineBuffer) {
 		float lineWidth = computeLineWidth(line, scale);
-		float currentX = x;
+		float currentX = 0.0f;
 
 		switch (alignment) {
 			case TextAlign::Center:
@@ -415,15 +342,13 @@ void BitmapFont::generateVertices(std::string_view text, float x, float y, float
 				v1 = 1.0f - (glyph.rect.y + glyph.rect.h) / texHeight;
 			}
 
-			glm::vec4 glmColor(color.r, color.g, color.b, color.a);
-
-			outVertices.push_back({{glyphX, glyphY, 0.0f}, {u0, v0}, glmColor});
-			outVertices.push_back({{glyphX + glyphW, glyphY, 0.0f}, {u1, v0}, glmColor});
-			outVertices.push_back({{glyphX + glyphW, glyphY + glyphH, 0.0f}, {u1, v1}, glmColor});
+			outVertices.push_back({{glyphX, glyphY}, {u0, v0}});
+			outVertices.push_back({{glyphX + glyphW, glyphY}, {u1, v0}});
+			outVertices.push_back({{glyphX + glyphW, glyphY + glyphH}, {u1, v1}});
 			
-			outVertices.push_back({{glyphX, glyphY, 0.0f}, {u0, v0}, glmColor});
-			outVertices.push_back({{glyphX + glyphW, glyphY + glyphH, 0.0f}, {u1, v1}, glmColor});
-			outVertices.push_back({{glyphX, glyphY + glyphH, 0.0f}, {u0, v1}, glmColor});
+			outVertices.push_back({{glyphX, glyphY}, {u0, v0}});
+			outVertices.push_back({{glyphX + glyphW, glyphY + glyphH}, {u1, v1}});
+			outVertices.push_back({{glyphX, glyphY + glyphH}, {u0, v1}});
 
 			currentX += glyph.xAdvance * scale;
 		}
@@ -433,11 +358,11 @@ void BitmapFont::generateVertices(std::string_view text, float x, float y, float
 }
 
 void BitmapFont::draw(std::string_view text, const glm::vec2& position, float scale, float maxWidth, const SDL_FColor& color, TextAlign alignment) {
-	if (!isLoaded())
+	if (!isLoaded() || text.empty())
 		return;
 
 	vertexBuffer.clear();
-	generateVertices(text, position.x, position.y, scale, maxWidth, color, alignment, vertexBuffer);
+	generateVertices(text, scale, maxWidth, alignment, vertexBuffer);
 
 	if (vertexBuffer.empty())
 		return;
@@ -456,8 +381,8 @@ void BitmapFont::draw(std::string_view text, const glm::vec2& position, float sc
 		};
 
 		SDL_FRect dest{
-			v[0].position.x,
-			v[0].position.y,
+			v[0].position.x + position.x,
+			v[0].position.y + position.y,
 			(v[1].position.x - v[0].position.x),
 			(v[2].position.y - v[0].position.y)
 		};
@@ -467,25 +392,43 @@ void BitmapFont::draw(std::string_view text, const glm::vec2& position, float sc
 }
 
 void BitmapFont::drawCached(std::string_view text, const glm::vec2& position, float scale, float maxWidth, const SDL_FColor& color, TextAlign alignment) {
-	if (!isLoaded())
+	if (!isLoaded() || text.empty())
 		return;
 
 	Internal::TextCacheKey key {
 		std::string(text), scale, maxWidth, color, alignment
 	};
 
-	CachedText& cached = getCache(key);
+	CachedText* cached = cache.get(key);
 
-	if (cached.vertexCount == 0)
-		return;
+	if (!cached) {
+		CachedText cacheEntry;
+
+		vertexBuffer.clear();
+		generateVertices(key.text, scale, maxWidth, alignment, vertexBuffer, true);
+		
+		cacheEntry.vao.create();
+		cacheEntry.vbo.create();
+
+		cacheEntry.vao.bind();
+		cacheEntry.vbo.setData(vertexBuffer.data(), vertexBuffer.size() * sizeof(Vertex), GL_STATIC_DRAW);
+
+		cacheEntry.vao.enableAttrib(0, 3, GL_FLOAT, sizeof(Vertex), offsetof(Vertex, position));
+		cacheEntry.vao.enableAttrib(1, 2, GL_FLOAT, sizeof(Vertex), offsetof(Vertex, texCoord));
+		cacheEntry.vertexCount = vertexBuffer.size();
+
+		cache.put(key, std::move(cacheEntry));
+		cached = cache.get(key);
+	}
 
 	shader->bind();
 	shader->setVec2("u_Offset", position.x, position.y);
+	shader->setVec4("u_Color", color.r, color.g, color.b, color.a);
 
 	texture->bind();
-	cached.vao.bind();
+	cached->vao.bind();
 	
-	glDrawArrays(GL_TRIANGLES, 0, cached.vertexCount);
+	glDrawArrays(GL_TRIANGLES, 0, cached->vertexCount);
 	Graphics::VAO::unbind();
 	Graphics::Shader::unbind();
 }

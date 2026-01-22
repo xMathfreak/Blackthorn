@@ -1,6 +1,5 @@
 #pragma once
 
-#include <deque>
 #include <memory>
 #include <string>
 
@@ -11,6 +10,7 @@
 #include "Graphics/Texture.h"
 #include "Graphics/VAO.h"
 #include "Graphics/VBO.h"
+#include "Utils/LRUCache.h"
 
 namespace Blackthorn::Fonts {
 
@@ -59,9 +59,8 @@ private:
 	};
 
 	struct Vertex {
-		glm::vec3 position;
+		glm::vec2 position;
 		glm::vec2 texCoord;
-		glm::vec4 color;
 	};
 
 	struct CachedText {
@@ -74,7 +73,6 @@ private:
 
 private:
 	static std::shared_ptr<Graphics::Shader> shader;
-	static Uint32 fontShaderRefCount;
 	Graphics::Renderer* renderer = nullptr;
 
 	std::unique_ptr<Graphics::Texture> texture;
@@ -84,9 +82,8 @@ private:
 	float spaceWidth = 0.0f;
 	float tabWidth = 0.0f;
 
-	std::unordered_map<Internal::TextCacheKey, CachedText> cache;
-	std::deque<Internal::TextCacheKey> cacheOrder;
-	size_t maxCacheSize = 128;
+	static constexpr Uint32 MAX_CACHED_TEXT = 128;
+	Utils::LRUCache<Internal::TextCacheKey, CachedText> cache{MAX_CACHED_TEXT};
 
 	mutable std::vector<std::string_view> lineBuffer;
 	mutable std::vector<float> lineWidthBuffer;
@@ -95,23 +92,10 @@ private:
 	void wrapText(std::string_view text, float scale, float maxWidth, std::vector<std::string_view>& outLines) const;
 	float computeLineWidth(std::string_view line, float scale) const;
 	TextMetrics computeMetrics(std::string_view text, float scale, float maxWidth) const;
-	void generateVertices(std::string_view text, float x, float y, float scale, float maxWidth, const SDL_FColor& color, TextAlign alignment, std::vector<Vertex>& outVertices, bool flipY = false) const;
-
-	CachedText& getCache(const Internal::TextCacheKey& key);
-	void evictOldestCache();
-	void clearCache(); 
+	void generateVertices(std::string_view text, float scale, float maxWidth, TextAlign alignment, std::vector<Vertex>& outVertices, bool flipY = false) const; 
 
 public:
-	BitmapFont(Graphics::Renderer* ren)
-		: renderer(ren)
-	{
-		if (fontShaderRefCount == 0)
-			initializeShader();
-
-		fontShaderRefCount++;
-	}
-
-	~BitmapFont();
+	BitmapFont(Graphics::Renderer* ren);
 
 	BitmapFont(const BitmapFont&) = delete;
 	BitmapFont& operator=(const BitmapFont&) = delete;
@@ -126,10 +110,6 @@ public:
 	void drawCached(std::string_view text, const glm::vec2& position, float scale = 1.0f, float maxWidth = 0.0f, const SDL_FColor& color = {1.0f, 1.0f, 1.0f, 1.0f}, TextAlign alignment = TextAlign::Left) override;
 
 	TextMetrics measure(std::string_view text, float scale = 1.0f, float maxWidth = 0.0f) override;
-
-	void setCacheSize(size_t maxSize) { maxCacheSize = maxSize; }
-	size_t getCacheSize() const { return cache.size(); }
-	void invalidateCache() { clearCache(); }
 
 	float getLineHeight() const override { return lineHeight; }
 	float getSpaceWidth() const { return spaceWidth; }
