@@ -51,8 +51,10 @@ bool TrueTypeFont::loadFromFile(const std::string& filePath, int pointSize) {
 	atlasRowHeight = 0;
 	glyphCache.clear();
 
-	SDL_Log("Loaded TrueType font '%s' at %d pt (line height: %f)", filePath.c_str(), pointSize, lineHeight);
-	
+	#ifdef BLACKTHORN_DEBUG
+		SDL_Log("Loaded TrueType font '%s' at %d pt (line height: %f)", filePath.c_str(), pointSize, lineHeight);
+	#endif
+
 	return true;
 }
 
@@ -167,8 +169,7 @@ void TrueTypeFont::initBuffers() {
 	ebo->setData(indices);
 
 	vao->enableAttrib(0, 2, GL_FLOAT, sizeof(Vertex), offsetof(Vertex, position));
-	vao->enableAttrib(1, 4, GL_FLOAT, sizeof(Vertex), offsetof(Vertex, color));
-	vao->enableAttrib(2, 2, GL_FLOAT, sizeof(Vertex), offsetof(Vertex, texCoord));
+	vao->enableAttrib(1, 2, GL_FLOAT, sizeof(Vertex), offsetof(Vertex, texCoord));
 
 	Graphics::VBO::unbind();
 	Graphics::VAO::unbind();
@@ -265,10 +266,10 @@ void TrueTypeFont::buildTextGeometry(std::string_view text, float maxWidth, cons
 
 
 			if (w == 0 || h == 0) {
-				outVertices.push_back({{xPos, yPos}, {0, 0}, color});
-				outVertices.push_back({{xPos, yPos}, {0, 0}, color});
-				outVertices.push_back({{xPos, yPos}, {0, 0}, color});
-				outVertices.push_back({{xPos, yPos}, {0, 0}, color});
+				outVertices.push_back({{xPos, yPos}, {0, 0}});
+				outVertices.push_back({{xPos, yPos}, {0, 0}});
+				outVertices.push_back({{xPos, yPos}, {0, 0}});
+				outVertices.push_back({{xPos, yPos}, {0, 0}});
 				outIndexCount += 6;
 				
 				continue;
@@ -276,10 +277,10 @@ void TrueTypeFont::buildTextGeometry(std::string_view text, float maxWidth, cons
 
 			const auto& uv = glyph.uv;
 
-			outVertices.push_back({{xPos,     yPos},     {uv.x, uv.w}, color});
-			outVertices.push_back({{xPos + w, yPos},     {uv.z, uv.w}, color});
-			outVertices.push_back({{xPos + w, yPos + h}, {uv.z, uv.y}, color});
-			outVertices.push_back({{xPos,     yPos + h}, {uv.x, uv.y}, color});
+			outVertices.push_back({{xPos,     yPos},     {uv.x, uv.w}});
+			outVertices.push_back({{xPos + w, yPos},     {uv.z, uv.w}});
+			outVertices.push_back({{xPos + w, yPos + h}, {uv.z, uv.y}});
+			outVertices.push_back({{xPos,     yPos + h}, {uv.x, uv.y}});
 
 			outIndexCount += 6;
 
