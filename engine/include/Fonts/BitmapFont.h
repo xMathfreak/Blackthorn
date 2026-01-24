@@ -6,7 +6,6 @@
 #include "Core/Export.h"
 #include "Fonts/Font.h"
 #include "Fonts/TextCacheKey.h"
-#include "Graphics/Renderer.h"
 #include "Graphics/Shader.h"
 #include "Graphics/Texture.h"
 #include "Graphics/VAO.h"
@@ -39,7 +38,6 @@ private:
 
 private:
 	static std::shared_ptr<Graphics::Shader> shader;
-	Graphics::Renderer* renderer = nullptr;
 
 	static constexpr Uint32 MAX_TEXT_GLYPHS = 2048;
 	static constexpr Uint32 MAX_VERTICES = MAX_TEXT_GLYPHS * 4;
@@ -70,7 +68,7 @@ private:
 	void generateVertices(std::string_view text, float scale, float maxWidth, TextAlign alignment, std::vector<Vertex>& outVertices) const; 
 
 public:
-	BitmapFont(Graphics::Renderer* ren);
+	BitmapFont();
 
 	BitmapFont(const BitmapFont&) = delete;
 	BitmapFont& operator=(const BitmapFont&) = delete;

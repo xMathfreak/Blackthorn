@@ -2,7 +2,6 @@
 
 #include "Assets/IAssetLoader.h"
 #include "Fonts/BitmapFont.h"
-#include "Graphics/Renderer.h"
 
 namespace Blackthorn::Fonts {
 
@@ -21,17 +20,10 @@ struct BLACKTHORN_API BitmapParams : Assets::LoadParams {
 };
 
 class BitmapFontLoader : public Assets::IAssetLoader<BitmapFont> {
-private:
-	Graphics::Renderer* renderer;
-
 public:
-	BitmapFontLoader(Graphics::Renderer* ren)
-		: renderer(ren)
-	{}
-
 	std::unique_ptr<BitmapFont> load(const Assets::LoadParams& params) override {
 		const auto& p = static_cast<const BitmapParams&>(params);
-		std::unique_ptr<BitmapFont> font = std::make_unique<BitmapFont>(renderer);
+		std::unique_ptr<BitmapFont> font = std::make_unique<BitmapFont>();
 		font->loadFromFile(p.texturePath, p.metricsPath);
 		return font;
 	}

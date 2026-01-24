@@ -10,7 +10,6 @@
 #include "Core/Export.h"
 #include "Fonts/Font.h"
 #include "Fonts/TextCacheKey.h"
-#include "Graphics/Renderer.h"
 #include "Graphics/Texture.h"
 #include "Graphics/Shader.h"
 #include "Graphics/EBO.h"
@@ -22,7 +21,7 @@ namespace Blackthorn::Fonts {
 
 class BLACKTHORN_API TrueTypeFont : public Font {
 public:
-	TrueTypeFont(Graphics::Renderer* renderer);
+	TrueTypeFont();
 	~TrueTypeFont() override;
 
 	TrueTypeFont(const TrueTypeFont&) = delete;
@@ -81,7 +80,6 @@ private:
 	std::unique_ptr<Graphics::VBO> vbo;
 	void initBuffers();
 
-	Graphics::Renderer* renderer;
 	TTF_Font* font = nullptr;
 
 	static constexpr int ATLAS_SIZE = 1024;

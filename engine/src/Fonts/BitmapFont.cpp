@@ -9,9 +9,7 @@ namespace Blackthorn::Fonts {
 
 std::shared_ptr<Graphics::Shader> BitmapFont::shader = nullptr;
 
-BitmapFont::BitmapFont(Graphics::Renderer* ren)
-	: renderer(ren)
-{
+BitmapFont::BitmapFont() {
 	if (shader == nullptr)
 		initializeShader();
 

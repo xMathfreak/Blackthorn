@@ -4,9 +4,7 @@ namespace Blackthorn::Fonts {
 
 std::shared_ptr<Graphics::Shader> TrueTypeFont::shader = nullptr;
 
-TrueTypeFont::TrueTypeFont(Graphics::Renderer* ren)
-	: renderer(ren)
-{
+TrueTypeFont::TrueTypeFont() {
 	if (!shader)
 		initShader();
 
