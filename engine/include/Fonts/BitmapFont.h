@@ -5,47 +5,13 @@
 
 #include "Core/Export.h"
 #include "Fonts/Font.h"
+#include "Fonts/TextCacheKey.h"
 #include "Graphics/Renderer.h"
 #include "Graphics/Shader.h"
 #include "Graphics/Texture.h"
 #include "Graphics/VAO.h"
 #include "Graphics/VBO.h"
 #include "Utils/LRUCache.h"
-
-namespace Blackthorn::Fonts {
-
-namespace Internal {
-
-struct TextCacheKey {
-	std::string text;
-	float scale;
-	float maxWidth;
-	SDL_FColor color;
-	TextAlign alignment;
-
-	size_t hash() const noexcept;
-
-	bool operator==(const TextCacheKey& other) const noexcept {
-		return text == other.text
-			&& scale == other.scale
-			&& maxWidth == other.maxWidth
-			&& alignment == other.alignment
-			&& memcmp(&color, &other.color, sizeof(SDL_FColor)) == 0;
-	}
-};
-
-} // namespace Internal
-
-} // namespace Blackthorn::Fonts
-
-namespace std {
-	template <>
-	struct hash<Blackthorn::Fonts::Internal::TextCacheKey> {
-		size_t operator()(const Blackthorn::Fonts::Internal::TextCacheKey& key) const noexcept {
-			return key.hash();
-		}
-	};
-} // namespace std
 
 namespace Blackthorn::Fonts {
 
@@ -75,15 +41,24 @@ private:
 	static std::shared_ptr<Graphics::Shader> shader;
 	Graphics::Renderer* renderer = nullptr;
 
+	static constexpr Uint32 MAX_TEXT_GLYPHS = 2048;
+	static constexpr Uint32 MAX_VERTICES = MAX_TEXT_GLYPHS * 4;
+
+	std::unique_ptr<Graphics::VAO> vao;
+	std::unique_ptr<Graphics::VBO> vbo;
+
+	void initBuffers();
+
 	std::unique_ptr<Graphics::Texture> texture;
 	std::unordered_map<Uint32, Glyph> glyphs;
-
+	
+	float baseline = 0.0f;
 	float lineHeight = 0.0f;
 	float spaceWidth = 0.0f;
 	float tabWidth = 0.0f;
 
 	static constexpr Uint32 MAX_CACHED_TEXT = 128;
-	Utils::LRUCache<Internal::TextCacheKey, CachedText> cache{MAX_CACHED_TEXT};
+	Utils::LRUCache<TextCacheKey, CachedText> cache{MAX_CACHED_TEXT};
 
 	mutable std::vector<std::string_view> lineBuffer;
 	mutable std::vector<float> lineWidthBuffer;
@@ -92,7 +67,7 @@ private:
 	void wrapText(std::string_view text, float scale, float maxWidth, std::vector<std::string_view>& outLines) const;
 	float computeLineWidth(std::string_view line, float scale) const;
 	TextMetrics computeMetrics(std::string_view text, float scale, float maxWidth) const;
-	void generateVertices(std::string_view text, float scale, float maxWidth, TextAlign alignment, std::vector<Vertex>& outVertices, bool flipY = false) const; 
+	void generateVertices(std::string_view text, float scale, float maxWidth, TextAlign alignment, std::vector<Vertex>& outVertices) const; 
 
 public:
 	BitmapFont(Graphics::Renderer* ren);

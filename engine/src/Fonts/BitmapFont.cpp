@@ -9,38 +9,19 @@ namespace Blackthorn::Fonts {
 
 std::shared_ptr<Graphics::Shader> BitmapFont::shader = nullptr;
 
-namespace Internal {
-
-size_t TextCacheKey::hash() const noexcept {
-	size_t h = 0;
-
-	h ^= std::hash<std::string>{}(text);
-	h ^= std::hash<float>{}(scale) << 1;
-	h ^= std::hash<float>{}(maxWidth) << 2;
-	h ^= static_cast<size_t>(alignment) << 3;
-
-	Uint32 packedColor = 
-		(static_cast<Uint8>(color.r * 255.0f) << 24) |
-		(static_cast<Uint8>(color.g * 255.0f) << 16) |
-		(static_cast<Uint8>(color.b * 255.0f) << 8) |
-		(static_cast<Uint8>(color.a * 255.0f));
-
-	h ^= packedColor << 4;
-
-	return h;
-}
-
-} // namespace Internal
-
 BitmapFont::BitmapFont(Graphics::Renderer* ren)
 	: renderer(ren)
 {
 	if (shader == nullptr)
 		initializeShader();
+
+	initBuffers();
 }
 
 BitmapFont::BitmapFont(BitmapFont&& other) noexcept
-	: texture(std::move(other.texture))
+	: vao(std::move(other.vao))
+	, vbo(std::move(other.vbo))
+	, texture(std::move(other.texture))
 	, glyphs(std::move(other.glyphs))
 	, lineHeight(other.lineHeight)
 	, spaceWidth(other.spaceWidth)
@@ -50,6 +31,8 @@ BitmapFont::BitmapFont(BitmapFont&& other) noexcept
 
 BitmapFont& BitmapFont::operator=(BitmapFont&& other) noexcept {
 	if (this != &other) {
+		vao = std::move(other.vao);
+		vbo = std::move(other.vbo);
 		texture = std::move(other.texture);
 		glyphs = std::move(other.glyphs);
 		lineHeight = other.lineHeight;
@@ -59,6 +42,22 @@ BitmapFont& BitmapFont::operator=(BitmapFont&& other) noexcept {
 	}
 
 	return *this;
+}
+
+void BitmapFont::initBuffers() {
+	vao = std::make_unique<Graphics::VAO>(true);
+	vbo = std::make_unique<Graphics::VBO>(true);
+
+	vao->bind();
+	vbo->bind();
+
+	vbo->setData(nullptr, MAX_VERTICES * sizeof(Vertex), GL_DYNAMIC_DRAW);
+
+	vao->enableAttrib(0, 2, GL_FLOAT, sizeof(Vertex), offsetof(Vertex, position));
+	vao->enableAttrib(1, 2, GL_FLOAT, sizeof(Vertex), offsetof(Vertex, texCoord));
+
+	Graphics::VBO::unbind();
+	Graphics::VAO::unbind();
 }
 
 bool BitmapFont::loadFromFile(const std::string& texturePath, const std::string& metricsPath) {
@@ -102,6 +101,8 @@ bool BitmapFont::loadFromFile(const std::string& texturePath, const std::string&
 
 					if (name == "lineHeight") {
 						lineHeight = static_cast<float>(value);
+					} else if (name == "base" || name == "baseline") {
+						baseline = static_cast<float>(value);
 					}
 				}
 			}
@@ -159,6 +160,12 @@ bool BitmapFont::loadFromFile(const std::string& texturePath, const std::string&
 			}
 
 			glyphs[id] = glyph;
+		}
+	}
+
+	if (baseline == 0.0f) {
+		for (const auto& [id, glyph] : glyphs) {
+			baseline = std::max(baseline, static_cast<float>(-glyph.yOffset));
 		}
 	}
 
@@ -285,7 +292,7 @@ TextMetrics BitmapFont::measure(std::string_view text, float scale, float maxWid
 	return computeMetrics(text, scale, maxWidth);
 }
 
-void BitmapFont::generateVertices(std::string_view text, float scale, float maxWidth, TextAlign alignment, std::vector<Vertex>& outVertices, bool flipY) const {
+void BitmapFont::generateVertices(std::string_view text, float scale, float maxWidth, TextAlign alignment, std::vector<Vertex>& outVertices) const {
 	lineBuffer.clear();
 	wrapText(text, scale, maxWidth, lineBuffer);
 
@@ -326,21 +333,14 @@ void BitmapFont::generateVertices(std::string_view text, float scale, float maxW
 			const Glyph& glyph = it->second;
 
 			float glyphX = currentX + glyph.xOffset * scale;
-			float glyphY = currentY + glyph.yOffset * scale;
+			float glyphY = currentY + (baseline + glyph.yOffset) * scale;
 			float glyphW = glyph.rect.w * scale;
 			float glyphH = glyph.rect.h * scale;
 
 			float u0 = glyph.rect.x / texWidth;
 			float u1 = (glyph.rect.x + glyph.rect.w) / texWidth;
-			float v0, v1;
-
-			if (flipY) {
-				v0 = (glyph.rect.y + glyph.rect.h) / texHeight;
-				v1 = glyph.rect.y / texHeight;
-			} else {
-				v0 = 1.0f - glyph.rect.y / texHeight;
-				v1 = 1.0f - (glyph.rect.y + glyph.rect.h) / texHeight;
-			}
+			float v0 = (glyph.rect.y + glyph.rect.h) / texHeight;
+			float v1 = glyph.rect.y / texHeight;
 
 			outVertices.push_back({{glyphX, glyphY}, {u0, v0}});
 			outVertices.push_back({{glyphX + glyphW, glyphY}, {u1, v0}});
@@ -362,41 +362,29 @@ void BitmapFont::draw(std::string_view text, const glm::vec2& position, float sc
 		return;
 
 	vertexBuffer.clear();
+	vertexBuffer.reserve(text.length() * 6);
 	generateVertices(text, scale, maxWidth, alignment, vertexBuffer);
 
 	if (vertexBuffer.empty())
 		return;
 
-	const float texWidth = texture->getWidth();
-	const float texHeight = texture->getHeight();
+	shader->bind();
+	shader->setVec2("u_Offset", position.x, position.y);
+	shader->setVec4("u_Color", color.r, color.g, color.b, color.a);
 
-	for (size_t i = 0; i < vertexBuffer.size(); i += 6) {
-		const Vertex* v = &vertexBuffer[i];
+	vao->bind();
+	vbo->updateData(vertexBuffer);
+	texture->bind();
 
-		SDL_FRect src{
-			v[0].texCoord.x * texWidth,
-			v[0].texCoord.y * texHeight,
-			(v[1].texCoord.x - v[0].texCoord.x) * texWidth,
-			(v[2].texCoord.y - v[0].texCoord.y) * texHeight
-		};
-
-		SDL_FRect dest{
-			v[0].position.x + position.x,
-			v[0].position.y + position.y,
-			(v[1].position.x - v[0].position.x),
-			(v[2].position.y - v[0].position.y)
-		};
-
-		renderer->drawTexture(*texture, dest, &src, 0.0f, 0.0f, color);
-	}
+	glDrawArrays(GL_TRIANGLES, 0, vertexBuffer.size());
 }
 
 void BitmapFont::drawCached(std::string_view text, const glm::vec2& position, float scale, float maxWidth, const SDL_FColor& color, TextAlign alignment) {
 	if (!isLoaded() || text.empty())
 		return;
 
-	Internal::TextCacheKey key {
-		std::string(text), scale, maxWidth, color, alignment
+	TextCacheKey key {
+		std::string(text), scale, maxWidth, alignment
 	};
 
 	CachedText* cached = cache.get(key);
@@ -405,7 +393,8 @@ void BitmapFont::drawCached(std::string_view text, const glm::vec2& position, fl
 		CachedText cacheEntry;
 
 		vertexBuffer.clear();
-		generateVertices(key.text, scale, maxWidth, alignment, vertexBuffer, true);
+		vertexBuffer.reserve(text.length() * 6);
+		generateVertices(key.text, scale, maxWidth, alignment, vertexBuffer);
 		
 		cacheEntry.vao.create();
 		cacheEntry.vbo.create();
