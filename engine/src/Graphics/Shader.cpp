@@ -200,6 +200,12 @@ GLuint Shader::getUniformLocation(const std::string& name) {
 	return location;
 }
 
+void Shader::setBool(const std::string& name, bool value) {
+	GLuint location = getUniformLocation(name);
+	if (location != -1u)
+		glUniform1i(location, value);
+}
+
 void Shader::setInt(const std::string& name, int value) {
 	GLuint location = getUniformLocation(name);
 	if (location != -1u)

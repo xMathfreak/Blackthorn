@@ -111,6 +111,13 @@ public:
 	GLuint id() const noexcept { return programID; }
 	
 	/**
+	 * @brief Sets an boolean uniform.
+	 * @param name Uniform name.
+	 * @param value Boolean value.
+	 */
+	void setBool(const std::string& name, bool value);
+
+	/**
 	 * @brief Sets an integer uniform.
 	 * @param name Uniform name.
 	 * @param value Integer value.
