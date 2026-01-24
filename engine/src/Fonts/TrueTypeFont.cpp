@@ -36,9 +36,10 @@ bool TrueTypeFont::loadFromFile(const std::string& filePath, int pointSize) {
 	}
 
 	lineHeight = TTF_GetFontLineSkip(font);
+	TTF_SetFontKerning(font, true);
 
 	atlas = std::make_unique<Graphics::Texture>();
-	atlas->create(ATLAS_SIZE, ATLAS_SIZE, 4, {
+	atlas->create(ATLAS_SIZE, ATLAS_SIZE, 1, {
 		.minFilter = Graphics::TextureFilter::Linear,
 		.magFilter = Graphics::TextureFilter::Linear,
 		.wrapS = Graphics::TextureWrap::ClampToEdge,
@@ -46,12 +47,16 @@ bool TrueTypeFont::loadFromFile(const std::string& filePath, int pointSize) {
 		.generateMipmaps = true
 	});
 
+
 	atlasCursor = {0, 0};
 	atlasRowHeight = 0;
 	glyphCache.clear();
 
 	#ifdef BLACKTHORN_DEBUG
-		SDL_Log("Loaded TrueType font '%s' at %d pt (line height: %f)", filePath.c_str(), pointSize, lineHeight);
+		SDL_Log(
+			"Loaded TrueType font '%s' at %d pt (line height: %f)", 
+			filePath.c_str(), pointSize, lineHeight
+		);
 	#endif
 
 	return true;
@@ -72,9 +77,9 @@ void TrueTypeFont::drawCached(std::string_view text, const glm::vec2& position, 
 	if (!font || text.empty())
 		return;
 
-	std::string key = std::string(text) + "|"
-					+ std::to_string(maxWidth) + "|"
-					+ std::to_string(static_cast<int>(alignment));
+	TextCacheKey key {
+		std::string(text), scale, maxWidth, alignment
+	};
 
 	CachedText* cached = textCache.get(key);
 	if (!cached) {
@@ -207,7 +212,15 @@ const TrueTypeFont::Glyph& TrueTypeFont::getGlyph(char32_t codePoint) {
 	atlas->bind();
 
 	SDL_Surface* converted = SDL_ConvertSurface(surface, SDL_PIXELFORMAT_RGBA32);
-	atlas->updateRegion(atlasCursor.x, atlasCursor.y, converted->w, converted->h, converted->pixels);
+
+	std::vector<Uint8> alpha(converted->w * converted->h);
+	Uint32* pixels = static_cast<Uint32*>(converted->pixels);
+
+	for (int i=0; i<converted->w * converted->h; ++i)
+		alpha[i] = (pixels[i] >> 24) & 0xFF;
+
+	atlas->updateRegion(atlasCursor.x, atlasCursor.y, converted->w, converted->h, alpha.data());
+
 	SDL_DestroySurface(converted);
 	
 	float u0 = atlasCursor.x / float(ATLAS_SIZE);
@@ -220,7 +233,6 @@ const TrueTypeFont::Glyph& TrueTypeFont::getGlyph(char32_t codePoint) {
 
 	Glyph glyph;
 	glyph.size = glm::vec2(surface->w, surface->h);
-	glyph.bearing = glm::vec2(minX, maxY);
 	glyph.advance = static_cast<float>(advance);
 	glyph.uv = {u0, v0, u1, v1};
 
@@ -259,12 +271,11 @@ void TrueTypeFont::buildTextGeometry(std::string_view text, float maxWidth, Text
 		for (const auto& lg : line.glyphs) {	
 			const Glyph& glyph = *lg.glyph;
 
-			float xPos = lg.pos.x + offsetX;
+			float xPos = lg.xPos + offsetX;
 			float yPos = cursorY;
 
 			float w = glyph.size.x;
 			float h = glyph.size.y;
-
 
 			if (w == 0 || h == 0) {
 				outVertices.push_back({{xPos, yPos}, {0, 0}});
@@ -278,10 +289,10 @@ void TrueTypeFont::buildTextGeometry(std::string_view text, float maxWidth, Text
 
 			const auto& uv = glyph.uv;
 
-			outVertices.push_back({{xPos,     yPos},     {uv.x, uv.w}});
-			outVertices.push_back({{xPos + w, yPos},     {uv.z, uv.w}});
+			outVertices.push_back({{xPos, yPos},{uv.x, uv.w}});
+			outVertices.push_back({{xPos + w, yPos}, {uv.z, uv.w}});
 			outVertices.push_back({{xPos + w, yPos + h}, {uv.z, uv.y}});
-			outVertices.push_back({{xPos,     yPos + h}, {uv.x, uv.y}});
+			outVertices.push_back({{xPos, yPos + h}, {uv.x, uv.y}});
 
 			outIndexCount += 6;
 
@@ -297,7 +308,7 @@ void TrueTypeFont::render(const std::vector<Vertex>& vertices, GLsizei indexCoun
 
 	shader->bind();
 
-	shader->setVec2("u_Position", position.x, position.y);
+	shader->setVec2("u_Offset", position.x, position.y);
 	shader->setFloat("u_Scale", scale);
 	shader->setVec4("u_Color", color.x, color.y, color.z, color.w);
 	shader->setInt("u_Texture", 0);
@@ -374,11 +385,14 @@ std::vector<TrueTypeFont::LayoutLine> TrueTypeFont::layoutText(const std::vector
 	const Glyph& spaceGlyph = getGlyph(U' ');
 	float spaceAdvance = spaceGlyph.advance;
 
+	char32_t prev = 0;
+
 	for (size_t i = 0; i < text.size(); ++i) {
 		char32_t c = text[i];
 
 		if (c == U'\n') {
 			newLine();
+			prev = 0;
 			continue;
 		}
 
@@ -389,28 +403,31 @@ std::vector<TrueTypeFont::LayoutLine> TrueTypeFont::layoutText(const std::vector
 			if (nextTabStop == cursorX)
 				nextTabStop += tabWidth;
 
-			if (maxWidth >= 0.0f && nextTabStop > maxWidth)
+			if (maxWidth >= 0.0f && nextTabStop > maxWidth) {
 				newLine();
+				prev = 0;
+			}
 
 			cursorX = nextTabStop;
 			continue;
 		}
 
 		const Glyph& g = getGlyph(c);
-		float advance = g.advance;
 
-		if (maxWidth > 0.0f && cursorX + advance > maxWidth)
+		if (prev) {
+			int kern;
+			TTF_GetGlyphKerning(font, prev, c, &kern);
+			cursorX += kern;
+		}
+
+		if (maxWidth > 0.0f && cursorX + g.advance > maxWidth)
 			newLine();
 
-		LayoutGlyph lg;
-		lg.glyph = &g;
-		lg.pos = {cursorX, 0.0f};
+		lines.back().glyphs.push_back({&g, cursorX});
+		lines.back().width += g.advance;
 
-		lines.back().glyphs.push_back(lg);
-		lines.back().width += advance;
-
-		cursorX += advance;
-
+		cursorX += g.advance;
+		prev = c;
 	}
 	
 	return lines;	

@@ -9,6 +9,7 @@
 
 #include "Core/Export.h"
 #include "Fonts/Font.h"
+#include "Fonts/TextCacheKey.h"
 #include "Graphics/Renderer.h"
 #include "Graphics/Texture.h"
 #include "Graphics/Shader.h"
@@ -43,7 +44,6 @@ public:
 private:
 	struct Glyph {
 		glm::vec2 size;
-		glm::vec2 bearing;
 		glm::vec4 uv;
 		float advance;
 	};
@@ -55,7 +55,7 @@ private:
 
 	struct LayoutGlyph {
 		const Glyph* glyph;
-		glm::vec2 pos;
+		float xPos;
 	};
 
 	struct LayoutLine {
@@ -96,7 +96,7 @@ private:
 	std::unordered_map<char32_t, Glyph> glyphCache;
 
 	static constexpr Uint32 MAX_CACHED_TEXT = 256;
-	Utils::LRUCache<std::string, CachedText> textCache{MAX_CACHED_TEXT};
+	Utils::LRUCache<TextCacheKey, CachedText> textCache{MAX_CACHED_TEXT};
 
 private:
 	const Glyph& getGlyph(char32_t codePoint);

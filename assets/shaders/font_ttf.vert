@@ -7,16 +7,13 @@ layout(std140) uniform GlobalData {
 	mat4 u_ViewProjection;
 };
 
-uniform vec4 u_Color;
-uniform vec2 u_Position;
+uniform vec2 u_Offset;
 uniform float u_Scale;
 
 out vec2 v_TexCoord;
-out vec4 v_Color;
 
 void main() {
-	vec2 scaledPos = a_Position * u_Scale + u_Position;
+	vec2 scaledPos = a_Position * u_Scale + u_Offset;
 	gl_Position = u_ViewProjection * vec4(scaledPos, 0.0, 1.0);
 	v_TexCoord = a_TexCoord;
-	v_Color = u_Color;
 }
