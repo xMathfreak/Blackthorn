@@ -1,11 +1,15 @@
 #include "Core/Engine.h"
 
 #include <glad/glad.h>
+#include <SDL3_ttf/SDL_ttf.h>
 
+// Loaders
 #include "Assets/Loaders/BitmapFontLoader.h"
+#include "Assets/Loaders/ShaderLoader.h"
 #include "Assets/Loaders/TextureLoader.h"
+#include "Assets/Loaders/TrueTypeFontLoader.h"
+
 #include "Debug/Profiler.h"
-#include "Fonts/BitmapFont.h"
 
 namespace Blackthorn {
 
@@ -30,6 +34,11 @@ bool Engine::init(const EngineConfig& cfg) {
 	SDL_InitFlags initFlags = SDL_INIT_VIDEO;
 	if (!SDL_Init(initFlags)) {
 		SDL_LogError(SDL_LOG_CATEGORY_ERROR, "SDL_Init failed: %s", SDL_GetError());
+		return false;
+	}
+
+	if (!TTF_Init()) {
+		SDL_LogError(SDL_LOG_CATEGORY_ERROR, "TTF_Init failed: %s", SDL_GetError());
 		return false;
 	}
 	
@@ -63,6 +72,7 @@ bool Engine::init(const EngineConfig& cfg) {
 	window = SDL_CreateWindow(cfg.window.title.c_str(), cfg.window.width, cfg.window.height, windowFlags);
 	if (!window) {
 		SDL_LogError(SDL_LOG_CATEGORY_ERROR, "SDL_CreateWindow failed: %s", SDL_GetError());
+		TTF_Quit();
 		SDL_Quit();
 		return false;
 	}
@@ -71,6 +81,7 @@ bool Engine::init(const EngineConfig& cfg) {
 	if (!glContext) {
 		SDL_LogError(SDL_LOG_CATEGORY_ERROR, "SDL_GL_CreateContext failed: %s", SDL_GetError());
 		SDL_DestroyWindow(window);
+		TTF_Quit();
 		SDL_Quit();
 		return false;
 	}
@@ -125,7 +136,6 @@ bool Engine::init(const EngineConfig& cfg) {
 	}
 
 	initAssetLoaders();
-
 	initialized = true;
 
 	#ifdef BLACKTHORN_DEBUG
@@ -140,14 +150,24 @@ void Engine::initAssetLoaders() {
 		std::make_unique<Graphics::TextureLoader>()
 	);
 
+	assetManager.registerLoader<Graphics::Shader>(
+		std::make_unique<Graphics::ShaderLoader>()
+	);
+
 	assetManager.registerLoader<Fonts::BitmapFont>(
-		std::make_unique<Fonts::BitmapFontLoader>(renderer.get())
+		std::make_unique<Fonts::BitmapFontLoader>()
+	);
+
+	assetManager.registerLoader<Fonts::TrueTypeFont>(
+		std::make_unique<Fonts::TrueTypeFontLoader>()
 	);
 }
 
 void Engine::shutdown() {
 	if (!initialized)
 		return;
+
+	assetManager.clear();
 
 	if (glContext) {
 		SDL_GL_DestroyContext(glContext);
@@ -159,7 +179,9 @@ void Engine::shutdown() {
 		window = nullptr;
 	}
 
+	TTF_Quit();
 	SDL_Quit();
+
 	initialized = false;
 	running = false;
 }
@@ -204,7 +226,7 @@ void Engine::processEvents() {
 
 		#ifdef BLACKTHORN_DEBUG
 			if (inputManager.isKeyPressed(SDLK_F5))
-				assetManager.reloadAllTyped<Graphics::Texture, Fonts::BitmapFont>();
+				assetManager.reloadAllTyped<Graphics::Texture, Fonts::BitmapFont, Fonts::TrueTypeFont>();
 		#endif
 	}
 }
@@ -385,6 +407,7 @@ void Engine::cleanupInitialization() {
 		window = nullptr;
 	}
 
+	TTF_Quit();
 	SDL_Quit();
 }
 
