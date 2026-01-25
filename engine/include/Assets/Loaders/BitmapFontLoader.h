@@ -22,10 +22,17 @@ struct BLACKTHORN_API BitmapParams : Assets::LoadParams {
 class BitmapFontLoader : public Assets::IAssetLoader<BitmapFont> {
 public:
 	std::unique_ptr<BitmapFont> load(const Assets::LoadParams& params) override {
-		const auto& p = static_cast<const BitmapParams&>(params);
 		std::unique_ptr<BitmapFont> font = std::make_unique<BitmapFont>();
-		font->loadFromFile(p.texturePath, p.metricsPath);
-		return font;
+		if (const BitmapParams* splitParams = dynamic_cast<const BitmapParams*>(&params)) {
+			font->loadFromFile(splitParams->texturePath, splitParams->metricsPath);
+			return font;
+		} else if (const auto* binaryParams = dynamic_cast<const Assets::PathLoadParams*>(&params)) {
+			font->loadFromBMFont(binaryParams->path);
+			return font;
+		}
+
+		font.reset();
+		return nullptr;
 	}
 
 	std::vector<std::string> getSupportedExtensions() const override {

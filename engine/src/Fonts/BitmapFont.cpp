@@ -5,6 +5,8 @@
 #include <fstream>
 #include <sstream>
 
+#include <SDL3_image/SDL_image.h>
+
 namespace Blackthorn::Fonts {
 
 std::shared_ptr<Graphics::Shader> BitmapFont::shader = nullptr;
@@ -183,7 +185,116 @@ bool BitmapFont::loadFromFile(const std::string& texturePath, const std::string&
 }
 
 bool BitmapFont::loadFromBMFont(const std::string& bmfPath) {
-	return false;
+	std::ifstream file(bmfPath, std::ios::binary);
+
+	if (!file) {
+		#ifdef BLACKTHORN_DEBUG
+			SDL_LogError(
+				SDL_LOG_CATEGORY_APPLICATION,
+				"Failed to open BMF file: %s",
+				bmfPath.c_str()
+			);
+		#endif
+
+		return false;
+	}
+
+	char sign[4];
+	file.read(sign, 4);
+	if (sign[0] != 'B' || sign[1] != 'M' || sign[2] != 'F' || sign[3] != '\0') {
+		#ifdef BLACKTHORN_DEBUG
+			SDL_LogError(
+				SDL_LOG_CATEGORY_APPLICATION,
+				"Invalid BMF file format: %s",
+				bmfPath.c_str()
+			);
+		#endif
+
+		return false;
+	}
+
+	file.read(reinterpret_cast<char*>(&lineHeight), sizeof(float));
+	file.read(reinterpret_cast<char*>(&baseline), sizeof(float));
+	file.read(reinterpret_cast<char*>(&spaceWidth), sizeof(float));
+
+	Uint32 imageSize;
+	file.read(reinterpret_cast<char*>(&imageSize), sizeof(imageSize));
+
+	std::vector<Uint8> imageData(imageSize);
+	file.read(reinterpret_cast<char*>(imageData.data()), imageSize);
+
+	SDL_IOStream* rw = SDL_IOFromConstMem(imageData.data(), imageSize);
+	if (!rw) {
+		#ifdef BLACKTHORN_DEBUG
+			SDL_LogError(
+				SDL_LOG_CATEGORY_APPLICATION,
+				"Failed to create SDL_IOStream from image data"
+			);
+		#endif
+
+		return false;
+	}
+
+	SDL_Surface* surface = IMG_Load_IO(rw, true);
+	if (!surface) {
+		#ifdef BLACKTHORN_DEBUG
+			SDL_LogError(
+				SDL_LOG_CATEGORY_APPLICATION,
+				"Failed to load image from BMF: %s",
+				SDL_GetError()
+			);
+		#endif
+
+		return false;
+	}
+
+	texture = std::make_unique<Graphics::Texture>();
+	texture->loadFromSurface(surface);
+	SDL_DestroySurface(surface);
+
+	if (!texture->isValid()) {
+		#ifdef BLACKTHORN_DEBUG
+			SDL_LogError(
+				SDL_LOG_CATEGORY_APPLICATION,
+				"Failed to create texture from BMF image data"
+			);
+		#endif
+
+		return false;
+	}
+
+	Uint32 glyphCount;
+	file.read(reinterpret_cast<char*>(&glyphCount), sizeof(glyphCount));
+
+	glyphs.clear();
+
+	for (Uint32 i = 0; i < glyphCount; ++i) {
+		Uint32 codePoint;
+
+		Glyph glyph;
+
+		file.read(reinterpret_cast<char*>(&codePoint), sizeof(codePoint));
+		file.read(reinterpret_cast<char*>(&glyph.rect.x), sizeof(glyph.rect.x));
+		file.read(reinterpret_cast<char*>(&glyph.rect.y), sizeof(glyph.rect.y));
+		file.read(reinterpret_cast<char*>(&glyph.rect.w), sizeof(glyph.rect.w));
+		file.read(reinterpret_cast<char*>(&glyph.rect.h), sizeof(glyph.rect.h));
+		file.read(reinterpret_cast<char*>(&glyph.xOffset), sizeof(glyph.xOffset));
+		file.read(reinterpret_cast<char*>(&glyph.yOffset), sizeof(glyph.yOffset));
+		file.read(reinterpret_cast<char*>(&glyph.xAdvance), sizeof(glyph.xAdvance));
+
+		glyphs[codePoint] = glyph;
+	}
+
+	tabWidth = spaceWidth * 4.0f;
+
+	#ifdef BLACKTHORN_DEBUG
+		SDL_Log(
+			"BitmapFont loaded %llu glyphs from %s, lineHeight=%.1f",
+			glyphs.size(), bmfPath.c_str(), lineHeight
+		);
+	#endif
+
+	return true;
 }
 
 float BitmapFont::computeLineWidth(std::string_view line, float scale) const {
