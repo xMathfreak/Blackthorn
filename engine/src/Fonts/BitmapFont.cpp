@@ -7,6 +7,75 @@
 
 #include <SDL3_image/SDL_image.h>
 
+namespace {
+
+inline void toLower(std::string& s) {
+	std::transform(s.begin(), s.end(), s.begin(), ::tolower);
+}
+
+bool parseKeyValue(const std::string& line, const std::string& key, std::string& outValue) {
+	std::istringstream iss(line);
+	std::string token;
+
+	while (iss >> token) {
+		auto eq = token.find('=');
+
+		if (eq != std::string::npos) {
+			std::string k = token.substr(0, eq);
+			toLower(k);
+
+			std::string v = token.substr(eq + 1);
+
+			if (k == key) {
+				if (!v.empty()) {
+					v.erase(v.find_last_not_of(" \t") + 1);
+					outValue = v;
+					return true;
+				}
+
+				return false;
+			}
+		}
+
+		if (token == key) {
+			std::string eqToken;
+			if (!(iss >> eqToken) || eqToken != "=")
+				continue;
+
+			if (iss >> outValue)
+				return false;
+		}
+	}
+
+	return false;
+}
+
+int parseIntValue(const std::string& line, const std::string& key) {
+	std::string value;
+	if (!parseKeyValue(line, key, value))
+		return 0;
+
+	try {
+		return std::stoi(value);
+	} catch (std::invalid_argument&) {
+		return 0;
+	}
+}
+
+float parseFloatValue(const std::string& line, const std::string& key) {
+	std::string value;
+	if (!parseKeyValue(line, key, value))
+		return 0.0f;
+
+	try {
+		return std::stof(value);
+	} catch (std::invalid_argument&) {
+		return 0.0f;
+	}
+}
+
+}
+
 namespace Blackthorn::Fonts {
 
 std::shared_ptr<Graphics::Shader> BitmapFont::shader = nullptr;
@@ -82,74 +151,35 @@ bool BitmapFont::loadFromFile(const std::string& texturePath, const std::string&
 	}
 
 	std::string line;
+	int lineNum = 0;
+
 	while (std::getline(file, line)) {
-		if (line.empty() || line[0] == '#')
+		lineNum++;
+
+		size_t commentPos = line.find('#');
+		if (commentPos != std::string::npos)
+			line = line.substr(0, commentPos);
+
+		line.erase(0, line.find_first_not_of(" \t"));
+		line.erase(line.find_last_not_of(" \t") + 1);
+
+		if (line.empty())
 			continue;
 
 		std::istringstream iss(line);
 		std::string command;
-
 		iss >> command;
+		toLower(command);
 
 		if (command == "common" || command == "global") {
-			std::string key;
-			while (iss >> key) {
-				size_t eq = key.find('=');
-				if (eq != std::string::npos) {
-					std::string name = key.substr(0, eq);
-					int value = std::stoi(key.substr(eq + 1));
+			lineHeight = parseFloatValue(line, "lineheight");
+			baseline = parseFloatValue(line, "baseline");
 
-					if (name == "lineHeight") {
-						lineHeight = static_cast<float>(value);
-					} else if (name == "base" || name == "baseline") {
-						baseline = static_cast<float>(value);
-					}
-				}
-			}
+			if (baseline == 0.0f)
+				baseline = parseFloatValue(line, "base");
+
 		} else if (command == "char") {
-			Uint32 id = 0;
-			Glyph glyph{};
-
-			std::string key;
-			while (iss >> key) {
-				size_t eq = key.find('=');
-				if (eq != std::string::npos) {
-					std::string name = key.substr(0, eq);
-					std::string token = key.substr(eq + 1);
-					
-					if (token.empty())
-						continue;
-
-					int value = 0;
-					try {
-						value = std::stoi(token);
-					} catch(const std::invalid_argument&) {
-						#ifdef BLACKTHORN_DEBUG
-							SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "Invalid character %s in font metrics %s", token.c_str(), metricsPath.c_str());
-						#endif
-
-						continue;
-					}
-
-					if (name == "id") {
-						id = value;
-					} else if (name == "x") {
-						glyph.rect.x = value;
-					} else if (name == "y") {
-						glyph.rect.y = value;
-					} else if (name == "width" || name == "w") {
-						glyph.rect.w = value;
-					} else if (name == "height" || name == "h") {
-						glyph.rect.h = value;
-					} else if (name == "xoffset") {
-						glyph.xOffset = value;
-					} else if (name == "yoffset") {
-						glyph.yOffset = value;
-					} else if (name == "xadvance") {
-						glyph.xAdvance = value;
-					}
-				}
-			}
+			Uint32 id = parseIntValue(line, "id");
 
 			if (id == 0) {
 				#ifdef BLACKTHORN_DEBUG
@@ -159,14 +189,40 @@ bool BitmapFont::loadFromFile(const std::string& texturePath, const std::string&
 				continue;
 			}
 
+			Glyph glyph{};
+			glyph.rect.x = parseFloatValue(line, "x");
+			glyph.rect.y = parseFloatValue(line, "y");
+
+			glyph.rect.w = parseFloatValue(line, "width");
+			if (glyph.rect.w == 0.0f)
+				glyph.rect.w = parseFloatValue(line, "w");
+
+			glyph.rect.h = parseFloatValue(line, "height");
+			if (glyph.rect.h == 0.0f)
+				glyph.rect.h = parseFloatValue(line, "h");
+
+			glyph.xOffset = parseIntValue(line, "xoffset");
+			glyph.yOffset = parseIntValue(line, "yoffset");
+			glyph.xAdvance = parseIntValue(line, "xadvance");
+
 			glyphs[id] = glyph;
+		} else {
+			#ifdef BLACKTHORN_DEBUG
+				SDL_LogWarn(
+					SDL_LOG_CATEGORY_APPLICATION,
+					"Unknown command '%s' on line %d in %s",
+					command.c_str(), lineNum, metricsPath.c_str()
+				);
+			#endif
 		}
 	}
 
-	if (baseline == 0.0f) {
-		for (const auto& [id, glyph] : glyphs) {
+	if (baseline == 0.0f && lineHeight > 0.0f) {
+		for (const auto& [id, glyph] : glyphs)
 			baseline = std::max(baseline, static_cast<float>(-glyph.yOffset));
-		}
+
+		if (baseline == 0.0f)
+			baseline = lineHeight * 0.25f;
 	}
 
 	if (glyphs.count(' ')) {
@@ -178,7 +234,8 @@ bool BitmapFont::loadFromFile(const std::string& texturePath, const std::string&
 	tabWidth = spaceWidth * 4.0f;
 
 	#ifdef BLACKTHORN_DEBUG
-		SDL_Log("BitmapFont loaded %llu glyphs from %s, lineHeight=%.1f", glyphs.size(), metricsPath.c_str(), lineHeight);
+		SDL_Log("BitmapFont loaded %lld glyphs from '%s'", glyphs.size(), metricsPath.c_str());
+		SDL_Log("\tlineHeight=%.1f, baseline=%.1f, spaceWidth=%.1f", lineHeight, baseline, spaceWidth);
 	#endif
 
 	return true;
@@ -207,6 +264,21 @@ bool BitmapFont::loadFromBMFont(const std::string& bmfPath) {
 				SDL_LOG_CATEGORY_APPLICATION,
 				"Invalid BMF file format: %s",
 				bmfPath.c_str()
+			);
+		#endif
+
+		return false;
+	}
+
+	Uint16 version;
+	file.read(reinterpret_cast<char*>(&version), sizeof(version));
+
+	if (version != 1) {
+		#ifdef BLACKTHORN_DEBUG
+			SDL_LogError(
+				SDL_LOG_CATEGORY_APPLICATION, 
+				"Unsupported BMF version %u in file: %s",
+				version, bmfPath.c_str()
 			);
 		#endif
 
@@ -288,10 +360,8 @@ bool BitmapFont::loadFromBMFont(const std::string& bmfPath) {
 	tabWidth = spaceWidth * 4.0f;
 
 	#ifdef BLACKTHORN_DEBUG
-		SDL_Log(
-			"BitmapFont loaded %llu glyphs from %s, lineHeight=%.1f",
-			glyphs.size(), bmfPath.c_str(), lineHeight
-		);
+		SDL_Log("BitmapFont loaded %lld glyphs from '%s'", glyphs.size(), bmfPath.c_str());
+		SDL_Log("\tlineHeight=%.1f, baseline=%.1f, spaceWidth=%.1f", lineHeight, baseline, spaceWidth);
 	#endif
 
 	return true;
