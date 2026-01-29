@@ -482,6 +482,10 @@ void BitmapFont::generateVertices(std::string_view text, float scale, float maxW
 	float texWidth = static_cast<float>(texture->getWidth());
 	float texHeight = static_cast<float>(texture->getHeight());
 
+	auto snap = [](float n) {
+		return std::floorf(n + 0.5f);
+	};
+
 	for (const auto& line : lineBuffer) {
 		float lineWidth = computeLineWidth(line, scale);
 		float currentX = 0.0f;
@@ -511,8 +515,8 @@ void BitmapFont::generateVertices(std::string_view text, float scale, float maxW
 
 			const Glyph& glyph = it->second;
 
-			float glyphX = currentX + glyph.xOffset * scale;
-			float glyphY = currentY + (baseline + glyph.yOffset) * scale;
+			float glyphX = snap(currentX + glyph.xOffset * scale);
+			float glyphY = snap(currentY + (baseline + glyph.yOffset) * scale);
 			float glyphW = glyph.rect.w * scale;
 			float glyphH = glyph.rect.h * scale;
 
@@ -524,7 +528,7 @@ void BitmapFont::generateVertices(std::string_view text, float scale, float maxW
 			outVertices.push_back({{glyphX, glyphY}, {u0, v0}});
 			outVertices.push_back({{glyphX + glyphW, glyphY}, {u1, v0}});
 			outVertices.push_back({{glyphX + glyphW, glyphY + glyphH}, {u1, v1}});
-			
+
 			outVertices.push_back({{glyphX, glyphY}, {u0, v0}});
 			outVertices.push_back({{glyphX + glyphW, glyphY + glyphH}, {u1, v1}});
 			outVertices.push_back({{glyphX, glyphY + glyphH}, {u0, v1}});
