@@ -32,8 +32,6 @@ private:
 		Graphics::VAO vao;
 		Graphics::VBO vbo;
 		size_t vertexCount = 0;
-		float width = 0;
-		float height = 0;
 	};
 
 private:
@@ -49,7 +47,7 @@ private:
 
 	std::unique_ptr<Graphics::Texture> texture;
 	std::unordered_map<Uint32, Glyph> glyphs;
-	
+
 	float baseline = 0.0f;
 	float lineHeight = 0.0f;
 	float spaceWidth = 0.0f;
