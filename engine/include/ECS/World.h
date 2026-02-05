@@ -47,7 +47,7 @@ public:
 
 	template <typename Component, typename... Args>
 	Component& addComponent(Entity entity, Args&&... args) {
-		pool.addComponent<Component>(entity, std::forward<Args>(args)...);
+		return pool.addComponent<Component>(entity, std::forward<Args>(args)...);
 	}
 
 	template <typename Component>

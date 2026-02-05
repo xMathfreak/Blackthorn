@@ -3,6 +3,7 @@
 #include <array>
 #include <memory>
 
+
 #include "Core/Export.h"
 #include "ECS/ComponentArray.h"
 #include "ECS/Detail.h"
@@ -11,7 +12,7 @@ namespace Blackthorn::ECS {
 
 namespace Detail {
 template <typename ...Components>
-class View; 
+class View;
 } // namespace Detail
 
 class BLACKTHORN_API EntityPool {
@@ -42,6 +43,10 @@ public:
 
 		Uint32 index = freeList.back();
 		freeList.pop_back();
+
+		#ifdef BLACKTHORN_DEBUG
+			assert(index < entities.size());
+		#endif
 
 		Entity entity = Detail::makeEntity(index, entities[index].generation);
 		++entityCount;
@@ -100,14 +105,14 @@ public:
 		entityCount = 0;
 	}
 
-	const std::vector<EntityData> getEntities() { return entities; }
+	const std::vector<EntityData>& getEntities() { return entities; }
 
 	template <typename Component, typename... Args>
 	Component& addComponent(Entity entity, Args&&... args) {
 		if (!isValid(entity))
 			throw std::runtime_error("EntityPool: Invalid entity");
 
-		size_t id = Detail::componentID<Component>();
+		static const size_t id = Detail::componentID<Component>();
 
 		if (!componentArrays[id])
 			componentArrays[id] = std::make_unique<ComponentArray<Component>>();
@@ -126,7 +131,7 @@ public:
 		if (!isValid(entity))
 			return;
 
-		size_t id = Detail::componentID<Component>();
+		static const size_t id = Detail::componentID<Component>();
 		if (id >= componentArrays.size() || !componentArrays[id])
 			return;
 
@@ -141,7 +146,7 @@ public:
 		if (!isValid(entity))
 			return false;
 
-		size_t id = Detail::componentID<Component>();
+		static const size_t id = Detail::componentID<Component>();
 
 		if (id >= componentArrays.size() || !componentArrays[id])
 			return false;
@@ -154,7 +159,7 @@ public:
 		if (!isValid(entity))
 			return nullptr;
 
-		size_t id = Detail::componentID<Component>();
+		static const size_t id = Detail::componentID<Component>();
 		if(id >= componentArrays.size() || !componentArrays[id])
 			return nullptr;
 
@@ -167,7 +172,7 @@ public:
 		if (!isValid(entity))
 			return nullptr;
 
-		size_t id = Detail::componentID<Component>();
+		static const size_t id = Detail::componentID<Component>();
 		if(id >= componentArrays.size() || !componentArrays[id])
 			return nullptr;
 
@@ -220,7 +225,7 @@ namespace Detail {
 
 template <typename... Components>
 class View {
-private: 
+private:
 	EntityPool* pool;
 	Uint64 requiredMask;
 	const std::vector<Entity>* entityList;
@@ -239,8 +244,28 @@ public:
 
 		for (Entity e : *entityList) {
 			Uint32 index = Detail::entityIndex(e);
+			const auto& entityData = pool->getEntities()[index];
 
-			if ((pool->getEntities()[index].componentMask & requiredMask) != requiredMask)
+			if ((entityData.componentMask & requiredMask) != requiredMask)
+				continue;
+
+			callback(e, getComponentForView<Components>(e)...);
+		}
+	}
+
+	template <typename Function>
+	void eachParallel(size_t chunkSize, Function&& callback) {
+		size_t count = entityList->size();
+		auto& entities = *entityList;
+		const auto& poolEntities = pool->getEntities();
+
+		#pragma omp parallel for schedule(static, chunkSize)
+		for (size_t i = 0; i < count; ++i) {
+			const Entity& e = entities[i];
+			Uint32 idx = Detail::entityIndex(e);
+
+			const auto& data = poolEntities[idx];
+			if ((data.componentMask & requiredMask) != requiredMask)
 				continue;
 
 			callback(e, getComponentForView<Components>(e)...);

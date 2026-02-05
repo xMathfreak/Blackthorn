@@ -31,7 +31,12 @@ namespace Blackthorn::ECS::Detail {
 
 	template <typename T>
 	inline size_t componentID() {
-		static size_t id = nextComponentID();
+		static const size_t id = nextComponentID();
+
+		#ifdef BLACKTHORN_DEBUG
+			assert(id < MAX_COMPONENTS);
+		#endif
+
 		return id;
 	}
 

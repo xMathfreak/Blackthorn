@@ -13,7 +13,7 @@ endif()
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
 # Compiler flags
-set(CMAKE_CXX_FLAGS_DEBUG "-DDEBUG -g3 -ggdb -O0 -Wall -Wextra -Werror -fstack-protector-all")
+set(CMAKE_CXX_FLAGS_DEBUG "-DDEBUG -g3 -ggdb -O0 -Wall -Wextra -Werror -fstack-protector-all -fopenmp")
 set(CMAKE_CXX_FLAGS_RELEASE "-DNDEBUG -O3 -flto -fwhole-program -march=native -funroll-loops -fomit-frame-pointer -ftree-vectorize -fopenmp -flax-vector-conversions")
 
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
