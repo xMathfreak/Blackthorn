@@ -23,18 +23,14 @@ public:
 			glm::vec2 interpolated = k ? glm::mix(k->oldPosition, t.position, alpha)
 				: t.position;
 
-			s.dest.x = interpolated.x;
-			s.dest.y = interpolated.y;
-			s.dest.w = s.src.w * t.scale;
-			s.dest.h = s.src.h * t.scale;
+			SDL_FRect rect = {
+				interpolated.x,
+				interpolated.y,
+				s.width * t.scale,
+				s.height * t.scale
+			};
 
-			if (s.flipX)
-				s.dest.w *= -1;
-
-			if (s.flipY)
-				s.dest.y *= -1;
-
-			renderer->drawTexture(*s.texture, s.dest, &s.src, t.angle, s.zOrder);
+			renderer->drawTexture(*s.texture, rect, nullptr, t.angle, s.zOrder);
 		});
 	}
 };
