@@ -450,7 +450,7 @@ void BitmapFont::wrapText(std::string_view text, float scale, float maxWidth, st
 		outLines.push_back(text.substr(lineStart));
 }
 
-TextMetrics BitmapFont::computeMetrics(std::string_view text, float scale, float maxWidth) const {
+Text::Metrics BitmapFont::computeMetrics(std::string_view text, float scale, float maxWidth) const {
 	lineBuffer.clear();
 	wrapText(text, scale, maxWidth, lineBuffer);
 
@@ -467,11 +467,11 @@ TextMetrics BitmapFont::computeMetrics(std::string_view text, float scale, float
 	};
 }
 
-TextMetrics BitmapFont::measure(std::string_view text, float scale, float maxWidth) {
+Text::Metrics BitmapFont::measure(std::string_view text, float scale, float maxWidth) {
 	return computeMetrics(text, scale, maxWidth);
 }
 
-void BitmapFont::generateVertices(std::string_view text, float scale, float maxWidth, TextAlign alignment, std::vector<Vertex>& outVertices) const {
+void BitmapFont::generateVertices(std::string_view text, float scale, float maxWidth, Text::Alignment alignment, std::vector<Vertex>& outVertices) const {
 	lineBuffer.clear();
 	wrapText(text, scale, maxWidth, lineBuffer);
 
@@ -491,10 +491,10 @@ void BitmapFont::generateVertices(std::string_view text, float scale, float maxW
 		float currentX = 0.0f;
 
 		switch (alignment) {
-			case TextAlign::Center:
+			case Text::Alignment::Center:
 				currentX -= lineWidth * 0.5f;
 				break;
-			case TextAlign::Right:
+			case Text::Alignment::Right:
 				currentX -= lineWidth;
 			default:
 				break;
@@ -540,7 +540,7 @@ void BitmapFont::generateVertices(std::string_view text, float scale, float maxW
 	}
 }
 
-void BitmapFont::draw(std::string_view text, const glm::vec2& position, float scale, float maxWidth, const SDL_FColor& color, TextAlign alignment) {
+void BitmapFont::draw(std::string_view text, const glm::vec2& position, float scale, float maxWidth, const SDL_FColor& color, Text::Alignment alignment) {
 	if (!isLoaded() || text.empty())
 		return;
 
@@ -562,7 +562,7 @@ void BitmapFont::draw(std::string_view text, const glm::vec2& position, float sc
 	glDrawArrays(GL_TRIANGLES, 0, vertexBuffer.size());
 }
 
-void BitmapFont::drawCached(std::string_view text, const glm::vec2& position, float scale, float maxWidth, const SDL_FColor& color, TextAlign alignment) {
+void BitmapFont::drawCached(std::string_view text, const glm::vec2& position, float scale, float maxWidth, const SDL_FColor& color, Text::Alignment alignment) {
 	if (!isLoaded() || text.empty())
 		return;
 
@@ -578,7 +578,7 @@ void BitmapFont::drawCached(std::string_view text, const glm::vec2& position, fl
 		vertexBuffer.clear();
 		vertexBuffer.reserve(text.length() * 6);
 		generateVertices(key.text, scale, maxWidth, alignment, vertexBuffer);
-		
+
 		cacheEntry.vao.create();
 		cacheEntry.vbo.create();
 
@@ -599,7 +599,7 @@ void BitmapFont::drawCached(std::string_view text, const glm::vec2& position, fl
 
 	texture->bind();
 	cached->vao.bind();
-	
+
 	glDrawArrays(GL_TRIANGLES, 0, cached->vertexCount);
 	Graphics::VAO::unbind();
 	Graphics::Shader::unbind();

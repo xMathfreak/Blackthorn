@@ -52,7 +52,7 @@ bool TrueTypeFont::loadFromFile(const std::string& filePath, int pointSize) {
 
 	#ifdef BLACKTHORN_DEBUG
 		SDL_Log(
-			"Loaded TrueType font '%s' at %d pt (line height: %f)", 
+			"Loaded TrueType font '%s' at %d pt (line height: %f)",
 			filePath.c_str(), pointSize, lineHeight
 		);
 	#endif
@@ -61,7 +61,7 @@ bool TrueTypeFont::loadFromFile(const std::string& filePath, int pointSize) {
 }
 
 
-void TrueTypeFont::draw(std::string_view text, const glm::vec2& position, float scale, float maxWidth, const SDL_FColor& color, TextAlign alignment) {
+void TrueTypeFont::draw(std::string_view text, const glm::vec2& position, float scale, float maxWidth, const SDL_FColor& color, Text::Alignment alignment) {
 	if (!font || text.empty())
 		return;
 
@@ -71,7 +71,7 @@ void TrueTypeFont::draw(std::string_view text, const glm::vec2& position, float 
 	render(vertices, indices, position, scale, {color.r, color.g, color.b, color.a});
 }
 
-void TrueTypeFont::drawCached(std::string_view text, const glm::vec2& position, float scale, float maxWidth, const SDL_FColor& color, TextAlign alignment) {
+void TrueTypeFont::drawCached(std::string_view text, const glm::vec2& position, float scale, float maxWidth, const SDL_FColor& color, Text::Alignment alignment) {
 	if (!font || text.empty())
 		return;
 
@@ -90,8 +90,8 @@ void TrueTypeFont::drawCached(std::string_view text, const glm::vec2& position, 
 	render(cached->vertices, cached->indexCount, position, scale, {color.r, color.g, color.b, color.a});
 }
 
-TextMetrics TrueTypeFont::measure(std::string_view text, float scale, float maxWidth) {
-	TextMetrics metrics{0.0f, 0.0f, 0};
+Text::Metrics TrueTypeFont::measure(std::string_view text, float scale, float maxWidth) {
+	Text::Metrics metrics{0.0f, 0.0f, 0};
 
 	if (!font || text.empty())
 		return metrics;
@@ -220,7 +220,7 @@ const TrueTypeFont::Glyph& TrueTypeFont::getGlyph(char32_t codePoint) {
 	atlas->updateRegion(atlasCursor.x, atlasCursor.y, converted->w, converted->h, alpha.data());
 
 	SDL_DestroySurface(converted);
-	
+
 	float u0 = atlasCursor.x / float(ATLAS_SIZE);
 	float v0 = atlasCursor.y / float(ATLAS_SIZE);
 	float u1 = (atlasCursor.x + surface->w) / float(ATLAS_SIZE);
@@ -243,7 +243,7 @@ const TrueTypeFont::Glyph& TrueTypeFont::getGlyph(char32_t codePoint) {
 	return glyphCache[codePoint];
 }
 
-void TrueTypeFont::buildTextGeometry(std::string_view text, float maxWidth, TextAlign alignment, std::vector<Vertex>& outVertices, GLsizei& outIndexCount) {
+void TrueTypeFont::buildTextGeometry(std::string_view text, float maxWidth, Text::Alignment alignment, std::vector<Vertex>& outVertices, GLsizei& outIndexCount) {
 	outVertices.clear();
 	outIndexCount = 0;
 
@@ -256,17 +256,17 @@ void TrueTypeFont::buildTextGeometry(std::string_view text, float maxWidth, Text
 		float offsetX = 0.0f;
 
 		switch (alignment) {
-			case TextAlign::Center:
+			case Text::Alignment::Center:
 				offsetX -= line.width * 0.5f;
 				break;
-			case TextAlign::Right:
+			case Text::Alignment::Right:
 				offsetX -= line.width;
 				break;
 			default:
 				break;
 		}
 
-		for (const auto& lg : line.glyphs) {	
+		for (const auto& lg : line.glyphs) {
 			const Glyph& glyph = *lg.glyph;
 
 			float xPos = lg.xPos + offsetX;
@@ -281,7 +281,7 @@ void TrueTypeFont::buildTextGeometry(std::string_view text, float maxWidth, Text
 				outVertices.push_back({{xPos, yPos}, {0, 0}});
 				outVertices.push_back({{xPos, yPos}, {0, 0}});
 				outIndexCount += 6;
-				
+
 				continue;
 			}
 
@@ -427,8 +427,8 @@ std::vector<TrueTypeFont::LayoutLine> TrueTypeFont::layoutText(const std::vector
 		cursorX += g.advance;
 		prev = c;
 	}
-	
-	return lines;	
+
+	return lines;
 }
 
 } // namespace Blackthorn::Fonts

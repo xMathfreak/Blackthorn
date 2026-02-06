@@ -2,7 +2,7 @@
 
 #include <string>
 
-#include "Fonts/TextAlign.h"
+#include "Fonts/TextTypes.h"
 
 namespace Blackthorn::Fonts {
 
@@ -10,7 +10,7 @@ struct TextCacheKey {
 	std::string text;
 	float scale;
 	float maxWidth;
-	TextAlign alignment;
+	Text::Alignment alignment;
 
 	size_t hash() const noexcept {
 		size_t h = 0;

@@ -62,8 +62,8 @@ private:
 
 	void wrapText(std::string_view text, float scale, float maxWidth, std::vector<std::string_view>& outLines) const;
 	float computeLineWidth(std::string_view line, float scale) const;
-	TextMetrics computeMetrics(std::string_view text, float scale, float maxWidth) const;
-	void generateVertices(std::string_view text, float scale, float maxWidth, TextAlign alignment, std::vector<Vertex>& outVertices) const; 
+	Text::Metrics computeMetrics(std::string_view text, float scale, float maxWidth) const;
+	void generateVertices(std::string_view text, float scale, float maxWidth, Text::Alignment alignment, std::vector<Vertex>& outVertices) const; 
 
 public:
 	BitmapFont();
@@ -77,10 +77,10 @@ public:
 	bool loadFromFile(const std::string& texturePath, const std::string& metricsPath);
 	bool loadFromBMFont(const std::string& bmfPath);
 
-	void draw(std::string_view text, const glm::vec2& position, float scale = 1.0f, float maxWidth = 0.0f, const SDL_FColor& color = {1.0f, 1.0f, 1.0f, 1.0f}, TextAlign alignment = TextAlign::Left) override;
-	void drawCached(std::string_view text, const glm::vec2& position, float scale = 1.0f, float maxWidth = 0.0f, const SDL_FColor& color = {1.0f, 1.0f, 1.0f, 1.0f}, TextAlign alignment = TextAlign::Left) override;
+	void draw(std::string_view text, const glm::vec2& position, float scale = 1.0f, float maxWidth = 0.0f, const SDL_FColor& color = {1.0f, 1.0f, 1.0f, 1.0f}, Text::Alignment alignment = Text::Alignment::Left) override;
+	void drawCached(std::string_view text, const glm::vec2& position, float scale = 1.0f, float maxWidth = 0.0f, const SDL_FColor& color = {1.0f, 1.0f, 1.0f, 1.0f}, Text::Alignment alignment = Text::Alignment::Left) override;
 
-	TextMetrics measure(std::string_view text, float scale = 1.0f, float maxWidth = 0.0f) override;
+	Text::Metrics measure(std::string_view text, float scale = 1.0f, float maxWidth = 0.0f) override;
 
 	float getLineHeight() const override { return lineHeight; }
 	float getSpaceWidth() const { return spaceWidth; }
