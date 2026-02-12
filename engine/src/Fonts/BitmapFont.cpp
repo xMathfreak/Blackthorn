@@ -276,7 +276,7 @@ bool BitmapFont::loadFromBMFont(const std::string& bmfPath) {
 	if (version != 1) {
 		#ifdef BLACKTHORN_DEBUG
 			SDL_LogError(
-				SDL_LOG_CATEGORY_APPLICATION, 
+				SDL_LOG_CATEGORY_APPLICATION,
 				"Unsupported BMF version %u in file: %s",
 				version, bmfPath.c_str()
 			);
@@ -540,7 +540,7 @@ void BitmapFont::generateVertices(std::string_view text, float scale, float maxW
 	}
 }
 
-void BitmapFont::draw(std::string_view text, const glm::vec2& position, float scale, float maxWidth, const SDL_FColor& color, Text::Alignment alignment) {
+void BitmapFont::draw(std::string_view text, const glm::vec2& position, float scale, float maxWidth, const glm::vec4& color, Text::Alignment alignment) {
 	if (!isLoaded() || text.empty())
 		return;
 
@@ -562,7 +562,7 @@ void BitmapFont::draw(std::string_view text, const glm::vec2& position, float sc
 	glDrawArrays(GL_TRIANGLES, 0, vertexBuffer.size());
 }
 
-void BitmapFont::drawCached(std::string_view text, const glm::vec2& position, float scale, float maxWidth, const SDL_FColor& color, Text::Alignment alignment) {
+void BitmapFont::drawCached(std::string_view text, const glm::vec2& position, float scale, float maxWidth, const glm::vec4& color, Text::Alignment alignment) {
 	if (!isLoaded() || text.empty())
 		return;
 

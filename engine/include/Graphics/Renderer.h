@@ -17,18 +17,6 @@
 namespace Blackthorn::Graphics {
 
 /**
- * @brief Vertex format used by the 2D renderer.
- *
- * Represents a single vertex for batched quad rendering.
- */
-struct Vertex2D {
-	glm::vec3 position;
-	glm::vec4 color;
-	glm::vec2 texCoords;
-	float texIndex;
-};
-
-/**
  * @brief Batched 2D renderer built on OpenGL.
  *
  * The renderer internally manages vertex/index buffers, shaders,
@@ -46,6 +34,19 @@ struct Vertex2D {
  * @note Requires a valid OpenGL context to be current on the calling thread.
  */
 class BLACKTHORN_API Renderer {
+private:
+	/**
+	 * @brief Vertex format used by the 2D renderer.
+	 *
+	 * Represents a single vertex for batched quad rendering.
+	 */
+	struct Vertex {
+		glm::vec3 position;
+		glm::vec4 color;
+		glm::vec2 texCoords;
+		float texIndex;
+	};
+
 private:
 	/// Maximum number of quads per batch
 	static constexpr Uint32 MAX_QUADS = 2 << 13;
@@ -92,10 +93,10 @@ private:
 	bool cullingEnabled = true;
 
 	/// CPU-side vertex buffer for batching
-	std::unique_ptr<Vertex2D[]> quadBuffer;
+	std::unique_ptr<Vertex[]> quadBuffer;
 
 	/// Pointer to the current position in the batch buffer
-	Vertex2D* quadBufferPtr = nullptr;
+	Vertex* quadBufferPtr = nullptr;
 
 	/// Number of indices currently queued in the batch
 	Uint32 quadIndexCount = 0;
@@ -150,19 +151,9 @@ private:
 	inline bool isVisible(const SDL_FRect& rect, float rotation = 0.0f) const;
 
 	/**
-	 * @brief Converts an SDL color to a glm::vec4.
-	 */
-	static inline constexpr glm::vec4 toGLMColor(const SDL_FColor& color);
-
-	/**
-	 * @brief Converts two floats to a glm::vec2.
-	 */
-	static inline constexpr glm::vec2 toGLMVec2(float x, float y);
-
-	/**
 	 * @brief Internal quad draw implementation.
 	 */
-	void draw(const SDL_FRect& rect, float z, float rotation, const SDL_FColor& color, const Texture* texture, const SDL_FRect* srcRect);
+	void draw(const SDL_FRect& rect, float z, float rotation, const glm::vec4& color, const Texture* texture, const SDL_FRect* srcRect);
 public:
 	/**
 	 * @brief Constructs the renderer and initializes GPU resources.
@@ -250,7 +241,7 @@ public:
 		const SDL_FRect& rect,
 		float rotation = 0.0f,
 		float z = 0.0f,
-		const SDL_FColor& color = { 1.0f, 1.0f, 1.0f, 1.0f }
+		const glm::vec4& color = { 1.0f, 1.0f, 1.0f, 1.0f }
 	);
 
 	/**
@@ -268,7 +259,7 @@ public:
 		const SDL_FRect* src = nullptr,
 		float rotation = 0.0f,
 		float z = 0.0f,
-		const SDL_FColor& tint = { 1.0f, 1.0f, 1.0f, 1.0f }
+		const glm::vec4& tint = { 1.0f, 1.0f, 1.0f, 1.0f }
 	);
 };
 

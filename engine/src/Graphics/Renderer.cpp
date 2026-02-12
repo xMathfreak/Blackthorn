@@ -4,19 +4,11 @@
 
 namespace Blackthorn::Graphics {
 
-inline constexpr glm::vec4 Renderer::toGLMColor(const SDL_FColor& color) {
-	return glm::vec4(color.r, color.g, color.b, color.a);
-}
-
-inline constexpr glm::vec2 Renderer::toGLMVec2(float x, float y) {
-	return glm::vec2(x, y);
-}
-
 Renderer::Renderer()
 	: projectionMatrix(1.0f)
 	, viewMatrix(1.0f)
 {
-	quadBuffer = std::make_unique<Vertex2D[]>(MAX_VERTICES);
+	quadBuffer = std::make_unique<Vertex[]>(MAX_VERTICES);
 
 	initQuadBuffers();
 	initShader();
@@ -53,12 +45,12 @@ void Renderer::initQuadBuffers() {
 	QuadVAO->bind();
 	QuadVBO->bind();
 
-	glBufferData(GL_ARRAY_BUFFER, MAX_VERTICES * sizeof(Vertex2D), nullptr, GL_DYNAMIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, MAX_VERTICES * sizeof(Vertex), nullptr, GL_DYNAMIC_DRAW);
 
-	QuadVAO->enableAttrib(0, 3, GL_FLOAT, sizeof(Vertex2D), offsetof(Vertex2D, position));
-	QuadVAO->enableAttrib(1, 4, GL_FLOAT, sizeof(Vertex2D), offsetof(Vertex2D, color));
-	QuadVAO->enableAttrib(2, 2, GL_FLOAT, sizeof(Vertex2D), offsetof(Vertex2D, texCoords));
-	QuadVAO->enableAttrib(3, 1, GL_FLOAT, sizeof(Vertex2D), offsetof(Vertex2D, texIndex));
+	QuadVAO->enableAttrib(0, 3, GL_FLOAT, sizeof(Vertex), offsetof(Vertex, position));
+	QuadVAO->enableAttrib(1, 4, GL_FLOAT, sizeof(Vertex), offsetof(Vertex, color));
+	QuadVAO->enableAttrib(2, 2, GL_FLOAT, sizeof(Vertex), offsetof(Vertex, texCoords));
+	QuadVAO->enableAttrib(3, 1, GL_FLOAT, sizeof(Vertex), offsetof(Vertex, texIndex));
 
 	std::vector<GLuint> indices;
 	indices.reserve(MAX_INDICES);
@@ -146,7 +138,7 @@ void Renderer::endScene() {
 	flush();
 }
 
-void Renderer::draw(const SDL_FRect& rect, float z, float rotation, const SDL_FColor& color, const Texture* texture, const SDL_FRect* srcRect) {
+void Renderer::draw(const SDL_FRect& rect, float z, float rotation, const glm::vec4& color, const Texture* texture, const SDL_FRect* srcRect) {
 	if (!isVisible(rect, rotation))
 		return;
 
@@ -174,8 +166,6 @@ void Renderer::draw(const SDL_FRect& rect, float z, float rotation, const SDL_FC
 			textureSlotIndex++;
 		}
 	}
-
-	glm::vec4 glmColor = toGLMColor(color);
 
 	glm::vec2 textureCoords[4];
 	constexpr glm::vec2 defaultTexCoords[4] = {
@@ -224,7 +214,7 @@ void Renderer::draw(const SDL_FRect& rect, float z, float rotation, const SDL_FC
 			float rotY = corners[i].x * sinR + corners[i].y * cosR;
 
 			quadBufferPtr->position = {centerX + rotX, centerY + rotY, z};
-			quadBufferPtr->color = glmColor;
+			quadBufferPtr->color = color;
 			quadBufferPtr->texCoords = textureCoords[i];
 			quadBufferPtr->texIndex = texIndex;
 			quadBufferPtr++;
@@ -232,28 +222,28 @@ void Renderer::draw(const SDL_FRect& rect, float z, float rotation, const SDL_FC
 	} else {
 		// Bottom-left
 		quadBufferPtr->position = { rect.x, rect.y, z };
-		quadBufferPtr->color = glmColor;
+		quadBufferPtr->color = color;
 		quadBufferPtr->texCoords = textureCoords[0];
 		quadBufferPtr->texIndex = texIndex;
 		quadBufferPtr++;
 
 		// Bottom-right
 		quadBufferPtr->position = { rect.x + rect.w, rect.y, z };
-		quadBufferPtr->color = glmColor;
+		quadBufferPtr->color = color;
 		quadBufferPtr->texCoords = textureCoords[1];
 		quadBufferPtr->texIndex = texIndex;
 		quadBufferPtr++;
 
 		// Top-right
 		quadBufferPtr->position = { rect.x + rect.w, rect.y + rect.h, z };
-		quadBufferPtr->color = glmColor;
+		quadBufferPtr->color = color;
 		quadBufferPtr->texCoords = textureCoords[2];
 		quadBufferPtr->texIndex = texIndex;
 		quadBufferPtr++;
 
 		// Top-left
 		quadBufferPtr->position = { rect.x, rect.y + rect.h, z };
-		quadBufferPtr->color = glmColor;
+		quadBufferPtr->color = color;
 		quadBufferPtr->texCoords = textureCoords[3];
 		quadBufferPtr->texIndex = texIndex;
 		quadBufferPtr++;
@@ -262,11 +252,11 @@ void Renderer::draw(const SDL_FRect& rect, float z, float rotation, const SDL_FC
 	quadIndexCount += 6;
 }
 
-void Renderer::drawQuad(const SDL_FRect& rect, float rotation, float z, const SDL_FColor& color) {
+void Renderer::drawQuad(const SDL_FRect& rect, float rotation, float z, const glm::vec4& color) {
 	draw(rect, z, rotation, color, nullptr, nullptr);
 }
 
-void Renderer::drawTexture(const Texture& texture, const SDL_FRect& dest, const SDL_FRect* src, float rotation, float z, const SDL_FColor& tint) {
+void Renderer::drawTexture(const Texture& texture, const SDL_FRect& dest, const SDL_FRect* src, float rotation, float z, const glm::vec4& tint) {
 	draw(dest, z, rotation, tint, &texture, src);
 }
 
@@ -294,7 +284,7 @@ void Renderer::setProjection(const glm::mat4& projection) {
 
 void Renderer::setView(const glm::mat4& view) {
 	viewMatrix = view;
-	
+
 	globalUBO->getData().viewProjection = getViewProjectionMatrix();
 	globalUBO->uploadField(&GlobalData::viewProjection);
 }

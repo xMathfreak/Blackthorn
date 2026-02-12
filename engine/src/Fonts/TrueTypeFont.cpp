@@ -61,17 +61,17 @@ bool TrueTypeFont::loadFromFile(const std::string& filePath, int pointSize) {
 }
 
 
-void TrueTypeFont::draw(std::string_view text, const glm::vec2& position, float scale, float maxWidth, const SDL_FColor& color, Text::Alignment alignment) {
+void TrueTypeFont::draw(std::string_view text, const glm::vec2& position, float scale, float maxWidth, const glm::vec4& color, Text::Alignment alignment) {
 	if (!font || text.empty())
 		return;
 
 	std::vector<Vertex> vertices;
 	GLsizei indices = 0;
 	buildTextGeometry(text, maxWidth, alignment, vertices, indices);
-	render(vertices, indices, position, scale, {color.r, color.g, color.b, color.a});
+	render(vertices, indices, position, scale, color);
 }
 
-void TrueTypeFont::drawCached(std::string_view text, const glm::vec2& position, float scale, float maxWidth, const SDL_FColor& color, Text::Alignment alignment) {
+void TrueTypeFont::drawCached(std::string_view text, const glm::vec2& position, float scale, float maxWidth, const glm::vec4& color, Text::Alignment alignment) {
 	if (!font || text.empty())
 		return;
 
@@ -87,7 +87,7 @@ void TrueTypeFont::drawCached(std::string_view text, const glm::vec2& position, 
 		cached = textCache.get(key);
 	}
 
-	render(cached->vertices, cached->indexCount, position, scale, {color.r, color.g, color.b, color.a});
+	render(cached->vertices, cached->indexCount, position, scale, color);
 }
 
 Text::Metrics TrueTypeFont::measure(std::string_view text, float scale, float maxWidth) {
