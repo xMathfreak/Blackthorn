@@ -7,9 +7,11 @@
 
 #include <SDL3/SDL.h>
 
+#include "Core/Export.h"
+
 namespace Blackthorn::Debug {
 
-class Profiler {
+class BLACKTHORN_API Profiler {
 public:
 	struct Sample {
 		std::string name;
