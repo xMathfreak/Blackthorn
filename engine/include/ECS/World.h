@@ -103,6 +103,10 @@ public:
 		systemManager.render(alpha);
 	}
 
+	void lateUpdate(float dt) {
+		systemManager.lateUpdate(dt);
+	}
+
 private:
 	EntityPool pool;
 	Systems::SystemManager systemManager;

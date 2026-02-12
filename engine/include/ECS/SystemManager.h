@@ -21,7 +21,7 @@ public:
 	template <typename System, typename... Args>
 	System* add(Args&&... args) {
 		static_assert(std::is_base_of_v<ISystem, System>, "System must inherit from ISystem");
-		
+
 		auto system = std::make_unique<System>(std::forward<Args>(args)...);
 		System* ptr = system.get();
 		ptr->init(&pool);
@@ -72,6 +72,11 @@ public:
 	void render(float alpha) {
 		for (auto& system: systems)
 			system->render(&pool, alpha);
+	}
+
+	void lateUpdate(float dt) {
+		for (auto& system : systems)
+			system->lateUpdate(&pool, dt);
 	}
 };
 

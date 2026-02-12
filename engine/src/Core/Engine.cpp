@@ -41,7 +41,7 @@ bool Engine::init(const EngineConfig& cfg) {
 		SDL_LogError(SDL_LOG_CATEGORY_ERROR, "TTF_Init failed: %s", SDL_GetError());
 		return false;
 	}
-	
+
 	config = cfg;
 
 	#ifdef BLACKTHORN_DEBUG
@@ -191,7 +191,7 @@ void Engine::render(float alpha) {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	renderer->beginScene();
-	
+
 	sceneManager.render(alpha);
 
 	renderer->endScene();
@@ -240,13 +240,15 @@ void Engine::fixedUpdate(float dt) {
 	sceneManager.fixedUpdate(dt);
 }
 
+void Engine::lateUpdate(float dt) {
+	sceneManager.lateUpdate(dt);
+}
+
 void Engine::run() {
 	if (!initialized) {
 		SDL_LogError(SDL_LOG_CATEGORY_ERROR, "Cannot run engine: Not initialized");
 		return;
 	}
-
-	PROFILE_SCOPE("Frame");
 
 	Uint64 lastFrameTime = SDL_GetPerformanceCounter();
 	float accumulatedTime = 0.0f;
@@ -262,6 +264,8 @@ void Engine::run() {
 		#ifdef BLACKTHORN_DEBUG
 			profiler.beginFrame();
 		#endif
+
+		PROFILE_SCOPE("Frame");
 
 		Uint64 currentTime = SDL_GetPerformanceCounter();
 		float frameTime = static_cast<float>(currentTime - lastFrameTime) / frequency;
@@ -289,7 +293,7 @@ void Engine::run() {
 			#ifdef BLACKTHORN_DEBUG
 				profiler.endFrame();
 			#endif
-			
+
 			Uint32 unfocusedDelay = static_cast<Uint32>(1000.0f / config.timing.unfocusedFPS);
 			SDL_Delay(unfocusedDelay);
 			continue;
@@ -324,6 +328,11 @@ void Engine::run() {
 			update(frameTime);
 		}
 
+		{
+			PROFILE_SCOPE("Late Update");
+			lateUpdate(frameTime);
+		}
+
 		float alpha = accumulatedTime / config.timing.fixedDeltaTime;
 		{
 			PROFILE_SCOPE("Render");
@@ -333,9 +342,9 @@ void Engine::run() {
 		#ifdef BLACKTHORN_DEBUG
 			static float logCounter = 0.0f;
 			logCounter += frameTime;
-			
+
 			profiler.endFrame();
-			
+
 			if (logCounter >= config.debug.profilingLogInterval) {
 				logProfilingInfo();
 				logCounter = 0;

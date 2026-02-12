@@ -12,6 +12,7 @@ public:
 	virtual void update(EntityPool*, float dt) {}
 	virtual void fixedUpdate(EntityPool*, float dt) {}
 	virtual void render(EntityPool*, float alpha) {}
+	virtual void lateUpdate(EntityPool*, float dt) {}
 };
 
 } // namespace Blackthorn::ECS::Systems

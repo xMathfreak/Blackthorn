@@ -26,10 +26,11 @@ public:
 	bool isRunning() const { return running; }
 	void stop() { running = false; }
 
-	void fixedUpdate(float dt);
 	void processEvents();
 	void render(float alpha);
 	void update(float dt);
+	void fixedUpdate(float dt);
+	void lateUpdate(float dt);
 
 	void logEngineInfo();
 

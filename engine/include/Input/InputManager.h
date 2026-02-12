@@ -52,7 +52,7 @@ public:
 			return false;
 
 		return it->second == ButtonState::Down
-			|| it->second == ButtonState::Pressed;		
+			|| it->second == ButtonState::Pressed;
 	}
 
 	bool isKeyPressed(SDL_Keycode key) const {

@@ -130,6 +130,18 @@ public:
 		}
 	}
 
+	void lateUpdate(float dt) {
+		if (inTransition)
+			return;
+
+		for (auto it = scenes.rbegin(); it != scenes.rend(); ++it) {
+			(*it)->lateUpdate(dt);
+
+			if ((*it)->blocksUpdate())
+				break;
+		}
+	}
+
 	void render(float alpha) {
 		if (scenes.empty())
 			return;

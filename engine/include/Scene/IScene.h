@@ -16,7 +16,7 @@ protected:
 
 public:
 	virtual ~IScene() = default;
-	
+
 	virtual void onEnter() {}
 	virtual void onExit() {}
 	virtual void onPause() {}
@@ -38,6 +38,11 @@ public:
 	virtual void render(float alpha) {
 		if (world)
 			world->render(alpha);
+	}
+
+	virtual void lateUpdate(float dt) {
+		if (world)
+			world->lateUpdate(dt);
 	}
 
 	ECS::World* getWorld() { return world.get(); }
