@@ -2,6 +2,7 @@
 
 #include "Core/Export.h"
 #include "ECS/World.h"
+#include "UI/UIManager.h"
 
 namespace Blackthorn::Scene {
 
@@ -10,6 +11,8 @@ class SceneManager;
 class BLACKTHORN_API IScene {
 protected:
 	std::unique_ptr<ECS::World> world;
+	std::unique_ptr<UI::UIManager> uiManager;
+
 	SceneManager* sceneManager = nullptr;
 
 	friend class SceneManager;

@@ -57,6 +57,7 @@ public:
 
 		scene->sceneManager = this;
 		scene->world = std::make_unique<ECS::World>();
+		scene->uiManager = std::make_unique<UI::UIManager>();
 		scene->onEnter();
 
 		scenes.push_back(std::move(scene));
