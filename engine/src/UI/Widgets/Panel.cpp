@@ -16,4 +16,18 @@ void Panel::render(Graphics::Renderer& renderer) {
 	Container::render(renderer);
 }
 
+void Panel::layoutChildren() {
+	Container::layoutChildren();
+
+	if (autoResize && layout) {
+		glm::vec2 minSize = layout->calculateMinimumSize(this);
+
+		if (widthMode == SizeMode::Content)
+			size.x = minSize.x;
+
+		if (heightMode == SizeMode::Content)
+			size.y = minSize.y;
+	}
+}
+
 } // namespace Blackthorn::UI

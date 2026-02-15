@@ -5,6 +5,8 @@
 #include <SDL3/SDL.h>
 #include <glm/glm.hpp>
 
+#include "UI/Layout.h"
+
 namespace Blackthorn {
 
 namespace Graphics {
@@ -22,20 +24,13 @@ namespace Blackthorn::UI {
 class Container;
 class Widget;
 
-enum class Align {
-	Start,
-	Center,
-	End,
-	Stretch
-};
-
-enum class SizeMode {
+enum class SizeMode : Uint8 {
 	Fixed,
 	Content,
 	Percent
 };
 
-enum class WidgetState {
+enum class WidgetState : Uint8 {
 	Normal = 0,
 	Hovered = 1 << 0,
 	Pressed = 1 << 1,
@@ -45,18 +40,33 @@ enum class WidgetState {
 
 inline WidgetState operator|(WidgetState a, WidgetState b) {
 	return static_cast<WidgetState>(
-		static_cast<int>(a) | static_cast<int>(b)
+		static_cast<Uint8>(a) | static_cast<Uint8>(b)
 	);
 }
 
 inline bool hasState(WidgetState state, WidgetState flag) {
-	return (static_cast<int>(state) & static_cast<int>(flag)) != 0;
+	return (static_cast<Uint8>(state) & static_cast<Uint8>(flag)) != 0;
 }
 
 class Widget {
+public:
+	struct Dimensions {
+		float width;
+		float height;
+	};
+
+	struct Margins {
+		float top, bottom, left, right;
+	};
+
+	struct SizeModes {
+		SizeMode widthMode;
+		SizeMode heightMode;
+	};
+
 protected:
-	glm::vec2 position{0, 0};
-	glm::vec2 size{0, 0};
+	glm::vec2 position{0};
+	glm::vec2 size{0};
 
 	float width = 0;
 	float height = 0;
@@ -64,12 +74,14 @@ protected:
 	SizeMode widthMode = SizeMode::Fixed;
 	SizeMode heightMode = SizeMode::Fixed;
 
+	Alignment alignment = Alignment::topLeft();
+
 	Container* parent = nullptr;
 	bool visible = true;
 	WidgetState state = WidgetState::Normal;
 
-	glm::vec4 margin;
-	glm::vec4 padding;
+	Margins margin;
+	Margins padding;
 
 	std::string id;
 
@@ -95,7 +107,7 @@ public:
 	virtual glm::vec2 getSize() const { return size; }
 	virtual glm::vec2 getAbsolutePosition() const;
 
-	virtual glm::vec2 getMinimumSize() const { return glm::vec2(0, 0); }
+	virtual glm::vec2 getMinimumSize() const { return glm::vec2{0}; }
 
 	void setWidth(float w, SizeMode mode = SizeMode::Fixed);
 	void setHeight(float w, SizeMode mode = SizeMode::Fixed);
@@ -121,18 +133,21 @@ public:
 
 	void setMargin(float m);
 	void setMargin(float top, float right, float bottom, float left);
-	void setMargin(const glm::vec4& m);
 
 	void setPadding(float p);
 	void setPadding(float top, float right, float bottom, float left);
-	void setPadding(const glm::vec4& p);
 
-	const glm::vec4& getMargin() const { return margin; }
-	const glm::vec4& getPadding() const { return padding; }
+	const Margins& getMargin() const { return margin; }
+	const Margins& getPadding() const { return padding; }
 
 	void setID(const std::string& ID) { this->id = ID; }
 	const std::string& getID() const { return id; }
 
+	void setAlignment(const Alignment& align) { alignment = align; }
+	const Alignment& getAlignment() const { return alignment; }
+
+	Dimensions getDimensions() const { return { width, height }; }
+	SizeModes getSizeModes() const { return {widthMode, heightMode}; }
 };
 
 } // namespace Blackthorn::UI

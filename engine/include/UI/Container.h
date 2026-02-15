@@ -11,6 +11,7 @@ namespace Blackthorn::UI {
 class BLACKTHORN_API Container : public Widget {
 protected:
 	std::vector<std::unique_ptr<Widget>> children;
+	std::unique_ptr<Layout> layout;
 	Widget* getChildAt(const glm::vec2& position);
 
 public:
@@ -32,6 +33,8 @@ public:
 	bool onKeyDown(SDL_Keycode key) override;
 	bool onKeyUp(SDL_Keycode key) override;
 
+	void setLayout(std::unique_ptr<Layout> l);
+	Layout* getLayout() const { return layout.get(); }
 	virtual void layoutChildren();
 };
 

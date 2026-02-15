@@ -29,7 +29,7 @@ bool Widget::onMouseDown(const glm::vec2& pos, Uint8 button) {
 bool Widget::onMouseUp(const glm::vec2& pos, Uint8 button) {
 	if (hasState(state, WidgetState::Pressed)) {
 		state = static_cast<WidgetState>(
-			static_cast<int>(state) & ~static_cast<int>(WidgetState::Pressed)
+			static_cast<Uint8>(state) & ~static_cast<Uint8>(WidgetState::Pressed)
 		);
 
 		return true;
@@ -61,7 +61,7 @@ glm::vec2 Widget::getAbsolutePosition() const {
 
 	if (parent) {
 		absolutePosition += parent->getAbsolutePosition();
-		absolutePosition += glm::vec2(parent->getPadding().x, parent->getPadding().y);
+		absolutePosition += glm::vec2{parent->getPadding().left, parent->getPadding().top};
 	}
 
 	return absolutePosition;
@@ -86,7 +86,7 @@ void Widget::setHeight(float h, SizeMode mode) {
 void Widget::setEnabled(bool enabled) {
 	if (enabled) {
 		state = static_cast<WidgetState>(
-			static_cast<int>(state) & ~static_cast<int>(WidgetState::Disabled)
+			static_cast<Uint8>(state) & ~static_cast<Uint8>(WidgetState::Disabled)
 		);
 	} else {
 		state = state | WidgetState::Disabled;
@@ -98,7 +98,7 @@ void Widget::setFocused(bool focused) {
 		state = state | WidgetState::Focused;
 	} else {
 		state = static_cast<WidgetState>(
-			static_cast<int>(state) & ~static_cast<int>(WidgetState::Focused)
+			static_cast<Uint8>(state) & ~static_cast<Uint8>(WidgetState::Focused)
 		);
 	}
 }
@@ -111,27 +111,19 @@ bool Widget::containsPoint(const glm::vec2& point) const {
 }
 
 void Widget::setMargin(float m) {
-	margin = glm::vec4(m);
+	margin = {m, m, m, m};
 }
 
 void Widget::setMargin(float top, float right, float bottom, float left) {
-	margin = {top, right, bottom, left};
-}
-
-void Widget::setMargin(const glm::vec4& m) {
-	margin = m;
+	margin = {top, bottom, left, right};
 }
 
 void Widget::setPadding(float p) {
-	padding = glm::vec4(p);
+	padding = {p, p, p, p};
 }
 
 void Widget::setPadding(float top, float right, float bottom, float left) {
-	padding = {top, right, bottom, left};
-}
-
-void Widget::setPadding(const glm::vec4& p) {
-	padding = p;
+	padding = {top, bottom, left, right};
 }
 
 void Widget::updateHoverState(const glm::vec2& mousePos) {
@@ -145,7 +137,7 @@ void Widget::updateHoverState(const glm::vec2& mousePos) {
 		state = state | WidgetState::Hovered;
 	} else if (!nowHovered && wasHovered) {
 		state = static_cast<WidgetState>(
-			static_cast<int>(state) & ~static_cast<int>(WidgetState::Hovered)
+			static_cast<Uint8>(state) & ~static_cast<Uint8>(WidgetState::Hovered)
 		);
 	}
 }
