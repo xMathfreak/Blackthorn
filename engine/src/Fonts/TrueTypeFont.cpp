@@ -222,9 +222,9 @@ const TrueTypeFont::Glyph& TrueTypeFont::getGlyph(char32_t codePoint) {
 	SDL_DestroySurface(converted);
 
 	float u0 = atlasCursor.x / float(ATLAS_SIZE);
-	float v0 = atlasCursor.y / float(ATLAS_SIZE);
+	float v0 = (atlasCursor.y + surface->h) / float(ATLAS_SIZE);
 	float u1 = (atlasCursor.x + surface->w) / float(ATLAS_SIZE);
-	float v1 = (atlasCursor.y + surface->h) / float(ATLAS_SIZE);
+	float v1 = atlasCursor.y / float(ATLAS_SIZE);
 
 	int minX, maxX, minY, maxY, advance;
 	TTF_GetGlyphMetrics(font, codePoint, &minX, &maxX, &minY, &maxY, &advance);

@@ -169,10 +169,10 @@ void Renderer::draw(const SDL_FRect& rect, float z, float rotation, const glm::v
 
 	glm::vec2 textureCoords[4];
 	constexpr glm::vec2 defaultTexCoords[4] = {
-		{ 0.0f, 1.0f },
-		{ 1.0f, 1.0f },
+		{ 0.0f, 0.0f },
 		{ 1.0f, 0.0f },
-		{ 0.0f, 0.0f }
+		{ 1.0f, 1.0f },
+		{ 0.0f, 1.0f }
 	};
 
 	if (srcRect && texture) {
@@ -180,14 +180,14 @@ void Renderer::draw(const SDL_FRect& rect, float z, float rotation, const glm::v
 		float invTexHeight = 1.0f / texture->getHeight();
 
 		float u0 = srcRect->x * invTexWidth;
-		float v0 = 1.0f - (srcRect->y * invTexHeight);
+		float v0 = srcRect->y * invTexHeight;
 		float u1 = (srcRect->x + srcRect->w) * invTexWidth;
-		float v1 = 1.0f - ((srcRect->y + srcRect->h) * invTexHeight);
+		float v1 = (srcRect->y + srcRect->h) * invTexHeight;
 
-		textureCoords[0] = { u0, v1 };
-		textureCoords[1] = { u1, v1 };
-		textureCoords[2] = { u1, v0 };
-		textureCoords[3] = { u0, v0 };
+		textureCoords[0] = { u0, v0 };
+		textureCoords[1] = { u1, v0 };
+		textureCoords[2] = { u1, v1 };
+		textureCoords[3] = { u0, v1 };
 	} else {
 		std::memcpy(textureCoords, defaultTexCoords, sizeof(textureCoords));
 	}
@@ -206,7 +206,7 @@ void Renderer::draw(const SDL_FRect& rect, float z, float rotation, const glm::v
 			{ -halfW, -halfH },
 			{  halfW, -halfH },
 			{  halfW,  halfH },
-			{ -halfW,  halfH }
+			{ -halfW,  halfH },
 		};
 
 		for (int i = 0; i < 4; ++i) {
@@ -220,28 +220,28 @@ void Renderer::draw(const SDL_FRect& rect, float z, float rotation, const glm::v
 			quadBufferPtr++;
 		}
 	} else {
-		// Bottom-left
+		// Top-left
 		quadBufferPtr->position = { rect.x, rect.y, z };
 		quadBufferPtr->color = color;
 		quadBufferPtr->texCoords = textureCoords[0];
 		quadBufferPtr->texIndex = texIndex;
 		quadBufferPtr++;
 
-		// Bottom-right
+		// Top-right
 		quadBufferPtr->position = { rect.x + rect.w, rect.y, z };
 		quadBufferPtr->color = color;
 		quadBufferPtr->texCoords = textureCoords[1];
 		quadBufferPtr->texIndex = texIndex;
 		quadBufferPtr++;
 
-		// Top-right
+		// Bottom-right
 		quadBufferPtr->position = { rect.x + rect.w, rect.y + rect.h, z };
 		quadBufferPtr->color = color;
 		quadBufferPtr->texCoords = textureCoords[2];
 		quadBufferPtr->texIndex = texIndex;
 		quadBufferPtr++;
 
-		// Top-left
+		// Bottom-left
 		quadBufferPtr->position = { rect.x, rect.y + rect.h, z };
 		quadBufferPtr->color = color;
 		quadBufferPtr->texCoords = textureCoords[3];
@@ -314,14 +314,14 @@ void Renderer::drawNineSlice(const Texture& texture, const SDL_FRect& dest, cons
 
 	// Bottom edge
 	SDL_FRect bottomEdge = {
-	dest.x + leftMargin, dest.y + dest.h - bottomMargin,
-	dest.w - leftMargin - rightMargin, bottomMargin
+		dest.x + leftMargin, dest.y + dest.h - bottomMargin,
+		dest.w - leftMargin - rightMargin, bottomMargin
 	};
 
 	// Bottom-right corner
 	SDL_FRect bottomRight = {
-	dest.x + dest.w - rightMargin, dest.y + dest.h - bottomMargin,
-	rightMargin, bottomMargin
+		dest.x + dest.w - rightMargin, dest.y + dest.h - bottomMargin,
+		rightMargin, bottomMargin
 	};
 
 	SDL_FRect srcTopLeft = {0, 0, leftMargin, topMargin};
@@ -350,7 +350,7 @@ void Renderer::drawNineSlice(const Texture& texture, const SDL_FRect& dest, cons
 void Renderer::setProjection(int width, int height) {
 	projectionMatrix = glm::ortho(
 		0.0f, static_cast<float>(width),
-		0.0f, static_cast<float>(height),
+		static_cast<float>(height), 0.0f,
 		-1.0f, 1.0f
 	);
 

@@ -516,14 +516,14 @@ void BitmapFont::generateVertices(std::string_view text, float scale, float maxW
 			const Glyph& glyph = it->second;
 
 			float glyphX = snap(currentX + glyph.xOffset * scale);
-			float glyphY = snap(currentY + (baseline + glyph.yOffset) * scale);
+			float glyphY = snap(currentY + glyph.yOffset * scale);
 			float glyphW = glyph.rect.w * scale;
 			float glyphH = glyph.rect.h * scale;
 
 			float u0 = glyph.rect.x / texWidth;
+			float v0 = glyph.rect.y / texHeight;
 			float u1 = (glyph.rect.x + glyph.rect.w) / texWidth;
-			float v0 = (glyph.rect.y + glyph.rect.h) / texHeight;
-			float v1 = glyph.rect.y / texHeight;
+			float v1 = (glyph.rect.y + glyph.rect.h) / texHeight;
 
 			outVertices.push_back({{glyphX, glyphY}, {u0, v0}});
 			outVertices.push_back({{glyphX + glyphW, glyphY}, {u1, v0}});
