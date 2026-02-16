@@ -106,8 +106,10 @@ void Widget::setFocused(bool focused) {
 bool Widget::containsPoint(const glm::vec2& point) const {
 	glm::vec2 absPos = getAbsolutePosition();
 
-	return point.x >= absPos.x && point.x <= absPos.x + size.x
-		&& point.y >= absPos.y && point.y <= absPos.y + size.y;
+	return point.x >= absPos.x
+		&& point.x <= absPos.x + size.x
+		&& point.y >= absPos.y
+		&& point.y <= absPos.y + size.y;
 }
 
 void Widget::setMargin(float m) {

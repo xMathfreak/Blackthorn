@@ -83,8 +83,6 @@ protected:
 	Margins margin;
 	Margins padding;
 
-	std::string id;
-
 	void updateHoverState(const glm::vec2& mousePos);
 
 public:
@@ -122,8 +120,8 @@ public:
 
 	WidgetState getState() const { return state; }
 	bool isEnabled() const { return !hasState(state, WidgetState::Disabled); }
-	bool isHovered() const { return !hasState(state, WidgetState::Hovered); }
-	bool isPressed() const { return !hasState(state, WidgetState::Pressed); }
+	bool isHovered() const { return hasState(state, WidgetState::Hovered); }
+	bool isPressed() const { return hasState(state, WidgetState::Pressed); }
 	bool isFocused() const { return !hasState(state, WidgetState::Focused); }
 
 	void setFocused(bool focused);
@@ -139,9 +137,6 @@ public:
 
 	const Margins& getMargin() const { return margin; }
 	const Margins& getPadding() const { return padding; }
-
-	void setID(const std::string& ID) { this->id = ID; }
-	const std::string& getID() const { return id; }
 
 	void setAlignment(const Alignment& align) { alignment = align; }
 	const Alignment& getAlignment() const { return alignment; }
