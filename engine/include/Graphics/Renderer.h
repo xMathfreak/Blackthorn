@@ -261,6 +261,22 @@ public:
 		float z = 0.0f,
 		const glm::vec4& tint = { 1.0f, 1.0f, 1.0f, 1.0f }
 	);
+
+	/**
+	 * @brief Draws a nine slice texture.
+	 * @param texture The texture to draw
+	 * @param dest Destination rectangle.
+	 * @param sliceMargins The slice margins separating the 9 quadrants.
+	 * @param z Z-depth value.
+	 * @param tint Color tint applied to the texture.
+	 */
+	void drawNineSlice(
+		const Texture& texture,
+		const SDL_FRect& dest,
+		const SDL_FRect& sliceMargins,
+		float z = 0.0f,
+		const glm::vec4& tint = { 1.0f, 1.0f, 1.0f, 1.0f, }
+	);
 };
 
 } // namespace Blackthorn::Graphics

@@ -260,6 +260,93 @@ void Renderer::drawTexture(const Texture& texture, const SDL_FRect& dest, const 
 	draw(dest, z, rotation, tint, &texture, src);
 }
 
+void Renderer::drawNineSlice(const Texture& texture, const SDL_FRect& dest, const SDL_FRect& sliceMargins, float z, const glm::vec4& tint) {
+	float texWidth = static_cast<float>(texture.getWidth());
+	float texHeight = static_cast<float>(texture.getHeight());
+
+	float leftMargin = sliceMargins.x;
+	float topMargin = sliceMargins.y;
+	float rightMargin = sliceMargins.w;
+	float bottomMargin = sliceMargins.h;
+
+	// Top-left corner
+	SDL_FRect topLeft = {
+		dest.x, dest.y,
+		leftMargin, topMargin
+	};
+
+	// Top edge
+	SDL_FRect topEdge = {
+		dest.x + leftMargin, dest.y,
+		dest.w - leftMargin - rightMargin, topMargin
+	};
+
+	// Top-right corner
+	SDL_FRect topRight = {
+		dest.x + dest.w - rightMargin, dest.y,
+		rightMargin, topMargin
+	};
+
+	// Left edge
+	SDL_FRect leftEdge = {
+		dest.x, dest.y + topMargin,
+		leftMargin, dest.h - topMargin - bottomMargin
+	};
+
+	// Center
+	SDL_FRect center = {
+		dest.x + leftMargin, dest.y + topMargin,
+		dest.w - leftMargin - rightMargin,
+		dest.h - topMargin - bottomMargin
+	};
+
+	// Right edge
+	SDL_FRect rightEdge = {
+		dest.x + dest.w - rightMargin, dest.y + topMargin,
+		rightMargin, dest.h - topMargin - bottomMargin
+	};
+
+	// Bottom-left corner
+	SDL_FRect bottomLeft = {
+		dest.x, dest.y + dest.h - bottomMargin,
+		leftMargin, bottomMargin
+	};
+
+	// Bottom edge
+	SDL_FRect bottomEdge = {
+	dest.x + leftMargin, dest.y + dest.h - bottomMargin,
+	dest.w - leftMargin - rightMargin, bottomMargin
+	};
+
+	// Bottom-right corner
+	SDL_FRect bottomRight = {
+	dest.x + dest.w - rightMargin, dest.y + dest.h - bottomMargin,
+	rightMargin, bottomMargin
+	};
+
+	SDL_FRect srcTopLeft = {0, 0, leftMargin, topMargin};
+	SDL_FRect srcTopEdge = {leftMargin, 0, texWidth - leftMargin - rightMargin, topMargin};
+	SDL_FRect srcTopRight = {texWidth - rightMargin, 0, rightMargin, topMargin};
+
+	SDL_FRect srcLeftEdge = {0, topMargin, leftMargin, texHeight - topMargin - bottomMargin};
+	SDL_FRect srcCenter = {leftMargin, topMargin, texWidth - leftMargin - rightMargin, texHeight - topMargin - bottomMargin};
+	SDL_FRect srcRightEdge = {texWidth - rightMargin, topMargin, rightMargin, texHeight - topMargin - bottomMargin};
+
+	SDL_FRect srcBottomLeft = {0, texHeight - bottomMargin, leftMargin, bottomMargin};
+	SDL_FRect srcBottomEdge = {leftMargin, texHeight - bottomMargin, texWidth - leftMargin - rightMargin, bottomMargin};
+	SDL_FRect srcBottomRight = {texWidth - rightMargin, texHeight - bottomMargin, rightMargin, bottomMargin};
+
+	drawTexture(texture, topLeft, &srcTopLeft, 0.0f, z, tint);
+	drawTexture(texture, topEdge, &srcTopEdge, 0.0f, z, tint);
+	drawTexture(texture, topRight, &srcTopRight, 0.0f, z, tint);
+	drawTexture(texture, leftEdge, &srcLeftEdge, 0.0f, z, tint);
+	drawTexture(texture, center, &srcCenter, 0.0f, z, tint);
+	drawTexture(texture, rightEdge, &srcRightEdge, 0.0f, z, tint);
+	drawTexture(texture, bottomLeft, &srcBottomLeft, 0.0f, z, tint);
+	drawTexture(texture, bottomEdge, &srcBottomEdge, 0.0f, z, tint);
+	drawTexture(texture, bottomRight, &srcBottomRight, 0.0f, z, tint);
+}
+
 void Renderer::setProjection(int width, int height) {
 	projectionMatrix = glm::ortho(
 		0.0f, static_cast<float>(width),
