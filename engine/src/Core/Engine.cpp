@@ -9,6 +9,7 @@
 #include "Assets/Loaders/TextureLoader.h"
 #include "Assets/Loaders/TrueTypeFontLoader.h"
 
+#include "Scene/SceneContext.h"
 #include "Debug/Profiler.h"
 
 namespace Blackthorn {
@@ -19,6 +20,7 @@ Engine::Engine()
 	, windowFocused(true)
 	, window(nullptr)
 	, glContext(nullptr)
+	, sceneContext(nullptr)
 {}
 
 Engine::~Engine() {
@@ -136,6 +138,14 @@ bool Engine::init(const EngineConfig& cfg) {
 	}
 
 	initAssetLoaders();
+
+	sceneContext = std::make_unique<Scene::SceneContextImpl>(
+		assetManager,
+		*renderer.get(),
+		inputManager,
+		sceneManager
+	);
+
 	initialized = true;
 
 	#ifdef BLACKTHORN_DEBUG
@@ -418,6 +428,10 @@ void Engine::cleanupInitialization() {
 
 	TTF_Quit();
 	SDL_Quit();
+}
+
+Scene::ISceneContext& Engine::getSceneContext() {
+	return *sceneContext.get();
 }
 
 #ifdef BLACKTHORN_DEBUG

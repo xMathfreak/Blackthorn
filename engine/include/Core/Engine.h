@@ -34,11 +34,7 @@ public:
 
 	void logEngineInfo();
 
-	Assets::AssetManager& getAssetManager() { return assetManager; }
-	Graphics::Renderer* getRenderer() const { return renderer.get(); }
-	Input::InputManager& getInputManager() { return inputManager; }
-	Scene::SceneManager& getSceneManager() { return sceneManager; }
-	SDL_Window* getWindow() const { return window; }
+	Scene::ISceneContext& getSceneContext();
 
 private:
 	bool initialized;
@@ -53,6 +49,8 @@ private:
 	Scene::SceneManager sceneManager;
 	SDL_Window* window;
 	SDL_GLContext glContext;
+
+	std::unique_ptr<Scene::ISceneContext> sceneContext;
 
 	void initAssetLoaders();
 	void cleanupInitialization();

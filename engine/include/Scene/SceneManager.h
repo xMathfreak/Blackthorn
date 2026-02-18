@@ -55,7 +55,6 @@ public:
 		if (!scenes.empty())
 			scenes.back()->onPause();
 
-		scene->sceneManager = this;
 		scene->world = std::make_unique<ECS::World>();
 		scene->uiManager = std::make_unique<UI::UIManager>();
 		scene->onEnter();
@@ -80,7 +79,6 @@ public:
 
 		clear();
 
-		scene->sceneManager = this;
 		scene->world = std::make_unique<ECS::World>();
 		scene->onEnter();
 

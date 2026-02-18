@@ -2,6 +2,7 @@
 
 #include "Core/Export.h"
 #include "ECS/World.h"
+#include "Scene/ISceneContext.h"
 #include "UI/UIManager.h"
 
 namespace Blackthorn::Scene {
@@ -13,11 +14,15 @@ protected:
 	std::unique_ptr<ECS::World> world;
 	std::unique_ptr<UI::UIManager> uiManager;
 
-	SceneManager* sceneManager = nullptr;
+	ISceneContext& context;
 
 	friend class SceneManager;
 
 public:
+	IScene(ISceneContext& ctx)
+		: context(ctx)
+	{}
+
 	virtual ~IScene() = default;
 
 	virtual void onEnter() {}
@@ -50,8 +55,6 @@ public:
 
 	ECS::World* getWorld() { return world.get(); }
 	const ECS::World* getWorld() const { return world.get(); }
-
-	SceneManager* getSceneManager() { return sceneManager; }
 
 	/**
 	 * @brief Get scene name for debugging.
