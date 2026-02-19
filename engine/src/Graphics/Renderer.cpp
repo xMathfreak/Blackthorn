@@ -100,6 +100,8 @@ void Renderer::startBatch() {
 
 	for (Uint32 i = 1; i < MAX_TEXTURE_SLOTS; ++i)
 		textureSlots[i] = nullptr;
+
+	textureSlotMap.clear();
 }
 
 void Renderer::nextBatch() {
@@ -117,6 +119,8 @@ void Renderer::flush() {
 
 	QuadEBO->bind();
 	QuadVBO->bind();
+
+	glBufferData(GL_ARRAY_BUFFER, MAX_VERTICES * sizeof(Vertex), nullptr, GL_DYNAMIC_DRAW);
 	glBufferSubData(GL_ARRAY_BUFFER, 0, dataSize, quadBuffer.get());
 
 	for (Uint32 i = 0; i < textureSlotIndex; ++i) {
@@ -148,21 +152,17 @@ void Renderer::draw(const SDL_FRect& rect, float z, float rotation, const glm::v
 	float texIndex = 0.0f;
 
 	if (texture) {
-		bool found = false;
-		for (Uint32 i = 1; i < textureSlotIndex; ++i) {
-			if (textureSlots[i] == texture) {
-				texIndex = static_cast<float>(i);
-				found = true;
-				break;
-			}
-		}
+		auto it = textureSlotMap.find(texture);
 
-		if (!found) {
+		if (it != textureSlotMap.end()) {
+			texIndex = it->second;
+		} else {
 			if (textureSlotIndex >= MAX_TEXTURE_SLOTS)
 				nextBatch();
 
 			texIndex = static_cast<float>(textureSlotIndex);
 			textureSlots[textureSlotIndex] = texture;
+			textureSlotMap[texture] = texIndex;
 			textureSlotIndex++;
 		}
 	}
@@ -265,22 +265,19 @@ void Renderer::drawNineSlice(const Texture& texture, const SDL_FRect& dest, cons
 		nextBatch();
 
 	float texIndex = 0.0f;
-	bool found = false;
 
-	for (Uint32 i = 1; i < textureSlotIndex; ++i) {
-		if (textureSlots[i] == &texture) {
-			texIndex = static_cast<float>(i);
-			found = true;
-			break;
-		}
-	}
+	auto it = textureSlotMap.find(&texture);
 
-	if (!found) {
+	if (it != textureSlotMap.end()) {
+		texIndex = it->second;
+	} else {
 		if (textureSlotIndex >= MAX_TEXTURE_SLOTS)
 			nextBatch();
 
 		texIndex = static_cast<float>(textureSlotIndex);
-		textureSlots[textureSlotIndex++] = &texture;
+		textureSlots[textureSlotIndex] = &texture;
+		textureSlotMap[&texture] = texIndex;
+		textureSlotIndex++;
 	}
 
 	float texW = static_cast<float>(texture.getWidth());
@@ -290,6 +287,9 @@ void Renderer::drawNineSlice(const Texture& texture, const SDL_FRect& dest, cons
 	float R = sliceMargins.w;
 	float T = sliceMargins.y;
 	float B = sliceMargins.h;
+
+	if (dest.w < L + R || dest.h < T + B)
+		return;
 
 	float dx[4] = { dest.x, dest.x + L, dest.x + dest.w - R, dest.x + dest.w };
 	float dy[4] = { dest.y, dest.y + T, dest.y + dest.h - B, dest.y + dest.h };
@@ -365,16 +365,23 @@ inline bool Renderer::isVisible(const SDL_FRect& rect, float rotation) const {
 	if (rotation == 0.0f)
 		return SDL_HasRectIntersectionFloat(&rect, &viewBounds);
 
-	float cx = rect.x + rect.w * 0.5f;
-	float cy = rect.y + rect.h * 0.5f;
+	float halfW = rect.w * 0.5f;
+	float halfH = rect.h * 0.5f;
 
-	float radius = std::sqrt(rect.w * rect.w + rect.h * rect.h) * 0.5f;
+	float abscos = std::abs(std::cos(rotation));
+	float abssin = std::abs(std::sin(rotation));
+
+	float aabbHalfW = halfW * abscos + halfH * abssin;
+	float aabbHalfH = halfW * abssin + halfH * abscos;
+
+	float cx = rect.x + halfW;
+	float cy = rect.y + halfH;
 
 	return (
-		cx + radius >= viewBounds.x &&
-		cx - radius <= viewBounds.x + viewBounds.w &&
-		cy + radius >= viewBounds.y &&
-		cy - radius <= viewBounds.y + viewBounds.h
+		cx + aabbHalfW >= viewBounds.x &&
+		cx - aabbHalfW <= viewBounds.x + viewBounds.w &&
+		cy + aabbHalfH >= viewBounds.y &&
+		cy - aabbHalfH <= viewBounds.y + viewBounds.h
 	);
 }
 

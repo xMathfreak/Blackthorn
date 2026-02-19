@@ -104,6 +104,9 @@ private:
 	/// Active texture slots for the current batch
 	std::array<const Texture*, MAX_TEXTURE_SLOTS> textureSlots;
 
+	/// Lookup table for texture slots
+	std::unordered_map<const Texture*, float> textureSlotMap;
+
 	/// Next available texture slot index
 	Uint32 textureSlotIndex = 1;
 
@@ -229,6 +232,11 @@ public:
 	 * @brief Returns the current view bounds.
 	 */
 	const SDL_FRect& getViewBounds() const { return viewBounds; }
+
+	/**
+	 * @brief Gets the global uniform buffer.
+	 */
+	const UBO<GlobalData>& getUniformBuffer() const { return *globalUBO.get(); }
 
 	/**
 	 * @brief Draws a colored quad.
