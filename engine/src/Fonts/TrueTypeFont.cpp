@@ -33,6 +33,8 @@ bool TrueTypeFont::loadFromFile(const std::string& filePath, int pointSize) {
 		return false;
 	}
 
+	TTF_SetFontSDF(font, true);
+
 	lineHeight = TTF_GetFontLineSkip(font);
 	descent = TTF_GetFontDescent(font);
 	TTF_SetFontKerning(font, true);
@@ -220,8 +222,6 @@ const TrueTypeFont::Glyph& TrueTypeFont::getGlyph(char32_t codePoint) {
 
 	atlas->updateRegion(atlasCursor.x, atlasCursor.y, converted->w, converted->h, alpha.data());
 
-	SDL_DestroySurface(converted);
-
 	float u0 = atlasCursor.x / float(ATLAS_SIZE);
 	float v0 = (atlasCursor.y + surface->h) / float(ATLAS_SIZE);
 	float u1 = (atlasCursor.x + surface->w) / float(ATLAS_SIZE);
@@ -231,13 +231,14 @@ const TrueTypeFont::Glyph& TrueTypeFont::getGlyph(char32_t codePoint) {
 	TTF_GetGlyphMetrics(font, codePoint, &minX, &maxX, &minY, &maxY, &advance);
 
 	Glyph glyph;
-	glyph.size = glm::vec2(surface->w, surface->h);
+	glyph.size = glm::vec2(converted->w, converted->h);
 	glyph.advance = static_cast<float>(advance);
 	glyph.uv = {u0, v0, u1, v1};
 
-	atlasCursor.x += surface->w;
-	atlasRowHeight = std::max(atlasRowHeight, surface->h);
+	atlasCursor.x += converted->w;
+	atlasRowHeight = std::max(atlasRowHeight, converted->h);
 
+	SDL_DestroySurface(converted);
 	SDL_DestroySurface(surface);
 
 	glyphCache[codePoint] = std::move(glyph);

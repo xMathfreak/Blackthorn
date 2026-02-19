@@ -8,6 +8,10 @@ uniform vec4 u_Color;
 out vec4 FragColor;
 
 void main() {
-	float alpha = texture(u_Texture, v_TexCoord).r;
-	FragColor = u_Color * vec4(1.0, 1.0, 1.0, alpha);
+	float dist = texture(u_Texture, v_TexCoord).r;
+
+	float smoothing = fwidth(dist) * 0.5;
+	float alpha = smoothstep(0.5 - smoothing, 0.5 + smoothing, dist);
+
+	FragColor = vec4(u_Color.rgb, u_Color.a * alpha);
 }
