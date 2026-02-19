@@ -261,90 +261,72 @@ void Renderer::drawTexture(const Texture& texture, const SDL_FRect& dest, const 
 }
 
 void Renderer::drawNineSlice(const Texture& texture, const SDL_FRect& dest, const SDL_FRect& sliceMargins, float z, const glm::vec4& tint) {
-	float texWidth = static_cast<float>(texture.getWidth());
-	float texHeight = static_cast<float>(texture.getHeight());
+	if (quadIndexCount + 54 > MAX_INDICES)
+		nextBatch();
 
-	float leftMargin = sliceMargins.x;
-	float topMargin = sliceMargins.y;
-	float rightMargin = sliceMargins.w;
-	float bottomMargin = sliceMargins.h;
+	float texIndex = 0.0f;
+	bool found = false;
 
-	// Top-left corner
-	SDL_FRect topLeft = {
-		dest.x, dest.y,
-		leftMargin, topMargin
-	};
+	for (Uint32 i = 1; i < textureSlotIndex; ++i) {
+		if (textureSlots[i] == &texture) {
+			texIndex = static_cast<float>(i);
+			found = true;
+			break;
+		}
+	}
 
-	// Top edge
-	SDL_FRect topEdge = {
-		dest.x + leftMargin, dest.y,
-		dest.w - leftMargin - rightMargin, topMargin
-	};
+	if (!found) {
+		if (textureSlotIndex >= MAX_TEXTURE_SLOTS)
+			nextBatch();
 
-	// Top-right corner
-	SDL_FRect topRight = {
-		dest.x + dest.w - rightMargin, dest.y,
-		rightMargin, topMargin
-	};
+		texIndex = static_cast<float>(textureSlotIndex);
+		textureSlots[textureSlotIndex++] = &texture;
+	}
 
-	// Left edge
-	SDL_FRect leftEdge = {
-		dest.x, dest.y + topMargin,
-		leftMargin, dest.h - topMargin - bottomMargin
-	};
+	float texW = static_cast<float>(texture.getWidth());
+	float texH = static_cast<float>(texture.getHeight());
 
-	// Center
-	SDL_FRect center = {
-		dest.x + leftMargin, dest.y + topMargin,
-		dest.w - leftMargin - rightMargin,
-		dest.h - topMargin - bottomMargin
-	};
+	float L = sliceMargins.x;
+	float R = sliceMargins.w;
+	float T = sliceMargins.y;
+	float B = sliceMargins.h;
 
-	// Right edge
-	SDL_FRect rightEdge = {
-		dest.x + dest.w - rightMargin, dest.y + topMargin,
-		rightMargin, dest.h - topMargin - bottomMargin
-	};
+	float dx[4] = { dest.x, dest.x + L, dest.x + dest.w - R, dest.x + dest.w };
+	float dy[4] = { dest.y, dest.y + T, dest.y + dest.h - B, dest.y + dest.h };
 
-	// Bottom-left corner
-	SDL_FRect bottomLeft = {
-		dest.x, dest.y + dest.h - bottomMargin,
-		leftMargin, bottomMargin
-	};
+	float ux[4] = { 0.0f, L / texW, (texW - R) / texW, 1.0f };
+	float uy[4] = { 0.0f, T / texH, (texH - B) / texH, 1.0f };
 
-	// Bottom edge
-	SDL_FRect bottomEdge = {
-		dest.x + leftMargin, dest.y + dest.h - bottomMargin,
-		dest.w - leftMargin - rightMargin, bottomMargin
-	};
+	for (int row = 0; row < 3; ++row) {
+		for (int col = 0; col < 3; ++col) {
+			quadBufferPtr->position  = { dx[col], dy[row], z };
+			quadBufferPtr->color = tint;
+			quadBufferPtr->texCoords = {ux[col], uy[row] };
+			quadBufferPtr->texIndex = texIndex;
+			quadBufferPtr++;
 
-	// Bottom-right corner
-	SDL_FRect bottomRight = {
-		dest.x + dest.w - rightMargin, dest.y + dest.h - bottomMargin,
-		rightMargin, bottomMargin
-	};
+			quadBufferPtr->position  = { dx[col + 1], dy[row], z };
+			quadBufferPtr->color = tint;
+			quadBufferPtr->texCoords = { ux[col + 1], uy[row] };
+			quadBufferPtr->texIndex = texIndex;
+			quadBufferPtr++;
 
-	SDL_FRect srcTopLeft = {0, 0, leftMargin, topMargin};
-	SDL_FRect srcTopEdge = {leftMargin, 0, texWidth - leftMargin - rightMargin, topMargin};
-	SDL_FRect srcTopRight = {texWidth - rightMargin, 0, rightMargin, topMargin};
+			quadBufferPtr->position  = { dx[col + 1], dy[row + 1], z };
+			quadBufferPtr->color = tint;
+			quadBufferPtr->texCoords = { ux[col + 1], uy[row + 1] };
+			quadBufferPtr->texIndex = texIndex;
+			quadBufferPtr++;
 
-	SDL_FRect srcLeftEdge = {0, topMargin, leftMargin, texHeight - topMargin - bottomMargin};
-	SDL_FRect srcCenter = {leftMargin, topMargin, texWidth - leftMargin - rightMargin, texHeight - topMargin - bottomMargin};
-	SDL_FRect srcRightEdge = {texWidth - rightMargin, topMargin, rightMargin, texHeight - topMargin - bottomMargin};
+			quadBufferPtr->position  = { dx[col], dy[row + 1], z };
+			quadBufferPtr->color = tint;
+			quadBufferPtr->texCoords = { ux[col], uy[row + 1] };
+			quadBufferPtr->texIndex = texIndex;
+			quadBufferPtr++;
 
-	SDL_FRect srcBottomLeft = {0, texHeight - bottomMargin, leftMargin, bottomMargin};
-	SDL_FRect srcBottomEdge = {leftMargin, texHeight - bottomMargin, texWidth - leftMargin - rightMargin, bottomMargin};
-	SDL_FRect srcBottomRight = {texWidth - rightMargin, texHeight - bottomMargin, rightMargin, bottomMargin};
 
-	drawTexture(texture, topLeft, &srcTopLeft, 0.0f, z, tint);
-	drawTexture(texture, topEdge, &srcTopEdge, 0.0f, z, tint);
-	drawTexture(texture, topRight, &srcTopRight, 0.0f, z, tint);
-	drawTexture(texture, leftEdge, &srcLeftEdge, 0.0f, z, tint);
-	drawTexture(texture, center, &srcCenter, 0.0f, z, tint);
-	drawTexture(texture, rightEdge, &srcRightEdge, 0.0f, z, tint);
-	drawTexture(texture, bottomLeft, &srcBottomLeft, 0.0f, z, tint);
-	drawTexture(texture, bottomEdge, &srcBottomEdge, 0.0f, z, tint);
-	drawTexture(texture, bottomRight, &srcBottomRight, 0.0f, z, tint);
+			quadIndexCount += 6;
+		}
+	}
 }
 
 void Renderer::setProjection(int width, int height) {
