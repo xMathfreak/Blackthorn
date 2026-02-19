@@ -515,8 +515,8 @@ void BitmapFont::generateVertices(std::string_view text, float scale, float maxW
 
 			const Glyph& glyph = it->second;
 
-			float glyphX = snap(currentX + glyph.xOffset * scale);
-			float glyphY = snap(currentY + glyph.yOffset * scale);
+			float glyphX = snap(currentX - (glyph.xOffset + 1) * scale);
+			float glyphY = snap(currentY - (glyph.yOffset + 1) * scale);
 			float glyphW = glyph.rect.w * scale;
 			float glyphH = glyph.rect.h * scale;
 

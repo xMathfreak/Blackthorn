@@ -88,6 +88,7 @@ private:
 	int atlasRowHeight = 0;
 
 	float lineHeight = 0.0f;
+	int descent = 0;
 
 	static constexpr Uint32 TAB_SPACES = 4;
 
@@ -99,7 +100,7 @@ private:
 private:
 	const Glyph& getGlyph(char32_t codePoint);
 
-	void buildTextGeometry(std::string_view text, float maxWidth, Text::Alignment alignment,std::vector<Vertex>& outVertices, GLsizei& outIndexCount);
+	void generateVertices(std::string_view text, float maxWidth, Text::Alignment alignment,std::vector<Vertex>& outVertices, GLsizei& outIndexCount);
 	void render(const std::vector<Vertex>& vertices, GLsizei indexCount, const glm::vec2& position, float scale, const glm::vec4& color);
 
 	std::vector<char32_t> utf8To32(std::string_view utf8) const;

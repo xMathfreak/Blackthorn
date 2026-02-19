@@ -34,6 +34,7 @@ bool TrueTypeFont::loadFromFile(const std::string& filePath, int pointSize) {
 	}
 
 	lineHeight = TTF_GetFontLineSkip(font);
+	descent = TTF_GetFontDescent(font);
 	TTF_SetFontKerning(font, true);
 
 	atlas = std::make_unique<Graphics::Texture>();
@@ -67,7 +68,7 @@ void TrueTypeFont::draw(std::string_view text, const glm::vec2& position, float 
 
 	std::vector<Vertex> vertices;
 	GLsizei indices = 0;
-	buildTextGeometry(text, maxWidth, alignment, vertices, indices);
+	generateVertices(text, maxWidth, alignment, vertices, indices);
 	render(vertices, indices, position, scale, color);
 }
 
@@ -82,7 +83,7 @@ void TrueTypeFont::drawCached(std::string_view text, const glm::vec2& position, 
 	CachedText* cached = textCache.get(key);
 	if (!cached) {
 		CachedText cacheEntry;
-		buildTextGeometry(text, maxWidth, alignment, cacheEntry.vertices, cacheEntry.indexCount);
+		generateVertices(text, maxWidth, alignment, cacheEntry.vertices, cacheEntry.indexCount);
 		textCache.put(key, std::move(cacheEntry));
 		cached = textCache.get(key);
 	}
@@ -243,7 +244,7 @@ const TrueTypeFont::Glyph& TrueTypeFont::getGlyph(char32_t codePoint) {
 	return glyphCache[codePoint];
 }
 
-void TrueTypeFont::buildTextGeometry(std::string_view text, float maxWidth, Text::Alignment alignment, std::vector<Vertex>& outVertices, GLsizei& outIndexCount) {
+void TrueTypeFont::generateVertices(std::string_view text, float maxWidth, Text::Alignment alignment, std::vector<Vertex>& outVertices, GLsizei& outIndexCount) {
 	outVertices.clear();
 	outIndexCount = 0;
 
@@ -270,7 +271,7 @@ void TrueTypeFont::buildTextGeometry(std::string_view text, float maxWidth, Text
 			const Glyph& glyph = *lg.glyph;
 
 			float xPos = lg.xPos + offsetX;
-			float yPos = cursorY;
+			float yPos = cursorY + descent;
 
 			float w = glyph.size.x;
 			float h = glyph.size.y;
