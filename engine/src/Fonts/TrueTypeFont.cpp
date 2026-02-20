@@ -41,11 +41,11 @@ bool TrueTypeFont::loadFromFile(const std::string& filePath, int pointSize) {
 
 	atlas = std::make_unique<Graphics::Texture>();
 	atlas->create(ATLAS_SIZE, ATLAS_SIZE, 1, {
-		.minFilter = Graphics::TextureFilter::Linear,
-		.magFilter = Graphics::TextureFilter::Linear,
+		.minFilter = Graphics::TextureFilter::Nearest,
+		.magFilter = Graphics::TextureFilter::Nearest,
 		.wrapS = Graphics::TextureWrap::ClampToEdge,
 		.wrapT = Graphics::TextureWrap::ClampToEdge,
-		.generateMipmaps = true
+		.generateMipmaps = false
 	});
 
 
@@ -68,9 +68,11 @@ void TrueTypeFont::draw(std::string_view text, const glm::vec2& position, float 
 	if (!font || text.empty())
 		return;
 
+	float layoutWidth = (maxWidth > 0.0f && scale > 0.0f) ? maxWidth / scale : maxWidth;
+
 	std::vector<Vertex> vertices;
 	GLsizei indices = 0;
-	generateVertices(text, maxWidth, alignment, vertices, indices);
+	generateVertices(text, layoutWidth, alignment, vertices, indices);
 	render(vertices, indices, position, scale, color);
 }
 
@@ -85,7 +87,8 @@ void TrueTypeFont::drawCached(std::string_view text, const glm::vec2& position, 
 	CachedText* cached = textCache.get(key);
 	if (!cached) {
 		CachedText cacheEntry;
-		generateVertices(text, maxWidth, alignment, cacheEntry.vertices, cacheEntry.indexCount);
+		float layoutWidth = (maxWidth > 0.0f && scale > 0.0f) ? maxWidth / scale : maxWidth;
+		generateVertices(text, layoutWidth, alignment, cacheEntry.vertices, cacheEntry.indexCount);
 		textCache.put(key, std::move(cacheEntry));
 		cached = textCache.get(key);
 	}
@@ -99,8 +102,10 @@ Text::Metrics TrueTypeFont::measure(std::string_view text, float scale, float ma
 	if (!font || text.empty())
 		return metrics;
 
+	float layoutWidth = (maxWidth > 0.0f && scale > 0.0f) ? maxWidth / scale : maxWidth;
+
 	auto codePoints = utf8To32(text);
-	auto lines = layoutText(codePoints, maxWidth);
+	auto lines = layoutText(codePoints, layoutWidth);
 
 	metrics.lineCount = lines.size();
 	metrics.height = lines.size() * lineHeight * scale;
@@ -385,14 +390,14 @@ std::vector<TrueTypeFont::LayoutLine> TrueTypeFont::layoutText(const std::vector
 	const Glyph& spaceGlyph = getGlyph(U' ');
 	float spaceAdvance = spaceGlyph.advance;
 
-	char32_t prev = 0;
+	size_t i = 0;
 
-	for (size_t i = 0; i < text.size(); ++i) {
+	while (i < text.size()) {
 		char32_t c = text[i];
 
 		if (c == U'\n') {
 			newLine();
-			prev = 0;
+			++i;
 			continue;
 		}
 
@@ -403,31 +408,72 @@ std::vector<TrueTypeFont::LayoutLine> TrueTypeFont::layoutText(const std::vector
 			if (nextTabStop == cursorX)
 				nextTabStop += tabWidth;
 
-			if (maxWidth >= 0.0f && nextTabStop > maxWidth) {
+			if (maxWidth > 0.0f && nextTabStop > maxWidth) {
 				newLine();
-				prev = 0;
+			} else {
+				cursorX = nextTabStop;
 			}
 
-			cursorX = nextTabStop;
+			++i;
+
 			continue;
 		}
 
-		const Glyph& g = getGlyph(c);
+		if (c == U' ') {
+			if (maxWidth <= 0.0f || cursorX + spaceAdvance <= maxWidth)
+				cursorX += spaceAdvance;
 
-		if (prev) {
-			int kern;
-			TTF_GetGlyphKerning(font, prev, c, &kern);
-			cursorX += kern;
+			++i;
+			continue;
 		}
 
-		if (maxWidth > 0.0f && cursorX + g.advance > maxWidth)
+		float wordWidth = 0.0f;
+		char32_t prev = 0;
+
+		for (size_t j = i; j < text.size(); ++j) {
+			char32_t wc = text[j];
+
+			if (wc == U' ' || wc == U'\t' || wc == U'\n')
+				break;
+
+			const Glyph& g = getGlyph(wc);
+
+			if (prev) {
+				int kern = 0;
+				TTF_GetGlyphKerning(font, prev, wc, &kern);
+				wordWidth += kern;
+			}
+
+			wordWidth += g.advance;
+			prev = wc;
+		}
+
+		if (maxWidth > 0.0f && cursorX > 0.0f && cursorX + wordWidth > maxWidth)
 			newLine();
 
-		lines.back().glyphs.push_back({&g, cursorX});
-		lines.back().width += g.advance;
+		prev = 0;
 
-		cursorX += g.advance;
-		prev = c;
+		while (i < text.size()) {
+			char32_t wc = text[i];
+
+			if (wc == U' ' || wc == U'\t' || wc == U'\n')
+				break;
+
+			const Glyph& g = getGlyph(wc);
+
+			if (prev) {
+				int kern = 0;
+				TTF_GetGlyphKerning(font, prev, wc, &kern);
+				cursorX += kern;
+			}
+
+			lines.back().glyphs.push_back({ &g, cursorX });
+			lines.back().width = cursorX + g.advance;
+
+			cursorX += g.advance;
+			prev = wc;
+			++i;
+		}
 	}
 
 	return lines;
