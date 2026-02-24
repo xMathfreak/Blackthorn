@@ -11,7 +11,7 @@ inline void InputManager::handleEvent(const SDL_Event& event) {
 		case SDL_EVENT_KEY_DOWN:
 			if (!event.key.repeat) {
 				keyStates[event.key.key] = ButtonState::Pressed;
-			} 
+			}
 			break;
 
 		case SDL_EVENT_KEY_UP:
@@ -32,7 +32,7 @@ inline void InputManager::handleEvent(const SDL_Event& event) {
 		case SDL_EVENT_MOUSE_BUTTON_UP:
 			if (event.button.button < mouseButtons.size())
 				mouseButtons[event.button.button] = ButtonState::Released;
-			
+
 			break;
 
 		case SDL_EVENT_MOUSE_WHEEL:

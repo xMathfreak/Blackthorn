@@ -93,7 +93,7 @@ void VAO::enableAttrib(GLuint index, GLint size, GLenum type, GLsizei stride, si
 		const char* typeStr = "unknown";
 
 		switch (type) {
-			case GL_FLOAT: 
+			case GL_FLOAT:
 				typeStr = "GL_FLOAT";
 				break;
 			case GL_INT:

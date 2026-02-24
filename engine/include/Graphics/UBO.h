@@ -13,19 +13,19 @@ namespace Blackthorn::Graphics {
 
 /**
  * @brief RAII wrapper for an OpenGL Uniform Buffer Object.
- * 
+ *
  * Manages the lifetime and data synchronization of a uniform buffer storing
  * a trivially copyable C++ struct.
- * 
+ *
  * The template parameter @p T represents the CPU-side layout of the buffer.
  * Te layout of @p T must match the GLSL uniform block layout exactly
  * (typically std140 or std430).
- * 
+ *
  * Copying is disallowed to enforce unique ownership of the OpenGL resource.
  * Move semantics are supported.
- * 
+ *
  * @tparam T Struct type for representing the uniform block.
- * 
+ *
  * @note Requires a valid OpenGL context to be current on the calling thread.
  * @warning No validation is performed to ensure that T matches the GLSL layout.
  */
@@ -42,7 +42,7 @@ public:
 	/**
 	 * @brief Creates a uniform buffer and allocates storage.
 	 * @param usage OpenGL usage hint (e.g. GL_DYNAMIC_DRAW).
-	 * 
+	 *
 	 * Allocates buffer storage of size `sizeof(T)` with no initial data.
 	 */
 	UBO(GLenum usage = GL_DYNAMIC_DRAW) {
@@ -100,7 +100,7 @@ public:
 
 	/**
 	 * @brief Destroys the OpenGL buffer.
-	 * 
+	 *
 	 * Safe to call multiple times.
 	 */
 	void destroy() {
@@ -113,7 +113,7 @@ public:
 	/**
 	 * @brief Binds the UBO to a uniform binding point.
 	 * @param bindingPoint Uniform buffer binding point.
-	 * 
+	 *
 	 * The shader must reference the same binding point for access.
 	 */
 	void bind(GLuint bindingPoint) const {
@@ -123,7 +123,7 @@ public:
 	/**
 	 * @brief Updates the entire uniform buffer.
 	 * @param newData New uniform data.
-	 * 
+	 *
 	 * Copies the data to CPU-side cache and uploads it to the GPU.
 	 */
 	void setData(const T& newData) {
@@ -144,10 +144,10 @@ public:
 	 * @brief Uploads a single field from the uniform struct.
 	 * @tparam Field Type of the field.
 	 * @param fieldPtr Pointer-to-member identifying the field.
-	 * 
-	 * Computes the byte offset of the field within T and updates only that 
+	 *
+	 * Computes the byte offset of the field within T and updates only that
 	 * sub-range of the buffer
-	 * 
+	 *
 	 * @warning This relies on the standard layout behavior and assumes that
 	 * the CPU struct layout matches the GLSL uniform block layout.
 	 */

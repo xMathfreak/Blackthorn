@@ -40,7 +40,7 @@ struct BLACKTHORN_API EngineConfig {
 	WindowConfig window;
 	RenderConfig render;
 	TimingConfig timing;
-	
+
 	DebugConfig  debug;
 };
 

@@ -14,7 +14,7 @@ struct BLACKTHORN_API LoadParams {
 struct BLACKTHORN_API PathLoadParams final : LoadParams {
 	std::string path;
 
-	explicit PathLoadParams(std::string p) 
+	explicit PathLoadParams(std::string p)
 		: path(std::move(p))
 	{}
 

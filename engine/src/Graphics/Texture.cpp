@@ -355,7 +355,7 @@ void Texture::updateRegion(int x, int y, int w, int h, const void* data) {
 	if (x < 0 || y < 0 || x + w > width || y + h > height) {
 		#ifdef BLACKTHORN_DEBUG
 			SDL_LogError(
-				SDL_LOG_CATEGORY_RENDER, 
+				SDL_LOG_CATEGORY_RENDER,
 				"Texture update region out of bounds (%d, %d, %d, %d) for %d x %d texture",
 				x, y, w, h, width, height
 			);

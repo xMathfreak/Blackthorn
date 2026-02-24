@@ -11,12 +11,12 @@ namespace Blackthorn::Graphics {
 
 /**
  * @brief RAII wrapper class for an OpenGL Frame Buffer Object with a color attachment.
- * 
+ *
  * The frame buffer owns s single color texture attachment, which can be sampled after rendering.
- * 
+ *
  * Copying is disallowed to enforce the unique ownership of the OpenGL resource
  * and its attachments. Move semantics are supported.
- * 
+ *
  * @note Requires a valid OpenGL context to be current on the calling thread.
  */
 class BLACKTHORN_API FBO {
@@ -38,7 +38,7 @@ public:
 	 * @brief Creates a frame buffer with a color texture attachment.
 	 * @param w Width of the frame buffer in pixels.
 	 * @param h Height of the frame buffer in pixels.
-	 * 
+	 *
 	 * Allocates a frame buffer object and attaches a 2D texture
 	 * suitable for color rendering.
 	 */
@@ -70,7 +70,7 @@ public:
 
 	/**
 	 * @brief Binds this frame buffer for rendering.
-	 * 
+	 *
 	 * All subsequent draw calls will render into this frame buffer
 	 * until unbind() is called.
 	 */
@@ -83,14 +83,14 @@ public:
 
 	/**
 	 * @brief Destroys the frame buffer and its attachments.
-	 * 
+	 *
 	 * After calling this, the FBO becomes invalid.
 	 */
 	void destroy();
 
 	/**
 	 * @brief Returns the color attachment texture.
-	 * 
+	 *
 	 * The returned texture can be bound for sampling in later render passes.
 	 */
 	const Texture& getTexture() const;

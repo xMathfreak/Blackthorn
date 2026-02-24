@@ -27,7 +27,7 @@ static const char* shaderTypeToString(GLenum type) {
 		case GL_FRAGMENT_SHADER:
 			return "Fragment";
 		case GL_GEOMETRY_SHADER:
-			return "Geometry"; 
+			return "Geometry";
 		default:
 			return "Unknown";
 	}
@@ -112,7 +112,7 @@ void Shader::linkProgram(GLuint vertexShader, GLuint fragmentShader) {
 Shader::Shader(const std::string& vertexPath, const std::string& fragmentPath) {
 	#ifdef BLACKTHORN_DEBUG
 		SDL_Log("Loading shader: %s, %s", vertexPath.c_str(), fragmentPath.c_str());
-	#endif	
+	#endif
 
 	try {
 		std::string vertexSource = readFile(vertexPath);
@@ -186,12 +186,12 @@ GLuint Shader::getUniformLocation(const std::string& name) {
 		return it->second;
 
 	GLint location = glGetUniformLocation(programID, name.c_str());
-	
+
 	#ifdef BLACKTHORN_DEBUG
 		if (location == -1)
 			SDL_LogWarn(
 				SDL_LOG_CATEGORY_RENDER,
-				"Uniform '%s' not found in shader program %u", 
+				"Uniform '%s' not found in shader program %u",
 				name.c_str(), programID
 			);
 	#endif

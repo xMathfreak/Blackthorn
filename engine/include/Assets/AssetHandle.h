@@ -29,7 +29,7 @@ public:
 
 	AssetType* operator->() const { return get(); }
 	AssetType& operator*() const { return *get(); }
-	explicit operator bool() const { return isValid() && get() != nullptr; } 
+	explicit operator bool() const { return isValid() && get() != nullptr; }
 
 private:
 	std::string id;

@@ -13,10 +13,10 @@ namespace Blackthorn::Graphics {
 
 /**
  * @brief RAII wrapper for an OpenGL Vertex Buffer Object (GL_ARRAY_BUFFER)
- * 
+ *
  * Copying is disallowed to enforce unique ownership of the OpenGL resource.
  * Move semantics are supported to allow safe transfer of ownership.
- * 
+ *
  * @note Requires a valid OpenGL context to be current on the calling thread.
  */
 class BLACKTHORN_API VBO {
@@ -30,8 +30,8 @@ private:
 public:
 	/**
 	 * @brief Constructs an empty VBO without creating the OpenGL buffer
-	 * 
-	 * Call create() explicitly or use the constructor taking createNow = true 
+	 *
+	 * Call create() explicitly or use the constructor taking createNow = true
 	 * before uploading data.
 	 */
 	VBO() = default;
@@ -44,7 +44,7 @@ public:
 
 	/**
 	 * @brief Destroys the VBO and releases the OpenGL buffer.
-	 * 
+	 *
 	 * Safe to call even if the buffer was never created.
 	 */
 	~VBO();
@@ -58,8 +58,8 @@ public:
 	/**
 	 * @brief Move-constructs a VBO, transferring ownership.
 	 * @param other VBO to move from.
-	 * 
-	 * The moved-from object is left in an invalid but destructible state. 
+	 *
+	 * The moved-from object is left in an invalid but destructible state.
 	 */
 	VBO(VBO&& other) noexcept;
 
@@ -72,21 +72,21 @@ public:
 
 	/**
 	 * @brief Creates the OpenGL buffer object.
-	 * 
+	 *
 	 * If the buffer already exist, this function has no effect.
 	 */
 	void create();
 
 	/**
 	 * @brief Destroys the OpenGL buffer object.
-	 * 
+	 *
 	 * After calling this, isValid() will return false.
 	 */
 	void destroy();
 
 	/**
 	 * @brief Binds this VBO to GL_ARRAY_BUFFER.
-	 * 
+	 *
 	 * @pre The buffer must be valid.
 	 */
 	void bind() const;
@@ -101,7 +101,7 @@ public:
 	 * @tparam T Element type of the data.
 	 * @param data SOurce data to upload.
 	 * @param usage OpenGL usage hint (e.g. GL_STATIC_DRAW).
-	 * 
+	 *
 	 * If the buffer has not yet been created, it will be created automatically.
 	 * Any existing buffer storage is replaced.
 	 */
@@ -135,7 +135,7 @@ public:
 	 * @param data Pointer to the source data.
 	 * @param sizeInBytes Size of the data in bytes.
 	 * @param usage OpenGL usage hint.
-	 * 
+	 *
 	 * Replaces any existing buffer storage.
 	 */
 	void setData(const void* data, size_t sizeInBytes, GLenum usage = GL_STATIC_DRAW);
@@ -145,7 +145,7 @@ public:
 	 * @tparam T Element type of the data.
 	 * @param data Source data to upload.
 	 * @param offset Byte offset into the buffer.
-	 * 
+	 *
 	 * @warning The update must not exceed the current size of the buffer.
 	 * If it does the operation is aborted.
 	 */

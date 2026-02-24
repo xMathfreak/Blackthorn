@@ -13,7 +13,7 @@ struct BLACKTHORN_API Transform {
 
 	BLACKTHORN_API Transform() = default;
 	BLACKTHORN_API Transform(float x, float y) : position(x, y) {}
-	BLACKTHORN_API Transform(glm::vec2 pos) : position(pos) {} 
+	BLACKTHORN_API Transform(glm::vec2 pos) : position(pos) {}
 };
 
 } // namespace Blackthorn::ECS::Components

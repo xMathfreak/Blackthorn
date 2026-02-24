@@ -42,11 +42,11 @@ EBO& EBO::operator=(EBO&& other) noexcept {
 }
 
 void EBO::create() {
-	if (id != 0) {	
+	if (id != 0) {
 		#ifdef BLACKTHORN_DEBUG
 			SDL_LogWarn(SDL_LOG_CATEGORY_RENDER, "EBO already created (ID: %u)", id);
 		#endif
-			
+
 		return;
 	}
 
@@ -80,7 +80,7 @@ void EBO::setData(const void* data, size_t indexCount, GLenum type, GLenum usage
 		#ifdef BLACKTHORN_DEBUG
 			SDL_LogWarn(SDL_LOG_CATEGORY_RENDER, "Attempting to set data on uninitialized EBO");
 		#endif
-		
+
 		create();
 	}
 
@@ -99,7 +99,7 @@ void EBO::setData(const void* data, size_t indexCount, GLenum type, GLenum usage
 			#ifdef BLACKTHORN_DEBUG
 				SDL_LogError(SDL_LOG_CATEGORY_RENDER, "Invalid index type: 0x%x", type);
 			#endif
-			
+
 			return;
 	}
 

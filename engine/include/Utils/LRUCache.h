@@ -12,7 +12,7 @@ public:
 	using EvictionCallback = std::function<void(const Key&, Value&)>;
 
 	explicit LRUCache(size_t size, EvictionCallback evictCallback = nullptr)
-		: maxSize(size), onEvict(evictCallback)	
+		: maxSize(size), onEvict(evictCallback)
 	{}
 
 	Value* get(const Key& key) {

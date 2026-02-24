@@ -13,7 +13,7 @@ namespace Blackthorn::Graphics {
 
 /**
  * @brief Describes a single vertex attribute layout entry.
- * 
+ *
  * Used to define how vertex data is interpreted by the GPU
  * when bound to a Vertex Array Object.
  */
@@ -39,10 +39,10 @@ struct VertexAttribute {
 
 /**
  * @brief RAII wrapper for an OpenGL Vertex Array Object.
- * 
+ *
  * Copying is disallowed to enforce unique ownership of the OpenGL
  * resource. Move semantics are supported.
- * 
+ *
  * @note Requires a valid OpenGL context to be current on the calling thread.
  * @note Attribute configuration assumes the appropriate VBO is bound to GL_ARRAY_BUFFER at the time of setup.
  */
@@ -50,7 +50,7 @@ class BLACKTHORN_API VAO {
 private:
 	/**
 	 * @brief Tracks the currently bound VAO.
-	 * 
+	 *
 	 * Used to avoid redundant bind() calls and allow isBound() checks.
 	 */
 	static inline GLuint currentVAO = 0;
@@ -72,7 +72,7 @@ public:
 
 	/**
 	 * @brief Destroys the VAO and releases the OpenGL object.
-	 * 
+	 *
 	 * Safe to call even if the VAO was never created.
 	 */
 	~VAO();
@@ -98,14 +98,14 @@ public:
 
 	/**
 	 * @brief Creates the OpenGL VAO
-	 * 
+	 *
 	 * If the VAO already exists, this function has no effect.
 	 */
 	void create();
 
 	/**
 	 * @brief Destroys the OpenGL VAO.
-	 * 
+	 *
 	 * After calling this, isValid() will return false.
 	 */
 	void destroy();
@@ -122,14 +122,14 @@ public:
 
 	/**
 	 * @brief Enables and defines a vertex attribute.
-	 * 
+	 *
 	 * @param index Attribute index/location.
 	 * @param size Number of components per vertex.
 	 * @param type Component data type.
 	 * @param stride Byte stride offset between vertices.
 	 * @param offset Byte offset of the attribute.
 	 * @param normalized Whether fixed-point values are normalized.
-	 * 
+	 *
 	 * @pre A VBO must be bound to GL_ARRAY_BUFFER.
 	 * @pre This VAO must be bound.
 	 */
@@ -138,7 +138,7 @@ public:
 	/**
 	 * @brief Disables a vertex attribute.
 	 * @param index Attribute index/location.
-	 * 
+	 *
 	 * @pre This VAO must be bound.
 	 */
 	void disableAttrib(GLuint index);
@@ -146,7 +146,7 @@ public:
 	/**
 	 * @brief Configures multiple vertex attributes in sequence.
 	 * @param attributes List of vertex attribute descriptions.
-	 * 
+	 *
 	 * @pre A VBO must be bound to GL_ARRAY_BUFFER.
 	 * @pre This VAO must be bound.
 	 */

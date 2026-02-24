@@ -34,11 +34,11 @@ VBO& VBO::operator=(VBO&& other) noexcept {
 }
 
 void VBO::create() {
-	if (id != 0) {	
+	if (id != 0) {
 		#ifdef BLACKTHORN_DEBUG
 			SDL_LogWarn(SDL_LOG_CATEGORY_RENDER, "VBO already created (ID: %u)", id);
 		#endif
-			
+
 		return;
 	}
 
