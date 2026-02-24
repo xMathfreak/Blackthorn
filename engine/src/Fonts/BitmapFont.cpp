@@ -540,7 +540,7 @@ void BitmapFont::generateVertices(std::string_view text, float scale, float maxW
 	}
 }
 
-void BitmapFont::draw(std::string_view text, const glm::vec2& position, float scale, float maxWidth, const glm::vec4& color, Text::Alignment alignment) {
+void BitmapFont::draw(std::string_view text, const glm::vec2& position, float scale, float z, float maxWidth, const glm::vec4& color, Text::Alignment alignment) {
 	if (!isLoaded() || text.empty())
 		return;
 
@@ -552,7 +552,7 @@ void BitmapFont::draw(std::string_view text, const glm::vec2& position, float sc
 		return;
 
 	shader->bind();
-	shader->setVec2("u_Offset", position.x, position.y);
+	shader->setVec3("u_Offset", position.x, position.y, z);
 	shader->setVec4("u_Color", color.r, color.g, color.b, color.a);
 
 	vao->bind();
@@ -562,7 +562,7 @@ void BitmapFont::draw(std::string_view text, const glm::vec2& position, float sc
 	glDrawArrays(GL_TRIANGLES, 0, vertexBuffer.size());
 }
 
-void BitmapFont::drawCached(std::string_view text, const glm::vec2& position, float scale, float maxWidth, const glm::vec4& color, Text::Alignment alignment) {
+void BitmapFont::drawCached(std::string_view text, const glm::vec2& position, float scale, float z, float maxWidth, const glm::vec4& color, Text::Alignment alignment) {
 	if (!isLoaded() || text.empty())
 		return;
 
@@ -594,7 +594,7 @@ void BitmapFont::drawCached(std::string_view text, const glm::vec2& position, fl
 	}
 
 	shader->bind();
-	shader->setVec2("u_Offset", position.x, position.y);
+	shader->setVec3("u_Offset", position.x, position.y, z);
 	shader->setVec4("u_Color", color.r, color.g, color.b, color.a);
 
 	texture->bind();

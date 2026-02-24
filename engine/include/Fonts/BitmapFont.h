@@ -77,8 +77,8 @@ public:
 	bool loadFromFile(const std::string& texturePath, const std::string& metricsPath);
 	bool loadFromBMFont(const std::string& bmfPath);
 
-	void draw(std::string_view text, const glm::vec2& position, float scale = 1.0f, float maxWidth = 0.0f, const glm::vec4& color = {1.0f, 1.0f, 1.0f, 1.0f}, Text::Alignment alignment = Text::Alignment::Left) override;
-	void drawCached(std::string_view text, const glm::vec2& position, float scale = 1.0f, float maxWidth = 0.0f, const glm::vec4& color = {1.0f, 1.0f, 1.0f, 1.0f}, Text::Alignment alignment = Text::Alignment::Left) override;
+	void draw(std::string_view text, const glm::vec2& position, float scale = 1.0f, float z = 0.0f, float maxWidth = 0.0f, const glm::vec4& color = {1.0f, 1.0f, 1.0f, 1.0f}, Text::Alignment alignment = Text::Alignment::Left) override;
+	void drawCached(std::string_view text, const glm::vec2& position, float scale = 1.0f, float z = 0.0f, float maxWidth = 0.0f, const glm::vec4& color = {1.0f, 1.0f, 1.0f, 1.0f}, Text::Alignment alignment = Text::Alignment::Left) override;
 
 	Text::Metrics measure(std::string_view text, float scale = 1.0f, float maxWidth = 0.0f) override;
 

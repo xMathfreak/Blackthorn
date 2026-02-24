@@ -13,5 +13,8 @@ void main() {
 	float smoothing = fwidth(dist) * 0.5;
 	float alpha = smoothstep(0.5 - smoothing, 0.5 + smoothing, dist);
 
+	if (alpha == 0)
+		discard;
+
 	FragColor = vec4(u_Color.rgb, u_Color.a * alpha);
 }

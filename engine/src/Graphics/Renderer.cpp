@@ -333,7 +333,7 @@ void Renderer::setProjection(int width, int height) {
 	projectionMatrix = glm::ortho(
 		0.0f, static_cast<float>(width),
 		static_cast<float>(height), 0.0f,
-		-1.0f, 1.0f
+		-100.0f, 100.0f
 	);
 
 	viewBounds = { 0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height) };

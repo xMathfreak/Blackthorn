@@ -34,20 +34,19 @@ bool TrueTypeFont::loadFromFile(const std::string& filePath, int pointSize) {
 	}
 
 	TTF_SetFontSDF(font, true);
+	TTF_SetFontKerning(font, true);
 
 	lineHeight = TTF_GetFontLineSkip(font);
 	descent = TTF_GetFontDescent(font);
-	TTF_SetFontKerning(font, true);
 
 	atlas = std::make_unique<Graphics::Texture>();
 	atlas->create(ATLAS_SIZE, ATLAS_SIZE, 1, {
-		.minFilter = Graphics::TextureFilter::Nearest,
-		.magFilter = Graphics::TextureFilter::Nearest,
+		.minFilter = Graphics::TextureFilter::Linear,
+		.magFilter = Graphics::TextureFilter::Linear,
 		.wrapS = Graphics::TextureWrap::ClampToEdge,
 		.wrapT = Graphics::TextureWrap::ClampToEdge,
 		.generateMipmaps = false
 	});
-
 
 	atlasCursor = {0, 0};
 	atlasRowHeight = 0;
@@ -64,7 +63,7 @@ bool TrueTypeFont::loadFromFile(const std::string& filePath, int pointSize) {
 }
 
 
-void TrueTypeFont::draw(std::string_view text, const glm::vec2& position, float scale, float maxWidth, const glm::vec4& color, Text::Alignment alignment) {
+void TrueTypeFont::draw(std::string_view text, const glm::vec2& position, float scale, float z, float maxWidth, const glm::vec4& color, Text::Alignment alignment) {
 	if (!font || text.empty())
 		return;
 
@@ -73,10 +72,10 @@ void TrueTypeFont::draw(std::string_view text, const glm::vec2& position, float 
 	std::vector<Vertex> vertices;
 	GLsizei indices = 0;
 	generateVertices(text, layoutWidth, alignment, vertices, indices);
-	render(vertices, indices, position, scale, color);
+	render(vertices, indices, position, scale, z, color);
 }
 
-void TrueTypeFont::drawCached(std::string_view text, const glm::vec2& position, float scale, float maxWidth, const glm::vec4& color, Text::Alignment alignment) {
+void TrueTypeFont::drawCached(std::string_view text, const glm::vec2& position, float scale, float z, float maxWidth, const glm::vec4& color, Text::Alignment alignment) {
 	if (!font || text.empty())
 		return;
 
@@ -93,7 +92,7 @@ void TrueTypeFont::drawCached(std::string_view text, const glm::vec2& position, 
 		cached = textCache.get(key);
 	}
 
-	render(cached->vertices, cached->indexCount, position, scale, color);
+	render(cached->vertices, cached->indexCount, position, scale, z, color);
 }
 
 Text::Metrics TrueTypeFont::measure(std::string_view text, float scale, float maxWidth) {
@@ -180,7 +179,7 @@ void TrueTypeFont::initBuffers() {
 
 	ebo->setData(indices);
 
-	vao->enableAttrib(0, 2, GL_FLOAT, sizeof(Vertex), offsetof(Vertex, position));
+	vao->enableAttrib(0, 3, GL_FLOAT, sizeof(Vertex), offsetof(Vertex, position));
 	vao->enableAttrib(1, 2, GL_FLOAT, sizeof(Vertex), offsetof(Vertex, texCoord));
 
 	Graphics::VBO::unbind();
@@ -307,13 +306,13 @@ void TrueTypeFont::generateVertices(std::string_view text, float maxWidth, Text:
 	}
 }
 
-void TrueTypeFont::render(const std::vector<Vertex>& vertices, GLsizei indexCount, const glm::vec2& position, float scale, const glm::vec4& color) {
+void TrueTypeFont::render(const std::vector<Vertex>& vertices, GLsizei indexCount, const glm::vec2& position, float scale, float z, const glm::vec4& color) {
 	if (vertices.empty())
 		return;
 
 	shader->bind();
 
-	shader->setVec2("u_Offset", position.x, position.y);
+	shader->setVec3("u_Offset", position.x, position.y, z);
 	shader->setFloat("u_Scale", scale);
 	shader->setVec4("u_Color", color.x, color.y, color.z, color.w);
 	shader->setInt("u_Texture", 0);

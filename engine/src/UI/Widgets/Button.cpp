@@ -34,7 +34,7 @@ void Button::render(Graphics::Renderer& renderer) {
 	}
 
 	if (font && !text.empty()) {
-		font->drawCached(text, absPos, textScale, 0.0f, textColor, Text::Alignment::Center);
+		font->drawCached(text, absPos, textScale, 0.0f, size.x, textColor, Text::Alignment::Center);
 	}
 }
 

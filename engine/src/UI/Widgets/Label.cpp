@@ -16,9 +16,9 @@ void Label::render(Graphics::Renderer& renderer) {
 	glm::vec2 absPos = getAbsolutePosition();
 
 	if (renderMode == Mode::Dynamic) {
-		font->draw(text, absPos, textScale, 0.0f, textColor);
+		font->draw(text, absPos, textScale, 0.0f, 0.0f, textColor);
 	} else {
-		font->drawCached(text, absPos, textScale, 0.0f, textColor);
+		font->drawCached(text, absPos, textScale, 0.0f, 0.0f, textColor);
 	}
 }
 
