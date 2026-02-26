@@ -3,6 +3,7 @@
 #include <memory>
 #include <string>
 
+#include "Containers/LRUCache.h"
 #include "Core/Export.h"
 #include "Fonts/Font.h"
 #include "Fonts/TextCacheKey.h"
@@ -10,7 +11,6 @@
 #include "Graphics/Texture.h"
 #include "Graphics/VAO.h"
 #include "Graphics/VBO.h"
-#include "Utils/LRUCache.h"
 
 namespace Blackthorn::Fonts {
 
@@ -54,7 +54,7 @@ private:
 	float tabWidth = 0.0f;
 
 	static constexpr Uint32 MAX_CACHED_TEXT = 128;
-	Utils::LRUCache<TextCacheKey, CachedText> cache{MAX_CACHED_TEXT};
+	Containers::LRUCache<TextCacheKey, CachedText> cache{MAX_CACHED_TEXT};
 
 	mutable std::vector<std::string_view> lineBuffer;
 	mutable std::vector<float> lineWidthBuffer;

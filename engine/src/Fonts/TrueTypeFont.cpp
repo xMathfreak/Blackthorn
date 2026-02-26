@@ -6,7 +6,7 @@ std::shared_ptr<Graphics::Shader> TrueTypeFont::shader = nullptr;
 
 TrueTypeFont::TrueTypeFont() {
 	if (!shader)
-		initShader();
+		initializeShader();
 
 	initBuffers();
 }
@@ -16,7 +16,7 @@ TrueTypeFont::~TrueTypeFont() {
 		TTF_CloseFont(font);
 }
 
-void TrueTypeFont::initShader() {
+void TrueTypeFont::initializeShader() {
 	if (!shader) {
 		shader = std::make_shared<Graphics::Shader>("assets/shaders/font_ttf.vert", "assets/shaders/font_ttf.frag");
 
@@ -24,6 +24,11 @@ void TrueTypeFont::initShader() {
 			SDL_Log("Created TrueTypeFont Shader");
 		#endif
 	}
+}
+
+void TrueTypeFont::cleanupShader() {
+	if (shader)
+		shader->destroy();
 }
 
 bool TrueTypeFont::loadFromFile(const std::string& filePath, int pointSize) {

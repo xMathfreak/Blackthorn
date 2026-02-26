@@ -4,7 +4,7 @@
 #include <list>
 #include <unordered_map>
 
-namespace Utils {
+namespace Containers {
 
 template <typename Key, typename Value>
 class LRUCache {

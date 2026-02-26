@@ -7,6 +7,7 @@
 
 #include <SDL3_ttf/SDL_ttf.h>
 
+#include "Containers/LRUCache.h"
 #include "Core/Export.h"
 #include "Fonts/Font.h"
 #include "Fonts/TextCacheKey.h"
@@ -15,7 +16,6 @@
 #include "Graphics/EBO.h"
 #include "Graphics/VAO.h"
 #include "Graphics/VBO.h"
-#include "Utils/LRUCache.h"
 
 namespace Blackthorn::Fonts {
 
@@ -39,6 +39,9 @@ public:
 	void setOutline(int outline);
 	void setHinting(TTF_HintingFlags hinting);
 	void setKerning(bool enabled);
+
+	static void initializeShader();
+	static void cleanupShader();
 
 private:
 	struct Glyph {
@@ -69,7 +72,6 @@ private:
 
 private:
 	static std::shared_ptr<Graphics::Shader> shader;
-	void initShader();
 
 	static constexpr Uint32 MAX_TEXT_GLYPHS = 2048;
 	static constexpr Uint32 MAX_VERTICES = MAX_TEXT_GLYPHS * 4;
@@ -95,7 +97,7 @@ private:
 	std::unordered_map<char32_t, Glyph> glyphCache;
 
 	static constexpr Uint32 MAX_CACHED_TEXT = 256;
-	Utils::LRUCache<TextCacheKey, CachedText> textCache{MAX_CACHED_TEXT};
+	Containers::LRUCache<TextCacheKey, CachedText> textCache{MAX_CACHED_TEXT};
 
 private:
 	const Glyph& getGlyph(char32_t codePoint);
