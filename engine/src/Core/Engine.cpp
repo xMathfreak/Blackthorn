@@ -180,6 +180,9 @@ void Engine::shutdown() {
 	if (!initialized)
 		return;
 
+	Fonts::TrueTypeFont::cleanupShader();
+	Fonts::BitmapFont::cleanupShader();
+
 	assetManager.clear();
 
 	if (glContext) {
