@@ -101,6 +101,11 @@ public:
 	static void unbind();
 
 	/**
+	 * @brief Destroys the shader program.
+	 */
+	void destroy();
+
+	/**
 	 * @brief Checks whether the shader program is valid.
 	 */
 	bool isValid() const noexcept { return programID != 0; }

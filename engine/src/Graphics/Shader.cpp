@@ -136,6 +136,10 @@ Shader::Shader(const std::string& vertexPath, const std::string& fragmentPath) {
 }
 
 Shader::~Shader() {
+	destroy();
+}
+
+void Shader::destroy() {
 	if (programID != 0) {
 		glDeleteProgram(programID);
 		programID = 0;
