@@ -15,7 +15,7 @@ void Button::render(Graphics::Renderer& renderer) {
 	glm::vec2 absPos = getAbsolutePosition();
 	SDL_FRect rect = {absPos.x, absPos.y, size.x, size.y};
 
-	glm::vec4 bgColor = normalColor;
+	Math::Color bgColor = normalColor;
 
 	if (hasState(state, WidgetState::Disabled)) {
 		bgColor = normalColor * 0.5f;

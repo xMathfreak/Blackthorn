@@ -68,7 +68,7 @@ bool TrueTypeFont::loadFromFile(const std::string& filePath, int pointSize) {
 }
 
 
-void TrueTypeFont::draw(std::string_view text, const glm::vec2& position, float scale, float z, float maxWidth, const glm::vec4& color, Text::Alignment alignment) {
+void TrueTypeFont::draw(std::string_view text, const glm::vec2& position, float scale, float z, float maxWidth, const Math::Color& color, Text::Alignment alignment) {
 	if (!font || text.empty())
 		return;
 
@@ -80,7 +80,7 @@ void TrueTypeFont::draw(std::string_view text, const glm::vec2& position, float 
 	render(vertices, indices, position, scale, z, color);
 }
 
-void TrueTypeFont::drawCached(std::string_view text, const glm::vec2& position, float scale, float z, float maxWidth, const glm::vec4& color, Text::Alignment alignment) {
+void TrueTypeFont::drawCached(std::string_view text, const glm::vec2& position, float scale, float z, float maxWidth, const Math::Color& color, Text::Alignment alignment) {
 	if (!font || text.empty())
 		return;
 
@@ -311,7 +311,7 @@ void TrueTypeFont::generateVertices(std::string_view text, float maxWidth, Text:
 	}
 }
 
-void TrueTypeFont::render(const std::vector<Vertex>& vertices, GLsizei indexCount, const glm::vec2& position, float scale, float z, const glm::vec4& color) {
+void TrueTypeFont::render(const std::vector<Vertex>& vertices, GLsizei indexCount, const glm::vec2& position, float scale, float z, const Math::Color& color) {
 	if (vertices.empty())
 		return;
 

@@ -10,9 +10,10 @@
 #include "Graphics/EBO.h"
 #include "Graphics/Shader.h"
 #include "Graphics/Texture.h"
-#include <Graphics/UBO.h>
+#include "Graphics/UBO.h"
 #include "Graphics/VAO.h"
 #include "Graphics/VBO.h"
+#include "Math/Color.h"
 
 namespace Blackthorn::Graphics {
 
@@ -156,7 +157,7 @@ private:
 	/**
 	 * @brief Internal quad draw implementation.
 	 */
-	void draw(const SDL_FRect& rect, float z, float rotation, const glm::vec4& color, const Texture* texture, const SDL_FRect* srcRect);
+	void draw(const SDL_FRect& rect, float z, float rotation, const Math::Color& color, const Texture* texture, const SDL_FRect* srcRect);
 public:
 	/**
 	 * @brief Constructs the renderer and initializes GPU resources.
@@ -249,7 +250,7 @@ public:
 		const SDL_FRect& rect,
 		float rotation = 0.0f,
 		float z = 0.0f,
-		const glm::vec4& color = { 1.0f, 1.0f, 1.0f, 1.0f }
+		const Math::Color& color = Math::Colors::White
 	);
 
 	/**
@@ -267,7 +268,7 @@ public:
 		const SDL_FRect* src = nullptr,
 		float rotation = 0.0f,
 		float z = 0.0f,
-		const glm::vec4& tint = { 1.0f, 1.0f, 1.0f, 1.0f }
+		const Math::Color& tint = Math::Colors::White
 	);
 
 	/**
@@ -283,7 +284,7 @@ public:
 		const SDL_FRect& dest,
 		const SDL_FRect& sliceMargins,
 		float z = 0.0f,
-		const glm::vec4& tint = { 1.0f, 1.0f, 1.0f, 1.0f, }
+		const Math::Color& tint = Math::Colors::White
 	);
 };
 

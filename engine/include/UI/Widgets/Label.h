@@ -3,6 +3,7 @@
 #include <string>
 
 #include "Core/Export.h"
+#include "Math/Color.h"
 #include "UI/Widget.h"
 
 namespace Blackthorn::UI {
@@ -24,14 +25,14 @@ public:
 	void setText(const std::string& t);
 	const std::string& getText() const { return text; }
 
-	void setTextColor(const glm::vec4& color) { textColor = color; }
+	void setTextColor(const Math::Color& color) { textColor = color; }
 	void setFont(Fonts::Font* f) { font = f; }
 	void setScale(float scale) { textScale = scale; }
 
 private:
 	std::string text;
 	Fonts::Font* font = nullptr;
-	glm::vec4 textColor{1.0f, 1.0f, 1.0f, 1.0f};
+	Math::Color textColor = Math::Colors::White;
 	float textScale = 1.0f;
 	Mode renderMode = Mode::Dynamic;
 };

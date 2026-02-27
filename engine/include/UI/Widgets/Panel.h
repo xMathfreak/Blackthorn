@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Core/Export.h"
+#include "Math/Color.h"
 #include "UI/Container.h"
 
 namespace Blackthorn::UI {
@@ -12,11 +13,11 @@ public:
 
 	void render(Graphics::Renderer& renderer) override;
 
-	void setBackgroundColor(glm::vec4& color) {
+	void setBackgroundColor(const Math::Color& color) {
 		backgroundColor = color;
 	}
 
-	void setBorderColor(glm::vec4& color) {
+	void setBorderColor(const Math::Color& color) {
 		borderColor = color;
 	}
 
@@ -34,8 +35,8 @@ public:
 	bool isAutoResize() const { return autoResize; }
 
 private:
-	glm::vec4 backgroundColor{0.0f, 0.0f, 0.0f, 1.0f};
-	glm::vec4 borderColor{0.0f, 0.0f, 0.0f, 1.0f};
+	Math::Color backgroundColor{0.0f, 0.0f, 0.0f, 1.0f};
+	Math::Color borderColor{0.0f, 0.0f, 0.0f, 1.0f};
 	float borderWidth = 0.1f;
 	float cornerRadius = 0.0f;
 	bool autoResize = true;

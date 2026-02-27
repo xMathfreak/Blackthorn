@@ -3,6 +3,7 @@
 #include <functional>
 
 #include "Core/Export.h"
+#include "Math/Color.h"
 #include "UI/Widget.h"
 
 namespace Blackthorn {
@@ -34,10 +35,10 @@ public:
 
 	void setOnClickCallback(ClickCallback callback) { onClick = callback; }
 
-	void setNormalColor(const glm::vec4& color) { normalColor = color; }
-	void setHoverColor(const glm::vec4& color) { hoverColor = color; }
-	void setPressedColor(const glm::vec4& color) { pressedColor = color; }
-	void setTextColor(const glm::vec4& color) { textColor = color; }
+	void setNormalColor(const Math::Color& color) { normalColor = color; }
+	void setHoverColor(const Math::Color& color) { hoverColor = color; }
+	void setPressedColor(const Math::Color& color) { pressedColor = color; }
+	void setTextColor(const Math::Color& color) { textColor = color; }
 
 	void setUseNineSlice(bool use) { useNineSlice = use; }
 	void setBackgroundTexture(Graphics::Texture* tex) { backgroundTexture = tex; }
@@ -55,10 +56,10 @@ private:
 	SDL_FRect nineSliceMargins{0, 0, 0, 0};
 	Graphics::Texture* backgroundTexture = nullptr;
 
-	glm::vec4 textColor{1.0f, 1.0f, 1.0f, 1.0f};
-	glm::vec4 hoverColor{0.0f, 0.0f, 0.0f, 1.0f};
-	glm::vec4 pressedColor{0.0f, 0.0f, 0.0f, 1.0f};
-	glm::vec4 normalColor{0.0f, 0.0f, 0.0f, 1.0f};
+	Math::Color textColor = Math::Colors::White;
+	Math::Color hoverColor = Math::Colors::Black;
+	Math::Color pressedColor = Math::Colors::Black;
+	Math::Color normalColor = Math::Colors::Black;
 
 	ClickCallback onClick;
 };

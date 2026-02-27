@@ -142,7 +142,7 @@ void Renderer::endScene() {
 	flush();
 }
 
-void Renderer::draw(const SDL_FRect& rect, float z, float rotation, const glm::vec4& color, const Texture* texture, const SDL_FRect* srcRect) {
+void Renderer::draw(const SDL_FRect& rect, float z, float rotation, const Math::Color& color, const Texture* texture, const SDL_FRect* srcRect) {
 	if (!isVisible(rect, rotation))
 		return;
 
@@ -252,15 +252,15 @@ void Renderer::draw(const SDL_FRect& rect, float z, float rotation, const glm::v
 	quadIndexCount += 6;
 }
 
-void Renderer::drawQuad(const SDL_FRect& rect, float rotation, float z, const glm::vec4& color) {
+void Renderer::drawQuad(const SDL_FRect& rect, float rotation, float z, const Math::Color& color) {
 	draw(rect, z, rotation, color, nullptr, nullptr);
 }
 
-void Renderer::drawTexture(const Texture& texture, const SDL_FRect& dest, const SDL_FRect* src, float rotation, float z, const glm::vec4& tint) {
+void Renderer::drawTexture(const Texture& texture, const SDL_FRect& dest, const SDL_FRect* src, float rotation, float z, const Math::Color& tint) {
 	draw(dest, z, rotation, tint, &texture, src);
 }
 
-void Renderer::drawNineSlice(const Texture& texture, const SDL_FRect& dest, const SDL_FRect& sliceMargins, float z, const glm::vec4& tint) {
+void Renderer::drawNineSlice(const Texture& texture, const SDL_FRect& dest, const SDL_FRect& sliceMargins, float z, const Math::Color& tint) {
 	if (quadIndexCount + 54 > MAX_INDICES)
 		nextBatch();
 

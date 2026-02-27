@@ -46,16 +46,16 @@ void Checkbox::render(Graphics::Renderer& renderer) {
 	glm::vec2 absPos = getAbsolutePosition();
 	SDL_FRect rect = {absPos.x, absPos.y, size.x, size.y};
 
-	glm::vec4 bgTint{1.0f};
-	glm::vec4 checkTint{1.0f};
+	Math::Color bgTint{1.0f};
+	Math::Color checkTint{1.0f};
 
 	if (hasState(state, WidgetState::Disabled)) {
-		bgTint = glm::vec4{0.5f, 0.5f, 0.5f, 1.0f};
-		checkTint = glm::vec4{0.5f, 0.5f, 0.5f, 1.0f};
+		bgTint = Math::Color{0.5f, 0.5f, 0.5f, 1.0f};
+		checkTint = Math::Color{0.5f, 0.5f, 0.5f, 1.0f};
 	} else if (hasState(state, WidgetState::Pressed)) {
-		bgTint = glm::vec4{0.8f, 0.8f, 0.8f, 1.0f};
+		bgTint = Math::Color{0.8f, 0.8f, 0.8f, 1.0f};
 	} else if (hasState(state, WidgetState::Hovered)) {
-		bgTint = glm::vec4{1.1f, 1.1f, 1.1f, 1.0f};
+		bgTint = Math::Color{1.1f, 1.1f, 1.1f, 1.0f};
 	}
 
 	if (backgroundTexture) {

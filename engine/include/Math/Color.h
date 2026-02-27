@@ -12,6 +12,7 @@ namespace Blackthorn::Math {
 
 // Normalized float RGBA [0, 1]
 using Color = glm::vec4;
+using Colour = Color;
 
 namespace Colors {
 	inline constexpr Color Clear	{ 0.0f };

@@ -3,6 +3,7 @@
 #include <functional>
 
 #include "Core/Export.h"
+#include "Math/Color.h"
 #include "UI/Widget.h"
 
 namespace Blackthorn {
@@ -31,8 +32,8 @@ public:
 
 	void setOnChangeCallback(ChangeCallback callback) { onChange = callback; }
 
-	void setBoxColor(glm::vec4& color) { boxColor = color; }
-	void setCheckColor(const glm::vec4& color) { checkColor = color; }
+	void setBoxColor(const Math::Color& color) { boxColor = color; }
+	void setCheckColor(const Math::Color& color) { checkColor = color; }
 	void setBoxSize(float s) { boxSize = s; };
 
 	void setBackgroundTexture(Graphics::Texture* tex) { backgroundTexture = tex; }
@@ -50,8 +51,8 @@ public:
 private:
 	bool checked = false;
 
-	glm::vec4 boxColor{0.0f, 0.0f, 0.0f, 1.0f};
-	glm::vec4 checkColor{1.0f, 1.0f, 1.0f, 1.0f};
+	Math::Color boxColor = Math::Colors::Black;
+	Math::Color checkColor = Math::Colors::White;
 	float boxSize = 1.0f;
 
 	Graphics::Texture* backgroundTexture = nullptr;

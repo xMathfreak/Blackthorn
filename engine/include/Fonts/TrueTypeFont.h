@@ -29,8 +29,8 @@ public:
 
 	bool loadFromFile(const std::string& filePath, int pointSize);
 
-	void draw(std::string_view text, const glm::vec2& position, float scale = 1.0f, float z = 0.0f, float maxWidth = 0.0f, const glm::vec4& color = {1.0f, 1.0f, 1.0f, 1.0f}, Text::Alignment alignment = Text::Alignment::Left) override;
-	void drawCached(std::string_view text, const glm::vec2& position, float scale = 1.0f, float z = 0.0f, float maxWidth = 0.0f, const glm::vec4& color = {1.0f, 1.0f, 1.0f, 1.0f}, Text::Alignment alignment = Text::Alignment::Left) override;
+	void draw(std::string_view text, const glm::vec2& position, float scale = 1.0f, float z = 0.0f, float maxWidth = 0.0f, const Math::Color& color = Math::Colors::White, Text::Alignment alignment = Text::Alignment::Left) override;
+	void drawCached(std::string_view text, const glm::vec2& position, float scale = 1.0f, float z = 0.0f, float maxWidth = 0.0f, const Math::Color& color = Math::Colors::White, Text::Alignment alignment = Text::Alignment::Left) override;
 
 	Text::Metrics measure(std::string_view text, float scale, float maxWidth) override;
 	float getLineHeight() const override;
@@ -103,7 +103,7 @@ private:
 	const Glyph& getGlyph(char32_t codePoint);
 
 	void generateVertices(std::string_view text, float maxWidth, Text::Alignment alignment,std::vector<Vertex>& outVertices, GLsizei& outIndexCount);
-	void render(const std::vector<Vertex>& vertices, GLsizei indexCount, const glm::vec2& position, float scale, float z, const glm::vec4& color);
+	void render(const std::vector<Vertex>& vertices, GLsizei indexCount, const glm::vec2& position, float scale, float z, const Math::Color& color);
 
 	std::vector<char32_t> utf8To32(std::string_view utf8) const;
 
