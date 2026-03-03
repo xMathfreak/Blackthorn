@@ -63,7 +63,6 @@ private:
 
 	void wrapText(std::string_view text, float scale, float maxWidth, std::vector<std::string_view>& outLines) const;
 	float computeLineWidth(std::string_view line, float scale) const;
-	Text::Metrics computeMetrics(std::string_view text, float scale, float maxWidth) const;
 	void generateVertices(std::string_view text, float scale, float maxWidth, Text::Alignment alignment, std::vector<Vertex>& outVertices) const;
 
 public:

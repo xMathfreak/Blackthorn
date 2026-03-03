@@ -184,7 +184,7 @@ void TrueTypeFont::initBuffers() {
 
 	ebo->setData(indices);
 
-	vao->enableAttrib(0, 3, GL_FLOAT, sizeof(Vertex), offsetof(Vertex, position));
+	vao->enableAttrib(0, 2, GL_FLOAT, sizeof(Vertex), offsetof(Vertex, position));
 	vao->enableAttrib(1, 2, GL_FLOAT, sizeof(Vertex), offsetof(Vertex, texCoord));
 
 	Graphics::VBO::unbind();
@@ -218,8 +218,6 @@ const TrueTypeFont::Glyph& TrueTypeFont::getGlyph(char32_t codePoint) {
 		static Glyph defaultGlyph;
 		return defaultGlyph;
 	}
-
-	atlas->bind();
 
 	SDL_Surface* converted = SDL_ConvertSurface(surface, SDL_PIXELFORMAT_RGBA32);
 
@@ -286,15 +284,8 @@ void TrueTypeFont::generateVertices(std::string_view text, float maxWidth, Text:
 			float w = glyph.size.x;
 			float h = glyph.size.y;
 
-			if (w == 0 || h == 0) {
-				outVertices.push_back({{xPos, yPos}, {0, 0}});
-				outVertices.push_back({{xPos, yPos}, {0, 0}});
-				outVertices.push_back({{xPos, yPos}, {0, 0}});
-				outVertices.push_back({{xPos, yPos}, {0, 0}});
-				outIndexCount += 6;
-
+			if (w == 0 || h == 0)
 				continue;
-			}
 
 			const auto& uv = glyph.uv;
 
@@ -432,6 +423,9 @@ std::vector<TrueTypeFont::LayoutLine> TrueTypeFont::layoutText(const std::vector
 		}
 
 		float wordWidth = 0.0f;
+		struct WordGlyph { const Glyph* glyph; float kern; };
+		std::vector<WordGlyph> word;
+
 		char32_t prev = 0;
 
 		for (size_t j = i; j < text.size(); ++j) {
@@ -442,42 +436,26 @@ std::vector<TrueTypeFont::LayoutLine> TrueTypeFont::layoutText(const std::vector
 
 			const Glyph& g = getGlyph(wc);
 
-			if (prev) {
-				int kern = 0;
+			int kern = 0;
+			if (prev)
 				TTF_GetGlyphKerning(font, prev, wc, &kern);
-				wordWidth += kern;
-			}
 
-			wordWidth += g.advance;
+			word.push_back({&g, static_cast<float>(kern)});
+			wordWidth += kern + g.advance;
 			prev = wc;
 		}
 
 		if (maxWidth > 0.0f && cursorX > 0.0f && cursorX + wordWidth > maxWidth)
 			newLine();
 
-		prev = 0;
-
-		while (i < text.size()) {
-			char32_t wc = text[i];
-
-			if (wc == U' ' || wc == U'\t' || wc == U'\n')
-				break;
-
-			const Glyph& g = getGlyph(wc);
-
-			if (prev) {
-				int kern = 0;
-				TTF_GetGlyphKerning(font, prev, wc, &kern);
-				cursorX += kern;
-			}
-
-			lines.back().glyphs.push_back({ &g, cursorX });
-			lines.back().width = cursorX + g.advance;
-
-			cursorX += g.advance;
-			prev = wc;
-			++i;
+		for (const auto& wg : word) {
+			cursorX += wg.kern;
+			lines.back().glyphs.push_back({wg.glyph, cursorX});
+			lines.back().width = cursorX + wg.glyph->advance;
+			cursorX += wg.glyph->advance;
 		}
+
+		i += word.size();
 	}
 
 	return lines;

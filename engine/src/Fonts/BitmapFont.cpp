@@ -450,7 +450,7 @@ void BitmapFont::wrapText(std::string_view text, float scale, float maxWidth, st
 		outLines.push_back(text.substr(lineStart));
 }
 
-Text::Metrics BitmapFont::computeMetrics(std::string_view text, float scale, float maxWidth) const {
+Text::Metrics BitmapFont::measure(std::string_view text, float scale, float maxWidth) {
 	lineBuffer.clear();
 	wrapText(text, scale, maxWidth, lineBuffer);
 
@@ -467,16 +467,12 @@ Text::Metrics BitmapFont::computeMetrics(std::string_view text, float scale, flo
 	};
 }
 
-Text::Metrics BitmapFont::measure(std::string_view text, float scale, float maxWidth) {
-	return computeMetrics(text, scale, maxWidth);
-}
-
 void BitmapFont::generateVertices(std::string_view text, float scale, float maxWidth, Text::Alignment alignment, std::vector<Vertex>& outVertices) const {
 	lineBuffer.clear();
 	wrapText(text, scale, maxWidth, lineBuffer);
 
 	outVertices.clear();
-	outVertices.reserve(lineBuffer.size() * text.length() * 6);
+	outVertices.reserve(text.length() * 6);
 
 	float currentY = 0.0f;
 	float texWidth = static_cast<float>(texture->getWidth());
@@ -585,7 +581,7 @@ void BitmapFont::drawCached(std::string_view text, const glm::vec2& position, fl
 		cacheEntry.vao.bind();
 		cacheEntry.vbo.setData(vertexBuffer.data(), vertexBuffer.size() * sizeof(Vertex), GL_STATIC_DRAW);
 
-		cacheEntry.vao.enableAttrib(0, 3, GL_FLOAT, sizeof(Vertex), offsetof(Vertex, position));
+		cacheEntry.vao.enableAttrib(0, 2, GL_FLOAT, sizeof(Vertex), offsetof(Vertex, position));
 		cacheEntry.vao.enableAttrib(1, 2, GL_FLOAT, sizeof(Vertex), offsetof(Vertex, texCoord));
 		cacheEntry.vertexCount = vertexBuffer.size();
 
