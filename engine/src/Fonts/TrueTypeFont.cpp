@@ -279,7 +279,7 @@ void TrueTypeFont::generateVertices(std::string_view text, float maxWidth, Text:
 			const Glyph& glyph = *lg.glyph;
 
 			float xPos = lg.xPos + offsetX;
-			float yPos = cursorY + descent;
+			float yPos = cursorY;
 
 			float w = glyph.size.x;
 			float h = glyph.size.y;

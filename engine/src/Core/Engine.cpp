@@ -229,6 +229,7 @@ void Engine::processEvents() {
 				config.window.height = event.window.data2;
 				glViewport(0, 0, event.window.data1, event.window.data2);
 				renderer->setProjection(event.window.data1, event.window.data2);
+				UI::UIManager::onWindowResize(event.window.data1, event.window.data2);
 				break;
 			case SDL_EVENT_WINDOW_FOCUS_GAINED:
 				windowFocused = true;
@@ -248,8 +249,8 @@ void Engine::processEvents() {
 }
 
 void Engine::update(float dt) {
-	inputManager.update(dt);
 	sceneManager.update(dt);
+	inputManager.update(dt);
 }
 
 void Engine::fixedUpdate(float dt) {

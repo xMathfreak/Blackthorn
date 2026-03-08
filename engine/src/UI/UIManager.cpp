@@ -2,52 +2,111 @@
 
 #include <algorithm>
 
-#include "Input/InputManager.h"
+#include <SDL3/SDL.h>
+
 #include "UI/Container.h"
 #include "UI/Widget.h"
 
 namespace Blackthorn::UI {
 
-UIManager::UIManager() {}
+float UIManager::globalUIScale = 1.0f;
+Fonts::Font* UIManager::defaultFont = nullptr;
+glm::vec2 UIManager::screenDimensions{1920.0f, 1080.0f};
+std::vector<UIManager*> UIManager::managers;
 
-UIManager::~UIManager() = default;
+UIManager::UIManager() {
+	root = std::make_unique<Container>();
+	root->setSizingMode(Container::SizingMode::FillParent);
 
-void UIManager::update(float dt) {
-	for (auto& widget : rootWidgets) {
-		if (widget->isVisible())
-			widget->update(dt);
+	managers.push_back(this);
+}
+
+UIManager::~UIManager() {
+	auto it = std::find(managers.begin(), managers.end(), this);
+	if (it != managers.end())
+		managers.erase(it);
+}
+
+void UIManager::onWindowResize(int width, int height) {
+	screenDimensions.x = static_cast<float>(width);
+	screenDimensions.y = static_cast<float>(height);
+
+	updateAllLayouts();
+}
+
+void UIManager::setGlobalUIScale(float scale) {
+	if (scale <= 0.0f) {
+		#ifdef BLACKTHORN_DEBUG
+			SDL_Log("UIManager: ignoring non-positive UI scale %.2f", scale);
+		#endif
+
+		return;
+	}
+
+		#ifdef BLACKTHORN_DEBUG
+		if (scale < 0.5f || scale > 5.0f)
+			SDL_Log("UIManager: extreme global UI scale set: %.2f", scale);
+		#endif
+
+	globalUIScale = scale;
+
+	updateAllLayouts();
+}
+
+void UIManager::setDefaultFont(Fonts::Font* font) {
+	defaultFont = font;
+}
+
+void UIManager::updateAllLayouts() {
+	for (auto* m : managers) {
+		if (m)
+			m->updateLayout();
 	}
 }
 
-void UIManager::render(Graphics::Renderer& renderer) {
-	for (auto& widget : rootWidgets) {
-		if (widget->isVisible())
-			widget->render(renderer);
+void UIManager::addWidget(std::unique_ptr<Widget> widget) {
+	if (!widget) {
+#ifdef BLACKTHORN_DEBUG
+		SDL_Log("UIManager::addWidget — null widget ignored");
+#endif
+		return;
 	}
+
+	root->addWidget(std::move(widget));
 }
 
-void UIManager::addRoot(std::unique_ptr<Widget> widget) {
-	rootWidgets.push_back(std::move(widget));
+void UIManager::removeWidget(Widget* widget) {
+	if (!widget) {
+		#ifdef BLACKTHORN_DEBUG
+			SDL_Log("UIManager::removeWidget — null widget ignored");
+		#endif
+
+		return;
+	}
+
+	root->removeWidget(widget);
 }
 
-void UIManager::removeRoot(Widget* widget) {
-	auto it = std::find_if(rootWidgets.begin(), rootWidgets.end(),
-		[widget](const std::unique_ptr<	Widget>& ptr) {
-			return ptr.get() == widget;
-		}
-	);
-
-	if (it != rootWidgets.end())
-		rootWidgets.erase(it);
-}
-
-void UIManager::clearRoots() {
-	rootWidgets.clear();
+void UIManager::clearWidgets() {
+	root->clearWidgets();
 	focusedWidget = nullptr;
 	hoveredWidget = nullptr;
 }
 
+void UIManager::updateLayout() {
+	if (!root)
+		return;
+
+	root->markLayoutDirty();
+	root->markTransformDirty();
+
+	root->updateLayout();
+}
+
 void UIManager::setFocusedWidget(Widget* widget) {
+	if (focusedWidget == widget)
+		return;
+
 	if (focusedWidget)
 		focusedWidget->setFocused(false);
 
@@ -57,94 +116,62 @@ void UIManager::setFocusedWidget(Widget* widget) {
 		focusedWidget->setFocused(true);
 }
 
-void UIManager::handleInput(const Input::InputManager& input) {
-	glm::vec2 mousePos = input.getMousePosition();
+void UIManager::setHoveredWidget(Widget* widget) {
+	if (hoveredWidget == widget)
+		return;
 
-	for (auto it = rootWidgets.rbegin(); it != rootWidgets.rend(); ++it) {
-		if ((*it)->isVisible())
-			(*it)->onMouseMove(mousePos);
-	}
+	if (hoveredWidget)
+		hoveredWidget->setHovered(false);
 
-	if (input.isMouseButtonPressed(SDL_BUTTON_LEFT)) {
-		for (auto it = rootWidgets.rbegin(); it != rootWidgets.rend(); ++it) {
-			if ((*it)->isVisible() && (*it)->onMouseDown(mousePos, SDL_BUTTON_LEFT)) {
-				Widget* clickedWidget = findWidgetAt(mousePos);
+	hoveredWidget = widget;
 
-				if (clickedWidget && clickedWidget->canFocus())
-					setFocusedWidget(clickedWidget);
-
-				return;
-			}
-		}
-
-		setFocusedWidget(nullptr);
-	}
-
-	if (input.isMouseButtonReleased(SDL_BUTTON_LEFT)) {
-		for (auto it = rootWidgets.rbegin(); it != rootWidgets.rend(); ++it) {
-			if ((*it)->isVisible())
-				(*it)->onMouseUp(mousePos, SDL_BUTTON_LEFT);
-		}
-	}
-
-	if (input.isMouseButtonPressed(SDL_BUTTON_RIGHT)) {
-		for (auto it = rootWidgets.rbegin(); it != rootWidgets.rend(); ++it) {
-			if ((*it)->isVisible() && (*it)->onMouseDown(mousePos, SDL_BUTTON_RIGHT))
-				return;
-		}
-	}
-
-	if (input.isMouseButtonReleased(SDL_BUTTON_RIGHT)) {
-		for (auto it = rootWidgets.rbegin(); it != rootWidgets.rend(); ++it) {
-			if ((*it)->isVisible())
-				(*it)->onMouseUp(mousePos, SDL_BUTTON_RIGHT);
-		}
-	}
-
-	// Handle keyboard input
+	if (hoveredWidget)
+		hoveredWidget->setHovered(true);
 }
 
 Widget* UIManager::findWidgetAt(const glm::vec2& position) {
-	for (auto it = rootWidgets.rbegin(); it != rootWidgets.rend(); ++it) {
-		Widget* widget = it->get();
+	if (!root)
+		return nullptr;
 
-		if (!widget->isVisible())
-			continue;
+	std::function<Widget*(Container*, const glm::vec2&)> searchContainer;
+	searchContainer = [&](Container* container, const glm::vec2& pos) -> Widget* {
+		if (!container || !container->isVisible())
+			return nullptr;
 
-		if (auto* container = dynamic_cast<Container*>(widget)) {
-			std::function<Widget*(Container*, const glm::vec2&)> searchContainer
-			= [&](Container* cont, const glm::vec2& pos) -> Widget* {
-				for (auto containerIt = cont->getChildren().rbegin();
-					containerIt != cont->getChildren().rend(); ++containerIt) {
-					Widget* child = containerIt->get();
+		const auto& childWidgets = container->getWidgets();
 
-					if (!child->isVisible())
-						continue;
+		for (auto it = childWidgets.rbegin(); it != childWidgets.rend(); ++it) {
+			Widget* widget = it->get();
+			if (!widget || !widget->isVisible())
+				continue;
 
-					if (auto* childContainer = dynamic_cast<Container*>(child)) {
-						Widget* found = searchContainer(childContainer, pos);
+			if (auto* childContainer = dynamic_cast<Container*>(widget)) {
+				if (Widget* found = searchContainer(childContainer, pos))
+					return found;
+			}
 
-						if (found)
-							return found;
-					}
-
-					if (child->containsPoint(pos))
-						return child;
-				}
-
-				return nullptr;
-			};
-
-			Widget* found = searchContainer(container, position);
-			if (found)
-				return found;
+			if (widget->containsPoint(pos))
+				return widget;
 		}
 
-		if (widget->containsPoint(position))
-			return widget;
-	}
+		return nullptr;
+	};
 
-	return nullptr;
+	return searchContainer(root.get(), position);
+}
+
+void UIManager::update(float dt) {
+	if (root)
+		root->update(dt);
+}
+
+void UIManager::render(Graphics::Renderer& renderer) {
+	if (root)
+		root->render(renderer);
+}
+
+void UIManager::handleInput(const Input::InputManager& input) {
+	// TODO: dispatch mouse/keyboard events from InputManager.
 }
 
 } // namespace Blackthorn::UI

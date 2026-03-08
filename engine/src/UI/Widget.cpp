@@ -1,17 +1,204 @@
 #include "UI/Widget.h"
 #include "UI/Container.h"
+#include "UI/UIManager.h"
 
 namespace Blackthorn::UI {
 
 Widget::Widget() {}
 
-void Widget::update(float dt) {}
+void Widget::setState(WidgetState flag) {
+	state = state | flag;
+	markRenderDirty();
+}
 
-void Widget::render(Graphics::Renderer& renderer) {}
+void Widget::clearState(WidgetState flag) {
+	state = static_cast<WidgetState>(
+		static_cast<Uint8>(state) & ~static_cast<Uint8>(flag)
+	);
+	markRenderDirty();
+}
+
+void Widget::toggleState(WidgetState flag) {
+	state = state ^ flag;
+	markRenderDirty();
+}
+
+void Widget::setPosition(const glm::vec2& pos) {
+	if (position == pos)
+		return;
+
+	position = pos;
+	markTransformDirty();
+}
+
+glm::vec2 Widget::getAbsolutePosition() const {
+	if (transformDirty)
+		updateTransform();
+
+	return absolutePosition;
+}
+
+void Widget::updateTransform() const {
+	const float scale = UIManager::getGlobalUIScale();
+
+	glm::vec2 parentAbsPos{0};
+	glm::vec2 parentDesignSize{0};
+
+	if (parent) {
+		parentAbsPos = parent->getAbsolutePosition();
+		parentAbsPos.x += parent->getPadding().left * scale;
+		parentAbsPos.y += parent->getPadding().top * scale;
+
+		glm::vec2 parentSize = parent->getSize();
+		parentDesignSize.x = parentSize.x - parent->getPadding().left - parent->getPadding().right;
+		parentDesignSize.y = parentSize.y - parent->getPadding().top - parent->getPadding().bottom;
+	} else {
+		parentDesignSize = UIManager::getScreenDimensions() / scale;
+	}
+
+	glm::vec2 alignmentOffset{0};
+
+	switch (alignment.horizontal) {
+		case Alignment::Horizontal::Left:
+			break;
+		case Alignment::Horizontal::Center:
+			alignmentOffset.x = (parentDesignSize.x - size.x) * 0.5f;
+			break;
+		case Alignment::Horizontal::Right:
+			alignmentOffset.x = parentDesignSize.x - size.x;
+			break;
+	}
+
+	switch (alignment.vertical) {
+		case Alignment::Vertical::Top:
+			break;
+		case Alignment::Vertical::Center:
+			alignmentOffset.y = (parentDesignSize.y - size.y) * 0.5f;
+			break;
+		case Alignment::Vertical::Bottom:
+			alignmentOffset.y = parentDesignSize.y - size.y;
+			break;
+	}
+
+	absolutePosition = parentAbsPos + (position + alignmentOffset) * scale;
+	transformDirty = false;
+}
+
+void Widget::setSize(const glm::vec2& sz) {
+	if (size == sz)
+		return;
+
+	size = sz;
+	designWidth = sz.x;
+	designHeight = sz.y;
+
+	markLayoutDirty();
+	markTransformDirty();
+}
+
+void Widget::setWidth(float w, SizeMode mode) {
+	designWidth = w;
+	widthMode = mode;
+
+	if (mode == SizeMode::Fixed)
+		size.x = w;
+
+	markLayoutDirty();
+	markTransformDirty();
+}
+
+void Widget::setHeight(float h, SizeMode mode) {
+	designHeight = h;
+	heightMode = mode;
+
+	if (mode == SizeMode::Fixed) {
+		size.y = h;
+	}
+
+	markLayoutDirty();
+	markTransformDirty();
+}
+
+void Widget::setAlignment(const Alignment& align) {
+	if (alignment == align)
+		return;
+
+	alignment = align;
+	markTransformDirty();
+}
+
+void Widget::setMargin(float m) {
+	margin = {m, m, m, m};
+	markLayoutDirty();
+}
+
+void Widget::setMargin(float top, float right, float bottom, float left) {
+	margin = {top, right, bottom, left};
+	markLayoutDirty();
+}
+
+void Widget::setPadding(float p) {
+	padding = {p, p, p, p};
+	markLayoutDirty();
+	markTransformDirty();
+}
+
+void Widget::setPadding(float top, float right, float bottom, float left) {
+	padding = {top, right, bottom, left};
+	markLayoutDirty();
+	markTransformDirty();
+}
+
+void Widget::setParent(Container* container) {
+	parent = container;
+	markTransformDirty();
+	markLayoutDirty();
+}
+
+void Widget::setVisible(bool isVisible) {
+	if (visible == isVisible)
+		return;
+
+	visible = isVisible;
+
+	if (parent)
+		parent->markLayoutDirty();
+
+	markRenderDirty();
+}
+
+void Widget::setEnabled(bool enabled) {
+	if (enabled)
+		clearState(WidgetState::Disabled);
+	else
+		setState(WidgetState::Disabled);
+}
+
+void Widget::setFocused(bool focused) {
+	if (focused && canFocus())
+		setState(WidgetState::Focused);
+	else
+		clearState(WidgetState::Focused);
+}
+
+void Widget::setHovered(bool hovered) {
+	if (hovered)
+		setState(WidgetState::Hovered);
+	else
+		clearState(WidgetState::Hovered);
+}
 
 bool Widget::onMouseMove(const glm::vec2& pos) {
-	updateHoverState(pos);
-	return containsPoint(pos);
+	bool contains = containsPoint(pos);
+
+	bool wasHovered = isHovered();
+	if (contains && !wasHovered) {
+		setHovered(true);
+	} else if (!contains && wasHovered) {
+		setHovered(false);
+	}
+
+	return contains;
 }
 
 bool Widget::onMouseDown(const glm::vec2& pos, Uint8 button) {
@@ -19,7 +206,7 @@ bool Widget::onMouseDown(const glm::vec2& pos, Uint8 button) {
 		return false;
 
 	if (containsPoint(pos)) {
-		state = state | WidgetState::Pressed;
+		setState(WidgetState::Pressed);
 		return true;
 	}
 
@@ -28,121 +215,44 @@ bool Widget::onMouseDown(const glm::vec2& pos, Uint8 button) {
 
 bool Widget::onMouseUp(const glm::vec2& pos, Uint8 button) {
 	if (hasState(state, WidgetState::Pressed)) {
-		state = static_cast<WidgetState>(
-			static_cast<Uint8>(state) & ~static_cast<Uint8>(WidgetState::Pressed)
-		);
-
+		clearState(WidgetState::Pressed);
 		return true;
 	}
 
 	return false;
 }
 
-bool Widget::onKeyDown(SDL_Keycode key) {
-	return false;
-}
-
-bool Widget::onKeyUp(SDL_Keycode key) {
-	return false;
-}
-
-void Widget::setPosition(const glm::vec2& pos) {
-	position = pos;
-}
-
-void Widget::setSize(const glm::vec2& s) {
-	size = s;
-	width = size.x;
-	height = size.y;
-}
-
-glm::vec2 Widget::getAbsolutePosition() const {
-	glm::vec2 absolutePosition = position;
-
-	if (parent) {
-		absolutePosition += parent->getAbsolutePosition();
-		absolutePosition += glm::vec2{parent->getPadding().left, parent->getPadding().top};
-	}
-
-	return absolutePosition;
-}
-
-void Widget::setWidth(float w, SizeMode mode) {
-	width = w;
-	widthMode = mode;
-
-	if (mode == SizeMode::Fixed)
-		size.x = width;
-}
-
-void Widget::setHeight(float h, SizeMode mode) {
-	height = h;
-	heightMode = mode;
-
-	if (mode == SizeMode::Fixed)
-		size.y = height;
-}
-
-void Widget::setEnabled(bool enabled) {
-	if (enabled) {
-		state = static_cast<WidgetState>(
-			static_cast<Uint8>(state) & ~static_cast<Uint8>(WidgetState::Disabled)
-		);
-	} else {
-		state = state | WidgetState::Disabled;
-	}
-}
-
-void Widget::setFocused(bool focused) {
-	if (focused && canFocus()) {
-		state = state | WidgetState::Focused;
-	} else {
-		state = static_cast<WidgetState>(
-			static_cast<Uint8>(state) & ~static_cast<Uint8>(WidgetState::Focused)
-		);
-	}
-}
-
 bool Widget::containsPoint(const glm::vec2& point) const {
+	if (!visible)
+		return false;
+
+	const float scale = UIManager::getGlobalUIScale();
+	if (size.x * scale <= 0.0f || size.y * scale <= 0.0f)
+		return false;
+
 	glm::vec2 absPos = getAbsolutePosition();
 
 	return point.x >= absPos.x
-		&& point.x <= absPos.x + size.x
+		&& point.x <= absPos.x + size.x * scale
 		&& point.y >= absPos.y
-		&& point.y <= absPos.y + size.y;
+		&& point.y <= absPos.y + size.y * scale;
 }
 
-void Widget::setMargin(float m) {
-	margin = {m, m, m, m};
+void Widget::markTransformDirty() {
+	transformDirty = true;
 }
 
-void Widget::setMargin(float top, float right, float bottom, float left) {
-	margin = {top, bottom, left, right};
+void Widget::markLayoutDirty() {
+	layoutDirty = true;
+	markTransformDirty();
 }
 
-void Widget::setPadding(float p) {
-	padding = {p, p, p, p};
+void Widget::markRenderDirty() {
+	renderDirty = true;
 }
 
-void Widget::setPadding(float top, float right, float bottom, float left) {
-	padding = {top, bottom, left, right};
+void Widget::updateLayout() {
+	layoutDirty = false;
 }
-
-void Widget::updateHoverState(const glm::vec2& mousePos) {
-	if (!isEnabled() || !isVisible())
-		return;
-
-	bool wasHovered = hasState(state, WidgetState::Hovered);
-	bool nowHovered = containsPoint(mousePos);
-
-	if (nowHovered && !wasHovered) {
-		state = state | WidgetState::Hovered;
-	} else if (!nowHovered && wasHovered) {
-		state = static_cast<WidgetState>(
-			static_cast<Uint8>(state) & ~static_cast<Uint8>(WidgetState::Hovered)
-		);
-	}
-}
-
 
 } // namespace Blackthorn::UI
