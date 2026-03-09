@@ -141,6 +141,9 @@ bool Engine::init(const EngineConfig& cfg) {
 	}
 
 	initAssetLoaders();
+	int w, h;
+	SDL_GetWindowSizeInPixels(window, &w, &h);
+	UI::UIManager::setReferenceResolution(w, h);
 
 	sceneContext = std::make_unique<Scene::SceneContextImpl>(
 		assetManager,

@@ -9,9 +9,14 @@
 
 namespace Blackthorn::UI {
 
+glm::vec2 UIManager::screenDimensions{1280.0f, 720.0f};
+glm::vec2 UIManager::referenceResolution{1280.0f, 720.0f};
+
+float UIManager::autoScale = 1.0f;
 float UIManager::globalUIScale = 1.0f;
+float UIManager::effectiveScale = 1.0f;
+
 Fonts::Font* UIManager::defaultFont = nullptr;
-glm::vec2 UIManager::screenDimensions{1920.0f, 1080.0f};
 std::vector<UIManager*> UIManager::managers;
 
 UIManager::UIManager() {
@@ -31,7 +36,30 @@ void UIManager::onWindowResize(int width, int height) {
 	screenDimensions.x = static_cast<float>(width);
 	screenDimensions.y = static_cast<float>(height);
 
+	recomputeScale();
+}
+
+void UIManager::recomputeScale() {
+	float scaleX = screenDimensions.x / referenceResolution.x;
+	float scaleY = screenDimensions.y / referenceResolution.y;
+
+	autoScale = std::min(scaleX, scaleY);
+	effectiveScale = autoScale * globalUIScale;
+
 	updateAllLayouts();
+}
+
+void UIManager::setReferenceResolution(float width, float height) {
+	if (width <= 0.0f || height <= 0.0f) {
+		#ifdef BLACKTHORN_DEBUG
+			SDL_Log("UIManager: ignoring invalid reference resolution (%.0f x %.0f)", width, height);
+		#endif
+
+		return;
+	}
+
+	referenceResolution = {width, height};
+	recomputeScale();
 }
 
 void UIManager::setGlobalUIScale(float scale) {
@@ -49,8 +77,7 @@ void UIManager::setGlobalUIScale(float scale) {
 		#endif
 
 	globalUIScale = scale;
-
-	updateAllLayouts();
+	recomputeScale();
 }
 
 void UIManager::setDefaultFont(Fonts::Font* font) {

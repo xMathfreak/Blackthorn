@@ -265,7 +265,7 @@ void Container::updateLayout() {
 				size.x = parentSize.x - parent->getPadding().left - parent->getPadding().right;
 				size.y = parentSize.y - parent->getPadding().top - parent->getPadding().bottom;
 			} else {
-				size = UIManager::getScreenDimensions() / UIManager::getGlobalUIScale();
+				size = UIManager::getScreenDimensions() / UIManager::getEffectiveScale();
 			}
 			break;
 	}

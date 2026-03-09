@@ -19,7 +19,7 @@ void Label::render(Graphics::Renderer& renderer) {
 
 	updateLayout();
 
-	const float scale = UIManager::getGlobalUIScale();
+	const float scale = UIManager::getEffectiveScale();
 	glm::vec2 absPos = getAbsolutePosition();
 
 	glm::vec2 contentPos;

@@ -39,7 +39,7 @@ glm::vec2 Widget::getAbsolutePosition() const {
 }
 
 void Widget::updateTransform() const {
-	const float scale = UIManager::getGlobalUIScale();
+	const float scale = UIManager::getEffectiveScale();
 
 	glm::vec2 parentAbsPos{0};
 	glm::vec2 parentDesignSize{0};
@@ -226,7 +226,7 @@ bool Widget::containsPoint(const glm::vec2& point) const {
 	if (!visible)
 		return false;
 
-	const float scale = UIManager::getGlobalUIScale();
+	const float scale = UIManager::getEffectiveScale();
 	if (size.x * scale <= 0.0f || size.y * scale <= 0.0f)
 		return false;
 
