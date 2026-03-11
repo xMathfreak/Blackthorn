@@ -1,4 +1,5 @@
 #include "Graphics/Renderer.h"
+#include "Graphics/RenderLayers.h"
 
 #include <glm/gtc/type_ptr.hpp>
 
@@ -330,10 +331,13 @@ void Renderer::drawNineSlice(const Texture& texture, const SDL_FRect& dest, cons
 }
 
 void Renderer::setProjection(int width, int height) {
+	constexpr float nearPlane = -100.0f;
+	constexpr float farPlane = RenderLayers::Debug + 100.0f;
+
 	projectionMatrix = glm::ortho(
 		0.0f, static_cast<float>(width),
 		static_cast<float>(height), 0.0f,
-		-100.0f, 100.0f
+		nearPlane, farPlane
 	);
 
 	viewBounds = { 0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height) };
