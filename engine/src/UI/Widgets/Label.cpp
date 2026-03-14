@@ -51,9 +51,9 @@ void Label::render(Graphics::Renderer& renderer) {
 	const float effectiveScale = textScale * scale;
 
 	if (renderMode == Mode::Dynamic) {
-		font->draw(text, renderPos, effectiveScale, 1.0f, 0.0f, textColor, textAlignment);
+		font->draw(text, renderPos, effectiveScale, zDepth, 0.0f, textColor, textAlignment);
 	} else {
-		font->drawCached(text, renderPos, effectiveScale, 1.0f, 0.0f, textColor, textAlignment);
+		font->drawCached(text, renderPos, effectiveScale, zDepth, 0.0f, textColor, textAlignment);
 	}
 
 	renderDirty = false;
@@ -162,6 +162,14 @@ void Label::setMode(Mode mode) {
 		return;
 
 	renderMode = mode;
+	markRenderDirty();
+}
+
+void Label::setZDepth(float z) {
+	if (zDepth == z)
+		return;
+
+	zDepth = z;
 	markRenderDirty();
 }
 

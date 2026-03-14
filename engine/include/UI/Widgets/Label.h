@@ -4,6 +4,7 @@
 
 #include "Core/Export.h"
 #include "Fonts/TextTypes.h"
+#include "Graphics/RenderLayers.h"
 #include "Math/Color.h"
 #include "UI/Widget.h"
 
@@ -25,6 +26,7 @@ public:
 protected:
 	std::string text;
 	Fonts::Font* font = nullptr;
+	float zDepth = Graphics::RenderLayers::UI + 1.0f;
 	Math::Color textColor = Math::Colors::White;
 	float textScale = 1.0f;
 	Mode renderMode = Mode::Dynamic;
@@ -61,6 +63,9 @@ public:
 
 	void setMode(Mode mode);
 	Mode getMode() const { return renderMode; }
+
+	void setZDepth(float z);
+	float getZDepth() const { return zDepth; }
 
 	void markLayoutDirty() override;
 };
