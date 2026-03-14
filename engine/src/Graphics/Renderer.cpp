@@ -1,18 +1,24 @@
 #include "Graphics/Renderer.h"
 #include "Graphics/RenderLayers.h"
 
+#include <cstring>
+
 #include <glm/gtc/type_ptr.hpp>
 
 namespace Blackthorn::Graphics {
 
-Renderer::Renderer()
-	: projectionMatrix(1.0f)
+Renderer::Renderer(Uint32 maxQuads)
+	: MAX_QUADS(maxQuads)
+	, MAX_VERTICES(maxQuads * 4)
+	, MAX_INDICES(maxQuads * 6)
+	, projectionMatrix(1.0f)
 	, viewMatrix(1.0f)
 {
 	quadBuffer = std::make_unique<Vertex[]>(MAX_VERTICES);
 
 	initQuadBuffers();
 	initShader();
+	initScreenPass();
 
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 	glPixelStorei(GL_PACK_ALIGNMENT, 1);
@@ -34,9 +40,7 @@ Renderer::Renderer()
 	#endif
 }
 
-Renderer::~Renderer() {
-
-}
+Renderer::~Renderer() {}
 
 void Renderer::initQuadBuffers() {
 	QuadVAO = std::make_unique<VAO>(true);
@@ -46,7 +50,7 @@ void Renderer::initQuadBuffers() {
 	QuadVAO->bind();
 	QuadVBO->bind();
 
-	glBufferData(GL_ARRAY_BUFFER, MAX_VERTICES * sizeof(Vertex), nullptr, GL_DYNAMIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(MAX_VERTICES) * sizeof(Vertex), nullptr, GL_DYNAMIC_DRAW);
 
 	QuadVAO->enableAttrib(0, 3, GL_FLOAT, sizeof(Vertex), offsetof(Vertex, position));
 	QuadVAO->enableAttrib(1, 4, GL_FLOAT, sizeof(Vertex), offsetof(Vertex, color));
@@ -90,19 +94,35 @@ void Renderer::initShader() {
 	#endif
 }
 
+void Renderer::initScreenPass() {
+	screenVAO = std::make_unique<VAO>(true);
+}
+
 void Renderer::initWhiteTexture() {
 	whiteTexture = std::make_unique<Texture>(Texture::createDefault());
+
+	screenShader = std::make_unique<Shader>(
+		"assets/shaders/screen.vert",
+		"assets/shaders/screen.frag"
+	);
+
+	screenShader->bind();
+	screenShader->setInt("u_ScreenTexture", 0);
+
+	activeScreenShader = screenShader.get();
+
+	#ifdef BLACKTHORN_DEBUG
+		SDL_Log("Render screen pass initialized");
+	#endif
 }
 
 void Renderer::startBatch() {
+	QuadVBO->bind();
+	glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(MAX_VERTICES) * sizeof(Vertex), nullptr, GL_DYNAMIC_DRAW);
+
 	quadBufferPtr = quadBuffer.get();
 	quadIndexCount = 0;
 	textureSlotIndex = 1;
-
-	for (Uint32 i = 1; i < MAX_TEXTURE_SLOTS; ++i)
-		textureSlots[i] = nullptr;
-
-	textureSlotMap.clear();
 }
 
 void Renderer::nextBatch() {
@@ -114,14 +134,8 @@ void Renderer::flush() {
 	if (quadIndexCount == 0)
 		return;
 
-	Uint32 dataSize = static_cast<Uint32>(
-		reinterpret_cast<Uint8*>(quadBufferPtr) - reinterpret_cast<Uint8*>(quadBuffer.get())
-	);
-
-	QuadEBO->bind();
+	const GLsizeiptr dataSize = reinterpret_cast<const Uint8*>(quadBufferPtr) - reinterpret_cast<const Uint8*>(quadBuffer.get());
 	QuadVBO->bind();
-
-	glBufferData(GL_ARRAY_BUFFER, MAX_VERTICES * sizeof(Vertex), nullptr, GL_DYNAMIC_DRAW);
 	glBufferSubData(GL_ARRAY_BUFFER, 0, dataSize, quadBuffer.get());
 
 	for (Uint32 i = 0; i < textureSlotIndex; ++i) {
@@ -136,12 +150,62 @@ void Renderer::flush() {
 }
 
 void Renderer::beginScene() {
+	if (fbo)
+		fbo->bind();
+
+	glClearColor(clearColor.r, clearColor.g, clearColor.b, clearColor.a);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
 	startBatch();
 }
 
 void Renderer::endScene() {
 	flush();
+	presentToScreen();
 }
+
+void Renderer::presentToScreen() {
+	if (!fbo)
+		return;
+
+	FBO::unbind();
+
+	if (!postProcessingEnabled) {
+		glBindFramebuffer(GL_READ_FRAMEBUFFER, fbo->getID());
+		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+
+		glBlitFramebuffer(
+			0, 0, fbo->getWidth(), fbo->getHeight(),
+			0, 0, fbo->getWidth(), fbo->getHeight(),
+			GL_COLOR_BUFFER_BIT, GL_NEAREST
+		);
+
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		return;
+	}
+
+	glDisable(GL_DEPTH_TEST);
+	activeScreenShader->bind();
+	fbo->getTexture().bind(0);
+	screenVAO->bind();
+	glDrawArrays(GL_TRIANGLES, 0, 3);
+	glEnable(GL_DEPTH_TEST);
+}
+
+void Renderer::setPostProcessingEnabled(bool enabled) {
+	postProcessingEnabled = enabled;
+}
+
+void Renderer::setScreenShader(Shader* customShader) {
+	if (customShader) {
+		customShader->bind();
+		customShader->setInt("u_ScreenTexture", 0);
+		activeScreenShader = customShader;
+	} else {
+		activeScreenShader = screenShader.get();
+	}
+}
+
 
 void Renderer::draw(const SDL_FRect& rect, float z, float rotation, const Math::Color& color, const Texture* texture, const SDL_FRect* srcRect) {
 	if (!isVisible(rect, rotation))
@@ -153,19 +217,20 @@ void Renderer::draw(const SDL_FRect& rect, float z, float rotation, const Math::
 	float texIndex = 0.0f;
 
 	if (texture) {
-		auto it = textureSlotMap.find(texture);
-
-		if (it != textureSlotMap.end()) {
-			texIndex = it->second;
-		} else {
-			if (textureSlotIndex >= MAX_TEXTURE_SLOTS)
-				nextBatch();
-
-			texIndex = static_cast<float>(textureSlotIndex);
-			textureSlots[textureSlotIndex] = texture;
-			textureSlotMap[texture] = texIndex;
-			textureSlotIndex++;
+		for (Uint32 i = 1; i < textureSlotIndex; ++i) {
+			if (textureSlots[i] == texture) {
+				texIndex = static_cast<float>(i);
+				goto textureFound;
+			}
 		}
+
+		if (textureSlotIndex >= MAX_TEXTURE_SLOTS)
+			nextBatch();
+
+		texIndex = static_cast<float>(textureSlotIndex);
+		textureSlots[textureSlotIndex++] = texture;
+
+	textureFound:;
 	}
 
 	glm::vec2 textureCoords[4];
@@ -262,24 +327,28 @@ void Renderer::drawTexture(const Texture& texture, const SDL_FRect& dest, const 
 }
 
 void Renderer::drawNineSlice(const Texture& texture, const SDL_FRect& dest, const SDL_FRect& sliceMargins, float z, const Math::Color& tint) {
+	if (!isVisible(dest))
+		return;
+
 	if (quadIndexCount + 54 > MAX_INDICES)
 		nextBatch();
 
 	float texIndex = 0.0f;
 
-	auto it = textureSlotMap.find(&texture);
-
-	if (it != textureSlotMap.end()) {
-		texIndex = it->second;
-	} else {
-		if (textureSlotIndex >= MAX_TEXTURE_SLOTS)
-			nextBatch();
-
-		texIndex = static_cast<float>(textureSlotIndex);
-		textureSlots[textureSlotIndex] = &texture;
-		textureSlotMap[&texture] = texIndex;
-		textureSlotIndex++;
+	for (Uint32 i = 1; i < textureSlotIndex; ++i) {
+		if (textureSlots[i] == &texture) {
+			texIndex = static_cast<float>(i);
+			goto textureFound;
+		}
 	}
+
+	if (textureSlotIndex >= MAX_TEXTURE_SLOTS)
+		nextBatch();
+
+	texIndex = static_cast<float>(textureSlotIndex);
+	textureSlots[textureSlotIndex++] = &texture;
+
+	textureFound:;
 
 	float texW = static_cast<float>(texture.getWidth());
 	float texH = static_cast<float>(texture.getHeight());
@@ -331,13 +400,16 @@ void Renderer::drawNineSlice(const Texture& texture, const SDL_FRect& dest, cons
 }
 
 void Renderer::setProjection(int width, int height) {
-	constexpr float nearPlane = -100.0f;
-	constexpr float farPlane = RenderLayers::Debug + 100.0f;
+	if (fbo) {
+		fbo->resize(width, height);
+	} else {
+		fbo = std::make_unique<FBO>(width, height);
+	}
 
 	projectionMatrix = glm::ortho(
 		0.0f, static_cast<float>(width),
 		static_cast<float>(height), 0.0f,
-		nearPlane, farPlane
+		RenderLayers::NearPlane, RenderLayers::FarPlane
 	);
 
 	viewBounds = { 0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height) };

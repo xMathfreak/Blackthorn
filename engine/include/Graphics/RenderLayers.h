@@ -12,7 +12,7 @@ namespace Blackthorn::Graphics {
  * Layers are spaced 100 units apart, leaving room for up to 99 distinct
  * sub-layers between any two anchors, e.g.:
  *
- *   RenderLayers::UI          — panel background
+ *   RenderLayers::UI         — panel background
  *   RenderLayers::UI + 1.0f  — panel border / decorations
  *   RenderLayers::UI + 2.0f  — text / icons drawn on top of the panel
  *
@@ -27,12 +27,15 @@ namespace Blackthorn::Graphics {
  */
 namespace RenderLayers {
 
-	constexpr float Background = 0.0f;
-	constexpr float World      = 100.0f;
-	constexpr float Effects    = 200.0f;
-	constexpr float UI         = 300.0f;
-	constexpr float UIOverlay  = 400.0f;
-	constexpr float Debug      = 500.0f;
+	constexpr float NearPlane  = -100.0f;
+	constexpr float FarPlane   = 100.0f;
+
+	constexpr float Background = -80.0f;
+	constexpr float World      = -60.0f;
+	constexpr float Effects    = -40.0f;
+	constexpr float UI         = 20.0f;
+	constexpr float UIOverlay  = 40.0f;
+	constexpr float Debug      = 60.0f;
 
 } // namespace RenderLayers
 

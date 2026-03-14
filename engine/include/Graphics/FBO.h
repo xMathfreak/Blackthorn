@@ -30,14 +30,20 @@ private:
 	/// Height of the frame buffer in pixels.
 	GLsizei height;
 
+	GLuint depthRBO = 0;
+
 	/// Owned color attachment texture.
 	std::unique_ptr<Texture> colorAttachment;
+
+	/// Internal allocation, called by constructor and `resize()`;
+	void allocate(GLsizei w, GLsizei h);
 
 public:
 	/**
 	 * @brief Creates a frame buffer with a color texture attachment.
 	 * @param w Width of the frame buffer in pixels.
 	 * @param h Height of the frame buffer in pixels.
+	 * @throws std::runtime_error if the frame buffer is incomplete after setup.
 	 *
 	 * Allocates a frame buffer object and attaches a 2D texture
 	 * suitable for color rendering.
@@ -82,6 +88,19 @@ public:
 	static void unbind();
 
 	/**
+	 * @brief Resizes the frame buffer, reallocating all attachments
+	 *
+	 * Destroys the existing color texture and depth render buffer and
+	 * creates new ones at the requested size. Any previously captured
+	 * content is lost.
+	 *
+	 * @param w New width in pixels (must be > 0).
+	 * @param h New height in pixels (must be > 0).
+	 * @throws std::runtime_error if the new frame buffer is incomplete.
+	 */
+	void resize(GLsizei w, GLsizei h);
+
+	/**
 	 * @brief Destroys the frame buffer and its attachments.
 	 *
 	 * After calling this, the FBO becomes invalid.
@@ -94,6 +113,12 @@ public:
 	 * The returned texture can be bound for sampling in later render passes.
 	 */
 	const Texture& getTexture() const;
+
+	GLsizei getWidth() const { return width; }
+	GLsizei getHeight() const { return height; }
+
+	GLuint getID() const { return id; }
+	bool isValid() const { return id != 0; }
 };
 
 } // namespace Blackthorn::Graphics

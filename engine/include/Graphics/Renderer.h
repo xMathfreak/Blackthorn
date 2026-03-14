@@ -8,6 +8,7 @@
 
 #include "Core/Export.h"
 #include "Graphics/EBO.h"
+#include "Graphics/FBO.h"
 #include "Graphics/Shader.h"
 #include "Graphics/Texture.h"
 #include "Graphics/UBO.h"
@@ -20,17 +21,25 @@ namespace Blackthorn::Graphics {
 /**
  * @brief Batched 2D renderer built on OpenGL.
  *
- * The renderer internally manages vertex/index buffers, shaders,
- * textures, and uniform buffers. Users interact only through the
- * public drawing and state-setting API.
- *
  * Rendering follows a strict begin/end pattern:
- * - beginScene()
- * - draw calls
- * - endScene()
  *
- * Copying is disallowed; the renderer owns GPU resources and enforces
- * a single point of control.
+ *   beginScene()  — binds the internal FBO, clears color + depth
+ *   draw calls
+ *   endScene()    — flushes batches, runs the fullscreen pass to the
+ *                   default framebuffer
+ *
+ * The renderer owns an internal FBO with a color texture and depth
+ * renderbuffer. At endScene(), a fullscreen pass draws the FBO color
+ * attachment to the default framebuffer using an oversized triangle (no
+ * vertex buffer — positions are generated from gl_VertexID in the shader).
+ *
+ * Post-processing is supported by swapping the screen shader via
+ * setScreenShader(). The built-in screen shader supports grayscale, invert,
+ * brightness, contrast, saturation, and gamma correction. Disable the
+ * fullscreen pass entirely (falling back to glBlitFramebuffer) via
+ * setPostProcessingEnabled(false).
+ *
+ * Copying is disallowed; the renderer owns GPU resources.
  *
  * @note Requires a valid OpenGL context to be current on the calling thread.
  */
@@ -49,17 +58,16 @@ private:
 	};
 
 private:
-	/// Maximum number of quads per batch
-	static constexpr Uint32 MAX_QUADS = 2 << 13;
-
-	/// Maximum number of vertices per batch
-	static constexpr Uint32 MAX_VERTICES = MAX_QUADS * 4;
-
-	/// Maximum number of indices per batch
-	static constexpr Uint32 MAX_INDICES = MAX_QUADS * 6;
+	/// Default number of quads per batch — overridable at construction
+	static constexpr Uint32 DEFAULT_MAX_QUADS = 1 << 12;
 
 	/// Maximum number of texture slots per batch
 	static constexpr Uint32 MAX_TEXTURE_SLOTS = 2 << 3;
+
+	/// Runtime batch limits (set from maxQuads passed to constructor)
+	Uint32 MAX_QUADS = DEFAULT_MAX_QUADS;
+	Uint32 MAX_VERTICES = DEFAULT_MAX_QUADS * 4;
+	Uint32 MAX_INDICES = DEFAULT_MAX_QUADS * 6;
 
 	/// Index buffer for quad rendering
 	std::unique_ptr<EBO> QuadEBO;
@@ -72,6 +80,16 @@ private:
 
 	/// Shader used for 2D rendering
 	std::unique_ptr<Shader> shader;
+
+	/// Shader for Post Processing effects
+	std::unique_ptr<Shader> screenShader;
+
+	std::unique_ptr<VAO> screenVAO;
+
+	Shader* activeScreenShader = nullptr;
+	bool postProcessingEnabled = true;
+
+	std::unique_ptr<FBO> fbo;
 
 	/**
 	 * @brief Global uniform data shared across draw calls.
@@ -93,10 +111,10 @@ private:
 	/// Whether view frustum culling is enabled
 	bool cullingEnabled = true;
 
-	/// CPU-side vertex buffer for batching
+	/// CPU-side vertex buffer — written each batch, uploaded via glBufferSubData
 	std::unique_ptr<Vertex[]> quadBuffer;
 
-	/// Pointer to the current position in the batch buffer
+	/// Pointer to the current write position within quadBuffer
 	Vertex* quadBufferPtr = nullptr;
 
 	/// Number of indices currently queued in the batch
@@ -104,9 +122,6 @@ private:
 
 	/// Active texture slots for the current batch
 	std::array<const Texture*, MAX_TEXTURE_SLOTS> textureSlots;
-
-	/// Lookup table for texture slots
-	std::unordered_map<const Texture*, float> textureSlotMap;
 
 	/// Next available texture slot index
 	Uint32 textureSlotIndex = 1;
@@ -131,6 +146,8 @@ private:
 	 * @brief Creates the default white texture.
 	 */
 	void initWhiteTexture();
+
+	void initScreenPass();
 
 	/**
 	 * @brief Begins a new rendering batch.
@@ -158,11 +175,18 @@ private:
 	 * @brief Internal quad draw implementation.
 	 */
 	void draw(const SDL_FRect& rect, float z, float rotation, const Math::Color& color, const Texture* texture, const SDL_FRect* srcRect);
+
+	/// Runs the fullscreen pass, drawing the FBO to the default frame buffer
+	void presentToScreen();
+	/// Background clear color applied to the FBO each frame
+	Math::Color clearColor = Math::Colors::Black;
+
 public:
 	/**
 	 * @brief Constructs the renderer and initializes GPU resources.
+	 * @param maxQuads Maximum quads per batch. Defaults to 4096.
 	 */
-	Renderer();
+	explicit Renderer(Uint32 maxQuads = DEFAULT_MAX_QUADS);
 
 	/**
 	 * @brief Destroys the renderer and releases GPU resources.
@@ -205,6 +229,13 @@ public:
 	void setView(const glm::mat4& view);
 
 	/**
+	 * @brief Sets the clear color used at the start of each scene.
+	 */
+	void setClearColor(float r, float g, float b, float a = 1.0f) {
+		clearColor = { r, g, b, a };
+	}
+
+	/**
 	 * @brief Enables or disables view frustum culling.
 	 */
 	void setCullingEnabled(bool enabled) { cullingEnabled = enabled; }
@@ -237,7 +268,35 @@ public:
 	/**
 	 * @brief Gets the global uniform buffer.
 	 */
-	const UBO<GlobalData>& getUniformBuffer() const { return *globalUBO.get(); }
+	const UBO<GlobalData>& getUniformBuffer() const { return *globalUBO; }
+
+	/**
+	 * @brief Enable or disable the fullscreen shader pass.
+	 *
+	 * When enabled (default), endScene() draws the FBO through the active
+	 * screen shader. When disabled, endScene() falls back to a raw
+	 * glBlitFramebuffer call — marginally faster but no shader effects.
+	 */
+	void setPostProcessingEnabled(bool enabled);
+	bool isPostProcessingEnabled() const { return postProcessingEnabled; }
+
+	/**
+	 * @brief Override the screen shader used for the fullscreen pass.
+	 *
+	 * Pass nullptr to restore the built-in passthrough / post-process shader.
+	 * The renderer does NOT take ownership — the caller must keep the shader
+	 * alive for as long as it is active.
+	 *
+	 * @param customShader Shader to use, or nullptr to reset to built-in.
+	 */
+	void setScreenShader(Shader* customShader);
+
+	/**
+	 * @brief Returns the built-in screen shader for direct uniform access.
+	 * Use this to toggle built-in effects (grayscale, invert, etc.) without
+	 * supplying a custom shader.
+	 */
+	Shader& getScreenShader() const { return *screenShader; }
 
 	/**
 	 * @brief Draws a colored quad.
