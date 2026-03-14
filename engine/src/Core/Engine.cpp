@@ -36,11 +36,13 @@ bool Engine::init(const EngineConfig& cfg) {
 	SDL_InitFlags initFlags = SDL_INIT_VIDEO;
 	if (!SDL_Init(initFlags)) {
 		SDL_LogError(SDL_LOG_CATEGORY_ERROR, "SDL_Init failed: %s", SDL_GetError());
+		cleanupInitialization();
 		return false;
 	}
 
 	if (!TTF_Init()) {
 		SDL_LogError(SDL_LOG_CATEGORY_ERROR, "TTF_Init failed: %s", SDL_GetError());
+		cleanupInitialization();
 		return false;
 	}
 
@@ -74,17 +76,14 @@ bool Engine::init(const EngineConfig& cfg) {
 	window = SDL_CreateWindow(cfg.window.title.c_str(), cfg.window.width, cfg.window.height, windowFlags);
 	if (!window) {
 		SDL_LogError(SDL_LOG_CATEGORY_ERROR, "SDL_CreateWindow failed: %s", SDL_GetError());
-		TTF_Quit();
-		SDL_Quit();
+		cleanupInitialization();
 		return false;
 	}
 
 	glContext = SDL_GL_CreateContext(window);
 	if (!glContext) {
 		SDL_LogError(SDL_LOG_CATEGORY_ERROR, "SDL_GL_CreateContext failed: %s", SDL_GetError());
-		SDL_DestroyWindow(window);
-		TTF_Quit();
-		SDL_Quit();
+		cleanupInitialization();
 		return false;
 	}
 
@@ -124,6 +123,8 @@ bool Engine::init(const EngineConfig& cfg) {
 		#endif
 
 		renderer = std::make_unique<Graphics::Renderer>();
+		renderer->setClearColor(0.1f, 0.1f, 0.12f);
+		renderer->setPostProcessingEnabled(true);
 
 		#ifdef BLACKTHORN_DEBUG
 			SDL_Log("===================================================");
@@ -143,11 +144,12 @@ bool Engine::init(const EngineConfig& cfg) {
 	initAssetLoaders();
 	int w, h;
 	SDL_GetWindowSizeInPixels(window, &w, &h);
-	UI::UIManager::setReferenceResolution(w, h);
+	renderer->setProjection(w, h);
+	UI::UIManager::onWindowResize(w, h);
 
 	sceneContext = std::make_unique<Scene::SceneContextImpl>(
 		assetManager,
-		*renderer.get(),
+		*renderer,
 		inputManager,
 		sceneManager
 	);
@@ -206,9 +208,6 @@ void Engine::shutdown() {
 }
 
 void Engine::render(float alpha) {
-	glClearColor(0.1f, 0.1f, 0.12f, 1.0f);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
 	renderer->beginScene();
 
 	sceneManager.render(alpha);
@@ -228,11 +227,18 @@ void Engine::processEvents() {
 				running = false;
 				break;
 			case SDL_EVENT_WINDOW_RESIZED:
-				config.window.width = event.window.data1;
-				config.window.height = event.window.data2;
-				glViewport(0, 0, event.window.data1, event.window.data2);
-				renderer->setProjection(event.window.data1, event.window.data2);
-				UI::UIManager::onWindowResize(event.window.data1, event.window.data2);
+				int pw, ph;
+				SDL_GetWindowSizeInPixels(window, &pw, &ph);
+
+				if (pw != config.window.width || ph != config.window.height) {
+					config.window.width = pw;
+					config.window.height = ph;
+
+					glViewport(0, 0, pw, ph);
+					renderer->setProjection(pw, ph);
+					UI::UIManager::onWindowResize(pw, ph);
+				}
+
 				break;
 			case SDL_EVENT_WINDOW_FOCUS_GAINED:
 				windowFocused = true;
@@ -243,12 +249,12 @@ void Engine::processEvents() {
 			default:
 				break;
 		}
-
-		#ifdef BLACKTHORN_DEBUG
-			if (inputManager.isKeyPressed(SDLK_F5))
-				assetManager.reloadAllTyped<Graphics::Texture, Fonts::BitmapFont, Fonts::TrueTypeFont>();
-		#endif
 	}
+
+	#ifdef BLACKTHORN_DEBUG
+		if (inputManager.isKeyPressed(SDLK_F5))
+			assetManager.reloadAllTyped<Graphics::Texture, Fonts::BitmapFont, Fonts::TrueTypeFont>();
+	#endif
 }
 
 void Engine::update(float dt) {
@@ -282,7 +288,8 @@ void Engine::run() {
 
 	while (running) {
 		#ifdef BLACKTHORN_DEBUG
-			profiler.beginFrame();
+			if (windowFocused)
+				profiler.beginFrame();
 		#endif
 
 		PROFILE_SCOPE("Frame");
@@ -290,6 +297,23 @@ void Engine::run() {
 		Uint64 currentTime = SDL_GetPerformanceCounter();
 		float frameTime = static_cast<float>(currentTime - lastFrameTime) / frequency;
 		lastFrameTime = currentTime;
+
+		{
+			PROFILE_SCOPE("Events");
+			processEvents();
+		}
+
+		if (!windowFocused) {
+			Uint32 unfocusedDelay = static_cast<Uint32>(1000.0f / config.timing.unfocusedFPS);
+			SDL_Delay(unfocusedDelay);
+
+			accumulatedTime = std::min(
+				accumulatedTime + frameTime,
+				config.timing.fixedDeltaTime * (config.timing.maxFixedUpdates - 1)
+			);
+			lastFrameTime = SDL_GetPerformanceCounter();
+			continue;
+		}
 
 		if (frameTime > config.timing.maxDeltaTime) {
 			#ifdef BLACKTHORN_DEBUG
@@ -303,21 +327,6 @@ void Engine::run() {
 		}
 
 		accumulatedTime += frameTime;
-
-		{
-			PROFILE_SCOPE("Events");
-			processEvents();
-		}
-
-		if (!windowFocused) {
-			#ifdef BLACKTHORN_DEBUG
-				profiler.endFrame();
-			#endif
-
-			Uint32 unfocusedDelay = static_cast<Uint32>(1000.0f / config.timing.unfocusedFPS);
-			SDL_Delay(unfocusedDelay);
-			continue;
-		}
 
 		int fixedUpdateCount = 0;
 
@@ -377,8 +386,11 @@ void Engine::run() {
 			float elapsedTime = static_cast<float>(endTime - currentTime) / frequency;
 
 			if (elapsedTime < targetFrameTime) {
-				Uint32 delay = static_cast<Uint32>((targetFrameTime - elapsedTime) * 1000.0f);
-				SDL_Delay(delay);
+				float sleepTime = (targetFrameTime - elapsedTime) - 0.002f;
+				if (sleepTime > 0.0f)
+					SDL_Delay(static_cast<Uint32>(sleepTime * 1000.0f));
+
+				while (static_cast<float>(SDL_GetPerformanceCounter() - currentTime) / frequency < targetFrameTime);
 			}
 		}
 	}
@@ -441,7 +453,7 @@ void Engine::cleanupInitialization() {
 }
 
 Scene::ISceneContext& Engine::getSceneContext() {
-	return *sceneContext.get();
+	return *sceneContext;
 }
 
 #ifdef BLACKTHORN_DEBUG
