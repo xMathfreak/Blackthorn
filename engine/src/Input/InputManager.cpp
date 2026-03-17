@@ -2,11 +2,11 @@
 
 namespace Blackthorn::Input {
 
-inline InputManager::InputManager() {
+InputManager::InputManager() {
 	mouseButtons.fill(ButtonState::Up);
 }
 
-inline void InputManager::handleEvent(const SDL_Event& event) {
+void InputManager::handleEvent(const SDL_Event& event) {
 	switch (event.type) {
 		case SDL_EVENT_KEY_DOWN:
 			if (!event.key.repeat) {

@@ -9,7 +9,7 @@ namespace Blackthorn::Graphics {
  * pass any float z-value to renderer draw calls — these constants exist so
  * common cases have a consistent, readable name instead of magic numbers.
  *
- * Layers are spaced 100 units apart, leaving room for up to 99 distinct
+ * Layers are spaced 20 units apart, leaving room for up to 19 distinct
  * sub-layers between any two anchors, e.g.:
  *
  *   RenderLayers::UI         — panel background
@@ -18,12 +18,12 @@ namespace Blackthorn::Graphics {
  *
  * Layer overview:
  *
- *   Background  (  0)  Skies, tilemaps, static backdrops.
- *   World       (100)  ECS entities, sprites, world-space objects.
- *   Effects     (200)  Particles, projectile FX, world-space VFX.
- *   UI          (300)  Base UI layer — panels, buttons, labels.
- *   UIOverlay   (400)  Tooltips, dropdowns, modals, anything above base UI.
- *   Debug       (500)  Debug overlays, hitboxes, dev tools. Always on top.
+ *   Background  (-80)  Skies, tilemaps, static backdrops.
+ *   World       (-60)  ECS entities, sprites, world-space objects.
+ *   Effects     (-40)  Particles, projectile FX, world-space VFX.
+ *   UI          ( 20)  Base UI layer — panels, buttons, labels.
+ *   UIOverlay   ( 40)  Tooltips, dropdowns, modals, anything above base UI.
+ *   Debug       ( 60)  Debug overlays, hitboxes, dev tools. Always on top.
  */
 namespace RenderLayers {
 
