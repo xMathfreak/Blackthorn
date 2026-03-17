@@ -37,7 +37,6 @@ public:
 	private:
 		const char* name;
 		Uint64 startTime;
-		int parentDepth;
 	};
 
 	static Profiler& instance();

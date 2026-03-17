@@ -154,7 +154,6 @@ void Profiler::clear() {
 Profiler::ProfileScope::ProfileScope(const char* scopeName)
 	: name(scopeName)
 	, startTime(0)
-	, parentDepth(0)
 {
 	Profiler& profiler = Profiler::instance();
 	if (profiler.isEnabled())
