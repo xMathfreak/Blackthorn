@@ -117,9 +117,6 @@ void Renderer::initWhiteTexture() {
 }
 
 void Renderer::startBatch() {
-	QuadVBO->bind();
-	glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(MAX_VERTICES) * sizeof(Vertex), nullptr, GL_DYNAMIC_DRAW);
-
 	quadBufferPtr = quadBuffer.get();
 	quadIndexCount = 0;
 	textureSlotIndex = 1;
