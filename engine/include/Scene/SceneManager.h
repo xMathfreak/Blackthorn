@@ -55,8 +55,7 @@ public:
 		if (!scenes.empty())
 			scenes.back()->onPause();
 
-		scene->world = std::make_unique<ECS::World>();
-		scene->uiManager = std::make_unique<UI::UIManager>();
+		scene->init();
 		scene->onEnter();
 
 		scenes.push_back(std::move(scene));
@@ -79,7 +78,7 @@ public:
 
 		clear();
 
-		scene->world = std::make_unique<ECS::World>();
+		scene->init();
 		scene->onEnter();
 
 		scenes.push_back(std::move(scene));
@@ -102,10 +101,8 @@ public:
 	}
 
 	void fixedUpdate(float dt) {
-		if (inTransition) {
-			updateTransition(dt);
+		if (inTransition)
 			return;
-		}
 
 		for (auto it = scenes.rbegin(); it != scenes.rend(); ++it) {
 			(*it)->fixedUpdate(dt);

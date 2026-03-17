@@ -7,8 +7,6 @@
 
 namespace Blackthorn::Scene {
 
-class SceneManager;
-
 class BLACKTHORN_API IScene {
 protected:
 	std::unique_ptr<ECS::World> world;
@@ -16,14 +14,17 @@ protected:
 
 	ISceneContext& context;
 
-	friend class SceneManager;
-
 public:
 	IScene(ISceneContext& ctx)
 		: context(ctx)
 	{}
 
 	virtual ~IScene() = default;
+
+	virtual void init() {
+		world = std::make_unique<ECS::World>();
+		uiManager = std::make_unique<UI::UIManager>();
+	}
 
 	virtual void onEnter() {}
 	virtual void onExit() {}
