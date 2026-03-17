@@ -80,7 +80,7 @@ public:
 		Uint32 idx = Detail::entityIndex(entity);
 		Uint32 gen = Detail::entityGeneration(entity);
 
-		auto& entry = sparse[idx];
+		const auto& entry = sparse[idx];
 
 		return entry.pos != INVALID_ENTITY && entry.generation == gen;
 	}
