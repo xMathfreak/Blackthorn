@@ -35,6 +35,13 @@ private:
 		size_t vertexCount = 0;
 	};
 
+	struct Layout {
+		std::vector<std::string_view> lines;
+		std::vector<float> lineWidths;
+		float totalWidth = 0.0f;
+		float totalHeight = 0.0f;
+	};
+
 private:
 	static std::shared_ptr<Graphics::Shader> shader;
 
@@ -61,9 +68,8 @@ private:
 	mutable std::vector<float> lineWidthBuffer;
 	mutable std::vector<Vertex> vertexBuffer;
 
-	void wrapText(std::string_view text, float scale, float maxWidth, std::vector<std::string_view>& outLines) const;
-	float computeLineWidth(std::string_view line, float scale) const;
-	void generateVertices(std::string_view text, float scale, float maxWidth, Text::Alignment alignment, std::vector<Vertex>& outVertices) const;
+	Layout buildLayout(std::string_view text, float scale, float maxWidth) const;
+	void generateVertices(const Layout& layout, float scale, Text::Alignment alignment, std::vector<Vertex>& outVertices) const;
 
 public:
 	BitmapFont();

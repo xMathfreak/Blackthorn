@@ -367,131 +367,198 @@ bool BitmapFont::loadFromBMFont(const std::string& bmfPath) {
 	return true;
 }
 
-float BitmapFont::computeLineWidth(std::string_view line, float scale) const {
-	float width = 0.0f;
-
-	for (char c : line) {
-		if (c == ' ') {
-			width += spaceWidth * scale;
-		} else if (c == '\t') {
-			width += tabWidth * scale;
-		} else {
-			auto it = glyphs.find(static_cast<Uint32>(c));
-			if (it != glyphs.end())
-				width += it->second.xAdvance * scale;
-		}
-	}
-
-	return width;
+Text::Metrics BitmapFont::measure(std::string_view text, float scale, float maxWidth) {
+	const Layout layout = buildLayout(text, scale, maxWidth);
+	return {
+		layout.totalWidth,
+		layout.totalHeight,
+		layout.lines.size()
+	};
 }
 
-void BitmapFont::wrapText(std::string_view text, float scale, float maxWidth, std::vector<std::string_view>& outLines) const {
-	outLines.clear();
+
+void BitmapFont::draw(std::string_view text, const glm::vec2& position, float scale, float z, float maxWidth, const Math::Color& color, Text::Alignment alignment) {
+	if (!isLoaded() || text.empty())
+		return;
+
+	const Layout layout = buildLayout(text, scale, maxWidth);
+	vertexBuffer.clear();
+	generateVertices(layout, scale, alignment, vertexBuffer);
+
+	if (vertexBuffer.empty())
+		return;
+
+	shader->bind();
+	shader->setVec3("u_Offset", position.x, position.y, z);
+	shader->setVec4("u_Color", color.r, color.g, color.b, color.a);
+
+	vao->bind();
+	vbo->updateData(vertexBuffer);
+	texture->bind();
+
+	glDrawArrays(GL_TRIANGLES, 0, static_cast<GLsizei>(vertexBuffer.size()));
+}
+
+void BitmapFont::drawCached(std::string_view text, const glm::vec2& position, float scale, float z, float maxWidth, const Math::Color& color, Text::Alignment alignment) {
+	if (!isLoaded() || text.empty())
+		return;
+
+	TextCacheKey key{ std::string(text), scale, maxWidth, alignment };
+	CachedText* cached = cache.get(key);
+
+	if (!cached) {
+		CachedText cacheEntry;
+		const Layout layout = buildLayout(key.text, scale, maxWidth);
+
+		vertexBuffer.clear();
+		generateVertices(layout, scale, alignment, vertexBuffer);
+
+		cacheEntry.vao.create();
+		cacheEntry.vbo.create();
+
+		cacheEntry.vao.bind();
+		cacheEntry.vbo.setData(vertexBuffer.data(), vertexBuffer.size() * sizeof(Vertex), GL_STATIC_DRAW);
+		cacheEntry.vao.enableAttrib(0, 2, GL_FLOAT, sizeof(Vertex), offsetof(Vertex, position));
+		cacheEntry.vao.enableAttrib(1, 2, GL_FLOAT, sizeof(Vertex), offsetof(Vertex, texCoord));
+
+		cacheEntry.vertexCount = vertexBuffer.size();
+
+		cache.put(key, std::move(cacheEntry));
+		cached = cache.get(key);
+	}
+
+	shader->bind();
+	shader->setVec3("u_Offset", position.x, position.y, z);
+	shader->setVec4("u_Color", color.r, color.g, color.b, color.a);
+
+	texture->bind();
+	cached->vao.bind();
+
+	glDrawArrays(GL_TRIANGLES, 0, static_cast<GLsizei>(cached->vertexCount));
+	Graphics::VAO::unbind();
+	Graphics::Shader::unbind();
+}
+
+void BitmapFont::initializeShader() {
+	if (!shader) {
+		shader = std::make_shared<Graphics::Shader>("assets/shaders/font_bitmap.vert", "assets/shaders/font_bitmap.frag");
+
+		#ifdef BLACKTHORN_DEBUG
+			SDL_Log("BitmapFont Shader initialized");
+		#endif
+	}
+}
+
+void BitmapFont::cleanupShader() {
+	shader.reset();
+}
+
+BitmapFont::Layout BitmapFont::buildLayout(std::string_view text, float scale, float maxWidth) const {
+	Layout layout;
+	auto& lines = layout.lines;
+	auto& widths = layout.lineWidths;
 
 	if (maxWidth <= 0.0f) {
 		size_t start = 0;
 		for (size_t i = 0; i < text.length(); ++i) {
 			if (text[i] == '\n') {
-				outLines.push_back(text.substr(start, i - start));
+				lines.push_back(text.substr(start, i - start));
 				start = i + 1;
 			}
 		}
 
 		if (start < text.length())
-			outLines.push_back(text.substr(start));
+			lines.push_back(text.substr(start));
+	} else {
+		size_t lineStart = 0;
+		size_t lastSpace = 0;
+		float  currentWidth = 0.0f;
 
-		return;
-	}
+		for (size_t i = 0; i < text.length(); ++i) {
+			char c = text[i];
 
-	size_t lineStart = 0;
-	size_t lastSpace = 0;
-	float currentWidth = 0.0f;
-
-	for (size_t i = 0; i < text.length(); ++i) {
-		char c = text[i];
-
-		if (c == '\n') {
-			outLines.push_back(text.substr(lineStart, i - lineStart));
-			lineStart = i + 1;
-			lastSpace = i + 1;
-			currentWidth = 0.0f;
-			continue;
-		}
-
-		float charWidth = 0.0f;
-		if (c == ' ') {
-			charWidth = spaceWidth * scale;
-			lastSpace = i;
-		} else if (c == '\t') {
-			charWidth = tabWidth * scale;
-		} else {
-			auto it = glyphs.find(static_cast<Uint32>(c));
-			if (it != glyphs.end())
-				charWidth = it->second.xAdvance * scale;
-		}
-
-		currentWidth += charWidth;
-
-		if (currentWidth > maxWidth) {
-			if (lastSpace > lineStart) {
-				outLines.push_back(text.substr(lineStart, lastSpace - lineStart));
-				lineStart = lastSpace + 1;
-				i = lastSpace;
-			} else {
-				outLines.push_back(text.substr(lineStart, i - lineStart));
-				lineStart = i;
+			if (c == '\n') {
+				lines.push_back(text.substr(lineStart, i - lineStart));
+				lineStart = lastSpace = i + 1;
+				currentWidth = 0.0f;
+				continue;
 			}
 
-			currentWidth = 0.0f;
+			float charWidth = 0.0f;
+			if (c == ' ') {
+				charWidth = spaceWidth * scale;
+				lastSpace = i;
+			} else if (c == '\t') {
+				charWidth = tabWidth * scale;
+			} else {
+				auto it = glyphs.find(static_cast<Uint32>(c));
+				if (it != glyphs.end())
+					charWidth = it->second.xAdvance * scale;
+			}
+
+			currentWidth += charWidth;
+
+			if (currentWidth > maxWidth) {
+				if (lastSpace > lineStart) {
+					lines.push_back(text.substr(lineStart, lastSpace - lineStart));
+					lineStart = lastSpace + 1;
+					i = lastSpace;
+				} else {
+					lines.push_back(text.substr(lineStart, i - lineStart));
+					lineStart = i;
+				}
+				currentWidth = 0.0f;
+			}
 		}
+
+		if (lineStart < text.length())
+			lines.push_back(text.substr(lineStart));
 	}
 
-	if (lineStart < text.length())
-		outLines.push_back(text.substr(lineStart));
-}
+	widths.reserve(lines.size());
+	for (const auto& line : lines) {
+		float w = 0.0f;
+		for (char c : line) {
+			if (c == ' ') {
+				w += spaceWidth * scale;
+			} else if (c == '\t') {
+				w += tabWidth   * scale;
+			} else {
+				auto it = glyphs.find(static_cast<Uint32>(c));
+				if (it != glyphs.end())
+					w += it->second.xAdvance * scale;
+			}
+		}
 
-Text::Metrics BitmapFont::measure(std::string_view text, float scale, float maxWidth) {
-	lineBuffer.clear();
-	wrapText(text, scale, maxWidth, lineBuffer);
-
-	float maxLineWidth = 0.0f;
-	for (const auto& line : lineBuffer) {
-		float lineWidth = computeLineWidth(line, scale);
-		maxLineWidth = std::max(maxLineWidth, lineWidth);
+		widths.push_back(w);
+		layout.totalWidth = std::max(layout.totalWidth, w);
 	}
 
-	return {
-		maxLineWidth,
-		lineHeight * scale * lineBuffer.size(),
-		lineBuffer.size()
-	};
+	layout.totalHeight = lineHeight * scale * static_cast<float>(lines.size());
+	return layout;
 }
 
-void BitmapFont::generateVertices(std::string_view text, float scale, float maxWidth, Text::Alignment alignment, std::vector<Vertex>& outVertices) const {
-	lineBuffer.clear();
-	wrapText(text, scale, maxWidth, lineBuffer);
-
+void BitmapFont::generateVertices(const Layout& layout, float scale, Text::Alignment alignment, std::vector<Vertex>& outVertices) const {
 	outVertices.clear();
-	outVertices.reserve(text.length() * 6);
+	outVertices.reserve(layout.totalWidth > 0 ? layout.lines.size() * 32 : 8);
+
+	const float texWidth  = static_cast<float>(texture->getWidth());
+	const float texHeight = static_cast<float>(texture->getHeight());
+
+	auto snap = [](float n) { return std::floorf(n + 0.5f); };
 
 	float currentY = 0.0f;
-	float texWidth = static_cast<float>(texture->getWidth());
-	float texHeight = static_cast<float>(texture->getHeight());
-
-	auto snap = [](float n) {
-		return std::floorf(n + 0.5f);
-	};
-
-	for (const auto& line : lineBuffer) {
-		float lineWidth = computeLineWidth(line, scale);
-		float currentX = 0.0f;
+	for (size_t li = 0; li < layout.lines.size(); ++li) {
+		const auto& line = layout.lines[li];
+		float currentX   = 0.0f;
 
 		switch (alignment) {
 			case Text::Alignment::Center:
-				currentX -= lineWidth * 0.5f;
+				currentX -= layout.lineWidths[li] * 0.5f;
 				break;
 			case Text::Alignment::Right:
-				currentX -= lineWidth;
+				currentX -= layout.lineWidths[li];
+				break;
 			default:
 				break;
 		}
@@ -510,7 +577,6 @@ void BitmapFont::generateVertices(std::string_view text, float scale, float maxW
 				continue;
 
 			const Glyph& glyph = it->second;
-
 			float glyphX = snap(currentX - glyph.xOffset * scale);
 			float glyphY = snap(currentY - glyph.yOffset * scale);
 			float glyphW = glyph.rect.w * scale;
@@ -521,98 +587,18 @@ void BitmapFont::generateVertices(std::string_view text, float scale, float maxW
 			float u1 = (glyph.rect.x + glyph.rect.w) / texWidth;
 			float v1 = (glyph.rect.y + glyph.rect.h) / texHeight;
 
-			outVertices.push_back({{glyphX, glyphY}, {u0, v0}});
-			outVertices.push_back({{glyphX + glyphW, glyphY}, {u1, v0}});
+			outVertices.push_back({{glyphX,         glyphY        }, {u0, v0}});
+			outVertices.push_back({{glyphX + glyphW, glyphY        }, {u1, v0}});
 			outVertices.push_back({{glyphX + glyphW, glyphY + glyphH}, {u1, v1}});
-
-			outVertices.push_back({{glyphX, glyphY}, {u0, v0}});
+			outVertices.push_back({{glyphX,          glyphY        }, {u0, v0}});
 			outVertices.push_back({{glyphX + glyphW, glyphY + glyphH}, {u1, v1}});
-			outVertices.push_back({{glyphX, glyphY + glyphH}, {u0, v1}});
+			outVertices.push_back({{glyphX,          glyphY + glyphH}, {u0, v1}});
 
 			currentX += glyph.xAdvance * scale;
 		}
 
 		currentY += lineHeight * scale;
 	}
-}
-
-void BitmapFont::draw(std::string_view text, const glm::vec2& position, float scale, float z, float maxWidth, const Math::Color& color, Text::Alignment alignment) {
-	if (!isLoaded() || text.empty())
-		return;
-
-	vertexBuffer.clear();
-	vertexBuffer.reserve(text.length() * 6);
-	generateVertices(text, scale, maxWidth, alignment, vertexBuffer);
-
-	if (vertexBuffer.empty())
-		return;
-
-	shader->bind();
-	shader->setVec3("u_Offset", position.x, position.y, z);
-	shader->setVec4("u_Color", color.r, color.g, color.b, color.a);
-
-	vao->bind();
-	vbo->updateData(vertexBuffer);
-	texture->bind();
-
-	glDrawArrays(GL_TRIANGLES, 0, vertexBuffer.size());
-}
-
-void BitmapFont::drawCached(std::string_view text, const glm::vec2& position, float scale, float z, float maxWidth, const Math::Color& color, Text::Alignment alignment) {
-	if (!isLoaded() || text.empty())
-		return;
-
-	TextCacheKey key {
-		std::string(text), scale, maxWidth, alignment
-	};
-
-	CachedText* cached = cache.get(key);
-
-	if (!cached) {
-		CachedText cacheEntry;
-
-		vertexBuffer.clear();
-		vertexBuffer.reserve(text.length() * 6);
-		generateVertices(key.text, scale, maxWidth, alignment, vertexBuffer);
-
-		cacheEntry.vao.create();
-		cacheEntry.vbo.create();
-
-		cacheEntry.vao.bind();
-		cacheEntry.vbo.setData(vertexBuffer.data(), vertexBuffer.size() * sizeof(Vertex), GL_STATIC_DRAW);
-
-		cacheEntry.vao.enableAttrib(0, 2, GL_FLOAT, sizeof(Vertex), offsetof(Vertex, position));
-		cacheEntry.vao.enableAttrib(1, 2, GL_FLOAT, sizeof(Vertex), offsetof(Vertex, texCoord));
-		cacheEntry.vertexCount = vertexBuffer.size();
-
-		cache.put(key, std::move(cacheEntry));
-		cached = cache.get(key);
-	}
-
-	shader->bind();
-	shader->setVec3("u_Offset", position.x, position.y, z);
-	shader->setVec4("u_Color", color.r, color.g, color.b, color.a);
-
-	texture->bind();
-	cached->vao.bind();
-
-	glDrawArrays(GL_TRIANGLES, 0, cached->vertexCount);
-	Graphics::VAO::unbind();
-	Graphics::Shader::unbind();
-}
-
-void BitmapFont::initializeShader() {
-	if (!shader) {
-		shader = std::make_shared<Graphics::Shader>("assets/shaders/font_bitmap.vert", "assets/shaders/font_bitmap.frag");
-
-		#ifdef BLACKTHORN_DEBUG
-			SDL_Log("BitmapFont Shader initialized");
-		#endif
-	}
-}
-
-void BitmapFont::cleanupShader() {
-	shader.reset();
 }
 
 } // namespace Blackthorn
