@@ -14,8 +14,26 @@
 namespace Blackthorn::Assets {
 
 class BLACKTHORN_API AssetManager {
+private:
+	struct AliasKey {
+		std::type_index type;
+		std::string id;
+
+		bool operator==(const AliasKey& other) const {
+			return type == other.type && id == other.id;
+		}
+	};
+
+	struct AliasKeyHash {
+		size_t operator()(const AliasKey& k) const {
+			size_t h = k.type.hash_code();
+			h ^= std::hash<std::string>{}(k.id) + 0x9e3779b9 + (h << 6) + (h >> 2);
+			return h;
+		}
+	};
+
 public:
-	AssetManager() = default;
+	AssetManager() {}
 	~AssetManager() = default;
 
 	AssetManager(const AssetManager&) = delete;
@@ -108,15 +126,18 @@ public:
 		if (!has<AssetType>(existingID))
 			return;
 
-		aliases[newID] = existingID;
+		AliasKey key{ std::type_index(typeid(AssetType)), newID };
+		aliases[key] = existingID;
 	}
 
 	template <typename AssetType>
 	AssetType* get(const std::string& id) {
-		if (aliases.find(id) != aliases.end())
-			return get<AssetType>(aliases[id]);
+		AliasKey key{ std::type_index(typeid(AssetType)), id };
+		auto it = aliases.find(key);
+		if (it != aliases.end())
+			return get<AssetType>(it->second);
 
-		auto storage = getStorage<AssetType>();
+		auto* storage = getStorage<AssetType>();
 		if (!storage || !storage->has(id))
 			return nullptr;
 
@@ -135,8 +156,10 @@ public:
 
 	template <typename AssetType>
 	bool has(const std::string& id) const {
-		if (aliases.find(id) != aliases.end())
-			return has<AssetType>(aliases.at(id));
+		AliasKey key{ std::type_index(typeid(AssetType)), id };
+		auto it = aliases.find(key);
+		if (it != aliases.end())
+			return has<AssetType>(it->second);
 
 		auto* storage = getStorage<AssetType>();
 		return storage && storage->has(id);
@@ -268,7 +291,12 @@ private:
 
 	template <typename AssetType>
 	const AssetStorage<AssetType>* getStorage() const {
-		return const_cast<AssetManager*>(this)->getStorage<AssetType>();
+		std::type_index type = std::type_index(typeid(AssetType));
+		auto it = storages.find(type);
+
+		return (it != storages.end())
+			? static_cast<AssetStorage<AssetType>*>(it->second.get())
+			: nullptr;
 	}
 
 	class ILoaderWrapper {
@@ -311,8 +339,8 @@ private:
 
 	std::unordered_map<std::string, std::unique_ptr<LoadParams>> assetParams;
 
-	std::unordered_map<std::string, std::string> aliases;
+	std::unordered_map<AliasKey, std::string, AliasKeyHash> aliases;
 
 };
 
-} // namespace Assets
+} // namespace Blackthorn::Assets
