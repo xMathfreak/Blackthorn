@@ -12,6 +12,7 @@ namespace Blackthorn::UI {
 glm::vec2 UIManager::screenDimensions{1280.0f, 720.0f};
 glm::vec2 UIManager::referenceResolution{1280.0f, 720.0f};
 
+bool UIManager::layoutPending = false;
 float UIManager::autoScale = 1.0f;
 float UIManager::globalUIScale = 1.0f;
 float UIManager::effectiveScale = 1.0f;
@@ -46,6 +47,14 @@ void UIManager::recomputeScale() {
 	autoScale = std::min(scaleX, scaleY);
 	effectiveScale = autoScale * globalUIScale;
 
+	layoutPending = true;
+}
+
+void UIManager::flushPendingLayout() {
+	if (!layoutPending)
+		return;
+
+	layoutPending = false;
 	updateAllLayouts();
 }
 
@@ -188,6 +197,8 @@ Widget* UIManager::findWidgetAt(const glm::vec2& position) {
 }
 
 void UIManager::update(float dt) {
+	flushPendingLayout();
+
 	if (root)
 		root->update(dt);
 }

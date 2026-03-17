@@ -28,6 +28,7 @@ class Container;
 
 class BLACKTHORN_API UIManager {
 private:
+	static bool layoutPending;
 	static float autoScale;
 	static float globalUIScale;
 	static float effectiveScale;
@@ -47,6 +48,7 @@ private:
 
 	std::unique_ptr<Container> root;
 
+	void flushPendingLayout();
 	void updateLayout();
 	Widget* findWidgetAt(const glm::vec2& position);
 
