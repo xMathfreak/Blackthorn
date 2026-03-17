@@ -25,10 +25,10 @@ private:
 	GLuint id = 0;
 
 	/// Width of the frame buffer in pixels
-	GLsizei width;
+	GLsizei width = 0;
 
 	/// Height of the frame buffer in pixels.
-	GLsizei height;
+	GLsizei height = 0;
 
 	GLuint depthRBO = 0;
 

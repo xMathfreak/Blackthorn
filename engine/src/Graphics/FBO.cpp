@@ -28,7 +28,7 @@ void FBO::allocate(GLsizei w, GLsizei h) {
 	glBindRenderbuffer(GL_RENDERBUFFER, 0);
 
 	if (status != GL_FRAMEBUFFER_COMPLETE) {
-		glDeleteBuffers(1, &depthRBO);
+		glDeleteRenderbuffers(1, &depthRBO);
 		glDeleteFramebuffers(1, &id);
 
 		depthRBO = 0;
