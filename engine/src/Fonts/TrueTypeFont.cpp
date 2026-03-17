@@ -219,15 +219,19 @@ const TrueTypeFont::Glyph& TrueTypeFont::getGlyph(char32_t codePoint) {
 		return defaultGlyph;
 	}
 
-	SDL_Surface* converted = SDL_ConvertSurface(surface, SDL_PIXELFORMAT_RGBA32);
+	const int pixelCount = surface->w * surface->h;
+	reuseBuffer.resize(pixelCount);
 
-	std::vector<Uint8> alpha(converted->w * converted->h);
-	Uint32* pixels = static_cast<Uint32*>(converted->pixels);
+	const Uint8* src = static_cast<Uint8*>(surface->pixels);
+	const int pitch = surface->pitch;
 
-	for (int i=0; i<converted->w * converted->h; ++i)
-		alpha[i] = (pixels[i] >> 24) & 0xFF;
+	for (int row = 0; row < surface->h; ++row) {
+		const Uint32* rowPixels = reinterpret_cast<const Uint32*>(src + row * pitch);
+		for (int col = 0; col < surface->w; ++col)
+			reuseBuffer[row * surface->w + col] = (rowPixels[col] >> 24) & 0xFF;
+	}
 
-	atlas->updateRegion(atlasCursor.x, atlasCursor.y, converted->w, converted->h, alpha.data());
+	atlas->updateRegion(atlasCursor.x, atlasCursor.y, surface->w, surface->h, reuseBuffer.data());
 
 	float u0 = atlasCursor.x / float(ATLAS_SIZE);
 	float v0 = (atlasCursor.y + surface->h) / float(ATLAS_SIZE);
@@ -238,14 +242,13 @@ const TrueTypeFont::Glyph& TrueTypeFont::getGlyph(char32_t codePoint) {
 	TTF_GetGlyphMetrics(font, codePoint, &minX, &maxX, &minY, &maxY, &advance);
 
 	Glyph glyph;
-	glyph.size = glm::vec2(converted->w, converted->h);
+	glyph.size = glm::vec2(surface->w, surface->h);
 	glyph.advance = static_cast<float>(advance);
 	glyph.uv = {u0, v0, u1, v1};
 
-	atlasCursor.x += converted->w;
-	atlasRowHeight = std::max(atlasRowHeight, converted->h);
+	atlasCursor.x += surface->w;
+	atlasRowHeight = std::max(atlasRowHeight, surface->h);
 
-	SDL_DestroySurface(converted);
 	SDL_DestroySurface(surface);
 
 	glyphCache[codePoint] = std::move(glyph);

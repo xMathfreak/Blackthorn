@@ -97,6 +97,7 @@ private:
 	std::unordered_map<char32_t, Glyph> glyphCache;
 
 	static constexpr Uint32 MAX_CACHED_TEXT = 256;
+	std::vector<Uint8> reuseBuffer;
 	Containers::LRUCache<TextCacheKey, CachedText> textCache{MAX_CACHED_TEXT};
 
 private:
