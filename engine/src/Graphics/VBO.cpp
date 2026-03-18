@@ -35,26 +35,19 @@ VBO& VBO::operator=(VBO&& other) noexcept {
 
 void VBO::create() {
 	if (id != 0) {
-		#ifdef BLACKTHORN_DEBUG
-			SDL_LogWarn(SDL_LOG_CATEGORY_RENDER, "VBO already created (ID: %u)", id);
-		#endif
-
+		BT_WARN(std::format("VBO already created (ID: {})", id));
 		return;
 	}
 
 	glGenBuffers(1, &id);
 
-	#ifdef BLACKTHORN_DEBUG
-		SDL_Log("VBO created (ID: %u)", id);
-	#endif
+	BT_DEBUG(std::format("VBO created (ID: {})", id));
+
 }
 
 void VBO::bind() const {
 	if (id == 0) {
-		#ifdef BLACKTHORN_DEBUG
-			SDL_LogWarn(SDL_LOG_CATEGORY_RENDER, "Attempting to bind unitialized VBO");
-		#endif
-
+		BT_WARN("Attempting to bind unitialized VBO. Request ignored.");
 		return;
 	}
 
@@ -74,13 +67,7 @@ void VBO::destroy() {
 
 void VBO::setData(const void* data, size_t sizeInBytes, GLenum usage) {
 	if (id == 0) {
-		#ifdef BLACKTHORN_DEBUG
-			SDL_LogWarn(
-				SDL_LOG_CATEGORY_RENDER,
-				"Attempting to set data on uninitialized VBO"
-			);
-		#endif
-
+		BT_WARN("Attempting to set data of uninitialized vertex buffer. Creating buffer automatically");
 		create();
 	}
 
@@ -88,12 +75,7 @@ void VBO::setData(const void* data, size_t sizeInBytes, GLenum usage) {
 	glBufferData(GL_ARRAY_BUFFER, sizeInBytes, data, usage);
 	size = sizeInBytes;
 
-	#ifdef BLACKTHORN_DEBUG
-		SDL_Log(
-			"VBO %u: Uploaded %lld bytes",
-			id, size
-		);
-	#endif
+	BT_DEBUG(std::format("VBO {}: Uploaded {} bytes", id, size));
 }
 
 } // namespace Blackthorn::Graphics

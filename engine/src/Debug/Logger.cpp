@@ -34,7 +34,7 @@ void Logger::init(const LoggerConfig& cfg) {
 	#ifdef BLACKTHORN_DEBUG
 		currentLevel = LogLevel::Debug;
 	#else
-		currentLevel = LogLevel::Standard;
+		currentLevel = LogLevel::Info;
 	#endif
 
 	openFile();
@@ -191,7 +191,7 @@ const char* Logger::levelTag(LogLevel level) {
 			return "ERROR  ";
 		case LogLevel::Warning:
 			return "WARN   ";
-		case LogLevel::Standard:
+		case LogLevel::Info:
 			return "INFO   ";
 		case LogLevel::Verbose:
 			return "VERBOSE";

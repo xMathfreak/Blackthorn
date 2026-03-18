@@ -43,18 +43,13 @@ EBO& EBO::operator=(EBO&& other) noexcept {
 
 void EBO::create() {
 	if (id != 0) {
-		#ifdef BLACKTHORN_DEBUG
-			SDL_LogWarn(SDL_LOG_CATEGORY_RENDER, "EBO already created (ID: %u)", id);
-		#endif
-
+		BT_WARN(std::format("EBO already created (ID: {})", id));
 		return;
 	}
 
 	glGenBuffers(1, &id);
 
-	#ifdef BLACKTHORN_DEBUG
-		SDL_Log("EBO created (ID: %u)", id);
-	#endif
+	BT_DEBUG(std::format("EBO created (ID: {})", id));
 }
 
 void EBO::destroy() {
@@ -77,10 +72,7 @@ void EBO::unbind() {
 
 void EBO::setData(const void* data, size_t indexCount, GLenum type, GLenum usage) {
 	if (id == 0) {
-		#ifdef BLACKTHORN_DEBUG
-			SDL_LogWarn(SDL_LOG_CATEGORY_RENDER, "Attempting to set data on uninitialized EBO");
-		#endif
-
+		BT_WARN("Attempting to set data of uninitialized element buffer. Creating buffer automatically");
 		create();
 	}
 
@@ -96,10 +88,7 @@ void EBO::setData(const void* data, size_t indexCount, GLenum type, GLenum usage
 			elementSize = sizeof(GLubyte);
 			break;
 		default:
-			#ifdef BLACKTHORN_DEBUG
-				SDL_LogError(SDL_LOG_CATEGORY_RENDER, "Invalid index type: 0x%x", type);
-			#endif
-
+			BT_ERROR(std::format("Inalid index type: 0x{}", type));
 			return;
 	}
 
@@ -111,9 +100,7 @@ void EBO::setData(const void* data, size_t indexCount, GLenum type, GLenum usage
 	size = sizeInBytes;
 	indexType = type;
 
-	#ifdef BLACKTHORN_DEBUG
-		SDL_Log("EBO %u: Uploaded %lld indices (type 0x%x, %lld bytes)", id, count, indexType, size);
-	#endif
+	BT_DEBUG(std::format("EBO {}: Uploaded {} indices (type 0x{}, {} bytes)", id, count, indexType, size));
 }
 
 } // namespace Blackthorn::Graphics

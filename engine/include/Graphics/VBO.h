@@ -1,13 +1,12 @@
 #pragma once
 
+#include <format>
 #include <vector>
 
 #include <glad/glad.h>
-#ifdef BLACKTHORN_DEBUG
-	#include <SDL3/SDL.h>
-#endif
 
 #include "Core/Export.h"
+#include "Debug/Logger.h"
 
 namespace Blackthorn::Graphics {
 
@@ -108,13 +107,7 @@ public:
 	template <typename T>
 	void setData(const std::vector<T>& data, GLenum usage = GL_STATIC_DRAW) {
 		if (id == 0) {
-			#ifdef BLACKTHORN_DEBUG
-				SDL_LogWarn(
-					SDL_LOG_CATEGORY_RENDER,
-					"Attempting to set data on uninitialized VBO"
-				);
-			#endif
-
+			BT_WARN("Attempting to set data of uninitialized vertex buffer. Creating buffer automatically");
 			create();
 		}
 
@@ -122,12 +115,7 @@ public:
 		glBufferData(GL_ARRAY_BUFFER, data.size() * sizeof(T), data.data(), usage);
 		size = data.size() * sizeof(T);
 
-		#ifdef BLACKTHORN_DEBUG
-			SDL_Log(
-				"VBO %u: Uploaded %lld bytes (%lld elements of size %lld)",
-				id, size, data.size(), sizeof(T)
-			);
-		#endif
+		BT_DEBUG(std::format("VBO {}: Uploaded {} bytes ({} elements of size {})", id, size, data.size(), sizeof(T)));
 	}
 
 	/**
@@ -152,26 +140,13 @@ public:
 	template <typename T>
 	void updateData(const std::vector<T>& data, size_t offset = 0) {
 		if (id == 0) {
-			#ifdef BLACKTHORN_DEBUG
-				SDL_LogError(
-					SDL_LOG_CATEGORY_RENDER,
-					"Cannot update an uninitialized VBO"
-				);
-			#endif
-
+			BT_ERROR("Cannot update uninitialized EBO");
 			return;
 		}
 
 		size_t dataSize = data.size() * sizeof(T);
 		if (offset + dataSize > size) {
-			#ifdef BLACKTHORN_DEBUG
-				SDL_LogError(
-					SDL_LOG_CATEGORY_RENDER,
-					"VBO %u: Update would overflow buffer (offset %lld + data %lld > buffer %lld)",
-					id, offset, dataSize, size
-				);
-			#endif
-
+			BT_ERROR(std::format("VBO {}: Update would overflow buffer (offset {} + data {} > buffer {})", id, offset, dataSize, size));
 			return;
 		}
 

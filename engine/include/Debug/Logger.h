@@ -1,6 +1,5 @@
 #pragma once
 
-#include <format>
 #include <fstream>
 #include <mutex>
 #include <string>
@@ -19,7 +18,7 @@ namespace Blackthorn::Debug {
  *   Silent   — Nothing is written.
  *   Error    — Only errors.
  *   Warning  — Errors + warnings.
- *   Standard — Errors + warnings + informational messages  (Release default).
+ *   Info — Errors + warnings + informational messages  (Release default).
  *   Verbose  — All of the above + verbose trace detail.
  *   Debug    — Everything, including fine-grained debug output  (Debug default).
  */
@@ -27,7 +26,7 @@ enum class LogLevel : int {
 	Silent   = 0,
 	Error    = 1,
 	Warning  = 2,
-	Standard = 3,
+	Info     = 3,
 	Verbose  = 4,
 	Debug    = 5,
 };
@@ -48,13 +47,11 @@ struct BLACKTHORN_API LoggerConfig {
 	/// Whether to mirror log entries to `SDL_Log` / `SDL_LogWarn` / `SDL_LogError`
 	/// at startup.
 	/// Can be toggled at any time via `Logger::setSDLMirrorEnabled()`.
-	bool mirrorToSDL =
-		#ifdef BLACKTHORN_DEBUG
-			true
-		#else
-			false
-		#endif
-	;
+	#ifdef BLACKTHORN_DEBUG
+		bool mirrorToSDL = true;
+	#else
+		bool mirrorToSDL = false;
+	#endif
 };
 
 /**
@@ -102,7 +99,7 @@ public:
 	 *
 	 * The log level is set automatically based on build configuration:
 	 *   Debug build   → `LogLevel::Debug`.
-	 *   Release build → `LogLevel::Standard`.
+	 *   Release build → `LogLevel::Info`.
 	 * Override afterwards with setLevel() if needed.
 	 *
 	 * @param config Logger configuration (directory, filename, SDL mirror flag).
@@ -163,7 +160,7 @@ public:
 		int              srcLine = 0
 	);
 
-	void standard(std::string_view msg, const char* f = nullptr, int line = 0) { log(LogLevel::Standard, msg, f, line); }
+	void info    (std::string_view msg, const char* f = nullptr, int line = 0) { log(LogLevel::Info, msg, f, line); }
 	void warn    (std::string_view msg, const char* f = nullptr, int line = 0) { log(LogLevel::Warning,  msg, f, line); }
 	void error   (std::string_view msg, const char* f = nullptr, int line = 0) { log(LogLevel::Error,    msg, f, line); }
 	void verbose (std::string_view msg, const char* f = nullptr, int line = 0) { log(LogLevel::Verbose,  msg, f, line); }
@@ -202,7 +199,7 @@ private:
 	std::ofstream file;
 	LoggerConfig  config;
 
-	LogLevel currentLevel   = LogLevel::Standard;
+	LogLevel currentLevel   = LogLevel::Info;
 	bool     sdlMirror      = true;
 	bool     initialized    = false;
 };
@@ -218,13 +215,13 @@ private:
 //   BT_ERROR(std::format("Failed to open '{}'", path));
 
 #ifdef BLACKTHORN_DEBUG
-	#define BT_LOG(msg)     ::Blackthorn::Debug::Logger::instance().standard((msg), __FILE__, __LINE__)
+	#define BT_LOG(msg)     ::Blackthorn::Debug::Logger::instance().info((msg), __FILE__, __LINE__)
 	#define BT_WARN(msg)    ::Blackthorn::Debug::Logger::instance().warn    ((msg), __FILE__, __LINE__)
 	#define BT_ERROR(msg)   ::Blackthorn::Debug::Logger::instance().error   ((msg), __FILE__, __LINE__)
 	#define BT_VERBOSE(msg) ::Blackthorn::Debug::Logger::instance().verbose ((msg), __FILE__, __LINE__)
 	#define BT_DEBUG(msg)   ::Blackthorn::Debug::Logger::instance().debug   ((msg), __FILE__, __LINE__)
 #else
-	#define BT_LOG(msg)     ::Blackthorn::Debug::Logger::instance().standard((msg))
+	#define BT_LOG(msg)     ::Blackthorn::Debug::Logger::instance().info((msg))
 	#define BT_WARN(msg)    ::Blackthorn::Debug::Logger::instance().warn    ((msg))
 	#define BT_ERROR(msg)   ::Blackthorn::Debug::Logger::instance().error   ((msg))
 	#define BT_VERBOSE(msg) ::Blackthorn::Debug::Logger::instance().verbose ((msg))

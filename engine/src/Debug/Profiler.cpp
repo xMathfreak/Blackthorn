@@ -1,7 +1,10 @@
 #include "Debug/Profiler.h"
 
 #include <algorithm>
+#include <format>
 #include <numeric>
+
+#include "Debug/Logger.h"
 
 namespace Blackthorn::Debug {
 
@@ -66,10 +69,7 @@ void Profiler::endScope(const char* name) {
 		return;
 
 	if (scopeStack.empty()) {
-		#ifdef BLACKTHORN_DEBUG
-			SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "Profiler: endScope called without matchin beginScope for %s", name);
-		#endif
-
+		BT_WARN(std::format("endScope() called without matching beginScope() for {}", name));
 		return;
 	}
 
@@ -77,7 +77,7 @@ void Profiler::endScope(const char* name) {
 	const ScopeEntry& entry = scopeStack.back();
 
 	if (std::string(entry.name) != std::string(name))
-		SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "Profiler: Mismatched scope names. Expected '%s', got '%s'", entry.name, name);
+		BT_WARN(std::format("Profiler: Mismatched scope names. Expected '{}', got '{}'", entry.name, name));
 
 	Sample sample;
 	sample.name = entry.name;

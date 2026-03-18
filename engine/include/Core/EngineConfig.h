@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Core/Export.h"
+#include "Debug/Logger.h"
 
 #include <string>
 
@@ -34,13 +35,13 @@ struct BLACKTHORN_API TimingConfig {
 
 struct DebugConfig {
 	float profilingLogInterval = 1.0f;
+	Debug::LoggerConfig logger;
 };
 
 struct BLACKTHORN_API EngineConfig {
 	WindowConfig window;
 	RenderConfig render;
 	TimingConfig timing;
-
 	DebugConfig  debug;
 };
 

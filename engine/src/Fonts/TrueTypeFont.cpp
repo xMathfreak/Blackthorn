@@ -1,5 +1,9 @@
 #include "Fonts/TrueTypeFont.h"
 
+#include <format>
+
+#include "Debug/Logger.h"
+
 namespace Blackthorn::Fonts {
 
 std::shared_ptr<Graphics::Shader> TrueTypeFont::shader = nullptr;
@@ -20,9 +24,7 @@ void TrueTypeFont::initializeShader() {
 	if (!shader) {
 		shader = std::make_shared<Graphics::Shader>("assets/shaders/font_ttf.vert", "assets/shaders/font_ttf.frag");
 
-		#ifdef BLACKTHORN_DEBUG
-			SDL_Log("Created TrueTypeFont Shader");
-		#endif
+		BT_DEBUG("Created TrueTypeFont Shader");
 	}
 }
 
@@ -34,7 +36,7 @@ void TrueTypeFont::cleanupShader() {
 bool TrueTypeFont::loadFromFile(const std::string& filePath, int pointSize) {
 	font = TTF_OpenFont(filePath.c_str(), pointSize);
 	if (!font) {
-		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to load True Type font '%s': '%s'", filePath.c_str(), SDL_GetError());
+		BT_ERROR(std::format("Failed to load True Type font '{}': '{}'", filePath, SDL_GetError()));
 		return false;
 	}
 
@@ -57,12 +59,10 @@ bool TrueTypeFont::loadFromFile(const std::string& filePath, int pointSize) {
 	atlasRowHeight = 0;
 	glyphCache.clear();
 
-	#ifdef BLACKTHORN_DEBUG
-		SDL_Log(
-			"Loaded TrueType font '%s' at %d pt (line height: %f)",
-			filePath.c_str(), pointSize, lineHeight
-		);
-	#endif
+	BT_DEBUG(std::format(
+		"Loaded TrueType font '{}' at {} pt (line height: {})",
+		filePath, pointSize, lineHeight
+	));
 
 	return true;
 }
@@ -199,7 +199,7 @@ const TrueTypeFont::Glyph& TrueTypeFont::getGlyph(char32_t codePoint) {
 	SDL_Surface* surface = TTF_RenderGlyph_Blended(font, codePoint, SDL_Color{255, 255, 255, 255});
 
 	if (!surface) {
-		SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "Failed to render glyph U+%04X: %s", codePoint, SDL_GetError());
+		BT_WARN(std::format("Failed to render glyph U+{:#x}: {}", static_cast<Uint32>(codePoint), SDL_GetError()));
 
 		static Glyph defaultGlyph;
 		return defaultGlyph;
@@ -212,7 +212,7 @@ const TrueTypeFont::Glyph& TrueTypeFont::getGlyph(char32_t codePoint) {
 	}
 
 	if (atlasCursor.y + surface->h > ATLAS_SIZE) {
-		SDL_LogError(SDL_LOG_CATEGORY_RENDER, "True Type Font atlas overflow");
+		BT_ERROR("TrueTypeFont atlas overflow");
 		SDL_DestroySurface(surface);
 
 		static Glyph defaultGlyph;

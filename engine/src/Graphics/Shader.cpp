@@ -1,12 +1,11 @@
 #include "Graphics/Shader.h"
 
+#include <format>
 #include <fstream>
 #include <sstream>
 #include <stdexcept>
 
-#ifdef BLACKTHORN_DEBUG
-	#include <SDL3/SDL.h>
-#endif
+#include "Debug/Logger.h"
 
 namespace Blackthorn::Graphics {
 
@@ -56,17 +55,12 @@ GLuint Shader::compileShader(const std::string& source, GLenum type) {
 
 		std::string errorMsg = std::string(shaderTypeToString(type)) + " shader compilation failed:\n" + log;
 
-		#ifdef BLACKTHORN_DEBUG
-			SDL_LogError(SDL_LOG_CATEGORY_RENDER, "%s", errorMsg.c_str());
-		#endif
+		BT_ERROR(errorMsg);
 
 		throw std::runtime_error(errorMsg);
 	}
 
-	#ifdef BLACKTHORN_DEBUG
-		SDL_Log("%s shader compiled successfully.", shaderTypeToString(type));
-	#endif
-
+	BT_DEBUG(std::format("{} shader compiled successfully", shaderTypeToString(type)));
 	return shader;
 }
 
@@ -94,25 +88,18 @@ void Shader::linkProgram(GLuint vertexShader, GLuint fragmentShader) {
 
 		std::string errorMsg = "Shader program linking failed:\n" + log;
 
-		#ifdef BLACKTHORN_DEBUG
-			SDL_LogError(SDL_LOG_CATEGORY_RENDER, "%s", errorMsg.c_str());
-		#endif
-
+		BT_ERROR(errorMsg);
 		throw std::runtime_error(errorMsg);
 	}
 
-	#ifdef BLACKTHORN_DEBUG
-		SDL_Log("Shader program linked successfully (ID: %u)", programID);
-	#endif
+	BT_DEBUG(std::format("Shader program linked successfully (ID: {})", programID));
 
-		glDetachShader(programID, vertexShader);
-		glDetachShader(programID, fragmentShader);
+	glDetachShader(programID, vertexShader);
+	glDetachShader(programID, fragmentShader);
 }
 
 Shader::Shader(const std::string& vertexPath, const std::string& fragmentPath) {
-	#ifdef BLACKTHORN_DEBUG
-		SDL_Log("Loading shader: %s, %s", vertexPath.c_str(), fragmentPath.c_str());
-	#endif
+	BT_DEBUG(std::format("Loading shader: {}, {}", vertexPath, fragmentPath));
 
 	try {
 		std::string vertexSource = readFile(vertexPath);
@@ -168,13 +155,7 @@ Shader& Shader::operator=(Shader&& other) noexcept {
 
 void Shader::bind() const {
 	if (programID == 0) {
-		#ifdef BLACKTHORN_DEBUG
-			SDL_LogWarn(
-				SDL_LOG_CATEGORY_RENDER,
-				"Attempting to bind invalid shader"
-			);
-		#endif
-
+		BT_WARN("Attempting to bind invalid shader");
 		return;
 	}
 
@@ -191,14 +172,11 @@ GLuint Shader::getUniformLocation(const std::string& name) {
 
 	GLint location = glGetUniformLocation(programID, name.c_str());
 
-	#ifdef BLACKTHORN_DEBUG
-		if (location == -1)
-			SDL_LogWarn(
-				SDL_LOG_CATEGORY_RENDER,
-				"Uniform '%s' not found in shader program %u",
-				name.c_str(), programID
-			);
-	#endif
+	if (location == -1)
+		BT_WARN(std::format(
+			"Uniform '{}' not found in shader program {}",
+			name, programID
+		));
 
 	uniformCache[name] = location;
 	return location;

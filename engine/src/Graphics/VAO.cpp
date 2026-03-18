@@ -1,5 +1,9 @@
 #include "Graphics/VAO.h"
 
+#include <format>
+
+#include "Debug/Logger.h"
+
 namespace Blackthorn::Graphics {
 
 VAO::VAO(bool createNow) {
@@ -31,25 +35,18 @@ VAO& VAO::operator=(VAO&& other) noexcept {
 
 void VAO::create() {
 	if (id != 0) {
-		#ifdef BLACKTHORN_DEBUG
-			SDL_LogWarn(SDL_LOG_CATEGORY_RENDER, "VAO already created (ID: %u)", id);
-		#endif
-
+		BT_WARN(std::format("VAO already created (ID: {})", id));
 		return;
 	}
 
 	glGenVertexArrays(1, &id);
-	#ifdef BLACKTHORN_DEBUG
-		SDL_Log("VAO created (ID: %u)", id);
-	#endif
+
+	BT_DEBUG(std::format("VAO created (ID: {})", id));
 }
 
 void VAO::bind() const {
 	if (id == 0) {
-		#ifdef BLACKTHORN_DEBUG
-			SDL_LogWarn(SDL_LOG_CATEGORY_RENDER, "Attempting to bind uninitialized VAO");
-		#endif
-
+		BT_WARN("Attempting to bind uninitialized VAO");
 		return;
 	}
 
@@ -68,79 +65,57 @@ void VAO::unbind() {
 
 void VAO::enableAttrib(GLuint index, GLint size, GLenum type, GLsizei stride, size_t offset, bool normalized) {
 	if (id == 0) {
-		#ifdef BLACKTHORN_DEBUG
-			SDL_LogError(SDL_LOG_CATEGORY_RENDER, "Cannot configure attributes on uninitialized VAO");
-			return;
-		#endif
+		BT_ERROR("Cannot configure attributes on uninitialized VAO");
+		return;
 	}
 
 	if (!isBound()) {
-		#ifdef BLACKTHORN_DEBUG
-			SDL_LogWarn(
-				SDL_LOG_CATEGORY_RENDER,
-				"Configuring VAO %u attributes while not bound",
-				id
-			);
-		#endif
-
+		BT_WARN(std::format("Attempting to configure attributes on VAO {} while not bound. Binding", id));
 		bind();
 	}
 
 	glEnableVertexAttribArray(index);
 	glVertexAttribPointer(index, size, type, normalized ? GL_TRUE : GL_FALSE, stride, reinterpret_cast<const void*>(offset));
 
-	#ifdef BLACKTHORN_DEBUG
-		const char* typeStr = "unknown";
+	const char* typeStr = "Unknown";
 
-		switch (type) {
-			case GL_FLOAT:
-				typeStr = "GL_FLOAT";
-				break;
-			case GL_INT:
-				typeStr = "GL_INT";
-				break;
-			case GL_UNSIGNED_INT:
-				typeStr = "GL_UNSIGNED_INT";
-				break;
-			case GL_BYTE:
-				typeStr = "GL_BYTE";
-				break;
-			case GL_UNSIGNED_BYTE:
-				typeStr = "GL_UNSIGNED_BYTE";
-				break;
-		}
-		SDL_Log("VAO %u: Enabled attribute %u (size=%d, type=%s, stride=%d, offset=%lld, normalized=%u)",
-		id, index, size, typeStr, stride, offset, normalized);
-	#endif
+	switch (type) {
+		case GL_FLOAT:
+			typeStr = "GL_FLOAT";
+			break;
+		case GL_INT:
+			typeStr = "GL_INT";
+			break;
+		case GL_UNSIGNED_INT:
+			typeStr = "GL_UNSIGNED_INT";
+			break;
+		case GL_BYTE:
+			typeStr = "GL_BYTE";
+			break;
+		case GL_UNSIGNED_BYTE:
+			typeStr = "GL_UNSIGNED_BYTE";
+			break;
+	}
+
+	BT_DEBUG(std::format("VAO {}: Enabled attribute {} (size={}, type={}, stride={}, offset={}, normalized={})",
+		id, index, size, typeStr, stride, offset, (normalized ? "true" : "false")
+	));
+
 }
 
 void VAO::disableAttrib(GLuint index) {
 	if (id == 0) {
-		#ifdef BLACKTHORN_DEBUG
-			SDL_LogError(SDL_LOG_CATEGORY_RENDER,
-				"Cannot disable attributes on uninitialized VAO"
-			);
-		#endif
-
+		BT_ERROR("Cannot disable attributes of an uninitialized VAO");
 		return;
 	}
 
 	if (!isBound()) {
-		#ifdef BLACKTHORN_DEBUG
-			SDL_LogWarn(SDL_LOG_CATEGORY_RENDER,
-				"Disabling VAO %u attributes while not bound",
-				id
-			);
-		#endif
-
+		BT_WARN(std::format("Attempting to disable attributes on VAO {} while not bound. Binding", id));
 		bind();
 	}
 
 	glDisableVertexAttribArray(index);
-
-	#ifdef BLACKTHORN_DEBUG
-		SDL_Log("VAO %u: Disabled attribute %u", id, index);
-	#endif
+	BT_DEBUG(std::format("VAO {}: Disabled attribute {}", id, index));
 }
 
 void VAO::destroy() {
@@ -163,10 +138,7 @@ GLuint VAO::takeHandle() noexcept {
 		currentVAO = 0;
 	}
 
-	#ifdef BLACKTHORN_DEBUG
-		SDL_Log("VAO handle taken (ID: %u), ownership transferred", tmp);
-	#endif
-
+	BT_DEBUG(std::format("VAO handle taken (ID: {}), ownership transferred", tmp));
 	return tmp;
 }
 

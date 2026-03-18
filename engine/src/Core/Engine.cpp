@@ -1,5 +1,6 @@
 #include "Core/Engine.h"
 
+#include <format>
 #include <glad/glad.h>
 #include <SDL3_ttf/SDL_ttf.h>
 
@@ -11,6 +12,7 @@
 
 #include "Scene/SceneContext.h"
 #include "Debug/Profiler.h"
+#include "Debug/Logger.h"
 
 namespace Blackthorn {
 
@@ -29,27 +31,29 @@ Engine::~Engine() {
 
 bool Engine::init(const EngineConfig& cfg) {
 	if (initialized) {
-		SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "Engine already initialized.");
+		BT_WARN("Engine already initialized.");
 		return false;
 	}
 
+	config = cfg;
+	Debug::Logger::instance().init(cfg.debug.logger);
+
 	SDL_InitFlags initFlags = SDL_INIT_VIDEO;
 	if (!SDL_Init(initFlags)) {
-		SDL_LogError(SDL_LOG_CATEGORY_ERROR, "SDL_Init failed: %s", SDL_GetError());
+		BT_ERROR(std::format("SDL_Init failed: {}", SDL_GetError()));
 		cleanupInitialization();
 		return false;
 	}
 
 	if (!TTF_Init()) {
-		SDL_LogError(SDL_LOG_CATEGORY_ERROR, "TTF_Init failed: %s", SDL_GetError());
+		BT_ERROR(std::format("TTF_Init failed: {}", SDL_GetError()));
 		cleanupInitialization();
 		return false;
 	}
 
-	config = cfg;
 
 	#ifdef BLACKTHORN_DEBUG
-		SDL_Log("========= Initializing Blackthorn Engine ==========");
+		BT_LOG("Initializing Blackthorn Engine");
 		SDL_SetLogPriority(SDL_LOG_CATEGORY_APPLICATION, SDL_LOG_PRIORITY_VERBOSE);
 	#else
 		SDL_SetLogPriority(SDL_LOG_CATEGORY_APPLICATION, SDL_LOG_PRIORITY_INFO);
@@ -75,26 +79,26 @@ bool Engine::init(const EngineConfig& cfg) {
 
 	window = SDL_CreateWindow(cfg.window.title.c_str(), cfg.window.width, cfg.window.height, windowFlags);
 	if (!window) {
-		SDL_LogError(SDL_LOG_CATEGORY_ERROR, "SDL_CreateWindow failed: %s", SDL_GetError());
+		BT_ERROR(std::format("SDL_CreateWindow failed: {}", SDL_GetError()));
 		cleanupInitialization();
 		return false;
 	}
 
 	glContext = SDL_GL_CreateContext(window);
 	if (!glContext) {
-		SDL_LogError(SDL_LOG_CATEGORY_ERROR, "SDL_GL_CreateContext failed: %s", SDL_GetError());
+		BT_ERROR(std::format("SDL_GL_CreateContext failed: {}", SDL_GetError()));
 		cleanupInitialization();
 		return false;
 	}
 
 	if (!SDL_GL_MakeCurrent(window, glContext)) {
-		SDL_LogError(SDL_LOG_CATEGORY_ERROR, "SDL_GL_MakeCurrent failed: %s", SDL_GetError());
+		BT_ERROR(std::format("SDL_GL_MakeCurrent failed: {}", SDL_GetError()));
 		cleanupInitialization();
 		return false;
 	}
 
 	if (!gladLoadGLLoader((GLADloadproc)SDL_GL_GetProcAddress)) {
-		SDL_LogError(SDL_LOG_CATEGORY_ERROR, "Failed to initialize GLAD");
+		BT_ERROR("Failed to initialize GLAD");
 		cleanupInitialization();
 		return false;
 	}
@@ -113,31 +117,16 @@ bool Engine::init(const EngineConfig& cfg) {
 
 	glViewport(0, 0, cfg.window.width, cfg.window.height);
 
-	#ifdef BLACKTHORN_DEBUG
-		logEngineInfo();
-	#endif
+	logEngineInfo();
 
 	try {
-		#ifdef BLACKTHORN_DEBUG
-			SDL_Log("============== Initializing Renderer ==============");
-		#endif
-
+		BT_LOG("Initializing Renderer");
 		renderer = std::make_unique<Graphics::Renderer>();
 		renderer->setClearColor(0.1f, 0.1f, 0.12f);
 		renderer->setPostProcessingEnabled(true);
-
-		#ifdef BLACKTHORN_DEBUG
-			SDL_Log("===================================================");
-		#endif
 	} catch (const std::exception& e) {
-		SDL_LogError(
-			SDL_LOG_CATEGORY_RENDER,
-			"Failed to initialize Renderer: %s",
-			e.what()
-		);
-
+		BT_ERROR(std::format("Failed to initialize Renderer: {}", e.what()));
 		cleanupInitialization();
-
 		return false;
 	}
 
@@ -156,9 +145,7 @@ bool Engine::init(const EngineConfig& cfg) {
 
 	initialized = true;
 
-	#ifdef BLACKTHORN_DEBUG
-		SDL_Log("=== Blackthorn Engine initialization successful ===");
-	#endif
+	BT_LOG("Initialization completed");
 
 	return true;
 }
@@ -205,6 +192,7 @@ void Engine::shutdown() {
 
 	initialized = false;
 	running = false;
+	Debug::Logger::instance().shutdown();
 }
 
 void Engine::render(float alpha) {
@@ -272,7 +260,7 @@ void Engine::lateUpdate(float dt) {
 
 void Engine::run() {
 	if (!initialized) {
-		SDL_LogError(SDL_LOG_CATEGORY_ERROR, "Cannot run engine: Not initialized");
+		BT_ERROR("Cannot run engine: Not initialized");
 		return;
 	}
 
@@ -290,9 +278,9 @@ void Engine::run() {
 		#ifdef BLACKTHORN_DEBUG
 			if (windowFocused)
 				profiler.beginFrame();
-		#endif
 
-		PROFILE_SCOPE("Frame");
+			PROFILE_SCOPE("Frame");
+		#endif
 
 		Uint64 currentTime = SDL_GetPerformanceCounter();
 		float frameTime = static_cast<float>(currentTime - lastFrameTime) / frequency;
@@ -316,13 +304,7 @@ void Engine::run() {
 		}
 
 		if (frameTime > config.timing.maxDeltaTime) {
-			#ifdef BLACKTHORN_DEBUG
-				SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
-					"Frame time capped: %.3f -> %.3f",
-					frameTime, config.timing.maxDeltaTime
-				);
-			#endif
-
+			BT_WARN(std::format("Frame time capped: {:.3f} -> {:.3f}", frameTime, config.timing.maxDeltaTime));
 			frameTime = config.timing.maxDeltaTime;
 		}
 
@@ -340,10 +322,7 @@ void Engine::run() {
 
 				if (fixedUpdateCount > config.timing.maxFixedUpdates) {
 					#ifdef BLACKTHORN_DEBUG
-						SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
-							"Too many fixed updates in one frame (%d)",
-							fixedUpdateCount
-						);
+						BT_WARN(std::format("Too many fixed updates in one frame ({})", fixedUpdateCount));
 					#endif
 
 					accumulatedTime = 0.0f;
@@ -397,44 +376,43 @@ void Engine::run() {
 }
 
 void Engine::logEngineInfo() {
-	SDL_Log("=================== Engine Info ===================");
-	SDL_Log("OpenGL Version: %s", glGetString(GL_VERSION));
-	SDL_Log("GLSL Version: %s", glGetString(GL_SHADING_LANGUAGE_VERSION));
-	SDL_Log("Renderer: %s", glGetString(GL_RENDERER));
-	SDL_Log("Vendor: %s", glGetString(GL_VENDOR));
+	BT_DEBUG("Engine Info");
+	BT_DEBUG(std::format("OpenGL Version: {}", reinterpret_cast<const char*>(glGetString(GL_VERSION))));
+	BT_DEBUG(std::format("Renderer: {}", reinterpret_cast<const char*>(glGetString(GL_RENDERER))));
 
 	GLint maxTextureSize;
 	glGetIntegerv(GL_MAX_TEXTURE_SIZE, &maxTextureSize);
-	SDL_Log("Max Texture Size: %d", maxTextureSize);
+	BT_DEBUG(std::format("Max Texture Size: {}", maxTextureSize));
 
 	GLint maxVertexAttribs;
 	glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &maxVertexAttribs);
-	SDL_Log("Max Vertex Attributes: %d", maxVertexAttribs);
+	BT_DEBUG(std::format("Max Vertex Attributes: {}", maxVertexAttribs));
+
 	int actualDepthSize, actualStencilSize, actualMSAASamples;
+
 	SDL_GL_GetAttribute(SDL_GL_DEPTH_SIZE, &actualDepthSize);
 	SDL_GL_GetAttribute(SDL_GL_STENCIL_SIZE, &actualStencilSize);
 	SDL_GL_GetAttribute(SDL_GL_MULTISAMPLESAMPLES, &actualMSAASamples);
-	SDL_Log("Depth Buffer: %d bits (requested %d)", actualDepthSize, config.render.depthBits);
-	SDL_Log("Stencil Buffer: %d bits (requested %d)", actualStencilSize, config.render.stencilBits);
-	SDL_Log("MSAA Samples: %dx (requested %dx)", actualMSAASamples, config.render.msaaSamples);
+
+	BT_DEBUG(std::format("Depth Buffer: {} bits (requested {})", actualDepthSize, config.render.depthBits));
+	BT_DEBUG(std::format("Stencil Buffer: {} bits (requested {})", actualStencilSize, config.render.stencilBits));
+	BT_DEBUG(std::format("MSAA Samples: {}x (requested {}x)", actualMSAASamples, config.render.msaaSamples));
 
 	#if defined(GLM_FORCE_SIMD_AVX2)
-		SDL_Log("GLM using AVX2 SIMD");
+		BT_DEBUG("GLM using AVX2 SIMD");
 	#elif defined(GLM_FORCE_SIMD_AVX)
-		SDL_Log("GLM using AVX SIMD");
+		BT_DEBUG("GLM using AVX SIMD");
 	#elif defined(GLM_FORCE_SIMD_SSE42)
-		SDL_Log("GLM using SSE4.2 SIMD");
+		BT_DEBUG("GLM using SSE4.2 SIMD");
 	#elif defined(GLM_FORCE_SIMD_SSE41)
-		SDL_Log("GLM using SSE4.1 SIMD");
+		BT_DEBUG("GLM using SSE4.1 SIMD");
 	#elif defined(GLM_FORCE_SIMD_SSE3)
-		SDL_Log("GLM using SSE3 SIMD");
+		BT_DEBUG("GLM using SSE3 SIMD");
 	#elif defined(GLM_FORCE_SIMD_SSE2)
-		SDL_Log("GLM using SSE2 SIMD");
+		BT_DEBUG("GLM using SSE2 SIMD");
 	#else
-		SDL_Log("GLM using scalar math (no SIMD)");
+		BT_DEBUG("GLM using scalar math (no SIMD)");
 	#endif
-
-	SDL_Log("===================================================");
 }
 
 void Engine::cleanupInitialization() {
@@ -460,7 +438,6 @@ Scene::ISceneContext& Engine::getSceneContext() {
 	void Engine::logProfilingInfo() {
 		auto& profiler = Debug::Profiler::instance();
 
-		SDL_Log("====== Performance Stats (60 frames average) ======");
 		SDL_Log("Frame Time: %.2f ms (%.1f FPS)",
 			profiler.getAverageFrameTime(60),
 			1000.0f / profiler.getAverageFrameTime(60)
@@ -480,8 +457,6 @@ Scene::ISceneContext& Engine::getSceneContext() {
 				);
 			}
 		}
-
-		SDL_Log("===================================================");
 	}
 
 	float Engine::getFPS() const {

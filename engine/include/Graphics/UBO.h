@@ -1,13 +1,12 @@
 #pragma once
 
+#include <format>
 #include <utility>
 
 #include <glad/glad.h>
-#ifdef BLACKTHORN_DEBUG
-	#include <SDL3/SDL.h>
-#endif
 
 #include "Core/Export.h"
+#include "Debug/Logger.h"
 
 namespace Blackthorn::Graphics {
 
@@ -51,9 +50,7 @@ public:
 		glBufferData(GL_UNIFORM_BUFFER, sizeof(T), nullptr, usage);
 		glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
-		#ifdef BLACKTHORN_DEBUG
-			SDL_Log("UBO created (ID: %u, Size: %lld)", id, sizeof(T));
-		#endif
+		BT_DEBUG(std::format("UBO created (ID: {}, Size: {})", id, sizeof(T)));
 	}
 
 	/**

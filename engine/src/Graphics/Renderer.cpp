@@ -2,8 +2,11 @@
 #include "Graphics/RenderLayers.h"
 
 #include <cstring>
+#include <format>
 
 #include <glm/gtc/type_ptr.hpp>
+
+#include "Debug/Logger.h"
 
 namespace Blackthorn::Graphics {
 
@@ -35,9 +38,7 @@ Renderer::Renderer(Uint32 maxQuads)
 	textureSlots.fill(nullptr);
 	textureSlots[0] = whiteTexture.get();
 
-	#ifdef BLACKTHORN_DEBUG
-		SDL_Log("Renderer initialized (Max Quads: %u, Max Textures: %u)", MAX_QUADS, MAX_TEXTURE_SLOTS);
-	#endif
+	BT_DEBUG(std::format("Renderer initialized (Max Quads: {}, Max Textures: {})", MAX_QUADS, MAX_TEXTURE_SLOTS));
 }
 
 Renderer::~Renderer() {}
@@ -76,9 +77,7 @@ void Renderer::initQuadBuffers() {
 	QuadEBO->setData(indices);
 	VAO::unbind();
 
-	#ifdef BLACKTHORN_DEBUG
-		SDL_Log("Renderer Quad buffers initialized");
-	#endif
+	BT_DEBUG("Renderer Quad buffers initialized");
 }
 
 void Renderer::initShader() {
@@ -89,9 +88,7 @@ void Renderer::initShader() {
 		shader->setInt("u_Textures[" + std::to_string(i) + "]", i);
 	}
 
-	#ifdef BLACKTHORN_DEBUG
-		SDL_Log("Renderer Shader initialized");
-	#endif
+	BT_DEBUG("Renderer Shader initialized");
 }
 
 void Renderer::initScreenPass() {
@@ -111,9 +108,7 @@ void Renderer::initWhiteTexture() {
 
 	activeScreenShader = screenShader.get();
 
-	#ifdef BLACKTHORN_DEBUG
-		SDL_Log("Render screen pass initialized");
-	#endif
+	BT_DEBUG("Render screen pass initialized");
 }
 
 void Renderer::startBatch() {

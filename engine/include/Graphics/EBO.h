@@ -1,13 +1,12 @@
 #pragma once
 
+#include <format>
 #include <vector>
 
 #include <glad/glad.h>
-#ifdef BLACKTHORN_DEBUG
-	#include <SDL3/SDL.h>
-#endif
 
 #include "Core/Export.h"
+#include "Debug/Logger.h"
 
 namespace Blackthorn::Graphics {
 
@@ -134,9 +133,7 @@ public:
 		);
 
 		if (id == 0) {
-			#ifdef BLACKTHORN_DEBUG
-				SDL_LogWarn(SDL_LOG_CATEGORY_RENDER, "Attempting to set data on uninitialized EBO");
-			#endif
+			BT_WARN("Attempting to set data of uninitialized element buffer. Creating buffer automatically");
 			create();
 		}
 
@@ -156,10 +153,8 @@ public:
 
 		#ifdef BLACKTHORN_DEBUG
 			const char* typeStr = (indexType == GL_UNSIGNED_INT) ?
-				"GLuint" :
-				(indexType == GL_UNSIGNED_SHORT) ? "GLushort" : "GLubyte";
-			SDL_Log("EBO %u: Uploaded %lld indices (%s, %lld bytes)",
-					id, count, typeStr, size);
+				"GLuint" : (indexType == GL_UNSIGNED_SHORT) ? "GLushort" : "GLubyte";
+			BT_DEBUG(std::format("EBO {}: Uploaded {} indices ({}, {} bytes)", id, count, typeStr, size));
 		#endif
 	}
 
@@ -182,23 +177,13 @@ public:
 		);
 
 		if (id == 0) {
-			#ifdef BLACKTHORN_DEBUG
-				SDL_LogError(SDL_LOG_CATEGORY_RENDER, "Cannot update uninitialized EBO");
-			#endif
-
+			BT_ERROR("Cannot update uninitialized EBO");
 			return;
 		}
 
 		size_t dataSize = data.size() * sizeof(T);
 		if (offsetInBytes + dataSize > size) {
-			#ifdef BLACKTHORN_DEBUG
-				SDL_LogError(
-					SDL_LOG_CATEGORY_RENDER,
-					"EBO %u: Update would overflow buffer (offset %lld + data %lld > buffer %lld)",
-					id, offsetInBytes, dataSize, size
-				);
-			#endif
-
+			BT_ERROR(std::format("EBO {}: Update would overflow buffer (offset {} + data {} > buffer {})", id, offsetInBytes, dataSize, size));
 			return;
 		}
 

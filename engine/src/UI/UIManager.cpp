@@ -1,9 +1,11 @@
 #include "UI/UIManager.h"
 
 #include <algorithm>
+#include <format>
 
 #include <SDL3/SDL.h>
 
+#include "Debug/Logger.h"
 #include "UI/Container.h"
 #include "UI/Widget.h"
 
@@ -60,10 +62,7 @@ void UIManager::flushPendingLayout() {
 
 void UIManager::setReferenceResolution(float width, float height) {
 	if (width <= 0.0f || height <= 0.0f) {
-		#ifdef BLACKTHORN_DEBUG
-			SDL_Log("UIManager: ignoring invalid reference resolution (%.0f x %.0f)", width, height);
-		#endif
-
+		BT_WARN(std::format("Invalid reference resolution ({:.0f} x {:.0f}). Values must be positive. Request ignored.", width, height));
 		return;
 	}
 
@@ -73,17 +72,12 @@ void UIManager::setReferenceResolution(float width, float height) {
 
 void UIManager::setGlobalUIScale(float scale) {
 	if (scale <= 0.0f) {
-		#ifdef BLACKTHORN_DEBUG
-			SDL_Log("UIManager: ignoring non-positive UI scale %.2f", scale);
-		#endif
-
+		BT_WARN(std::format("Ignoring non-positive global UI scale: {:.2f}", scale));
 		return;
 	}
 
-		#ifdef BLACKTHORN_DEBUG
-		if (scale < 0.5f || scale > 5.0f)
-			SDL_Log("UIManager: extreme global UI scale set: %.2f", scale);
-		#endif
+	if (scale < 0.5f || scale > 5.0f)
+		BT_WARN(std::format("Extreme global UI scale set: {:.2f}", scale));
 
 	globalUIScale = scale;
 	recomputeScale();
@@ -102,9 +96,7 @@ void UIManager::updateAllLayouts() {
 
 void UIManager::addWidget(std::unique_ptr<Widget> widget) {
 	if (!widget) {
-#ifdef BLACKTHORN_DEBUG
-		SDL_Log("UIManager::addWidget — null widget ignored");
-#endif
+		BT_WARN("addWidget() received nullptr. Request ignored.");
 		return;
 	}
 
@@ -113,10 +105,7 @@ void UIManager::addWidget(std::unique_ptr<Widget> widget) {
 
 void UIManager::removeWidget(Widget* widget) {
 	if (!widget) {
-		#ifdef BLACKTHORN_DEBUG
-			SDL_Log("UIManager::removeWidget — null widget ignored");
-		#endif
-
+		BT_WARN("removeWidget() received nullptr. Request ignored.");
 		return;
 	}
 

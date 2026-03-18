@@ -1,6 +1,10 @@
 #include "Graphics/Texture.h"
 
+#include <format>
+
 #include <SDL3_image/SDL_image.h>
+
+#include "Debug/Logger.h"
 
 namespace Blackthorn::Graphics {
 
@@ -100,14 +104,7 @@ bool Texture::loadFromFile(const std::string& path, const TextureParams& paramet
 
 	SDL_Surface* surface = IMG_Load(path.c_str());
 	if (!surface) {
-		#ifdef BLACKTHORN_DEBUG
-			SDL_LogError(
-				SDL_LOG_CATEGORY_RENDER,
-				"Failed to load texture '%s': '%s'",
-				path.c_str(), SDL_GetError()
-			);
-		#endif
-
+		BT_ERROR(std::format("Failed to load texture '{}': {}", path, SDL_GetError()));
 		return false;
 	}
 
@@ -216,10 +213,7 @@ bool Texture::loadFromMemory(int w, int h, int ch, const void* data, const Textu
 		glDeleteTextures(1, &id);
 
 	if (data == nullptr || w <= 0 || h <= 0 || ch < 1 || ch > 4) {
-		#ifdef BLACKTHORN_DEBUG
-			SDL_LogError(SDL_LOG_CATEGORY_RENDER, "Invalid texture parameters");
-		#endif
-
+		BT_ERROR("Invalid texture parameters");
 		return false;
 	}
 
@@ -267,10 +261,7 @@ bool Texture::loadFromMemory(int w, int h, int ch, const void* data, const Textu
 
 bool Texture::create(int w, int h, int ch, const TextureParams& parameters) {
 	if (w <= 0 || h <= 0 || ch < 1 || ch > 4) {
-		#ifdef BLACKTHORN_DEBUG
-			SDL_LogError(SDL_LOG_CATEGORY_RENDER, "Invalid texture dimensions");
-		#endif
-
+		BT_ERROR("Invalid texture dimensions");
 		return false;
 	}
 
@@ -327,10 +318,7 @@ void Texture::destroy() {
 
 void Texture::bind(GLuint slot) const {
 	if (id == 0) {
-		#ifdef BLACKTHORN_DEBUG
-			SDL_LogWarn(SDL_LOG_CATEGORY_RENDER, "Attempting to bind invalid texture");
-		#endif
-
+		BT_WARN("Attempting to bind invalid an invalid texture");
 		return;
 	}
 
@@ -345,22 +333,14 @@ void Texture::unbind(GLuint slot) {
 
 void Texture::updateRegion(int x, int y, int w, int h, const void* data) {
 	if (id == 0 || data == nullptr) {
-		#ifdef BLACKTHORN_DEBUG
-			SDL_LogError(SDL_LOG_CATEGORY_RENDER, "Cannot update invalid texture");
-		#endif
-
+		BT_ERROR("Cannot update invalid texture");
 		return;
 	}
 
 	if (x < 0 || y < 0 || x + w > width || y + h > height) {
-		#ifdef BLACKTHORN_DEBUG
-			SDL_LogError(
-				SDL_LOG_CATEGORY_RENDER,
-				"Texture update region out of bounds (%d, %d, %d, %d) for %d x %d texture",
-				x, y, w, h, width, height
-			);
-		#endif
-
+		BT_ERROR(std::format("Texture udate region out of bounds ({}, {}, {}, {}) for {} x {}",
+			x, y, w, h, width, height
+		));
 		return;
 	}
 

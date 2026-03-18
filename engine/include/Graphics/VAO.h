@@ -3,9 +3,6 @@
 #include <vector>
 
 #include <glad/glad.h>
-#ifdef BLACKTHORN_DEBUG
-	#include <SDL3/SDL.h>
-#endif
 
 #include "Core/Export.h"
 

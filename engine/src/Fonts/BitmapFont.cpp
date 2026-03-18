@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cstring>
+#include <format>
 #include <fstream>
 #include <sstream>
 
@@ -133,20 +134,14 @@ bool BitmapFont::loadFromFile(const std::string& texturePath, const std::string&
 	texture = std::make_unique<Graphics::Texture>(texturePath);
 
 	if (!texture->isValid()) {
-		#ifdef BLACKTHORN_DEBUG
-			SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to load font texture: %s", texturePath.c_str());
-		#endif
-
+		BT_ERROR(std::format("Failed to load font texture: {}", texturePath));
 		return false;
 	}
 
 	std::ifstream file(metricsPath);
 
 	if (!file.is_open()) {
-		#ifdef BLACKTHORN_DEBUG
-			SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to load font metrics: %s", metricsPath.c_str());
-		#endif
-
+		BT_ERROR(std::format("Failed to load font metrics: {}", metricsPath));
 		return false;
 	}
 
@@ -182,10 +177,7 @@ bool BitmapFont::loadFromFile(const std::string& texturePath, const std::string&
 			Uint32 id = parseIntValue(line, "id");
 
 			if (id == 0) {
-				#ifdef BLACKTHORN_DEBUG
-					SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "Skipping glyph with missing or invalid id in %s", metricsPath.c_str());
-				#endif
-
+				BT_WARN(std::format("Skipping glyph with missing or invalid id in {}", metricsPath));
 				continue;
 			}
 
@@ -207,13 +199,10 @@ bool BitmapFont::loadFromFile(const std::string& texturePath, const std::string&
 
 			glyphs[id] = glyph;
 		} else {
-			#ifdef BLACKTHORN_DEBUG
-				SDL_LogWarn(
-					SDL_LOG_CATEGORY_APPLICATION,
-					"Unknown command '%s' on line %d in %s",
-					command.c_str(), lineNum, metricsPath.c_str()
-				);
-			#endif
+			BT_WARN(std::format(
+				"Unknown command '{}' on line {} in {}",
+				command, lineNum, metricsPath
+			));
 		}
 	}
 
@@ -233,10 +222,26 @@ bool BitmapFont::loadFromFile(const std::string& texturePath, const std::string&
 
 	tabWidth = spaceWidth * 4.0f;
 
-	#ifdef BLACKTHORN_DEBUG
-		SDL_Log("BitmapFont loaded %lld glyphs from '%s'", glyphs.size(), metricsPath.c_str());
-		SDL_Log("\tlineHeight=%.1f, baseline=%.1f, spaceWidth=%.1f", lineHeight, baseline, spaceWidth);
-	#endif
+	BT_DEBUG(std::format(
+		"BitmapFont loaded {} glyphs from '{}' and '{}\nlineHeight={:.1f}, baseline={:.1f}, spaceWidth={:.1f}",
+		glyphs.size(), texturePath, metricsPath, lineHeight, baseline, spaceWidth
+	));
+
+	BT_DEBUG(std::format(
+		"BitmapFont loaded\n"
+		"    texture: {}\n"
+		"    metrics: {}\n"
+		"    glyphs: {}\n"
+		"    lineHeight: {:.1f}\n"
+		"    baseline: {:.1f}\n"
+		"    spaceWidth: {:.1f}",
+		texturePath,
+		metricsPath,
+		glyphs.size(),
+		lineHeight,
+		baseline,
+		spaceWidth
+	));
 
 	return true;
 }
@@ -245,28 +250,14 @@ bool BitmapFont::loadFromBMFont(const std::string& bmfPath) {
 	std::ifstream file(bmfPath, std::ios::binary);
 
 	if (!file) {
-		#ifdef BLACKTHORN_DEBUG
-			SDL_LogError(
-				SDL_LOG_CATEGORY_APPLICATION,
-				"Failed to open BMF file: %s",
-				bmfPath.c_str()
-			);
-		#endif
-
+		BT_ERROR(std::format("Failed to open BMF file: {}", bmfPath));
 		return false;
 	}
 
 	char sign[4];
 	file.read(sign, 4);
 	if (sign[0] != 'B' || sign[1] != 'M' || sign[2] != 'F' || sign[3] != '\0') {
-		#ifdef BLACKTHORN_DEBUG
-			SDL_LogError(
-				SDL_LOG_CATEGORY_APPLICATION,
-				"Invalid BMF file format: %s",
-				bmfPath.c_str()
-			);
-		#endif
-
+		BT_ERROR(std::format("Invalid BMF file format: {}", bmfPath));
 		return false;
 	}
 
@@ -274,14 +265,7 @@ bool BitmapFont::loadFromBMFont(const std::string& bmfPath) {
 	file.read(reinterpret_cast<char*>(&version), sizeof(version));
 
 	if (version != 1) {
-		#ifdef BLACKTHORN_DEBUG
-			SDL_LogError(
-				SDL_LOG_CATEGORY_APPLICATION,
-				"Unsupported BMF version %u in file: %s",
-				version, bmfPath.c_str()
-			);
-		#endif
-
+		BT_ERROR(std::format("Unsupported BMF version {} in file: {}", version, bmfPath));
 		return false;
 	}
 
@@ -297,26 +281,13 @@ bool BitmapFont::loadFromBMFont(const std::string& bmfPath) {
 
 	SDL_IOStream* rw = SDL_IOFromConstMem(imageData.data(), imageSize);
 	if (!rw) {
-		#ifdef BLACKTHORN_DEBUG
-			SDL_LogError(
-				SDL_LOG_CATEGORY_APPLICATION,
-				"Failed to create SDL_IOStream from image data"
-			);
-		#endif
-
+		BT_ERROR("Failed to create SDL_IOStream from image data");
 		return false;
 	}
 
 	SDL_Surface* surface = IMG_Load_IO(rw, true);
 	if (!surface) {
-		#ifdef BLACKTHORN_DEBUG
-			SDL_LogError(
-				SDL_LOG_CATEGORY_APPLICATION,
-				"Failed to load image from BMF: %s",
-				SDL_GetError()
-			);
-		#endif
-
+		BT_ERROR(std::format("Failed to load image from BMF: {}", SDL_GetError()));
 		return false;
 	}
 
@@ -325,13 +296,7 @@ bool BitmapFont::loadFromBMFont(const std::string& bmfPath) {
 	SDL_DestroySurface(surface);
 
 	if (!texture->isValid()) {
-		#ifdef BLACKTHORN_DEBUG
-			SDL_LogError(
-				SDL_LOG_CATEGORY_APPLICATION,
-				"Failed to create texture from BMF image data"
-			);
-		#endif
-
+		BT_ERROR("Failed to create texture from BMF image data");
 		return false;
 	}
 
@@ -359,10 +324,19 @@ bool BitmapFont::loadFromBMFont(const std::string& bmfPath) {
 
 	tabWidth = spaceWidth * 4.0f;
 
-	#ifdef BLACKTHORN_DEBUG
-		SDL_Log("BitmapFont loaded %lld glyphs from '%s'", glyphs.size(), bmfPath.c_str());
-		SDL_Log("\tlineHeight=%.1f, baseline=%.1f, spaceWidth=%.1f", lineHeight, baseline, spaceWidth);
-	#endif
+	BT_DEBUG(std::format(
+		"BitmapFont loaded\n"
+		"    file: {}\n"
+		"    glyphs: {}\n"
+		"    lineHeight: {:.1f}\n"
+		"    baseline: {:.1f}\n"
+		"    spaceWidth: {:.1f}",
+		bmfPath,
+		glyphs.size(),
+		lineHeight,
+		baseline,
+		spaceWidth
+	));
 
 	return true;
 }
@@ -443,9 +417,7 @@ void BitmapFont::initializeShader() {
 	if (!shader) {
 		shader = std::make_shared<Graphics::Shader>("assets/shaders/font_bitmap.vert", "assets/shaders/font_bitmap.frag");
 
-		#ifdef BLACKTHORN_DEBUG
-			SDL_Log("BitmapFont Shader initialized");
-		#endif
+		BT_DEBUG("BitmapFont Shader initialized");
 	}
 }
 
