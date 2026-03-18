@@ -2,6 +2,7 @@
 assets/*
 build/
 lib/
+logs/
 
 !assets/shaders/
 !engine/include/assets/
