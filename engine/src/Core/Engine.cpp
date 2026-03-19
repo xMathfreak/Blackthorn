@@ -152,7 +152,8 @@ bool Engine::init(const EngineConfig& cfg) {
 
 void Engine::initAssetLoaders() {
 	assetManager.registerLoader<Graphics::Texture>(
-		std::make_unique<Graphics::TextureLoader>()
+		std::make_unique<Graphics::TextureLoader>(),
+		std::make_unique<Graphics::AsyncTextureLoader>()
 	);
 
 	assetManager.registerLoader<Graphics::Shader>(
@@ -239,13 +240,15 @@ void Engine::processEvents() {
 		}
 	}
 
-	#ifdef BLACKTHORN_DEBUG
-		if (inputManager.isKeyPressed(SDLK_F5))
-			assetManager.reloadAllTyped<Graphics::Texture, Fonts::BitmapFont, Fonts::TrueTypeFont>();
-	#endif
+	// #ifdef BLACKTHORN_DEBUG
+	// 	if (inputManager.isKeyPressed(SDLK_F5))
+	// 		assetManager.reloadAllTyped<Graphics::Texture, Fonts::BitmapFont, Fonts::TrueTypeFont>();
+	// #endif
 }
 
 void Engine::update(float dt) {
+	assetManager.flushPendingUploads(4);
+
 	sceneManager.update(dt);
 	inputManager.update(dt);
 }
