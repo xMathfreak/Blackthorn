@@ -1,6 +1,9 @@
 #pragma once
 
+#include <atomic>
+#include <memory>
 #include <string>
+#include <thread>
 
 #include "Core/Export.h"
 
@@ -11,29 +14,39 @@ class AssetManager;
 template <typename AssetType>
 class BLACKTHORN_API AssetHandle {
 public:
-	AssetHandle()
-		: id("")
-		, manager(nullptr)
+	AssetHandle() = default;
+
+	AssetHandle(std::string assetID, AssetManager* mgr, std::shared_ptr<std::atomic<bool>> ready)
+		: id(std::move(assetID))
+		, manager(mgr)
+		, readyFlag(std::move(ready))
 	{}
 
-	AssetHandle(const std::string& assetID, AssetManager* mgr)
-		: id(assetID)
-		, manager(mgr)
-	{}
+	bool isReady() const {
+		return readyFlag && readyFlag->load(std::memory_order_acquire);
+	}
+
+	bool isValid() const {
+		return !id.empty() && manager != nullptr;
+	}
 
 	AssetType* get() const;
 
-	bool isValid() const { return !id.empty() && manager != nullptr; }
+	void wait() const {
+		while (!isReady())
+			std::this_thread::yield();
+	}
 
 	const std::string& getID() const { return id; }
 
 	AssetType* operator->() const { return get(); }
 	AssetType& operator*() const { return *get(); }
-	explicit operator bool() const { return isValid() && get() != nullptr; }
+	explicit operator bool() const { return isReady() && get() != nullptr; }
 
 private:
 	std::string id;
-	AssetManager* manager;
+	AssetManager* manager = nullptr;
+	std::shared_ptr<std::atomic<bool>> readyFlag;
 };
 
 } // namespace Blackthorn::Assets
