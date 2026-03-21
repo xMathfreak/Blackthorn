@@ -3,7 +3,7 @@
 #include <memory>
 #include <type_traits>
 
-namespace Blackthorn {
+namespace Blackthorn::Threads {
 
 struct ITask {
 	virtual ~ITask() = default;
@@ -40,4 +40,4 @@ requires std::invocable<Callable>
 	);
 }
 
-} // namespace Blackthorn
+} // namespace Blackthorn::Threads

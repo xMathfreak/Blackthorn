@@ -379,7 +379,7 @@ private:
 	requires std::invocable<Callable>
 	void pushUpload(Callable&& callable) {
 		std::unique_lock<std::mutex> lock(uploadMutex);
-		uploadQueue.push(makeTask(std::forward<Callable>(callable)));
+		uploadQueue.push(Threads::makeTask(std::forward<Callable>(callable)));
 	}
 
 	bool processOneUpload();
@@ -393,7 +393,7 @@ private:
 	std::unordered_set<std::string>	inFlight;
 	mutable std::mutex inFlightMutex;
 
-	std::queue<TaskPtr> uploadQueue;
+	std::queue<Threads::TaskPtr> uploadQueue;
 	mutable std::mutex uploadMutex;
 
 	std::atomic<size_t> pendingTotal{ 0 };

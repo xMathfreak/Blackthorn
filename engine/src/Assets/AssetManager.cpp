@@ -16,7 +16,7 @@ AssetManager::AssetManager(size_t workerCount)
 }
 
 bool AssetManager::processOneUpload() {
-	TaskPtr task;
+	Threads::TaskPtr task;
 
 	{
 		std::unique_lock<std::mutex> lock(uploadMutex);
