@@ -5,6 +5,7 @@
 #include "Assets/AssetManager.h"
 #include "Core/EngineConfig.h"
 #include "Core/Export.h"
+#include "Core/Settings.h"
 #include "Input/InputManager.h"
 #include "Graphics/Renderer.h"
 #include "Scene/SceneManager.h"
@@ -34,7 +35,9 @@ public:
 
 	void logEngineInfo();
 
-	Scene::ISceneContext& getSceneContext();
+	virtual void onRegisterSettings(Core::Settings& settings) {}
+
+	Scene::ISceneContext& getSceneContext() { return *sceneContext; }
 
 private:
 	bool initialized;
@@ -54,6 +57,11 @@ private:
 
 	void initAssetLoaders();
 	void cleanupInitialization();
+
+	void registerEngineDefaults(Core::Settings& settings);
+	void registerEngineCallbacks(Core::Settings& settings);
+	void applyEngineSettings();
+	void applyPostProcessing();
 
 	#ifdef BLACKTHORN_DEBUG
 		void logProfilingInfo();

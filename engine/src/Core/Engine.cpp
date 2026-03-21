@@ -10,6 +10,7 @@
 #include "Assets/Loaders/TextureLoader.h"
 #include "Assets/Loaders/TrueTypeFontLoader.h"
 
+#include "Core/Settings.h"
 #include "Scene/SceneContext.h"
 #include "Debug/Profiler.h"
 #include "Debug/Logger.h"
@@ -37,8 +38,20 @@ bool Engine::init(const EngineConfig& cfg) {
 	}
 
 	config = cfg;
+
 	Threads::ThreadRegistry::instance().registerCurrent("Main");
 	Debug::Logger::instance().init(cfg.debug.logger);
+
+	auto& settings = Core::Settings::instance();
+	settings.loadFromFile(cfg.settingsFilePath);
+
+	registerEngineDefaults(settings);
+	onRegisterSettings(settings);
+
+	if (settings.isDirty())
+		settings.saveToFile(cfg.settingsFilePath);
+
+	registerEngineCallbacks(settings);
 
 	SDL_InitFlags initFlags = SDL_INIT_VIDEO;
 	if (!SDL_Init(initFlags)) {
@@ -76,8 +89,6 @@ bool Engine::init(const EngineConfig& cfg) {
 	}
 
 	SDL_WindowFlags windowFlags = SDL_WINDOW_MAXIMIZED | SDL_WINDOW_RESIZABLE | SDL_WINDOW_OPENGL;
-	if (cfg.window.fullscreen)
-		windowFlags |= SDL_WINDOW_FULLSCREEN;
 
 	window = SDL_CreateWindow(cfg.window.title.c_str(), cfg.window.width, cfg.window.height, windowFlags);
 	if (!window) {
@@ -114,8 +125,7 @@ bool Engine::init(const EngineConfig& cfg) {
 	if (cfg.render.msaaSamples > 0)
 		glEnable(GL_MULTISAMPLE);
 
-	if (cfg.window.vsync)
-		SDL_GL_SetSwapInterval(1);
+	applyEngineSettings();
 
 	glViewport(0, 0, cfg.window.width, cfg.window.height);
 
@@ -174,6 +184,11 @@ void Engine::initAssetLoaders() {
 void Engine::shutdown() {
 	if (!initialized)
 		return;
+
+	auto& s = Core::Settings::instance();
+
+	if (s.isDirty())
+		s.saveToFile(config.settingsFilePath);
 
 	Fonts::TrueTypeFont::cleanupShader();
 	Fonts::BitmapFont::cleanupShader();
@@ -274,6 +289,7 @@ void Engine::run() {
 	const float frequency = static_cast<float>(SDL_GetPerformanceFrequency());
 
 	running = true;
+	auto& settings = Core::Settings::instance();
 
 	#ifdef BLACKTHORN_DEBUG
 		auto& profiler = Debug::Profiler::instance();
@@ -352,20 +368,8 @@ void Engine::run() {
 			render(alpha);
 		}
 
-		#ifdef BLACKTHORN_DEBUG
-			static float logCounter = 0.0f;
-			logCounter += frameTime;
-
-			profiler.endFrame();
-
-			if (logCounter >= config.debug.profilingLogInterval) {
-				logProfilingInfo();
-				logCounter = 0;
-			}
-		#endif
-
-		if (config.timing.capFrameRate && !config.window.vsync) {
-			float targetFrameTime = 1.0f / config.timing.targetFPS;
+		if (settings.get<bool>("graphics", "frame_cap") && !settings.get<bool>("window", "vsync")) {
+			float targetFrameTime = 1.0f / settings.get<int>("graphics", "target_fps");
 			Uint64 endTime = SDL_GetPerformanceCounter();
 			float elapsedTime = static_cast<float>(endTime - currentTime) / frequency;
 
@@ -377,6 +381,18 @@ void Engine::run() {
 				while (static_cast<float>(SDL_GetPerformanceCounter() - currentTime) / frequency < targetFrameTime);
 			}
 		}
+
+		#ifdef BLACKTHORN_DEBUG
+			static float logCounter = 0.0f;
+			logCounter += frameTime;
+
+			profiler.endFrame();
+
+			if (logCounter >= config.debug.profilingLogInterval) {
+				logProfilingInfo();
+				logCounter = 0;
+			}
+		#endif
 	}
 }
 
@@ -435,8 +451,100 @@ void Engine::cleanupInitialization() {
 	SDL_Quit();
 }
 
-Scene::ISceneContext& Engine::getSceneContext() {
-	return *sceneContext;
+void Engine::registerEngineDefaults(Core::Settings& s) {
+	s.setDefault("window", "width",      config.window.width);
+	s.setDefault("window", "height",     config.window.height);
+	s.setDefault("window", "fullscreen", false);
+	s.setDefault("window", "vsync",      false);
+
+	s.setDefault("graphics", "frame_cap",          false);
+	s.setDefault("graphics", "target_fps",         60);
+	s.setDefault("graphics", "msaa_samples",       0);
+	s.setDefault("graphics", "post_processing",    true);
+	s.setDefault("graphics", "brightness",         1.0f);
+	s.setDefault("graphics", "contrast",           1.0f);
+	s.setDefault("graphics", "saturation",         1.0f);
+	s.setDefault("graphics", "gamma",              1.0f);
+	s.setDefault("graphics", "vignette",           false);
+	s.setDefault("graphics", "vignette_intensity", 0.5f);
+
+	s.setDefault("ui", "scale", 1.0f);
+
+	s.setDefault("audio", "master_volume", 1.0f);
+	s.setDefault("audio", "music_volume",  1.0f);
+	s.setDefault("audio", "sfx_volume",    1.0f);
+
+	s.setDefault("developer", "log_level",      3);   // Info
+	s.setDefault("developer", "worker_threads", 0);   // auto
+}
+
+void Engine::registerEngineCallbacks(Core::Settings& s) {
+	s.onChange("window", "vsync", [](const std::string& val) {
+		SDL_GL_SetSwapInterval(val == "true" ? 1 : 0);
+	});
+
+	s.onChange("ui", "scale", [](const std::string& val) {
+		try { UI::UIManager::setGlobalUIScale(std::stof(val)); }
+		catch (...) {}
+	});
+
+	s.onChange("developer", "log_level", [](const std::string& val) {
+		try {
+			Debug::Logger::instance().setLevel(
+				static_cast<Debug::LogLevel>(std::stoi(val)));
+		} catch (...) {}
+	});
+
+	// Post-processing uniforms — batch-apply the full block when any one
+	// field changes, since glUniform calls are cheap and this keeps the
+	// callbacks simple.
+	auto applyPP = [this](const std::string&) { applyPostProcessing(); };
+
+	for (const char* key : {
+		"post_processing", "brightness", "contrast",
+		"saturation", "gamma", "vignette", "vignette_intensity"
+	}) {
+		s.onChange("graphics", key, applyPP);
+	}
+}
+
+void Engine::applyEngineSettings() {
+	auto& s = Core::Settings::instance();
+
+	// Window
+	SDL_SetWindowSize(window,
+		s.get<int> ("window", "width"),
+		s.get<int> ("window", "height"));
+	SDL_SetWindowFullscreen(window, s.get<bool>("window", "fullscreen"));
+	SDL_GL_SetSwapInterval(s.get<bool>("window", "vsync") ? 1 : 0);
+
+	// UI
+	UI::UIManager::setGlobalUIScale(s.get<float>("ui", "scale", 1.0f));
+
+	// Logger
+	Debug::Logger::instance().setLevel(
+		static_cast<Debug::LogLevel>(s.get<int>("developer", "log_level", 3)));
+
+	// Post-processing
+	applyPostProcessing();
+
+	// Input bindings
+	inputManager.loadBindingsFromSettings();
+}
+
+void Engine::applyPostProcessing() {
+	if (!renderer) return;
+	auto& s = Core::Settings::instance();
+
+	renderer->setPostProcessingEnabled(s.get<bool>("graphics", "post_processing", true));
+
+	auto& shader = renderer->getScreenShader();
+	shader.setFloat("u_Brightness", s.get<float>("graphics", "brightness", 1.0f));
+	shader.setFloat("u_Contrast", s.get<float>("graphics", "contrast", 1.0f));
+	shader.setFloat("u_Saturation", s.get<float>("graphics", "saturation", 1.0f));
+	shader.setFloat("u_GammaCorrect", s.get<float>("graphics", "gamma", 1.0f));
+	shader.setBool ("u_Vignette", s.get<bool> ("graphics", "vignette", false));
+	shader.setFloat("u_VignetteIntensity", s.get<float>("graphics", "vignette_intensity", 0.5f));
 }
 
 #ifdef BLACKTHORN_DEBUG
