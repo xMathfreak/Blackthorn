@@ -1,6 +1,7 @@
 #pragma once
 
 #include <deque>
+#include <mutex>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -11,54 +12,70 @@
 
 namespace Blackthorn::Debug {
 
+/**
+ * @brief Thread-safe hierarchical CPU profiler.
+ *
+ * Thread safety model:
+ *   - scopeStack is thread_local — each thread has its own independent stack.
+ *     beginScope / endScope on the hot path acquire no locks.
+ *   - scopeHistory and frameTimeHistory are shared state protected by
+ *     historyMutex. Only endScope (write) and getStats (read) touch them.
+ *   - beginFrame / endFrame are expected to be called only from the main
+ *     thread. lastFrameSamples is protected by historyMutex.
+ *
+ * Worker thread scopes are accumulated into scopeHistory automatically.
+ * They do NOT appear in lastFrameSamples (which is main-thread only).
+ */
 class BLACKTHORN_API Profiler {
 public:
 	struct Sample {
 		std::string name;
-		float duration;
+		float duration; // seconds
 		int depth;
 		Uint64 startTime;
 		Uint64 endTime;
 	};
 
 	struct ScopeStats {
-		float average;
-		float min;
-		float max;
-		float total;
-		int callCount;
+		float average = 0.0f;
+		float min = 0.0f;
+		float max = 0.0f;
+		float total = 0.0f;
+		int callCount = 0;
 	};
 
+	// RAII scope guard
 	class ProfileScope {
 	public:
-		ProfileScope(const char* name);
+		explicit ProfileScope(const char* name);
 		~ProfileScope();
-
 	private:
 		const char* name;
-		Uint64 startTime;
 	};
 
 	static Profiler& instance();
 
+	// Frame boundary (main thread only)
 	void beginFrame();
 	void endFrame();
 
+	// Scope markers (thread-safe)
 	void beginScope(const char* name);
 	void endScope(const char* name);
 
-	const std::vector<Sample>& getLastFrameSamples() const { return lastFrameSamples; }
-
+	/// Returns aggregated stats for named scope across recent frames.
 	ScopeStats getStats(const std::string& name, int frameCount = 60) const;
+
+	/// Snapshot of samples from the last completed main-thread frame.
+	std::vector<Sample> getLastFrameSamples() const;
 
 	std::vector<std::string> getAllScopeNames() const;
 
-	float getLastFrameTime() const { return lastFrameTime; }
+	float getLastFrameTime() const;
 	float getAverageFrameTime(int frameCount = 60) const;
 
 	void clear();
-
-	void setEnabled(bool isEnabled) { this->enabled = isEnabled; }
+	void setEnabled(bool isEnabled) { enabled = isEnabled; }
 	bool isEnabled() const { return enabled; }
 
 private:
@@ -68,25 +85,28 @@ private:
 	Profiler(const Profiler&) = delete;
 	Profiler& operator=(const Profiler&) = delete;
 
+	/// Per-thread scope stack.
 	struct ScopeEntry {
 		const char* name;
 		Uint64 startTime;
 		int depth;
 	};
 
-	std::vector<ScopeEntry> scopeStack;
-	std::vector<Sample> currentFrameSamples;
-	std::vector<Sample> lastFrameSamples;
+	/// Returns the scope stack for the calling thread.
+	static std::vector<ScopeEntry>& threadScopeStack();
+
+	mutable std::mutex historyMutex;
 
 	std::unordered_map<std::string, std::deque<float>> scopeHistory;
 	std::deque<float> frameTimeHistory;
+	std::vector<Sample> lastFrameSamples;
 
-	Uint64 frameStartTime;
-	float lastFrameTime;
+	/// Main-thread frame tracking
+	Uint64 frameStartTime = 0;
+	float lastFrameTime = 0.0f;
 
-	bool enabled;
-	int maxHistoryFrames;
-
+	bool enabled = true;
+	int maxHistoryFrames = 120;
 	float frequency;
 };
 

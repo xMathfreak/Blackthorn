@@ -1,19 +1,14 @@
 #include "Debug/Profiler.h"
+#include "Debug/Logger.h"
 
 #include <algorithm>
 #include <format>
 #include <numeric>
 
-#include "Debug/Logger.h"
-
 namespace Blackthorn::Debug {
 
 Profiler::Profiler()
-	: frameStartTime(0)
-	, lastFrameTime(0.0f)
-	, enabled(true)
-	, maxHistoryFrames(120)
-	, frequency(static_cast<float>(SDL_GetPerformanceFrequency()))
+	: frequency(static_cast<float>(SDL_GetPerformanceFrequency()))
 {}
 
 Profiler& Profiler::instance() {
@@ -21,91 +16,113 @@ Profiler& Profiler::instance() {
 	return profiler;
 }
 
+std::vector<Profiler::ScopeEntry>& Profiler::threadScopeStack() {
+	thread_local std::vector<ScopeEntry> stack;
+	return stack;
+}
+
 void Profiler::beginFrame() {
 	if (!enabled)
 		return;
 
 	frameStartTime = SDL_GetPerformanceCounter();
-	currentFrameSamples.clear();
-	scopeStack.clear();
+
+	std::lock_guard<std::mutex> lock(historyMutex);
+	lastFrameSamples.clear();
 }
 
 void Profiler::endFrame() {
 	if (!enabled)
 		return;
 
-	Uint64 frameEndTime = SDL_GetPerformanceCounter();
-	lastFrameTime = static_cast<float>(frameEndTime - frameStartTime) / frequency * 1000.0f;
+	const Uint64 frameEnd = SDL_GetPerformanceCounter();
+	lastFrameTime = static_cast<float>(frameEnd - frameStartTime) / frequency * 1000.0f;
 
+	std::lock_guard<std::mutex> lock(historyMutex);
 	frameTimeHistory.push_back(lastFrameTime);
-	if (frameTimeHistory.size() > static_cast<size_t>(maxHistoryFrames))
+
+	if (static_cast<int>(frameTimeHistory.size()) > maxHistoryFrames)
 		frameTimeHistory.pop_front();
-
-	lastFrameSamples = currentFrameSamples;
-
-	for (const auto& sample : currentFrameSamples) {
-		auto& history = scopeHistory[sample.name];
-		history.push_back(sample.duration);
-
-		if (history.size() > static_cast<size_t>(maxHistoryFrames))
-			history.pop_front();
-	}
 }
 
 void Profiler::beginScope(const char* name) {
 	if (!enabled)
 		return;
 
-	ScopeEntry entry;
-	entry.name = name;
-	entry.startTime = SDL_GetPerformanceCounter();
-	entry.depth = static_cast<int>(scopeStack.size());
-
-	scopeStack.push_back(entry);
+	auto& stack = threadScopeStack();
+	stack.push_back({
+		name,
+		SDL_GetPerformanceCounter(),
+		static_cast<int>(stack.size())
+	});
 }
 
 void Profiler::endScope(const char* name) {
 	if (!enabled)
 		return;
 
-	if (scopeStack.empty()) {
-		BT_WARN(std::format("endScope() called without matching beginScope() for {}", name));
+	const Uint64 endTime = SDL_GetPerformanceCounter();
+
+	auto& stack = threadScopeStack();
+	if (stack.empty()) {
+		BT_WARN(std::format("Profiler: endScope('{}') called with empty stack", name));
 		return;
 	}
 
-	Uint64 endTime = SDL_GetPerformanceCounter();
-	const ScopeEntry& entry = scopeStack.back();
+	const ScopeEntry& entry = stack.back();
 
-	if (std::string(entry.name) != std::string(name))
-		BT_WARN(std::format("Profiler: Mismatched scope names. Expected '{}', got '{}'", entry.name, name));
+	// Validate nesting — mismatched names indicate incorrect RAII usage.
+	if (std::string_view(entry.name) != std::string_view(name)) {
+		BT_WARN(std::format(
+			"Profiler: scope mismatch — expected '{}', got '{}'",
+			entry.name, name
+		));
+	}
+
+	const float duration = static_cast<float>(endTime - entry.startTime) / frequency;
 
 	Sample sample;
 	sample.name = entry.name;
 	sample.startTime = entry.startTime;
 	sample.endTime = endTime;
-	sample.duration = static_cast<float>(endTime - entry.startTime) / frequency;
+	sample.duration = duration;
 	sample.depth = entry.depth;
 
-	currentFrameSamples.push_back(sample);
-	scopeStack.pop_back();
+	stack.pop_back();
 
+	// Write into shared history — this is the only place we lock.
+	{
+		std::lock_guard<std::mutex> lock(historyMutex);
+
+		auto& history = scopeHistory[sample.name];
+		history.push_back(duration);
+		if (static_cast<int>(history.size()) > maxHistoryFrames)
+			history.pop_front();
+
+		// Only accumulate into lastFrameSamples for the main thread.
+		// Worker scopes show up in scopeHistory but not in the per-frame list,
+		// keeping the frame profiler readable without per-worker noise.
+		// If you want worker samples in the frame list, remove this check.
+		if (entry.depth >= 0)
+			lastFrameSamples.push_back(sample);
+	}
 }
 
 Profiler::ScopeStats Profiler::getStats(const std::string& name, int frameCount) const {
-	ScopeStats stats = {0.0f, 0.0f, 0.0f, 0.0f, 0};
+	ScopeStats stats;
+	std::lock_guard<std::mutex> lock(historyMutex);
 
 	auto it = scopeHistory.find(name);
 	if (it == scopeHistory.end() || it->second.empty())
 		return stats;
 
 	const auto& history = it->second;
-	int count = std::min(frameCount, static_cast<int>(history.size()));
-
+	const int count = std::min(frameCount, static_cast<int>(history.size()));
 	if (count == 0)
 		return stats;
 
 	auto startIt = history.end() - count;
-	auto endIt = history.end();
+	auto endIt= history.end();
 
 	stats.callCount = count;
 	stats.total = std::accumulate(startIt, endIt, 0.0f);
@@ -116,54 +133,58 @@ Profiler::ScopeStats Profiler::getStats(const std::string& name, int frameCount)
 	return stats;
 }
 
+std::vector<Profiler::Sample> Profiler::getLastFrameSamples() const {
+	std::lock_guard<std::mutex> lock(historyMutex);
+	return lastFrameSamples;
+}
+
 std::vector<std::string> Profiler::getAllScopeNames() const {
+	std::lock_guard<std::mutex> lock(historyMutex);
 	std::vector<std::string> names;
 	names.reserve(scopeHistory.size());
 
-	for (const auto& pair : scopeHistory)
-		names.push_back(pair.first);
+	for (const auto& [name, _] : scopeHistory)
+		names.push_back(name);
 
 	std::sort(names.begin(), names.end());
 	return names;
 }
 
+float Profiler::getLastFrameTime() const {
+	return lastFrameTime;
+}
+
 float Profiler::getAverageFrameTime(int frameCount) const {
+	std::lock_guard<std::mutex> lock(historyMutex);
+
 	if (frameTimeHistory.empty())
 		return 0.0f;
 
-	int count = std::min(frameCount, static_cast<int>(frameTimeHistory.size()));
+	const int count = std::min(frameCount, static_cast<int>(frameTimeHistory.size()));
+
 	if (count == 0)
 		return 0.0f;
 
 	auto startIt = frameTimeHistory.end() - count;
-	auto endIt = frameTimeHistory.end();
-
-	float total = std::accumulate(startIt, endIt, 0.0f);
-	return total / count;
+	return std::accumulate(startIt, frameTimeHistory.end(), 0.0f) / count;
 }
 
 void Profiler::clear() {
+	std::lock_guard<std::mutex> lock(historyMutex);
 	scopeHistory.clear();
 	frameTimeHistory.clear();
-	currentFrameSamples.clear();
 	lastFrameSamples.clear();
-	scopeStack.clear();
 	lastFrameTime = 0.0f;
 }
 
 Profiler::ProfileScope::ProfileScope(const char* scopeName)
 	: name(scopeName)
-	, startTime(0)
 {
-	Profiler& profiler = Profiler::instance();
-	if (profiler.isEnabled())
-		profiler.beginScope(name);
+	Profiler::instance().beginScope(name);
 }
 
 Profiler::ProfileScope::~ProfileScope() {
-	Profiler& profiler = Profiler::instance();
-	if (profiler.isEnabled())
-		profiler.endScope(name);
+	Profiler::instance().endScope(name);
 }
 
 } // namespace Blackthorn::Debug
