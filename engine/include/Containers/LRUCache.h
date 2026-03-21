@@ -4,7 +4,7 @@
 #include <list>
 #include <unordered_map>
 
-namespace Containers {
+namespace Blackthorn::Containers {
 
 template <typename Key, typename Value>
 class LRUCache {
@@ -98,4 +98,4 @@ private:
 	}
 };
 
-} // namespace Utils
+} // namespace Blackthorn::Containers
