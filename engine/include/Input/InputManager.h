@@ -43,6 +43,12 @@ public:
 	InputManager(const InputManager&) = delete;
 	InputManager& operator=(const InputManager&) = delete;
 
+	/** @brief Returns the human readable name of an SDL_Keycode. */
+	static std::string keyName(SDL_Keycode key);
+
+	/** @brief Resolves a human readable key name to an SDL_Keycode. */
+	static SDL_Keycode keyFromName(const std::string& name);
+
 	void handleEvent(const SDL_Event& event);
 	void update(float dt);
 
@@ -113,6 +119,8 @@ public:
 		actions[action] = {key, altKey};
 	}
 
+	void registerAction(const std::string& action, const std::string& primaryKey, const std::string& altKey = "");
+
 	bool isActionDown(const std::string& action) const {
 		auto it = actions.find(action);
 		if (it != actions.end()) {
@@ -154,6 +162,10 @@ public:
 	void clearTextInput() {
 		textInput.clear();
 	}
+
+	void saveBindingsToSettings() const;
+
+	void loadBindingsFromSettings();
 
 private:
 	void updateButtonState(ButtonState& state) {
