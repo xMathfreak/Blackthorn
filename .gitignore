@@ -10,6 +10,7 @@ logs/
 
 *.cfg
 *.dll
+*.ini
 *.sublime-workspace
 *.sublime-project
 .clang-tidy
