@@ -7,6 +7,8 @@
 
 #include <SDL3/SDL.h>
 
+#include "Threads/ThreadRegistry.h"
+
 namespace Blackthorn::Debug {
 
 Logger& Logger::instance() {
@@ -176,8 +178,19 @@ std::string Logger::formatEntry(LogLevel level, std::string_view message, const 
 	char timeBuf[10]; // "HH:MM:SS\0"
 	std::strftime(timeBuf, sizeof(timeBuf), "%H:%M:%S", &tm);
 
+	// Pad thread name to 9 characters for alignment
+	std::string threadName = Threads::ThreadRegistry::instance().currentName();
+	if (threadName.size() < 9) {
+		threadName.resize(9, ' ');
+	} else if (threadName.size() > 9) {
+		threadName = threadName.substr(0, 9);
+	}
+
 	std::ostringstream oss;
-	oss << '[' << timeBuf << "] [" << levelTag(level) << "] " << message;
+	oss << '[' << timeBuf << "] ["
+	    << levelTag(level) << "] ["
+	    << threadName << "] "
+	    << message;
 
 	if (srcFile && srcLine > 0)
 		oss << "  (" << stripPath(srcFile) << ':' << srcLine << ')';

@@ -1,5 +1,7 @@
 #include "Threads/ThreadPool.h"
 
+#include "Threads/ThreadRegistry.h"
+
 namespace Blackthorn::Threads {
 
 ThreadPool::ThreadPool(size_t workerCount) {
@@ -30,6 +32,11 @@ size_t ThreadPool::pendingCount() const {
 }
 
 void ThreadPool::workerLoop() {
+	static std::atomic<int> workerIdx{0};
+	const int idx = workerIdx.fetch_add(1, std::memory_order_relaxed);
+
+	ThreadRegistry::instance().registerCurrent("Worker-" + std::to_string(idx));
+
 	while (true) {
 		TaskPtr task;
 
@@ -48,6 +55,8 @@ void ThreadPool::workerLoop() {
 
 		task->invoke();
 	}
+
+	ThreadRegistry::instance().unregisterCurrent();
 }
 
 } // namespace Blackthorn::Threads

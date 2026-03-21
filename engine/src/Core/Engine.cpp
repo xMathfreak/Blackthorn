@@ -13,6 +13,7 @@
 #include "Scene/SceneContext.h"
 #include "Debug/Profiler.h"
 #include "Debug/Logger.h"
+#include "Threads/ThreadRegistry.h"
 
 namespace Blackthorn {
 
@@ -36,6 +37,7 @@ bool Engine::init(const EngineConfig& cfg) {
 	}
 
 	config = cfg;
+	Threads::ThreadRegistry::instance().registerCurrent("Main");
 	Debug::Logger::instance().init(cfg.debug.logger);
 
 	SDL_InitFlags initFlags = SDL_INIT_VIDEO;
