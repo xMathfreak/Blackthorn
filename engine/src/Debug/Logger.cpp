@@ -236,7 +236,7 @@ void Logger::logImpl(LogLevel level, std::string_view message, const char* srcFi
 	}
 
 	if (mirror)
-		forwardToSDL(level, entry.c_str());
+		forwardToSDL(level, std::string(message).c_str());
 }
 
 } // namespace Blackthorn::Debug
