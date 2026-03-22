@@ -1,6 +1,5 @@
 #include "Core/Engine.h"
 
-#include <format>
 #include <glad/glad.h>
 #include <SDL3_ttf/SDL_ttf.h>
 
@@ -55,13 +54,13 @@ bool Engine::init(const EngineConfig& cfg) {
 
 	SDL_InitFlags initFlags = SDL_INIT_VIDEO;
 	if (!SDL_Init(initFlags)) {
-		BT_ERROR(std::format("SDL_Init failed: {}", SDL_GetError()));
+		BT_ERROR("SDL_Init failed: {}", SDL_GetError());
 		cleanupInitialization();
 		return false;
 	}
 
 	if (!TTF_Init()) {
-		BT_ERROR(std::format("TTF_Init failed: {}", SDL_GetError()));
+		BT_ERROR("TTF_Init failed: {}", SDL_GetError());
 		cleanupInitialization();
 		return false;
 	}
@@ -92,20 +91,20 @@ bool Engine::init(const EngineConfig& cfg) {
 
 	window = SDL_CreateWindow(cfg.window.title.c_str(), cfg.window.width, cfg.window.height, windowFlags);
 	if (!window) {
-		BT_ERROR(std::format("SDL_CreateWindow failed: {}", SDL_GetError()));
+		BT_ERROR("SDL_CreateWindow failed: {}", SDL_GetError());
 		cleanupInitialization();
 		return false;
 	}
 
 	glContext = SDL_GL_CreateContext(window);
 	if (!glContext) {
-		BT_ERROR(std::format("SDL_GL_CreateContext failed: {}", SDL_GetError()));
+		BT_ERROR("SDL_GL_CreateContext failed: {}", SDL_GetError());
 		cleanupInitialization();
 		return false;
 	}
 
 	if (!SDL_GL_MakeCurrent(window, glContext)) {
-		BT_ERROR(std::format("SDL_GL_MakeCurrent failed: {}", SDL_GetError()));
+		BT_ERROR("SDL_GL_MakeCurrent failed: {}", SDL_GetError());
 		cleanupInitialization();
 		return false;
 	}
@@ -137,7 +136,7 @@ bool Engine::init(const EngineConfig& cfg) {
 		renderer->setClearColor(0.1f, 0.1f, 0.12f);
 		renderer->setPostProcessingEnabled(true);
 	} catch (const std::exception& e) {
-		BT_ERROR(std::format("Failed to initialize Renderer: {}", e.what()));
+		BT_ERROR("Failed to initialize Renderer: {}", e.what());
 		cleanupInitialization();
 		return false;
 	}
@@ -248,9 +247,17 @@ void Engine::processEvents() {
 				break;
 			case SDL_EVENT_WINDOW_FOCUS_GAINED:
 				windowFocused = true;
+				SDL_RestoreWindow(window);
+
+				if (Core::Settings::instance().get<bool>("window", "fullscreen"))
+					SDL_SetWindowFullscreen(window, true);
+
 				break;
 			case SDL_EVENT_WINDOW_FOCUS_LOST:
 				windowFocused = false;
+
+				if (SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN)
+					SDL_MinimizeWindow(window);
 				break;
 			default:
 				break;
@@ -325,7 +332,7 @@ void Engine::run() {
 		}
 
 		if (frameTime > config.timing.maxDeltaTime) {
-			BT_WARN(std::format("Frame time capped: {:.3f} -> {:.3f}", frameTime, config.timing.maxDeltaTime));
+			BT_WARN("Frame time capped: {:.3f} -> {:.3f}", frameTime, config.timing.maxDeltaTime);
 			frameTime = config.timing.maxDeltaTime;
 		}
 
@@ -343,7 +350,7 @@ void Engine::run() {
 
 				if (fixedUpdateCount > config.timing.maxFixedUpdates) {
 					#ifdef BLACKTHORN_DEBUG
-						BT_WARN(std::format("Too many fixed updates in one frame ({})", fixedUpdateCount));
+						BT_WARN("Too many fixed updates in one frame ({})", fixedUpdateCount);
 					#endif
 
 					accumulatedTime = 0.0f;
@@ -398,16 +405,16 @@ void Engine::run() {
 
 void Engine::logEngineInfo() {
 	BT_DEBUG("Engine Info");
-	BT_DEBUG(std::format("OpenGL Version: {}", reinterpret_cast<const char*>(glGetString(GL_VERSION))));
-	BT_DEBUG(std::format("Renderer: {}", reinterpret_cast<const char*>(glGetString(GL_RENDERER))));
+	BT_DEBUG("OpenGL Version: {}", reinterpret_cast<const char*>(glGetString(GL_VERSION)));
+	BT_DEBUG("Renderer: {}", reinterpret_cast<const char*>(glGetString(GL_RENDERER)));
 
 	GLint maxTextureSize;
 	glGetIntegerv(GL_MAX_TEXTURE_SIZE, &maxTextureSize);
-	BT_DEBUG(std::format("Max Texture Size: {}", maxTextureSize));
+	BT_DEBUG("Max Texture Size: {}", maxTextureSize);
 
 	GLint maxVertexAttribs;
 	glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &maxVertexAttribs);
-	BT_DEBUG(std::format("Max Vertex Attributes: {}", maxVertexAttribs));
+	BT_DEBUG("Max Vertex Attributes: {}", maxVertexAttribs);
 
 	int actualDepthSize, actualStencilSize, actualMSAASamples;
 
@@ -415,9 +422,9 @@ void Engine::logEngineInfo() {
 	SDL_GL_GetAttribute(SDL_GL_STENCIL_SIZE, &actualStencilSize);
 	SDL_GL_GetAttribute(SDL_GL_MULTISAMPLESAMPLES, &actualMSAASamples);
 
-	BT_DEBUG(std::format("Depth Buffer: {} bits (requested {})", actualDepthSize, config.render.depthBits));
-	BT_DEBUG(std::format("Stencil Buffer: {} bits (requested {})", actualStencilSize, config.render.stencilBits));
-	BT_DEBUG(std::format("MSAA Samples: {}x (requested {}x)", actualMSAASamples, config.render.msaaSamples));
+	BT_DEBUG("Depth Buffer: {} bits (requested {})", actualDepthSize, config.render.depthBits);
+	BT_DEBUG("Stencil Buffer: {} bits (requested {})", actualStencilSize, config.render.stencilBits);
+	BT_DEBUG("MSAA Samples: {}x (requested {}x)", actualMSAASamples, config.render.msaaSamples);
 
 	#if defined(GLM_FORCE_SIMD_AVX2)
 		BT_DEBUG("GLM using AVX2 SIMD");
@@ -474,7 +481,10 @@ void Engine::registerEngineDefaults(Core::Settings& s) {
 	s.setDefault("audio", "music_volume",  1.0f);
 	s.setDefault("audio", "sfx_volume",    1.0f);
 
-	s.setDefault("developer", "log_level",      3);   // Info
+	#ifdef BLACKTHORN_DEBUG
+		s.setDefault("developer", "log_level",      3);   // Info
+	#endif
+
 	s.setDefault("developer", "worker_threads", 0);   // auto
 }
 
@@ -488,12 +498,14 @@ void Engine::registerEngineCallbacks(Core::Settings& s) {
 		catch (...) {}
 	});
 
-	s.onChange("developer", "log_level", [](const std::string& val) {
-		try {
-			Debug::Logger::instance().setLevel(
-				static_cast<Debug::LogLevel>(std::stoi(val)));
-		} catch (...) {}
-	});
+	#ifdef BLACKTHORN_DEBUG
+		s.onChange("developer", "log_level", [](const std::string& val) {
+			try {
+				Debug::Logger::instance().setLevel(
+					static_cast<Debug::LogLevel>(std::stoi(val)));
+			} catch (...) {}
+		});
+	#endif
 
 	// Post-processing uniforms — batch-apply the full block when any one
 	// field changes, since glUniform calls are cheap and this keeps the
@@ -522,8 +534,11 @@ void Engine::applyEngineSettings() {
 	UI::UIManager::setGlobalUIScale(s.get<float>("ui", "scale", 1.0f));
 
 	// Logger
-	Debug::Logger::instance().setLevel(
-		static_cast<Debug::LogLevel>(s.get<int>("developer", "log_level", 3)));
+	#ifdef BLACKTHORN_DEBUG
+		Debug::Logger::instance().setLevel(
+			static_cast<Debug::LogLevel>(s.get<int>("developer", "log_level", 3))
+		);
+	#endif
 
 	// Post-processing
 	applyPostProcessing();
