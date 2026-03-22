@@ -3,7 +3,6 @@
 #include <chrono>
 #include <ctime>
 #include <filesystem>
-#include <sstream>
 
 #include <SDL3/SDL.h>
 
@@ -87,28 +86,7 @@ bool Logger::isOpen() const {
 	return file.is_open();
 }
 
-void Logger::log(LogLevel level, std::string_view message, const char* srcFile, int srcLine) {
-	if (static_cast<int>(level) > static_cast<int>(currentLevel))
-		return;
 
-	bool mirror = sdlMirror;
-
-	std::string entry = formatEntry(level, message, srcFile, srcLine);
-
-	{
-		std::lock_guard<std::mutex> lock(mutex);
-
-		if (file.is_open()) {
-			file << entry << '\n';
-
-			if (level <= LogLevel::Warning)
-				file.flush();
-		}
-	}
-
-	if (mirror)
-		forwardToSDL(level, entry.c_str());
-}
 
 void Logger::openFile() {
 	namespace fs = std::filesystem;
@@ -178,24 +156,20 @@ std::string Logger::formatEntry(LogLevel level, std::string_view message, const 
 	char timeBuf[10]; // "HH:MM:SS\0"
 	std::strftime(timeBuf, sizeof(timeBuf), "%H:%M:%S", &tm);
 
-	// Pad thread name to 9 characters for alignment
 	std::string threadName = Threads::ThreadRegistry::instance().currentName();
+
 	if (threadName.size() < 9) {
 		threadName.resize(9, ' ');
 	} else if (threadName.size() > 9) {
 		threadName = threadName.substr(0, 9);
 	}
 
-	std::ostringstream oss;
-	oss << '[' << timeBuf << "] ["
-	    << levelTag(level) << "] ["
-	    << threadName << "] "
-	    << message;
+	std::string entry = std::format("[{}] [{}] [{}] {}", timeBuf, levelTag(level), threadName, message);
 
 	if (srcFile && srcLine > 0)
-		oss << "  (" << stripPath(srcFile) << ':' << srcLine << ')';
+		entry += std::format("  ({}:{})", stripPath(srcFile), srcLine);
 
-	return oss.str();
+	return entry;
 }
 
 const char* Logger::levelTag(LogLevel level) {
@@ -244,6 +218,25 @@ void Logger::forwardToSDL(LogLevel level, const char* entry) {
 			SDL_Log("%s", entry);
 			break;
 	}
+}
+
+void Logger::logImpl(LogLevel level, std::string_view message, const char* srcFile, int srcLine) {
+	const bool mirror = sdlMirror.load(std::memory_order_relaxed);
+	const std::string entry = formatEntry(level, message, srcFile, srcLine);
+
+	{
+		std::lock_guard<std::mutex> lock(mutex);
+
+		if (file.is_open()) {
+			file << entry << '\n';
+
+			if (level <= LogLevel::Warning)
+				file.flush();
+		}
+	}
+
+	if (mirror)
+		forwardToSDL(level, entry.c_str());
 }
 
 } // namespace Blackthorn::Debug

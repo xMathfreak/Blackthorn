@@ -43,13 +43,13 @@ EBO& EBO::operator=(EBO&& other) noexcept {
 
 void EBO::create() {
 	if (id != 0) {
-		BT_WARN(std::format("EBO already created (ID: {})", id));
+		BT_WARN("EBO already created (ID: {})", id);
 		return;
 	}
 
 	glGenBuffers(1, &id);
 
-	BT_DEBUG(std::format("EBO created (ID: {})", id));
+	BT_DEBUG("EBO created (ID: {})", id);
 }
 
 void EBO::destroy() {
@@ -88,7 +88,7 @@ void EBO::setData(const void* data, size_t indexCount, GLenum type, GLenum usage
 			elementSize = sizeof(GLubyte);
 			break;
 		default:
-			BT_ERROR(std::format("Inalid index type: 0x{}", type));
+			BT_ERROR("Inalid index type: 0x{}", type);
 			return;
 	}
 
@@ -100,7 +100,7 @@ void EBO::setData(const void* data, size_t indexCount, GLenum type, GLenum usage
 	size = sizeInBytes;
 	indexType = type;
 
-	BT_DEBUG(std::format("EBO {}: Uploaded {} indices (type 0x{}, {} bytes)", id, count, indexType, size));
+	BT_DEBUG("EBO {}: Uploaded {} indices (type 0x{}, {} bytes)", id, count, indexType, size);
 }
 
 } // namespace Blackthorn::Graphics

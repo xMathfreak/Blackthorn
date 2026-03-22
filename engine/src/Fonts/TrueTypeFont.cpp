@@ -1,7 +1,5 @@
 #include "Fonts/TrueTypeFont.h"
 
-#include <format>
-
 #include "Debug/Logger.h"
 
 namespace Blackthorn::Fonts {
@@ -36,7 +34,7 @@ void TrueTypeFont::cleanupShader() {
 bool TrueTypeFont::loadFromFile(const std::string& filePath, int pointSize) {
 	font = TTF_OpenFont(filePath.c_str(), pointSize);
 	if (!font) {
-		BT_ERROR(std::format("Failed to load True Type font '{}': '{}'", filePath, SDL_GetError()));
+		BT_ERROR("Failed to load True Type font '{}': '{}'", filePath, SDL_GetError());
 		return false;
 	}
 
@@ -59,10 +57,10 @@ bool TrueTypeFont::loadFromFile(const std::string& filePath, int pointSize) {
 	atlasRowHeight = 0;
 	glyphCache.clear();
 
-	BT_DEBUG(std::format(
+	BT_DEBUG(
 		"Loaded TrueType font '{}' at {} pt (line height: {})",
 		filePath, pointSize, lineHeight
-	));
+	);
 
 	return true;
 }
@@ -199,7 +197,7 @@ const TrueTypeFont::Glyph& TrueTypeFont::getGlyph(char32_t codePoint) {
 	SDL_Surface* surface = TTF_RenderGlyph_Blended(font, codePoint, SDL_Color{255, 255, 255, 255});
 
 	if (!surface) {
-		BT_WARN(std::format("Failed to render glyph U+{:#x}: {}", static_cast<Uint32>(codePoint), SDL_GetError()));
+		BT_WARN("Failed to render glyph U+{:#x}: {}", static_cast<Uint32>(codePoint), SDL_GetError());
 
 		static Glyph defaultGlyph;
 		return defaultGlyph;

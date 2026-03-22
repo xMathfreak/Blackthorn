@@ -1,7 +1,6 @@
 #pragma once
 
 #include <cstring>
-#include <format>
 
 #include <SDL3_image/SDL_image.h>
 
@@ -87,10 +86,10 @@ public:
 
 		SDL_Surface* surface = IMG_Load(filePath.c_str());
 		if (!surface) {
-			BT_ERROR(std::format(
+			BT_ERROR(
 				"AsyncTextureLoader: IMG_Load fialed for '{}': {}",
 				filePath, SDL_GetError()
-			));
+			);
 
 			return nullptr;
 		}
@@ -99,10 +98,10 @@ public:
 		SDL_DestroySurface(surface);
 
 		if (!converted) {
-			BT_ERROR(std::format(
+			BT_ERROR(
 				"AsyncTextureLoader: SDL_ConvertSurface failed for '{}': {}",
 				filePath, SDL_GetError()
-			));
+			);
 
 			return nullptr;
 		}
@@ -136,20 +135,20 @@ public:
 		auto texture = std::make_unique<Texture>();
 
 		if (!texture->loadFromMemory(raw.width, raw.height, raw.channels, raw.pixels.data(), raw.params)) {
-			BT_ERROR(std::format(
+			BT_ERROR(
 				"AsyncTextureLoader: GPU upload failed for '{}' (source: '{}')",
 				raw.assetID, raw.srcPath
-			));
+			);
 
 			return;
 		}
 
 		manager.add<Texture>(raw.assetID, std::move(texture));
 
-		BT_DEBUG(std::format(
+		BT_DEBUG(
 			"AsyncTextureLoader: '{}' ready — {}x{} RGBA, source '{}'",
 			raw.assetID, raw.width, raw.height, raw.srcPath
-		));
+		);
 	}
 
 	std::vector<std::string> getSupportedExtensions() const override {

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <atomic>
+#include <format>
 #include <fstream>
 #include <mutex>
 #include <string>
@@ -18,7 +20,7 @@ namespace Blackthorn::Debug {
  *   Silent   — Nothing is written.
  *   Error    — Only errors.
  *   Warning  — Errors + warnings.
- *   Info — Errors + warnings + informational messages  (Release default).
+ *   Info     — Errors + warnings + informational messages  (Release default).
  *   Verbose  — All of the above + verbose trace detail.
  *   Debug    — Everything, including fine-grained debug output  (Debug default).
  */
@@ -55,34 +57,28 @@ struct BLACKTHORN_API LoggerConfig {
 };
 
 /**
- * @brief Thread-safe file logger with configurable log levels and an optional
- *        SDL_Log mirror.
+ * @brief Thread-safe file logger with compile-time validated format strings.
  *
- * Lifecycle
+ * @section lifecycle Lifecycle
  * ---------
- *
- *   `Logger::instance().init(config);`   // once, inside Engine::init()
+ *   `Logger::instance().init(config);`
  *   `BT_LOG("Engine started");`
- *   `Logger::instance().shutdown();`     // once, at the tail of Engine::shutdown()
+ *   `Logger::instance().shutdown();`
  *
- * The log file is opened in truncate mode on init() — previous contents are
- * discarded on every new run.
- *
- * SDL mirror
- * ----------
- *
- * When enabled, every entry is also forwarded to the appropriate SDL log
- * function. This can be toggled at any time:
- *
- *   `Logger::instance().setSDLMirrorEnabled(false);`
- *
- * Log entry format
+ * @section format Log entry format
  * ----------------
+ *   [HH:MM:SS] [LEVEL  ] [ThreadName] message  (filename:line)
  *
- *   [HH:MM:SS] [LEVEL  ] message  (filename:line)
+ * The source location suffix is only appended in Debug builds via the BT_*
+ * macros, which inject __FILE__ and __LINE__ automatically.
  *
- * The source location suffix is only appended when the BT_* macros are used
- * (they inject __FILE__ and __LINE__ automatically).
+ * @section runtime_strings Runtime strings
+ * ---------------
+ * Because format strings must be compile-time constants, a pre-built
+ * std::string must be passed through a format specifier:
+ *
+ *   std::string msg = buildMessage();
+ *   BT_ERROR("{}", msg);
  */
 class BLACKTHORN_API Logger {
 public:
@@ -141,31 +137,49 @@ public:
 	bool isOpen() const;
 
 	/**
-	 * @brief Write a message at the given level.
+	 * @brief Formats and logs a message at the given level, with source location.
 	 *
-	 * Filtered out immediately (before acquiring any lock) when level is
-	 * greater than the current log level, making disabled levels near-zero cost.
+	 * Intended to be called via the BT_* macros, which inject __FILE__
+	 * and __LINE__ automatically.
 	 *
-	 * Prefer the BT_* macros so that source file and line are captured.
-	 *
-	 * @param level   Severity of this message.
-	 * @param message Text to write.
-	 * @param srcFile Source file (__FILE__), or nullptr to omit the location.
-	 * @param srcLine Source line (__LINE__), ignored when srcFile is nullptr.
+	 * @param level Severity level.
+	 * @param srcFile Source file (__FILE__).
+	 * @param srcLine Source line (__LINE__).
+	 * @param fmt  Compile-time validated format string.
+	 * @param args Format arguments.
 	 */
-	void log(
-		LogLevel         level,
-		std::string_view message,
-		const char*      srcFile = nullptr,
-		int              srcLine = 0
-	);
+	template <typename... Args>
+	void log(LogLevel level, const char* srcFile, int srcLine, std::format_string<Args...> fmt, Args&&... args) {
+		if (static_cast<int>(level) > static_cast<int>(currentLevel.load(std::memory_order_relaxed)))
+			return;
 
-	void info    (std::string_view msg, const char* f = nullptr, int line = 0) { log(LogLevel::Info, msg, f, line); }
-	void warn    (std::string_view msg, const char* f = nullptr, int line = 0) { log(LogLevel::Warning,  msg, f, line); }
-	void error   (std::string_view msg, const char* f = nullptr, int line = 0) { log(LogLevel::Error,    msg, f, line); }
-	void verbose (std::string_view msg, const char* f = nullptr, int line = 0) { log(LogLevel::Verbose,  msg, f, line); }
-	void debug   (std::string_view msg, const char* f = nullptr, int line = 0) { log(LogLevel::Debug,    msg, f, line); }
+		logImpl(level, std::format(fmt, std::forward<Args>(args)...), srcFile, srcLine);
+	}
 
+	template <typename... Args>
+	void info(std::format_string<Args...> fmt, Args&&... args) {
+		log(LogLevel::Info, fmt, std::forward<Args>(args)...);
+	}
+
+	template <typename... Args>
+	void warn(std::format_string<Args...> fmt, Args&&... args) {
+		log(LogLevel::Warning, fmt, std::forward<Args>(args)...);
+	}
+
+	template <typename... Args>
+	void error(std::format_string<Args...> fmt, Args&&... args) {
+		log(LogLevel::Error, fmt, std::forward<Args>(args)...);
+	}
+
+	template <typename... Args>
+	void verbose(std::format_string<Args...> fmt, Args&&... args) {
+		log(LogLevel::Verbose, fmt, std::forward<Args>(args)...);
+	}
+
+	template <typename... Args>
+	void debug(std::format_string<Args...> fmt, Args&&... args) {
+		log(LogLevel::Debug, fmt, std::forward<Args>(args)...);
+	}
 private:
 	Logger();
 	~Logger();
@@ -185,6 +199,9 @@ private:
 		int              srcLine
 	);
 
+	/// Performs the actual write.
+	void logImpl(LogLevel level, std::string_view message, const char* srcFile, int srcLine);
+
 	/// Return just the filename portion of a full source path.
 	static const char* stripPath(const char* fullPath);
 
@@ -199,9 +216,9 @@ private:
 	std::ofstream file;
 	LoggerConfig  config;
 
-	LogLevel currentLevel   = LogLevel::Info;
-	bool     sdlMirror      = true;
-	bool     initialized    = false;
+	std::atomic<LogLevel> currentLevel{LogLevel::Info};
+	std::atomic<bool> sdlMirror {true};
+	bool initialized = false;
 };
 
 } // namespace Blackthorn::Debug
@@ -212,18 +229,19 @@ private:
 // build the string beforehand:
 //
 //   BT_LOG("Loaded " + std::to_string(count) + " assets");
-//   BT_ERROR(std::format("Failed to open '{}'", path));
+//   BT_ERROR("Failed to open '{}'", path);
+
 
 #ifdef BLACKTHORN_DEBUG
-	#define BT_LOG(msg)     ::Blackthorn::Debug::Logger::instance().info((msg), __FILE__, __LINE__)
-	#define BT_WARN(msg)    ::Blackthorn::Debug::Logger::instance().warn    ((msg), __FILE__, __LINE__)
-	#define BT_ERROR(msg)   ::Blackthorn::Debug::Logger::instance().error   ((msg), __FILE__, __LINE__)
-	#define BT_VERBOSE(msg) ::Blackthorn::Debug::Logger::instance().verbose ((msg), __FILE__, __LINE__)
-	#define BT_DEBUG(msg)   ::Blackthorn::Debug::Logger::instance().debug   ((msg), __FILE__, __LINE__)
+	#define BT_LOG(...)     ::Blackthorn::Debug::Logger::instance().log(::Blackthorn::Debug::LogLevel::Info,    __FILE__, __LINE__, __VA_ARGS__)
+	#define BT_WARN(...)    ::Blackthorn::Debug::Logger::instance().log(::Blackthorn::Debug::LogLevel::Warning, __FILE__, __LINE__, __VA_ARGS__)
+	#define BT_ERROR(...)   ::Blackthorn::Debug::Logger::instance().log(::Blackthorn::Debug::LogLevel::Error,   __FILE__, __LINE__, __VA_ARGS__)
+	#define BT_VERBOSE(...) ::Blackthorn::Debug::Logger::instance().log(::Blackthorn::Debug::LogLevel::Verbose, __FILE__, __LINE__, __VA_ARGS__)
+	#define BT_DEBUG(...)   ::Blackthorn::Debug::Logger::instance().log(::Blackthorn::Debug::LogLevel::Debug,   __FILE__, __LINE__, __VA_ARGS__)
 #else
-	#define BT_LOG(msg)     ::Blackthorn::Debug::Logger::instance().info((msg))
-	#define BT_WARN(msg)    ::Blackthorn::Debug::Logger::instance().warn    ((msg))
-	#define BT_ERROR(msg)   ::Blackthorn::Debug::Logger::instance().error   ((msg))
-	#define BT_VERBOSE(msg) ::Blackthorn::Debug::Logger::instance().verbose ((msg))
-	#define BT_DEBUG(msg)   ::Blackthorn::Debug::Logger::instance().debug   ((msg))
+	#define BT_LOG(...)     ::Blackthorn::Debug::Logger::instance().log(::Blackthorn::Debug::LogLevel::Info,    __VA_ARGS__)
+	#define BT_WARN(...)    ::Blackthorn::Debug::Logger::instance().log(::Blackthorn::Debug::LogLevel::Warning, __VA_ARGS__)
+	#define BT_ERROR(...)   ::Blackthorn::Debug::Logger::instance().log(::Blackthorn::Debug::LogLevel::Error,   __VA_ARGS__)
+	#define BT_VERBOSE(...) ::Blackthorn::Debug::Logger::instance().log(::Blackthorn::Debug::LogLevel::Verbose, __VA_ARGS__)
+	#define BT_DEBUG(...)   ::Blackthorn::Debug::Logger::instance().log(::Blackthorn::Debug::LogLevel::Debug,   __VA_ARGS__)
 #endif

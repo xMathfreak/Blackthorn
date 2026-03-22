@@ -1,7 +1,5 @@
 #include "Graphics/Texture.h"
 
-#include <format>
-
 #include <SDL3_image/SDL_image.h>
 
 #include "Debug/Logger.h"
@@ -104,7 +102,7 @@ bool Texture::loadFromFile(const std::string& path, const TextureParams& paramet
 
 	SDL_Surface* surface = IMG_Load(path.c_str());
 	if (!surface) {
-		BT_ERROR(std::format("Failed to load texture '{}': {}", path, SDL_GetError()));
+		BT_ERROR("Failed to load texture '{}': {}", path, SDL_GetError());
 		return false;
 	}
 
@@ -338,9 +336,9 @@ void Texture::updateRegion(int x, int y, int w, int h, const void* data) {
 	}
 
 	if (x < 0 || y < 0 || x + w > width || y + h > height) {
-		BT_ERROR(std::format("Texture udate region out of bounds ({}, {}, {}, {}) for {} x {}",
+		BT_ERROR("Texture udate region out of bounds ({}, {}, {}, {}) for {} x {}",
 			x, y, w, h, width, height
-		));
+		);
 		return;
 	}
 

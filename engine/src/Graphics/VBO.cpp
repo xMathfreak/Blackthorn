@@ -35,13 +35,13 @@ VBO& VBO::operator=(VBO&& other) noexcept {
 
 void VBO::create() {
 	if (id != 0) {
-		BT_WARN(std::format("VBO already created (ID: {})", id));
+		BT_WARN("VBO already created (ID: {})", id);
 		return;
 	}
 
 	glGenBuffers(1, &id);
 
-	BT_DEBUG(std::format("VBO created (ID: {})", id));
+	BT_DEBUG("VBO created (ID: {})", id);
 
 }
 
@@ -75,7 +75,7 @@ void VBO::setData(const void* data, size_t sizeInBytes, GLenum usage) {
 	glBufferData(GL_ARRAY_BUFFER, sizeInBytes, data, usage);
 	size = sizeInBytes;
 
-	BT_DEBUG(std::format("VBO {}: Uploaded {} bytes", id, size));
+	BT_DEBUG("VBO {}: Uploaded {} bytes", id, size);
 }
 
 } // namespace Blackthorn::Graphics

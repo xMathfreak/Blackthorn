@@ -1,7 +1,5 @@
 #include "Graphics/VAO.h"
 
-#include <format>
-
 #include "Debug/Logger.h"
 
 namespace Blackthorn::Graphics {
@@ -35,13 +33,13 @@ VAO& VAO::operator=(VAO&& other) noexcept {
 
 void VAO::create() {
 	if (id != 0) {
-		BT_WARN(std::format("VAO already created (ID: {})", id));
+		BT_WARN("VAO already created (ID: {})", id);
 		return;
 	}
 
 	glGenVertexArrays(1, &id);
 
-	BT_DEBUG(std::format("VAO created (ID: {})", id));
+	BT_DEBUG("VAO created (ID: {})", id);
 }
 
 void VAO::bind() const {
@@ -70,7 +68,7 @@ void VAO::enableAttrib(GLuint index, GLint size, GLenum type, GLsizei stride, si
 	}
 
 	if (!isBound()) {
-		BT_WARN(std::format("Attempting to configure attributes on VAO {} while not bound. Binding", id));
+		BT_WARN("Attempting to configure attributes on VAO {} while not bound. Binding", id);
 		bind();
 	}
 
@@ -97,9 +95,9 @@ void VAO::enableAttrib(GLuint index, GLint size, GLenum type, GLsizei stride, si
 			break;
 	}
 
-	BT_DEBUG(std::format("VAO {}: Enabled attribute {} (size={}, type={}, stride={}, offset={}, normalized={})",
+	BT_DEBUG("VAO {}: Enabled attribute {} (size={}, type={}, stride={}, offset={}, normalized={})",
 		id, index, size, typeStr, stride, offset, (normalized ? "true" : "false")
-	));
+	);
 
 }
 
@@ -110,12 +108,12 @@ void VAO::disableAttrib(GLuint index) {
 	}
 
 	if (!isBound()) {
-		BT_WARN(std::format("Attempting to disable attributes on VAO {} while not bound. Binding", id));
+		BT_WARN("Attempting to disable attributes on VAO {} while not bound. Binding", id);
 		bind();
 	}
 
 	glDisableVertexAttribArray(index);
-	BT_DEBUG(std::format("VAO {}: Disabled attribute {}", id, index));
+	BT_DEBUG("VAO {}: Disabled attribute {}", id, index);
 }
 
 void VAO::destroy() {
@@ -138,7 +136,7 @@ GLuint VAO::takeHandle() noexcept {
 		currentVAO = 0;
 	}
 
-	BT_DEBUG(std::format("VAO handle taken (ID: {}), ownership transferred", tmp));
+	BT_DEBUG("VAO handle taken (ID: {}), ownership transferred", tmp);
 	return tmp;
 }
 

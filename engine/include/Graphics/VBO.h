@@ -1,6 +1,5 @@
 #pragma once
 
-#include <format>
 #include <vector>
 
 #include <glad/glad.h>
@@ -115,7 +114,7 @@ public:
 		glBufferData(GL_ARRAY_BUFFER, data.size() * sizeof(T), data.data(), usage);
 		size = data.size() * sizeof(T);
 
-		BT_DEBUG(std::format("VBO {}: Uploaded {} bytes ({} elements of size {})", id, size, data.size(), sizeof(T)));
+		BT_DEBUG("VBO {}: Uploaded {} bytes ({} elements of size {})", id, size, data.size(), sizeof(T));
 	}
 
 	/**
@@ -146,7 +145,7 @@ public:
 
 		size_t dataSize = data.size() * sizeof(T);
 		if (offset + dataSize > size) {
-			BT_ERROR(std::format("VBO {}: Update would overflow buffer (offset {} + data {} > buffer {})", id, offset, dataSize, size));
+			BT_ERROR("VBO {}: Update would overflow buffer (offset {} + data {} > buffer {})", id, offset, dataSize, size);
 			return;
 		}
 

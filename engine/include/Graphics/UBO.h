@@ -1,6 +1,5 @@
 #pragma once
 
-#include <format>
 #include <utility>
 
 #include <glad/glad.h>
@@ -50,7 +49,7 @@ public:
 		glBufferData(GL_UNIFORM_BUFFER, sizeof(T), nullptr, usage);
 		glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
-		BT_DEBUG(std::format("UBO created (ID: {}, Size: {})", id, sizeof(T)));
+		BT_DEBUG("UBO created (ID: {}, Size: {})", id, sizeof(T));
 	}
 
 	/**

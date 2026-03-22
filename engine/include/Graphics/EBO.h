@@ -1,6 +1,5 @@
 #pragma once
 
-#include <format>
 #include <vector>
 
 #include <glad/glad.h>
@@ -154,7 +153,7 @@ public:
 		#ifdef BLACKTHORN_DEBUG
 			const char* typeStr = (indexType == GL_UNSIGNED_INT) ?
 				"GLuint" : (indexType == GL_UNSIGNED_SHORT) ? "GLushort" : "GLubyte";
-			BT_DEBUG(std::format("EBO {}: Uploaded {} indices ({}, {} bytes)", id, count, typeStr, size));
+			BT_DEBUG("EBO {}: Uploaded {} indices ({}, {} bytes)", id, count, typeStr, size);
 		#endif
 	}
 
@@ -183,7 +182,7 @@ public:
 
 		size_t dataSize = data.size() * sizeof(T);
 		if (offsetInBytes + dataSize > size) {
-			BT_ERROR(std::format("EBO {}: Update would overflow buffer (offset {} + data {} > buffer {})", id, offsetInBytes, dataSize, size));
+			BT_ERROR("EBO {}: Update would overflow buffer (offset {} + data {} > buffer {})", id, offsetInBytes, dataSize, size);
 			return;
 		}
 

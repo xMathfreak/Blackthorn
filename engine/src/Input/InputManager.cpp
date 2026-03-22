@@ -1,7 +1,5 @@
 #include "Input/InputManager.h"
 
-#include <format>
-
 #include "Core/Settings.h"
 #include "Debug/Logger.h"
 
@@ -103,10 +101,10 @@ void InputManager::loadBindingsFromSettings() {
 		const SDL_Keycode key = keyFromName(name);
 
 		if (key == SDLK_UNKNOWN) {
-			BT_WARN(std::format(
+			BT_WARN(
 				"InputManager: unknown key name '{}' for action '{}', keeping default.",
 				name, action
-			));
+			);
 			continue;
 		}
 

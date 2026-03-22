@@ -1,7 +1,6 @@
 #include "UI/UIManager.h"
 
 #include <algorithm>
-#include <format>
 
 #include <SDL3/SDL.h>
 
@@ -62,7 +61,7 @@ void UIManager::flushPendingLayout() {
 
 void UIManager::setReferenceResolution(float width, float height) {
 	if (width <= 0.0f || height <= 0.0f) {
-		BT_WARN(std::format("Invalid reference resolution ({:.0f} x {:.0f}). Values must be positive. Request ignored.", width, height));
+		BT_WARN("Invalid reference resolution ({:.0f} x {:.0f}). Values must be positive. Request ignored.", width, height);
 		return;
 	}
 
@@ -72,12 +71,12 @@ void UIManager::setReferenceResolution(float width, float height) {
 
 void UIManager::setGlobalUIScale(float scale) {
 	if (scale <= 0.0f) {
-		BT_WARN(std::format("Ignoring non-positive global UI scale: {:.2f}", scale));
+		BT_WARN("Ignoring non-positive global UI scale: {:.2f}", scale);
 		return;
 	}
 
 	if (scale < 0.5f || scale > 5.0f)
-		BT_WARN(std::format("Extreme global UI scale set: {:.2f}", scale));
+		BT_WARN("Extreme global UI scale set: {:.2f}", scale);
 
 	globalUIScale = scale;
 	recomputeScale();

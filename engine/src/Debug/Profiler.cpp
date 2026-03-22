@@ -1,8 +1,8 @@
 #include "Debug/Profiler.h"
+
 #include "Debug/Logger.h"
 
 #include <algorithm>
-#include <format>
 #include <numeric>
 
 namespace Blackthorn::Debug {
@@ -65,7 +65,7 @@ void Profiler::endScope(const char* name) {
 
 	auto& stack = threadScopeStack();
 	if (stack.empty()) {
-		BT_WARN(std::format("Profiler: endScope('{}') called with empty stack", name));
+		BT_WARN("Profiler: endScope('{}') called with empty stack", name);
 		return;
 	}
 
@@ -73,10 +73,10 @@ void Profiler::endScope(const char* name) {
 
 	// Validate nesting — mismatched names indicate incorrect RAII usage.
 	if (std::string_view(entry.name) != std::string_view(name)) {
-		BT_WARN(std::format(
+		BT_WARN(
 			"Profiler: scope mismatch — expected '{}', got '{}'",
 			entry.name, name
-		));
+		);
 	}
 
 	const float duration = static_cast<float>(endTime - entry.startTime) / frequency;

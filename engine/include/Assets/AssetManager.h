@@ -2,7 +2,6 @@
 
 #include <atomic>
 #include <filesystem>
-#include <format>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -106,15 +105,15 @@ public:
 		auto type = std::type_index(typeid(AssetType));
 		auto it = loaders.find(type);
 		if (it == loaders.end()) {
-			BT_WARN(std::format("AssetManager: no loader registered for '{}' (id '{}')",
-				typeid(AssetType).name(), id));
+			BT_WARN("AssetManager: no loader registered for '{}' (id '{}')",
+				typeid(AssetType).name(), id);
 			return {};
 		}
 
 		auto* wrapper = static_cast<LoaderWrapper<AssetType>*>(it->second.get());
 		auto asset = wrapper->syncLoader->load(params);
 		if (!asset) {
-			BT_ERROR(std::format("AssetManager: sync load failed for '{}'", id));
+			BT_ERROR("AssetManager: sync load failed for '{}'", id);
 			return {};
 		}
 
@@ -153,23 +152,23 @@ public:
 		auto type  = std::type_index(typeid(AssetType));
 		auto it    = loaders.find(type);
 		if (it == loaders.end()) {
-			BT_WARN(std::format("AssetManager: no loader registered for '{}' (id '{}')",
-				typeid(AssetType).name(), id));
+			BT_WARN("AssetManager: no loader registered for '{}' (id '{}')",
+				typeid(AssetType).name(), id);
 			return {};
 		}
 
 		auto* wrapper = static_cast<LoaderWrapper<AssetType>*>(it->second.get());
 
 		if (!wrapper->asyncLoader) {
-			BT_DEBUG(std::format(
-				"AssetManager: no async loader for '{}', falling back to sync", id));
+			BT_DEBUG(
+				"AssetManager: no async loader for '{}', falling back to sync", id);
 			return load<AssetType>(id, params);
 		}
 
 		{
 			std::unique_lock<std::mutex> lock(inFlightMutex);
 			if (inFlight.count(id)) {
-				BT_DEBUG(std::format("AssetManager: '{}' already in-flight", id));
+				BT_DEBUG("AssetManager: '{}' already in-flight", id);
 				return makePendingHandle<AssetType>(id);
 			}
 
@@ -189,7 +188,7 @@ public:
 			auto raw = loaderWrapper->loadRaw(*paramsCopy);
 
 			if (!raw || !raw->valid) {
-				BT_ERROR(std::format("AssetManager: loadRaw failed for '{}'", id));
+				BT_ERROR("AssetManager: loadRaw failed for '{}'", id);
 
 				{
 					std::unique_lock<std::mutex> lk(inFlightMutex);

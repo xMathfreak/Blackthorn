@@ -1,6 +1,5 @@
 #include "Graphics/Shader.h"
 
-#include <format>
 #include <fstream>
 #include <sstream>
 #include <stdexcept>
@@ -55,12 +54,12 @@ GLuint Shader::compileShader(const std::string& source, GLenum type) {
 
 		std::string errorMsg = std::string(shaderTypeToString(type)) + " shader compilation failed:\n" + log;
 
-		BT_ERROR(errorMsg);
+		BT_ERROR("{}", errorMsg);
 
 		throw std::runtime_error(errorMsg);
 	}
 
-	BT_DEBUG(std::format("{} shader compiled successfully", shaderTypeToString(type)));
+	BT_DEBUG("{} shader compiled successfully", shaderTypeToString(type));
 	return shader;
 }
 
@@ -87,19 +86,19 @@ void Shader::linkProgram(GLuint vertexShader, GLuint fragmentShader) {
 		programID = 0;
 
 		std::string errorMsg = "Shader program linking failed:\n" + log;
+		BT_ERROR("{}", errorMsg);
 
-		BT_ERROR(errorMsg);
 		throw std::runtime_error(errorMsg);
 	}
 
-	BT_DEBUG(std::format("Shader program linked successfully (ID: {})", programID));
+	BT_DEBUG("Shader program linked successfully (ID: {})", programID);
 
 	glDetachShader(programID, vertexShader);
 	glDetachShader(programID, fragmentShader);
 }
 
 Shader::Shader(const std::string& vertexPath, const std::string& fragmentPath) {
-	BT_DEBUG(std::format("Loading shader: {}, {}", vertexPath, fragmentPath));
+	BT_DEBUG("Loading shader: {}, {}", vertexPath, fragmentPath);
 
 	try {
 		std::string vertexSource = readFile(vertexPath);
@@ -173,10 +172,7 @@ GLuint Shader::getUniformLocation(const std::string& name) {
 	GLint location = glGetUniformLocation(programID, name.c_str());
 
 	if (location == -1)
-		BT_WARN(std::format(
-			"Uniform '{}' not found in shader program {}",
-			name, programID
-		));
+		BT_WARN("Uniform '{}' not found in shader program {}", name, programID);
 
 	uniformCache[name] = location;
 	return location;

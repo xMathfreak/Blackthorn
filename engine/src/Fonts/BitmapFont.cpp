@@ -2,7 +2,6 @@
 
 #include <algorithm>
 #include <cstring>
-#include <format>
 #include <fstream>
 #include <sstream>
 
@@ -134,14 +133,14 @@ bool BitmapFont::loadFromFile(const std::string& texturePath, const std::string&
 	texture = std::make_unique<Graphics::Texture>(texturePath);
 
 	if (!texture->isValid()) {
-		BT_ERROR(std::format("Failed to load font texture: {}", texturePath));
+		BT_ERROR("Failed to load font texture: {}", texturePath);
 		return false;
 	}
 
 	std::ifstream file(metricsPath);
 
 	if (!file.is_open()) {
-		BT_ERROR(std::format("Failed to load font metrics: {}", metricsPath));
+		BT_ERROR("Failed to load font metrics: {}", metricsPath);
 		return false;
 	}
 
@@ -177,7 +176,7 @@ bool BitmapFont::loadFromFile(const std::string& texturePath, const std::string&
 			Uint32 id = parseIntValue(line, "id");
 
 			if (id == 0) {
-				BT_WARN(std::format("Skipping glyph with missing or invalid id in {}", metricsPath));
+				BT_WARN("Skipping glyph with missing or invalid id in {}", metricsPath);
 				continue;
 			}
 
@@ -199,10 +198,10 @@ bool BitmapFont::loadFromFile(const std::string& texturePath, const std::string&
 
 			glyphs[id] = glyph;
 		} else {
-			BT_WARN(std::format(
+			BT_WARN(
 				"Unknown command '{}' on line {} in {}",
 				command, lineNum, metricsPath
-			));
+			);
 		}
 	}
 
@@ -222,12 +221,12 @@ bool BitmapFont::loadFromFile(const std::string& texturePath, const std::string&
 
 	tabWidth = spaceWidth * 4.0f;
 
-	BT_DEBUG(std::format(
+	BT_DEBUG(
 		"BitmapFont loaded {} glyphs from '{}' and '{}\nlineHeight={:.1f}, baseline={:.1f}, spaceWidth={:.1f}",
 		glyphs.size(), texturePath, metricsPath, lineHeight, baseline, spaceWidth
-	));
+	);
 
-	BT_DEBUG(std::format(
+	BT_DEBUG(
 		"BitmapFont loaded\n"
 		"    texture: {}\n"
 		"    metrics: {}\n"
@@ -241,7 +240,7 @@ bool BitmapFont::loadFromFile(const std::string& texturePath, const std::string&
 		lineHeight,
 		baseline,
 		spaceWidth
-	));
+	);
 
 	return true;
 }
@@ -250,14 +249,14 @@ bool BitmapFont::loadFromBMFont(const std::string& bmfPath) {
 	std::ifstream file(bmfPath, std::ios::binary);
 
 	if (!file) {
-		BT_ERROR(std::format("Failed to open BMF file: {}", bmfPath));
+		BT_ERROR("Failed to open BMF file: {}", bmfPath);
 		return false;
 	}
 
 	char sign[4];
 	file.read(sign, 4);
 	if (sign[0] != 'B' || sign[1] != 'M' || sign[2] != 'F' || sign[3] != '\0') {
-		BT_ERROR(std::format("Invalid BMF file format: {}", bmfPath));
+		BT_ERROR("Invalid BMF file format: {}", bmfPath);
 		return false;
 	}
 
@@ -265,7 +264,7 @@ bool BitmapFont::loadFromBMFont(const std::string& bmfPath) {
 	file.read(reinterpret_cast<char*>(&version), sizeof(version));
 
 	if (version != 1) {
-		BT_ERROR(std::format("Unsupported BMF version {} in file: {}", version, bmfPath));
+		BT_ERROR("Unsupported BMF version {} in file: {}", version, bmfPath);
 		return false;
 	}
 
@@ -287,7 +286,7 @@ bool BitmapFont::loadFromBMFont(const std::string& bmfPath) {
 
 	SDL_Surface* surface = IMG_Load_IO(rw, true);
 	if (!surface) {
-		BT_ERROR(std::format("Failed to load image from BMF: {}", SDL_GetError()));
+		BT_ERROR("Failed to load image from BMF: {}", SDL_GetError());
 		return false;
 	}
 
@@ -324,7 +323,7 @@ bool BitmapFont::loadFromBMFont(const std::string& bmfPath) {
 
 	tabWidth = spaceWidth * 4.0f;
 
-	BT_DEBUG(std::format(
+	BT_DEBUG(
 		"BitmapFont loaded\n"
 		"    file: {}\n"
 		"    glyphs: {}\n"
@@ -336,7 +335,7 @@ bool BitmapFont::loadFromBMFont(const std::string& bmfPath) {
 		lineHeight,
 		baseline,
 		spaceWidth
-	));
+	);
 
 	return true;
 }

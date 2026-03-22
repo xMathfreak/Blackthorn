@@ -1,6 +1,5 @@
 #include "Assets/AssetManager.h"
 
-#include <format>
 #include <thread>
 
 namespace Blackthorn::Assets {
@@ -8,11 +7,11 @@ namespace Blackthorn::Assets {
 AssetManager::AssetManager(size_t workerCount)
 	: threadPool(workerCount)
 {
-	BT_DEBUG(std::format(
+	BT_DEBUG(
 		"AssetManager initialised ({} worker thread{})",
 		threadPool.workerCount(),
 		threadPool.workerCount() == 1 ? "" : "s"
-	));
+	);
 }
 
 bool AssetManager::processOneUpload() {
