@@ -6,7 +6,7 @@
 
 namespace Blackthorn::ECS::Systems {
 
-class BLACKTHORN_API KinematicsSystem : public ISystem {
+class KinematicsSystem : public ISystem {
 public:
 	void fixedUpdate(EntityPool* pool, float dt) override {
 		auto view = pool->view<Components::Kinematics, Components::Transform>();

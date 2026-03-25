@@ -13,8 +13,8 @@ struct BLACKTHORN_API Sprite {
 
 	float zOrder = 0.0f;
 
-	BLACKTHORN_API Sprite() = default;
-	BLACKTHORN_API Sprite(Graphics::Texture* tex, float w = 64.0f, float h = 64.0f)
+	Sprite() = default;
+	Sprite(Graphics::Texture* tex, float w = 64.0f, float h = 64.0f)
 		: width(w), height(h), texture(tex)
 	{}
 };

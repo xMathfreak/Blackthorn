@@ -8,7 +8,7 @@
 
 namespace Blackthorn::ECS::Systems {
 
-class BLACKTHORN_API RenderSystem : public ISystem {
+class RenderSystem : public ISystem {
 	Graphics::Renderer* renderer;
 
 public:
