@@ -18,12 +18,6 @@
 namespace Blackthorn {
 
 Engine::Engine()
-	: initialized(false)
-	, running(false)
-	, windowFocused(true)
-	, window(nullptr)
-	, glContext(nullptr)
-	, sceneContext(nullptr)
 {}
 
 Engine::~Engine() {
@@ -87,7 +81,7 @@ bool Engine::init(const EngineConfig& cfg) {
 		SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, cfg.render.msaaSamples);
 	}
 
-	SDL_WindowFlags windowFlags = SDL_WINDOW_MAXIMIZED | SDL_WINDOW_RESIZABLE | SDL_WINDOW_OPENGL;
+	SDL_WindowFlags windowFlags = SDL_WINDOW_RESIZABLE | SDL_WINDOW_OPENGL;
 
 	window = SDL_CreateWindow(cfg.window.title.c_str(), cfg.window.width, cfg.window.height, windowFlags);
 	if (!window) {
@@ -223,6 +217,8 @@ void Engine::render(float alpha) {
 }
 
 void Engine::processEvents() {
+	auto& settings = Core::Settings::instance();
+
 	SDL_Event event;
 	while (SDL_PollEvent(&event)) {
 		inputManager.handleEvent(event);
@@ -242,15 +238,20 @@ void Engine::processEvents() {
 					glViewport(0, 0, pw, ph);
 					renderer->setProjection(pw, ph);
 					UI::UIManager::onWindowResize(pw, ph);
+
+					if (!(SDL_GetWindowFlags(window) & SDL_WINDOW_MAXIMIZED)) {
+						settings.set<int>("window", "width", pw);
+						settings.set<int>("window", "height", ph);
+						settings.saveToFile(config.settingsFilePath);
+					}
 				}
 
 				break;
 			case SDL_EVENT_WINDOW_FOCUS_GAINED:
 				windowFocused = true;
-				SDL_RestoreWindow(window);
 
-				if (Core::Settings::instance().get<bool>("window", "fullscreen"))
-					SDL_SetWindowFullscreen(window, true);
+				if (SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN)
+					SDL_RestoreWindow(window);
 
 				break;
 			case SDL_EVENT_WINDOW_FOCUS_LOST:
@@ -258,6 +259,28 @@ void Engine::processEvents() {
 
 				if (SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN)
 					SDL_MinimizeWindow(window);
+				break;
+			case SDL_EVENT_WINDOW_MAXIMIZED:
+				settings.set<bool>("window", "maximized", true);
+				settings.saveToFile(config.settingsFilePath);
+
+				break;
+			case SDL_EVENT_WINDOW_RESTORED:
+				settings.set<bool>("window", "maximized", false);
+				settings.saveToFile(config.settingsFilePath);
+
+				break;
+			case SDL_EVENT_WINDOW_MOVED:
+				if (!(SDL_GetWindowFlags(window) & SDL_WINDOW_MAXIMIZED)) {
+					int x, y;
+					SDL_GetWindowPosition(window, &x, &y);
+
+					settings.set("window", "pos_x", x);
+					settings.set("window", "pos_y", y);
+
+					settings.saveToFile(config.settingsFilePath);
+				}
+
 				break;
 			default:
 				break;
@@ -325,7 +348,7 @@ void Engine::run() {
 
 			accumulatedTime = std::min(
 				accumulatedTime + frameTime,
-				config.timing.fixedDeltaTime * (config.timing.maxFixedUpdates - 1)
+				config.timing.fixedDeltaTime * static_cast<float>(config.timing.maxFixedUpdates - 1)
 			);
 			lastFrameTime = SDL_GetPerformanceCounter();
 			continue;
@@ -338,24 +361,28 @@ void Engine::run() {
 
 		accumulatedTime += frameTime;
 
-		int fixedUpdateCount = 0;
+		int numFixed = 0;
+		float accumulatedCopy = accumulatedTime;
+
+		while (accumulatedCopy >= config.timing.fixedDeltaTime && numFixed < config.timing.maxFixedUpdates) {
+			accumulatedCopy -= config.timing.fixedDeltaTime;
+			++numFixed;
+		}
+
+		if (numFixed >= config.timing.maxFixedUpdates) {
+			#ifdef BLACKTHORN_DEBUG
+				BT_WARN("Fixed update count capped at {} this frame", numFixed);
+			#endif
+			accumulatedTime = 0.0f;
+		} else {
+			accumulatedTime = accumulatedCopy;
+		}
 
 		{
 			PROFILE_SCOPE("Fixed Update Loop");
-			while (accumulatedTime >= config.timing.fixedDeltaTime) {
+			for (int i = 0; i < numFixed; ++i) {
 				PROFILE_SCOPE("Fixed Update");
 				fixedUpdate(config.timing.fixedDeltaTime);
-				accumulatedTime -= config.timing.fixedDeltaTime;
-				fixedUpdateCount++;
-
-				if (fixedUpdateCount > config.timing.maxFixedUpdates) {
-					#ifdef BLACKTHORN_DEBUG
-						BT_WARN("Too many fixed updates in one frame ({})", fixedUpdateCount);
-					#endif
-
-					accumulatedTime = 0.0f;
-					break;
-				}
 			}
 		}
 
@@ -369,24 +396,25 @@ void Engine::run() {
 			lateUpdate(frameTime);
 		}
 
-		float alpha = accumulatedTime / config.timing.fixedDeltaTime;
+		const float alpha = accumulatedTime / config.timing.fixedDeltaTime;
+
 		{
 			PROFILE_SCOPE("Render");
 			render(alpha);
 		}
 
-		if (settings.get<bool>("graphics", "frame_cap") && !settings.get<bool>("window", "vsync")) {
-			float targetFrameTime = 1.0f / settings.get<int>("graphics", "target_fps");
-			Uint64 endTime = SDL_GetPerformanceCounter();
-			float elapsedTime = static_cast<float>(endTime - currentTime) / frequency;
+		if (settings.get<bool>("graphics", "frame_cap") &&
+		    !settings.get<bool>("window", "vsync"))
+		{
+			const float targetFrameTime = 1.0f / settings.get<int>("graphics", "target_fps");
+			const Uint64 endTime   = SDL_GetPerformanceCounter();
+			const float  elapsed   = static_cast<float>(endTime - currentTime) / frequency;
+			const float  sleepTime = (targetFrameTime - elapsed) - 0.002f;
 
-			if (elapsedTime < targetFrameTime) {
-				float sleepTime = (targetFrameTime - elapsedTime) - 0.002f;
-				if (sleepTime > 0.0f)
-					SDL_Delay(static_cast<Uint32>(sleepTime * 1000.0f));
+			if (sleepTime > 0.0f)
+				SDL_Delay(static_cast<Uint32>(sleepTime * 1000.0f));
 
-				while (static_cast<float>(SDL_GetPerformanceCounter() - currentTime) / frequency < targetFrameTime);
-			}
+			while (static_cast<float>(SDL_GetPerformanceCounter() - currentTime) / frequency < targetFrameTime) {}
 		}
 
 		#ifdef BLACKTHORN_DEBUG
@@ -397,7 +425,7 @@ void Engine::run() {
 
 			if (logCounter >= config.debug.profilingLogInterval) {
 				logProfilingInfo();
-				logCounter = 0;
+				logCounter = 0.0f;
 			}
 		#endif
 	}
@@ -459,34 +487,38 @@ void Engine::cleanupInitialization() {
 }
 
 void Engine::registerEngineDefaults(Core::Settings& s) {
-	s.setDefault("window", "width",      config.window.width);
-	s.setDefault("window", "height",     config.window.height);
+	s.setDefault("window", "width", config.window.width);
+	s.setDefault("window", "height", config.window.height);
 	s.setDefault("window", "fullscreen", false);
-	s.setDefault("window", "vsync",      false);
+	s.setDefault("window", "vsync", false);
+	s.setDefault("window", "maximized", false);
+	s.setDefault("window", "pos_x", SDL_WINDOWPOS_CENTERED);
+	s.setDefault("window", "pos_y", SDL_WINDOWPOS_CENTERED);
 
-	s.setDefault("graphics", "frame_cap",          false);
-	s.setDefault("graphics", "target_fps",         60);
-	s.setDefault("graphics", "msaa_samples",       0);
-	s.setDefault("graphics", "post_processing",    true);
-	s.setDefault("graphics", "brightness",         1.0f);
-	s.setDefault("graphics", "contrast",           1.0f);
-	s.setDefault("graphics", "saturation",         1.0f);
-	s.setDefault("graphics", "gamma",              1.0f);
-	s.setDefault("graphics", "vignette",           false);
+	s.setDefault("graphics", "frame_cap", false);
+	s.setDefault("graphics", "target_fps", 60);
+	s.setDefault("graphics", "msaa_samples", 0);
+	s.setDefault("graphics", "post_processing", true);
+	s.setDefault("graphics", "brightness", 1.0f);
+	s.setDefault("graphics", "contrast", 1.0f);
+	s.setDefault("graphics", "saturation", 1.0f);
+	s.setDefault("graphics", "gamma", 1.0f);
+	s.setDefault("graphics", "vignette", false);
 	s.setDefault("graphics", "vignette_intensity", 0.5f);
 
 	s.setDefault("ui", "scale", 1.0f);
 
 	s.setDefault("audio", "master_volume", 1.0f);
-	s.setDefault("audio", "music_volume",  1.0f);
-	s.setDefault("audio", "sfx_volume",    1.0f);
+	s.setDefault("audio", "music_volume", 1.0f);
+	s.setDefault("audio", "sfx_volume", 1.0f);
 
 	#ifdef BLACKTHORN_DEBUG
-		s.setDefault("developer", "log_level",      3);   // Info
+		s.setDefault("developer", "log_level", 3); // Info
 	#endif
 
-	s.setDefault("developer", "worker_threads", 0);   // auto
+	s.setDefault("developer", "worker_threads", 0); // auto
 }
+
 
 void Engine::registerEngineCallbacks(Core::Settings& s) {
 	s.onChange("window", "vsync", [](const std::string& val) {
@@ -507,9 +539,6 @@ void Engine::registerEngineCallbacks(Core::Settings& s) {
 		});
 	#endif
 
-	// Post-processing uniforms — batch-apply the full block when any one
-	// field changes, since glUniform calls are cheap and this keeps the
-	// callbacks simple.
 	auto applyPP = [this](const std::string&) { applyPostProcessing(); };
 
 	for (const char* key : {
@@ -523,27 +552,73 @@ void Engine::registerEngineCallbacks(Core::Settings& s) {
 void Engine::applyEngineSettings() {
 	auto& s = Core::Settings::instance();
 
-	// Window
-	SDL_SetWindowSize(window,
-		s.get<int> ("window", "width"),
-		s.get<int> ("window", "height"));
-	SDL_SetWindowFullscreen(window, s.get<bool>("window", "fullscreen"));
+	bool fullscreen = s.get<bool>("window", "fullscreen", false);
+	bool maximized = s.get<bool>("window", "maximized", false);
+
+	int width = s.get<int>("window", "width");
+	int height = s.get<int>("window", "height");
+	int posX = s.get<int>("window", "pos_x", SDL_WINDOWPOS_CENTERED);
+	int posY = s.get<int>("window", "pos_y", SDL_WINDOWPOS_CENTERED);
+
+	if (posX != SDL_WINDOWPOS_CENTERED && posY != SDL_WINDOWPOS_CENTERED) {
+		int numDisplays;
+		SDL_GetDisplays(&numDisplays);
+
+		int displayIndex = -1;
+
+		for (int i = 0; i < numDisplays; ++i) {
+			SDL_Rect bounds;
+			if (SDL_GetDisplayBounds(i, &bounds)) {
+				if (posX >= bounds.x && posX < bounds.x + bounds.w &&
+					posY >= bounds.y && posY < bounds.y + bounds.h) {
+					displayIndex = i;
+					break;
+				}
+			}
+		}
+
+		if (displayIndex < 0)
+			displayIndex = 0;
+
+		SDL_Rect usable;
+		if (SDL_GetDisplayUsableBounds(displayIndex, &usable)) {
+			const int margin = 50;
+
+			posX = std::max(
+				usable.x - width + margin,
+				std::min(posX, usable.x + usable.w - margin)
+			);
+
+			posY = std::max(
+				usable.y - height + margin,
+				std::min(posY, usable.y + usable.h - margin)
+			);
+		}
+	}
+
+	SDL_SetWindowFullscreen(window, false);
+	SDL_RestoreWindow(window);
+
+	SDL_SetWindowSize(window, width, height);
+	SDL_SetWindowPosition(window, posX, posY);
+
+	if (fullscreen) {
+		SDL_SetWindowFullscreen(window, true);
+	} else if (maximized) {
+		SDL_MaximizeWindow(window);
+	}
+
 	SDL_GL_SetSwapInterval(s.get<bool>("window", "vsync") ? 1 : 0);
 
-	// UI
 	UI::UIManager::setGlobalUIScale(s.get<float>("ui", "scale", 1.0f));
 
-	// Logger
 	#ifdef BLACKTHORN_DEBUG
 		Debug::Logger::instance().setLevel(
 			static_cast<Debug::LogLevel>(s.get<int>("developer", "log_level", 3))
 		);
 	#endif
 
-	// Post-processing
 	applyPostProcessing();
-
-	// Input bindings
 	inputManager.loadBindingsFromSettings();
 }
 

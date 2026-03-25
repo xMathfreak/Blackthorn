@@ -40,20 +40,20 @@ public:
 	Scene::ISceneContext& getSceneContext() { return *sceneContext; }
 
 private:
-	bool initialized;
-	bool running;
+	bool initialized = false;
+	bool running = false;
 
 	EngineConfig config;
-	bool windowFocused;
+	bool windowFocused = true;
 
 	Assets::AssetManager assetManager;
-	std::unique_ptr<Graphics::Renderer> renderer;
+	std::unique_ptr<Graphics::Renderer> renderer = nullptr;
 	Input::InputManager inputManager;
 	Scene::SceneManager sceneManager;
-	SDL_Window* window;
-	SDL_GLContext glContext;
+	SDL_Window* window = nullptr;
+	SDL_GLContext glContext = nullptr;
 
-	std::unique_ptr<Scene::ISceneContext> sceneContext;
+	std::unique_ptr<Scene::ISceneContext> sceneContext = nullptr;
 
 	void initAssetLoaders();
 	void cleanupInitialization();
