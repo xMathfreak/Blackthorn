@@ -44,7 +44,7 @@ vec3 applySaturation(vec3 color) {
 vec3 applyVignette(vec3 color, vec2 uv) {
 	vec2 center = vec2(0.5, 0.5);
 	float dist = distance(uv, center);
-	float vignette = smoothstep(u_VignetteRadius, u_VignetteRadius + 0.1, dist);
+	float vignette = 1.0 - smoothstep(u_VignetteRadius, u_VignetteRadius + 0.1, dist);
 	return mix(color, color * vignette, u_VignetteIntensity);
 }
 
@@ -88,16 +88,23 @@ vec3 applyPixelation(vec3 color, vec2 uv, vec2 texelSize) {
 }
 
 vec4 blur(sampler2D tex, vec2 uv, float radius, vec2 texelSize) {
-	vec4 color = texture(tex, uv);
+	vec3 result = vec3(0.0);
 
-	for (float x = -radius; x <= radius; x++) {
-		for (float y = -radius; y <= radius; y++) {
-			color += texture(tex, uv + vec2(x, y) * texelSize);
-		}
-	}
+	result += texture(tex, uv).rgb * 0.227027;
 
-	color /= (2.0 * radius + 1.0) * (2.0 * radius + 1.0);
-	return color;
+	result += texture(tex, uv + texelSize * vec2(1.0, 0.0)).rgb * 0.194594;
+	result += texture(tex, uv - texelSize * vec2(1.0, 0.0)).rgb * 0.194594;
+
+	result += texture(tex, uv + texelSize * vec2(0.0, 1.0)).rgb * 0.194594;
+	result += texture(tex, uv - texelSize * vec2(0.0, 1.0)).rgb * 0.194594;
+
+	result += texture(tex, uv + texelSize * vec2(1.0, 1.0)).rgb * 0.121621;
+	result += texture(tex, uv - texelSize * vec2(1.0, 1.0)).rgb * 0.121621;
+
+	result += texture(tex, uv + texelSize * vec2(-1.0, 1.0)).rgb * 0.121621;
+	result += texture(tex, uv - texelSize * vec2(-1.0, 1.0)).rgb * 0.121621;
+
+	return result;
 }
 
 void main() {
