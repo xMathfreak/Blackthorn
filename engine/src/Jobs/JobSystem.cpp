@@ -51,18 +51,22 @@ JobHandlePtr JobSystem::createHandle() {
 
 void JobSystem::enqueueReady(Job&& job) {
 	if (job.getAffinity() == ThreadAffinity::MainThread) {
+		++activeJobs;
 		auto* node = new MainThreadNode(std::move(job));
 		MainThreadNode* prev = mainHead.exchange(node, std::memory_order_acq_rel);
 		prev->next.store(node, std::memory_order_release);
-
-		++activeJobs;
 	} else {
 		size_t idx = nextWorker.fetch_add(1, std::memory_order_relaxed) % queues.size();
-		if (!queues[idx]->push(std::make_unique<Job>(std::move(job)))) {
-			BT_ERROR("JobSystem: worker queue {} full — job dropped, its handle will never complete", idx);
-		} else {
-			++activeJobs;
-		}
+
+        ++activeJobs;
+
+        if (!queues[idx]->push(std::make_unique<Job>(std::move(job)))) {
+            --activeJobs;
+            BT_ERROR(
+            	"JobSystem: worker queue {} full — job dropped, its handle will never complete",
+            	idx
+            );
+        }
 	}
 }
 
@@ -147,10 +151,11 @@ bool JobSystem::executeOne(bool mainThreadOnly) {
 }
 
 void JobSystem::flushMainThread() {
-	while (activeJobs.load(std::memory_order_acquire) > 0) {
-		while (executeOne(true)) {}
-		std::this_thread::yield();
-	}
+	// while (activeJobs.load(std::memory_order_acquire) > 0) {
+	// 	while (executeOne(true)) {}
+	// 	std::this_thread::yield();
+	// }
+	while (executeOne(true)) {}
 }
 
 void JobSystem::wait(const JobHandlePtr& handle) {
