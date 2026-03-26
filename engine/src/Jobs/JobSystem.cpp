@@ -40,10 +40,7 @@ JobSystem::~JobSystem() {
 	for (auto& t : workers)
 		t.join();
 
-	assert(
-		mainTail.load(std::memory_order_acquire)->next.load(std::memory_order_acquire) == nullptr &&
-		"JobSystem destroyed with pending main-thread jobs — call flushMainThread() before shutdown"
-	);
+	flushMainThread();
 
 	delete mainTail.load();
 }
@@ -55,81 +52,72 @@ JobHandlePtr JobSystem::createHandle() {
 void JobSystem::enqueueReady(Job&& job) {
 	if (job.getAffinity() == ThreadAffinity::MainThread) {
 		auto* node = new MainThreadNode(std::move(job));
-
 		MainThreadNode* prev = mainHead.exchange(node, std::memory_order_acq_rel);
-
 		prev->next.store(node, std::memory_order_release);
+
+		++activeJobs;
 	} else {
 		size_t idx = nextWorker.fetch_add(1, std::memory_order_relaxed) % queues.size();
-
 		if (!queues[idx]->push(std::make_unique<Job>(std::move(job)))) {
-			BT_ERROR(
-				"JobSystem: worker queue {} full — job dropped, "
-				"its handle will never complete", idx
-			);
+			BT_ERROR("JobSystem: worker queue {} full — job dropped, its handle will never complete", idx);
+		} else {
+			++activeJobs;
 		}
 	}
 }
 
 void JobSystem::submit(Job job) {
-	auto enqueueCallback = [this](std::function<void()> fn, bool) {
-		enqueueReady(Job(std::move(fn)));
-	};
-
-	const auto& dep = job.getDependencyHandle();
+	JobHandlePtr dep = job.getDependencyHandle();
 
 	if (dep && !dep->isComplete()) {
 		const bool mt = job.getAffinity() == ThreadAffinity::MainThread;
 		auto sharedJob = std::make_shared<Job>(std::move(job));
+		auto completionHdl = sharedJob->getCompletionHandle();
 
 		dep->addContinuation(
-			[this, sharedJob, enqueueCallback] {
-				auto enqFn = enqueueCallback;
-				enqueueReady(Job(
-					[sharedJob, enqFn] {
-						sharedJob->invoke();
-						if (const auto& h = sharedJob->getCompletionHandle())
-							h->signal(enqFn);
-					},
-					nullptr,
-					nullptr,
-					sharedJob->getAffinity()
-				));
-				++activeJobs;
+			[this, sharedJob, completionHdl] {
+				sharedJob->invoke();
+				if (completionHdl) {
+					completionHdl->signal([this](std::function<void()> fn, bool isMt) {
+						enqueueReady(Job(std::move(fn), nullptr, nullptr,
+							isMt ? ThreadAffinity::MainThread : ThreadAffinity::Any));
+					});
+				}
 			},
 			mt,
-			enqueueCallback
+			[this](std::function<void()> fn, bool isMt) {
+				enqueueReady(Job(std::move(fn), nullptr, nullptr,
+					isMt ? ThreadAffinity::MainThread : ThreadAffinity::Any));
+			}
 		);
+
 		return;
 	}
 
-	++activeJobs;
-
-	auto enqFn = enqueueCallback;
-	const ThreadAffinity affinity = job.getAffinity();
-	auto sharedJob = std::make_shared<Job>(std::move(job));
-
-	enqueueReady(Job(
-		[this, sharedJob, enqFn] {
-			sharedJob->invoke();
-			if (const auto& h = sharedJob->getCompletionHandle())
-				h->signal(enqFn);
-			--activeJobs;
-		},
-		nullptr,
-		nullptr,
-		affinity
-	));
+	enqueueReady(std::move(job));
 }
 
 bool JobSystem::executeOne(bool mainThreadOnly) {
-	if (mainThreadOnly || getWorkerIndex() == -1) {
+	auto runJob = [this](Job& job) {
+		job.invoke();
+
+		if (const auto& h = job.getCompletionHandle()) {
+			h->signal([this](std::function<void()> fn, bool isMt) {
+				enqueueReady(Job(std::move(fn), nullptr, nullptr,
+					isMt ? ThreadAffinity::MainThread : ThreadAffinity::Any));
+			});
+		}
+
+		--activeJobs;
+	};
+
+	if (mainThreadOnly || workerIndex == -1) {
 		MainThreadNode* tail = mainTail.load(std::memory_order_acquire);
 		MainThreadNode* next = tail->next.load(std::memory_order_acquire);
 
 		if (next) {
 			mainTail.store(next, std::memory_order_release);
-			next->job.invoke();
+			runJob(next->job);
 			delete tail;
 			return true;
 		}
@@ -138,21 +126,19 @@ bool JobSystem::executeOne(bool mainThreadOnly) {
 			return false;
 	}
 
-	if (getWorkerIndex() >= 0) {
-		if (auto job = queues[getWorkerIndex()]->pop()) {
-			job->invoke();
+	if (workerIndex >= 0) {
+		if (auto job = queues[workerIndex]->pop()) {
+			runJob(*job);
 			return true;
 		}
 	}
 
 	const size_t n = queues.size();
-	const size_t start = getWorkerIndex() >= 0
-		? static_cast<size_t>(getWorkerIndex())
-		: 0;
+	const size_t start = workerIndex >= 0 ? static_cast<size_t>(workerIndex) : 0;
 
 	for (size_t i = 1; i <= n; ++i) {
 		if (auto job = queues[(start + i) % n]->steal()) {
-			job->invoke();
+			runJob(*job);
 			return true;
 		}
 	}
@@ -161,7 +147,10 @@ bool JobSystem::executeOne(bool mainThreadOnly) {
 }
 
 void JobSystem::flushMainThread() {
-	while (executeOne(true)) {}
+	while (activeJobs.load(std::memory_order_acquire) > 0) {
+		while (executeOne(true)) {}
+		std::this_thread::yield();
+	}
 }
 
 void JobSystem::wait(const JobHandlePtr& handle) {

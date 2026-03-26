@@ -24,8 +24,7 @@ void JobHandle::signal(const std::function<void(std::function<void()>, bool)>& e
 	if (pendingCount.fetch_sub(1, std::memory_order_acq_rel) != 1)
 		return;
 
-	Continuation* list = continuationHead.exchange(
-		COMPLETE_SENTINEL, std::memory_order_acquire);
+	Continuation* list = continuationHead.exchange(COMPLETE_SENTINEL, std::memory_order_acquire);
 
 	while (list && list != COMPLETE_SENTINEL) {
 		Continuation* next = list->next;
@@ -40,11 +39,7 @@ void JobHandle::addContinuation(
 	bool mainThread,
 	const std::function<void(std::function<void()>, bool)>& enqueue)
 {
-	auto* node = new Continuation{
-		std::move(fn),
-		mainThread,
-		nullptr
-	};
+	auto* node = new Continuation{ std::move(fn), mainThread, nullptr };
 
 	Continuation* head = continuationHead.load(std::memory_order_acquire);
 
