@@ -145,6 +145,7 @@ bool Engine::init(const EngineConfig& cfg) {
 		assetManager,
 		*renderer,
 		inputManager,
+		*jobSystem,
 		sceneManager
 	);
 
