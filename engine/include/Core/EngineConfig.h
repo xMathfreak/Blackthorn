@@ -22,6 +22,10 @@ struct BLACKTHORN_API RenderConfig {
 	int msaaSamples = 0;
 };
 
+struct BLACKTHORN_API JobsConfig {
+	size_t workerCount = 0;
+};
+
 struct BLACKTHORN_API TimingConfig {
 	float fixedDeltaTime = 1.0f / 60.0f;
 	int maxFixedUpdates = 10;
@@ -39,6 +43,7 @@ struct BLACKTHORN_API EngineConfig {
 	RenderConfig render;
 	TimingConfig timing;
 	DebugConfig  debug;
+	JobsConfig   jobs;
 
 	std::string settingsFilePath = "settings.ini";
 };

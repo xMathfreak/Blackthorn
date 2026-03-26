@@ -148,6 +148,8 @@ bool Engine::init(const EngineConfig& cfg) {
 		sceneManager
 	);
 
+	jobSystem = std::make_unique<Jobs::JobSystem>(cfg.jobs.workerCount);
+
 	initialized = true;
 
 	BT_LOG("Initialization completed");

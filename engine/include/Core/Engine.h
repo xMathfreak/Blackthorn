@@ -8,6 +8,7 @@
 #include "Core/Settings.h"
 #include "Input/InputManager.h"
 #include "Graphics/Renderer.h"
+#include "Jobs/JobSystem.h"
 #include "Scene/SceneManager.h"
 
 namespace Blackthorn {
@@ -54,6 +55,7 @@ private:
 	SDL_GLContext glContext = nullptr;
 
 	std::unique_ptr<Scene::ISceneContext> sceneContext = nullptr;
+	std::unique_ptr<Jobs::JobSystem> jobSystem = nullptr;
 
 	void initAssetLoaders();
 	void cleanupInitialization();
