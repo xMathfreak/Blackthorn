@@ -9,10 +9,10 @@ class BLACKTHORN_API ISystem {
 public:
 	virtual ~ISystem() = default;
 	virtual void init(EntityPool*) {}
-	virtual void update(EntityPool*, float dt) {}
-	virtual void fixedUpdate(EntityPool*, float dt) {}
+	virtual void update(EntityPool*, float dt, Jobs::JobSystem*) {}
+	virtual void fixedUpdate(EntityPool*, float dt, Jobs::JobSystem*) {}
 	virtual void render(EntityPool*, float alpha) {}
-	virtual void lateUpdate(EntityPool*, float dt) {}
+	virtual void lateUpdate(EntityPool*, float dt, Jobs::JobSystem*) {}
 };
 
 } // namespace Blackthorn::ECS::Systems

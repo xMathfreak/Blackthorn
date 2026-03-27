@@ -6,16 +6,24 @@
 #include "Core/Export.h"
 #include "ECS/ISystem.h"
 
-namespace Blackthorn::ECS::Systems {
+namespace Blackthorn {
+
+namespace Jobs {
+	class JobSystem;
+} // namespace Jobs
+
+namespace ECS::Systems {
 
 class BLACKTHORN_API SystemManager {
 private:
 	EntityPool& pool;
+	Jobs::JobSystem* jobs;
 	std::vector<std::unique_ptr<ISystem>> systems;
 
 public:
-	explicit SystemManager(EntityPool& p)
+	explicit SystemManager(EntityPool& p, Jobs::JobSystem* js = nullptr)
 		: pool(p)
+		, jobs(js)
 	{}
 
 	template <typename System, typename... Args>
@@ -61,12 +69,12 @@ public:
 
 	void update(float dt) {
 		for (auto& system: systems)
-			system->update(&pool, dt);
+			system->update(&pool, dt, jobs);
 	}
 
 	void fixedUpdate(float dt) {
 		for (auto& system: systems)
-			system->fixedUpdate(&pool, dt);
+			system->fixedUpdate(&pool, dt, jobs);
 	}
 
 	void render(float alpha) {
@@ -76,8 +84,10 @@ public:
 
 	void lateUpdate(float dt) {
 		for (auto& system : systems)
-			system->lateUpdate(&pool, dt);
+			system->lateUpdate(&pool, dt, jobs);
 	}
 };
 
-} // namespace Blackthorn::ECS::Systems
+} // namespace ECS::Systems
+
+} // namespace Blackthorn

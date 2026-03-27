@@ -247,11 +247,11 @@ public:
 	 *                 Components*...)` for optional pointer types.
 	 */
 	template <typename Callable>
-	requires std::invocable<
-		Callable&,
-		Entity,
-		decltype(getComponentForView<Components>(std::declval<Entity>()))...
-	>
+	// requires std::invocable<
+	// 	Callable&,
+	// 	Entity,
+	// 	decltype(getComponentForView<Components>(std::declval<Entity>()))...
+	// >
 	void each(Callable&& callback) {
 		if (!entityList)
 			return;
@@ -285,11 +285,11 @@ public:
 	 *                  dispatch is used. Defaults to 64.
 	 */
 	template <typename Callable>
-	requires std::invocable<
-		Callable&,
-		Entity,
-		decltype(getComponentForView<Components>(std::declval<Entity>()))...
-	>
+	// requires std::invocable<
+	// 	Callable&,
+	// 	Entity,
+	// 	decltype(getComponentForView<Components>(std::declval<Entity>()))...
+	// >
 	void eachJobs(Jobs::JobSystem* js, Callable&& callback, size_t threshold = 64) {
 		if (!entityList)
 			return;

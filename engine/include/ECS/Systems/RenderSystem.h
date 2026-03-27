@@ -12,7 +12,7 @@ class RenderSystem : public ISystem {
 	Graphics::Renderer* renderer;
 
 public:
-	BLACKTHORN_API RenderSystem(Graphics::Renderer* ren) : renderer(ren) {}
+	RenderSystem(Graphics::Renderer* ren) : renderer(ren) {}
 
 	void render(ECS::EntityPool* pool, float alpha) override {
 		auto view = pool->view<Components::Sprite, Components::Transform, Components::Kinematics*>();

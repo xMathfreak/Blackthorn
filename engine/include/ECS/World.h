@@ -4,13 +4,19 @@
 #include "ECS/EntityPool.h"
 #include "ECS/SystemManager.h"
 
-namespace Blackthorn::ECS {
+namespace Blackthorn {
+
+namespace Jobs {
+	class JobSystem;
+} // namespace Jobs
+
+namespace ECS {
 
 class BLACKTHORN_API World {
 public:
-	World(size_t maxEntities = Detail::MAX_ENTITIES)
+	World(size_t maxEntities = Detail::MAX_ENTITIES, Jobs::JobSystem* js = nullptr)
 		: pool(maxEntities)
-		, systemManager(pool)
+		, systemManager(pool, js)
 	{}
 
 	~World() {}
@@ -112,4 +118,6 @@ private:
 	Systems::SystemManager systemManager;
 };
 
-} // namespace Blackthorn::ECS
+} // namespace ECS
+
+} // namespace Blackthorn
