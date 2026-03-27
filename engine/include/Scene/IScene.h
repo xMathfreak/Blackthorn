@@ -22,7 +22,7 @@ public:
 	virtual ~IScene() = default;
 
 	virtual void init() {
-		world = std::make_unique<ECS::World>();
+		world = std::make_unique<ECS::World>(ECS::Detail::MAX_ENTITIES, &context.getJobSystem());
 		uiManager = std::make_unique<UI::UIManager>();
 	}
 
@@ -42,11 +42,17 @@ public:
 	virtual void update(float dt) {
 		if (world)
 			world->update(dt);
+
+		if (uiManager)
+			uiManager->update(dt);
 	}
 
 	virtual void render(float alpha) {
 		if (world)
 			world->render(alpha);
+
+		if (uiManager)
+			uiManager->render(context.getRenderer());
 	}
 
 	virtual void lateUpdate(float dt) {
