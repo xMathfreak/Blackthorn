@@ -1,6 +1,7 @@
 #pragma once
 
 #include <atomic>
+#include <condition_variable>
 #include <memory>
 #include <thread>
 #include <vector>
@@ -93,6 +94,10 @@ private:
 	alignas(64) std::atomic<bool> shutdown { false };
 	alignas(64) std::atomic<size_t> activeJobs { 0 };
 	alignas(64) std::atomic<size_t> nextWorker { 0 };
+
+	std::mutex wakeMutex;
+	std::condition_variable wakeCondition;
+	std::atomic<size_t> pendingWork {0};
 
 	static int getWorkerIndex();
 	static void setWorkerIndex(int idx);

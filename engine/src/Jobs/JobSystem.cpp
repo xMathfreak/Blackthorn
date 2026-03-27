@@ -37,37 +37,18 @@ JobSystem::JobSystem(size_t workerCount) {
 
 JobSystem::~JobSystem() {
 	shutdown.store(true, std::memory_order_release);
+
+	wakeCondition.notify_all();
+
 	for (auto& t : workers)
 		t.join();
 
 	flushMainThread();
-
 	delete mainTail.load();
 }
 
 JobHandlePtr JobSystem::createHandle() {
 	return JobHandle::create();
-}
-
-void JobSystem::enqueueReady(Job&& job) {
-	if (job.getAffinity() == ThreadAffinity::MainThread) {
-		++activeJobs;
-		auto* node = new MainThreadNode(std::move(job));
-		MainThreadNode* prev = mainHead.exchange(node, std::memory_order_acq_rel);
-		prev->next.store(node, std::memory_order_release);
-	} else {
-		size_t idx = nextWorker.fetch_add(1, std::memory_order_relaxed) % queues.size();
-
-        ++activeJobs;
-
-        if (!queues[idx]->push(std::make_unique<Job>(std::move(job)))) {
-            --activeJobs;
-            BT_ERROR(
-            	"JobSystem: worker queue {} full — job dropped, its handle will never complete",
-            	idx
-            );
-        }
-	}
 }
 
 void JobSystem::submit(Job job) {
@@ -94,11 +75,49 @@ void JobSystem::submit(Job job) {
 					isMt ? ThreadAffinity::MainThread : ThreadAffinity::Any));
 			}
 		);
-
 		return;
 	}
 
 	enqueueReady(std::move(job));
+}
+
+void JobSystem::flushMainThread() {
+	while (executeOne(true)) {}
+}
+
+void JobSystem::wait(const JobHandlePtr& handle) {
+	while (!handle->isComplete()) {
+		if (!executeOne(false))
+			std::this_thread::yield();
+	}
+}
+
+void JobSystem::enqueueReady(Job&& job) {
+	if (job.getAffinity() == ThreadAffinity::MainThread) {
+		++activeJobs;
+		auto* node = new MainThreadNode(std::move(job));
+		MainThreadNode* prev = mainHead.exchange(node, std::memory_order_acq_rel);
+		prev->next.store(node, std::memory_order_release);
+	} else {
+		++activeJobs;
+		++pendingWork;
+
+		size_t idx = nextWorker.fetch_add(1, std::memory_order_relaxed) % queues.size();
+
+		if (!queues[idx]->push(std::make_unique<Job>(std::move(job)))) {
+			--activeJobs;
+			--pendingWork;
+
+			BT_ERROR(
+				"JobSystem: worker queue {} full — job dropped, its handle will never complete",
+				idx
+			);
+
+			return;
+		}
+
+		wakeCondition.notify_one();
+	}
 }
 
 bool JobSystem::executeOne(bool mainThreadOnly) {
@@ -132,16 +151,20 @@ bool JobSystem::executeOne(bool mainThreadOnly) {
 
 	if (workerIndex >= 0) {
 		if (auto job = queues[workerIndex]->pop()) {
+			--pendingWork;
 			runJob(*job);
 			return true;
 		}
 	}
 
 	const size_t n = queues.size();
-	const size_t start = workerIndex >= 0 ? static_cast<size_t>(workerIndex) : 0;
+	const size_t start = workerIndex >= 0
+		? static_cast<size_t>(workerIndex)
+		: 0;
 
 	for (size_t i = 1; i <= n; ++i) {
 		if (auto job = queues[(start + i) % n]->steal()) {
+			--pendingWork;
 			runJob(*job);
 			return true;
 		}
@@ -150,46 +173,30 @@ bool JobSystem::executeOne(bool mainThreadOnly) {
 	return false;
 }
 
-void JobSystem::flushMainThread() {
-	// while (activeJobs.load(std::memory_order_acquire) > 0) {
-	// 	while (executeOne(true)) {}
-	// 	std::this_thread::yield();
-	// }
-	while (executeOne(true)) {}
-}
-
-void JobSystem::wait(const JobHandlePtr& handle) {
-	while (!handle->isComplete()) {
-		if (!executeOne(false))
-			std::this_thread::yield();
-	}
-
-	if (getWorkerIndex() == -1)
-		flushMainThread();
-}
-
 void JobSystem::workerLoop(size_t idx) {
 	workerIndex = static_cast<int>(idx);
-
 	Threads::ThreadRegistry::instance().registerCurrent(
 		"JobWorker-" + std::to_string(idx));
 
-	while (!shutdown.load(std::memory_order_relaxed)) {
-		if (!executeOne(false))
-			std::this_thread::yield();
+	while (true) {
+		if (executeOne(false))
+			continue;
+
+		{
+			std::unique_lock<std::mutex> lock(wakeMutex);
+			wakeCondition.wait(lock, [this] {
+				return pendingWork.load(std::memory_order_relaxed) > 0
+					|| shutdown.load(std::memory_order_relaxed);
+			});
+		}
+
+		if (shutdown.load(std::memory_order_relaxed))
+			break;
 	}
 
 	while (executeOne(false)) {}
 
 	Threads::ThreadRegistry::instance().unregisterCurrent();
-}
-
-int JobSystem::getWorkerIndex() {
-	return workerIndex;
-}
-
-void JobSystem::setWorkerIndex(int idx) {
-	workerIndex = idx;
 }
 
 } // namespace Blackthorn::Jobs
