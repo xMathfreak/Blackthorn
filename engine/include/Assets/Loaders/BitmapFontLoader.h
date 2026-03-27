@@ -19,7 +19,7 @@ struct BLACKTHORN_API BitmapParams : Assets::LoadParams {
 	}
 };
 
-class BitmapFontLoader : public Assets::IAssetLoader<BitmapFont> {
+class BLACKTHORN_API BitmapFontLoader final : public Assets::IAssetLoader<BitmapFont> {
 public:
 	std::unique_ptr<BitmapFont> load(const Assets::LoadParams& params) override {
 		std::unique_ptr<BitmapFont> font = std::make_unique<BitmapFont>();

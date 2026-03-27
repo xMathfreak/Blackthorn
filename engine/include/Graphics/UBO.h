@@ -4,7 +4,6 @@
 
 #include <glad/glad.h>
 
-#include "Core/Export.h"
 #include "Debug/Logger.h"
 
 namespace Blackthorn::Graphics {
@@ -28,7 +27,7 @@ namespace Blackthorn::Graphics {
  * @warning No validation is performed to ensure that T matches the GLSL layout.
  */
 template <typename T>
-class BLACKTHORN_API UBO {
+class UBO {
 private:
 	/// OpenGL buffer object handle
 	GLuint id = 0;

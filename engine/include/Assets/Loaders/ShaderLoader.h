@@ -19,7 +19,7 @@ struct BLACKTHORN_API ShaderParams : Assets::LoadParams {
 	};
 };
 
-class ShaderLoader : public Assets::IAssetLoader<Shader> {
+class BLACKTHORN_API ShaderLoader final : public Assets::IAssetLoader<Shader> {
 public:
 	std::unique_ptr<Shader> load(const Assets::LoadParams& params) override {
 		const auto& p  = static_cast<const ShaderParams&>(params);

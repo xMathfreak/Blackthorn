@@ -6,14 +6,12 @@
 #include <thread>
 #include <unordered_map>
 
-#include "Core/Export.h"
-
 namespace Blackthorn::Threads {
 
 /**
  * @brief Maps `std::thread::id` values to human readable names for logging.
  */
-class BLACKTHORN_API ThreadRegistry {
+class ThreadRegistry {
 public:
 	static ThreadRegistry& instance() {
 		static ThreadRegistry reg;

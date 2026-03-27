@@ -1,5 +1,3 @@
-#pragma once
-
 #include "Scene/ISceneContext.h"
 
 namespace Blackthorn::Scene {

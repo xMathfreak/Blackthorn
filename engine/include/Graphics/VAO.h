@@ -14,7 +14,7 @@ namespace Blackthorn::Graphics {
  * Used to define how vertex data is interpreted by the GPU
  * when bound to a Vertex Array Object.
  */
-struct VertexAttribute {
+struct BLACKTHORN_API VertexAttribute {
 	/// Attribute index/location in the shader
 	GLuint index;
 

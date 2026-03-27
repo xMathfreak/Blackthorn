@@ -5,14 +5,12 @@
 #include <string>
 #include <thread>
 
-#include "Core/Export.h"
-
 namespace Blackthorn::Assets {
 
 class AssetManager;
 
 template <typename AssetType>
-class BLACKTHORN_API AssetHandle {
+class AssetHandle {
 public:
 	AssetHandle() = default;
 

@@ -40,7 +40,7 @@ struct BLACKTHORN_API TextureLoadParams final : Assets::LoadParams {
 	}
 };
 
-class BLACKTHORN_API TextureLoader : public Assets::IAssetLoader<Texture> {
+class BLACKTHORN_API TextureLoader final : public Assets::IAssetLoader<Texture> {
 public:
 	std::unique_ptr<Graphics::Texture> load(const Assets::LoadParams& params) override {
 		std::string filePath;
@@ -64,7 +64,7 @@ public:
 	}
 };
 
-class BLACKTHORN_API AsyncTextureLoader : public Assets::IAsyncAssetLoader<Texture> {
+class BLACKTHORN_API AsyncTextureLoader final : public Assets::IAsyncAssetLoader<Texture> {
 public:
 	std::unique_ptr<Assets::IRawAssetData> loadRaw(const Assets::LoadParams& params) override {
 		std::string filePath;

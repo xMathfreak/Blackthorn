@@ -19,7 +19,7 @@ struct BLACKTHORN_API TTFParams : Assets::LoadParams {
 	}
 };
 
-class TrueTypeFontLoader : public Assets::IAssetLoader<TrueTypeFont> {
+class BLACKTHORN_API TrueTypeFontLoader final : public Assets::IAssetLoader<TrueTypeFont> {
 public:
 	std::unique_ptr<TrueTypeFont> load(const Assets::LoadParams& params) override {
 		const auto& p = static_cast<const TTFParams&>(params);
