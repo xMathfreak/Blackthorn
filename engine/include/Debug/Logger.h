@@ -239,9 +239,9 @@ private:
 	#define BT_VERBOSE(...) ::Blackthorn::Debug::Logger::instance().log(::Blackthorn::Debug::LogLevel::Verbose, __FILE__, __LINE__, __VA_ARGS__)
 	#define BT_DEBUG(...)   ::Blackthorn::Debug::Logger::instance().log(::Blackthorn::Debug::LogLevel::Debug,   __FILE__, __LINE__, __VA_ARGS__)
 #else
-	#define BT_LOG(...)     ::Blackthorn::Debug::Logger::instance().log(::Blackthorn::Debug::LogLevel::Info,    __VA_ARGS__)
-	#define BT_WARN(...)    ::Blackthorn::Debug::Logger::instance().log(::Blackthorn::Debug::LogLevel::Warning, __VA_ARGS__)
-	#define BT_ERROR(...)   ::Blackthorn::Debug::Logger::instance().log(::Blackthorn::Debug::LogLevel::Error,   __VA_ARGS__)
-	#define BT_VERBOSE(...) ::Blackthorn::Debug::Logger::instance().log(::Blackthorn::Debug::LogLevel::Verbose, __VA_ARGS__)
-	#define BT_DEBUG(...)   ::Blackthorn::Debug::Logger::instance().log(::Blackthorn::Debug::LogLevel::Debug,   __VA_ARGS__)
+	#define BT_LOG(...)     ::Blackthorn::Debug::Logger::instance().log(::Blackthorn::Debug::LogLevel::Info,    nullptr, 0, __VA_ARGS__)
+	#define BT_WARN(...)    ::Blackthorn::Debug::Logger::instance().log(::Blackthorn::Debug::LogLevel::Warning, nullptr, 0, __VA_ARGS__)
+	#define BT_ERROR(...)   ::Blackthorn::Debug::Logger::instance().log(::Blackthorn::Debug::LogLevel::Error,   nullptr, 0, __VA_ARGS__)
+	#define BT_VERBOSE(...) ::Blackthorn::Debug::Logger::instance().log(::Blackthorn::Debug::LogLevel::Verbose, nullptr, 0, __VA_ARGS__)
+	#define BT_DEBUG(...)   ::Blackthorn::Debug::Logger::instance().log(::Blackthorn::Debug::LogLevel::Debug,   nullptr, 0, __VA_ARGS__)
 #endif
