@@ -6,12 +6,15 @@
 #include "Core/Export.h"
 #include "ECS/ComponentArray.h"
 #include "ECS/Detail.h"
+#include "Jobs/JobSystem.h"
 
 namespace Blackthorn::ECS {
 
 namespace Detail {
+
 template <typename ...Components>
 class View;
+
 } // namespace Detail
 
 class BLACKTHORN_API EntityPool {
@@ -236,42 +239,114 @@ public:
 		, entityList(entities)
 	{}
 
-	template <typename Function>
-	void each(Function&& callback) {
+	/**
+	 * @brief Calls @p callback for every entity that has all required
+	 *        components. Runs on the calling thread.
+	 *
+	 * @param callback Invocable as `(Entity, Components&...)` or `(Entity,
+	 *                 Components*...)` for optional pointer types.
+	 */
+	template <typename Callable>
+	requires std::invocable<
+		Callable&,
+		Entity,
+		decltype(getComponentForView<Components>(std::declval<Entity>()))...
+	>
+	void each(Callable&& callback) {
 		if (!entityList)
 			return;
 
 		for (Entity e : *entityList) {
-			Uint32 index = Detail::entityIndex(e);
-			const auto& entityData = pool->getEntities()[index];
-
-			if ((entityData.componentMask & requiredMask) != requiredMask)
+			if (!matchesMask(e))
 				continue;
 
 			callback(e, getComponentForView<Components>(e)...);
 		}
 	}
 
-	template <typename Function>
-	void eachParallel(size_t chunkSize, Function&& callback) {
-		size_t count = entityList->size();
-		auto& entities = *entityList;
-		const auto& poolEntities = pool->getEntities();
+	/**
+	 * @brief Dispatches @p callback across worker threads using @p js,
+	 *        then blocks until all batches have completed.
+	 *
+	 * The callback signature is identical to `each()`. The batching is
+	 * fully transparent to the caller. Falls back to `each()` if @p js
+	 * is null or the matching entity count is below @p threshold.
+	 *
+	 * Every batch runs to completion before this function returns , so
+	 * it is safe to read or write component data immediately after the
+	 * call, just as with `each()`.
+	 *
+	 * @param js        Job system to dispatch on. Triggers serial fallback
+	 *                  when null.
+	 * @param callback  Per-entity work. Must be safe to call concurrently
+	 *                  on different entities. Must not add or remove
+	 *                  components or entities during execution.
+	 * @param threshold Minimum matching entity count before parallel
+	 *                  dispatch is used. Defaults to 64.
+	 */
+	template <typename Callable>
+	requires std::invocable<
+		Callable&,
+		Entity,
+		decltype(getComponentForView<Components>(std::declval<Entity>()))...
+	>
+	void eachJobs(Jobs::JobSystem* js, Callable&& callback, size_t threshold = 64) {
+		if (!entityList)
+			return;
 
-		#pragma omp parallel for schedule(static, chunkSize)
-		for (size_t i = 0; i < count; ++i) {
-			const Entity& e = entities[i];
-			Uint32 idx = Detail::entityIndex(e);
+		std::vector<Entity> matching;
+		matching.reserve(entityList->size());
 
-			const auto& data = poolEntities[idx];
-			if ((data.componentMask & requiredMask) != requiredMask)
-				continue;
-
-			callback(e, getComponentForView<Components>(e)...);
+		for (Entity e : *entityList) {
+			if (matchesMask(e))
+				matching.push_back(e);
 		}
+
+		const size_t count = matching.size();
+
+		if (count == 0)
+			return;
+
+		if (!js || count < threshold) {
+			for (Entity e : matching)
+				callback(e, getComponentForView<Components>(e)...);
+
+			return;
+		}
+
+		const size_t batchSize = threshold;
+		const size_t batchCount = (count + batchSize - 1) / batchSize;
+
+		auto handle = js->createHandle();
+		handle->addPending(static_cast<int>(batchCount) - 1);
+
+		const Entity* matchingPtr = matching.data();
+
+		for (size_t b = 0; b < batchCount; ++b) {
+			const size_t begin = b * batchSize;
+			const size_t end = std::min(begin + batchSize, count);
+
+			js->submit(Jobs::Job(
+				[this, matchingPtr, begin, end, &callback] {
+					for (size_t i = begin; i < end; ++i) {
+						Entity e = matchingPtr[i];
+						callback(e, getComponentForView<Components>(e)...);
+					}
+				},
+				handle
+			));
+		}
+
+		js->wait(handle);
 	}
 
 private:
+	bool matchesMask(Entity e) const {
+		Uint32 idx = Detail::entityIndex(e);
+		const auto& data = pool->getEntities()[idx];
+		return (data.componentMask & requiredMask) == requiredMask;
+	}
+
 	template <typename Component>
 	decltype(auto) getComponentForView(Entity entity) {
 		using Raw = Detail::RawType<Component>;
