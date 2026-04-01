@@ -45,8 +45,8 @@ private:
 private:
 	static std::shared_ptr<Graphics::Shader> shader;
 
-	static constexpr Uint32 MAX_TEXT_GLYPHS = 2048;
-	static constexpr Uint32 MAX_VERTICES = MAX_TEXT_GLYPHS * 4;
+	Uint32 MAX_TEXT_GLYPHS;
+	Uint32 MAX_VERTICES;
 
 	std::unique_ptr<Graphics::VAO> vao;
 	std::unique_ptr<Graphics::VBO> vbo;
@@ -61,8 +61,7 @@ private:
 	float spaceWidth = 0.0f;
 	float tabWidth = 0.0f;
 
-	static constexpr Uint32 MAX_CACHED_TEXT = 128;
-	Containers::LRUCache<TextCacheKey, CachedText> cache{MAX_CACHED_TEXT};
+	Containers::LRUCache<TextCacheKey, CachedText> cache;
 
 	mutable std::vector<std::string_view> lineBuffer;
 	mutable std::vector<float> lineWidthBuffer;

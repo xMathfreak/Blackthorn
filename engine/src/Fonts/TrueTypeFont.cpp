@@ -1,12 +1,22 @@
 #include "Fonts/TrueTypeFont.h"
 
+#include "Core/EngineConfig.h"
 #include "Debug/Logger.h"
 
 namespace Blackthorn::Fonts {
 
 std::shared_ptr<Graphics::Shader> TrueTypeFont::shader = nullptr;
 
-TrueTypeFont::TrueTypeFont() {
+TrueTypeFont::TrueTypeFont()
+	: textCache(FontConfig::getCurrent().maxCachedText)
+{
+	const FontConfig& cfg = FontConfig::getCurrent();
+
+	MAX_TEXT_GLYPHS = cfg.maxTextGlyphs;
+	MAX_VERTICES = cfg.maxTextGlyphs * 4;
+	MAX_INDICES = cfg.maxTextGlyphs * 6;
+	TAB_SPACES = cfg.tabSpaces;
+
 	if (!shader)
 		initializeShader();
 
@@ -44,7 +54,10 @@ bool TrueTypeFont::loadFromFile(const std::string& filePath, int pointSize) {
 	lineHeight = TTF_GetFontLineSkip(font);
 
 	atlas = std::make_unique<Graphics::Texture>();
-	atlas->create(ATLAS_SIZE, ATLAS_SIZE, 1, {
+
+	const int atlasSize = FontConfig::getCurrent().atlasSize;
+
+	atlas->create(atlasSize, atlasSize, 1, {
 		.minFilter = Graphics::TextureFilter::Linear,
 		.magFilter = Graphics::TextureFilter::Linear,
 		.wrapS = Graphics::TextureWrap::ClampToEdge,
@@ -202,13 +215,15 @@ const TrueTypeFont::Glyph& TrueTypeFont::getGlyph(char32_t codePoint) {
 		return defaultGlyph;
 	}
 
-	if (atlasCursor.x + surface->w > ATLAS_SIZE) {
+	const int atlasSize = FontConfig::getCurrent().atlasSize;
+
+	if (atlasCursor.x + surface->w > atlasSize) {
 		atlasCursor.x = 0;
 		atlasCursor.y += atlasRowHeight;
 		atlasRowHeight = 0;
 	}
 
-	if (atlasCursor.y + surface->h > ATLAS_SIZE) {
+	if (atlasCursor.y + surface->h > atlasSize) {
 		BT_ERROR("TrueTypeFont atlas overflow");
 		SDL_DestroySurface(surface);
 
@@ -230,10 +245,10 @@ const TrueTypeFont::Glyph& TrueTypeFont::getGlyph(char32_t codePoint) {
 
 	atlas->updateRegion(atlasCursor.x, atlasCursor.y, surface->w, surface->h, reuseBuffer.data());
 
-	float u0 = atlasCursor.x / float(ATLAS_SIZE);
-	float v0 = (atlasCursor.y + surface->h) / float(ATLAS_SIZE);
-	float u1 = (atlasCursor.x + surface->w) / float(ATLAS_SIZE);
-	float v1 = atlasCursor.y / float(ATLAS_SIZE);
+	float u0 = atlasCursor.x / float(atlasSize);
+	float v0 = (atlasCursor.y + surface->h) / float(atlasSize);
+	float u1 = (atlasCursor.x + surface->w) / float(atlasSize);
+	float v1 = atlasCursor.y / float(atlasSize);
 
 	int minX, maxX, minY, maxY, advance;
 	TTF_GetGlyphMetrics(font, codePoint, &minX, &maxX, &minY, &maxY, &advance);

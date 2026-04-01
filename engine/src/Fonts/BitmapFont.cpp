@@ -7,6 +7,8 @@
 
 #include <SDL3_image/SDL_image.h>
 
+#include "Core/EngineConfig.h"
+
 namespace {
 
 inline void toLower(std::string& s) {
@@ -80,7 +82,14 @@ namespace Blackthorn::Fonts {
 
 std::shared_ptr<Graphics::Shader> BitmapFont::shader = nullptr;
 
-BitmapFont::BitmapFont() {
+BitmapFont::BitmapFont()
+	: cache(FontConfig::getCurrent().maxCachedText)
+{
+	const FontConfig& cfg = FontConfig::getCurrent();
+
+	MAX_TEXT_GLYPHS = cfg.maxTextGlyphs;
+	MAX_VERTICES = cfg.maxTextGlyphs * 4;
+
 	if (shader == nullptr)
 		initializeShader();
 

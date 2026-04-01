@@ -47,15 +47,15 @@ private:
 	EngineConfig config;
 	bool windowFocused = true;
 
-	Assets::AssetManager assetManager;
-	std::unique_ptr<Graphics::Renderer> renderer = nullptr;
+	std::unique_ptr<Assets::AssetManager> assetManager{};
+	std::unique_ptr<Graphics::Renderer> renderer{};
 	Input::InputManager inputManager;
 	Scene::SceneManager sceneManager;
 	SDL_Window* window = nullptr;
 	SDL_GLContext glContext = nullptr;
 
-	std::unique_ptr<Scene::ISceneContext> sceneContext = nullptr;
-	std::unique_ptr<Jobs::JobSystem> jobSystem = nullptr;
+	std::unique_ptr<Scene::ISceneContext> sceneContext{};
+	std::unique_ptr<Jobs::JobSystem> jobSystem{};
 
 	void initAssetLoaders();
 	void cleanupInitialization();

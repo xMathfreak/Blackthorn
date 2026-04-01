@@ -73,9 +73,9 @@ private:
 private:
 	static std::shared_ptr<Graphics::Shader> shader;
 
-	static constexpr Uint32 MAX_TEXT_GLYPHS = 2048;
-	static constexpr Uint32 MAX_VERTICES = MAX_TEXT_GLYPHS * 4;
-	static constexpr Uint32 MAX_INDICES = MAX_TEXT_GLYPHS * 6;
+	Uint32 MAX_TEXT_GLYPHS;
+	Uint32 MAX_VERTICES;
+	Uint32 MAX_INDICES;
 
 	std::unique_ptr<Graphics::EBO> ebo;
 	std::unique_ptr<Graphics::VAO> vao;
@@ -84,20 +84,18 @@ private:
 
 	TTF_Font* font = nullptr;
 
-	static constexpr int ATLAS_SIZE = 1024;
 	std::unique_ptr<Graphics::Texture> atlas;
 	glm::ivec2 atlasCursor{0, 0};
 	int atlasRowHeight = 0;
 
 	float lineHeight = 0.0f;
 
-	static constexpr Uint32 TAB_SPACES = 4;
+	Uint32 TAB_SPACES;
 
 	std::unordered_map<char32_t, Glyph> glyphCache;
 
-	static constexpr Uint32 MAX_CACHED_TEXT = 256;
 	std::vector<Uint8> reuseBuffer;
-	Containers::LRUCache<TextCacheKey, CachedText> textCache{MAX_CACHED_TEXT};
+	Containers::LRUCache<TextCacheKey, CachedText> textCache;
 
 private:
 	const Glyph& getGlyph(char32_t codePoint);

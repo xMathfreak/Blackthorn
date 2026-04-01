@@ -31,6 +31,7 @@ bool Engine::init(const EngineConfig& cfg) {
 	}
 
 	config = cfg;
+	FontConfig::setCurrent(cfg.fonts);
 
 	Threads::ThreadRegistry::instance().registerCurrent("Main");
 	Debug::Logger::instance().init(cfg.debug.logger);
@@ -76,9 +77,10 @@ bool Engine::init(const EngineConfig& cfg) {
 	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, cfg.render.depthBits);
 	SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, cfg.render.stencilBits);
 
-	if (cfg.render.msaaSamples > 0) {
+	int msaaSamples = settings.get<int>("graphics", "msaa_samples");
+	if (msaaSamples > 0) {
 		SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
-		SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, cfg.render.msaaSamples);
+		SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, msaaSamples);
 	}
 
 	SDL_WindowFlags windowFlags = SDL_WINDOW_RESIZABLE | SDL_WINDOW_OPENGL;
@@ -115,7 +117,7 @@ bool Engine::init(const EngineConfig& cfg) {
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LEQUAL);
 
-	if (cfg.render.msaaSamples > 0)
+	if (msaaSamples > 0)
 		glEnable(GL_MULTISAMPLE);
 
 	applyEngineSettings();
@@ -124,9 +126,12 @@ bool Engine::init(const EngineConfig& cfg) {
 
 	logEngineInfo();
 
+	assetManager = std::make_unique<Assets::AssetManager>(cfg.threading.assetWorkerCount);
+	jobSystem = std::make_unique<Jobs::JobSystem>(cfg.threading.jobWorkerCount);
+
 	try {
 		BT_LOG("Initializing Renderer");
-		renderer = std::make_unique<Graphics::Renderer>();
+		renderer = std::make_unique<Graphics::Renderer>(cfg.render.maxQuads);
 		renderer->setClearColor(0.1f, 0.1f, 0.12f);
 		renderer->setPostProcessingEnabled(true);
 	} catch (const std::exception& e) {
@@ -142,14 +147,13 @@ bool Engine::init(const EngineConfig& cfg) {
 	UI::UIManager::onWindowResize(w, h);
 
 	sceneContext = std::make_unique<Scene::SceneContextImpl>(
-		assetManager,
+		*assetManager,
 		*renderer,
 		inputManager,
 		*jobSystem,
 		sceneManager
 	);
 
-	jobSystem = std::make_unique<Jobs::JobSystem>(cfg.jobs.workerCount);
 
 	initialized = true;
 
@@ -159,20 +163,20 @@ bool Engine::init(const EngineConfig& cfg) {
 }
 
 void Engine::initAssetLoaders() {
-	assetManager.registerLoader<Graphics::Texture>(
+	assetManager->registerLoader<Graphics::Texture>(
 		std::make_unique<Graphics::TextureLoader>(),
 		std::make_unique<Graphics::AsyncTextureLoader>()
 	);
 
-	assetManager.registerLoader<Graphics::Shader>(
+	assetManager->registerLoader<Graphics::Shader>(
 		std::make_unique<Graphics::ShaderLoader>()
 	);
 
-	assetManager.registerLoader<Fonts::BitmapFont>(
+	assetManager->registerLoader<Fonts::BitmapFont>(
 		std::make_unique<Fonts::BitmapFontLoader>()
 	);
 
-	assetManager.registerLoader<Fonts::TrueTypeFont>(
+	assetManager->registerLoader<Fonts::TrueTypeFont>(
 		std::make_unique<Fonts::TrueTypeFontLoader>()
 	);
 }
@@ -189,7 +193,8 @@ void Engine::shutdown() {
 	Fonts::TrueTypeFont::cleanupShader();
 	Fonts::BitmapFont::cleanupShader();
 
-	assetManager.clear();
+	if (assetManager)
+		assetManager->clear();
 
 	if (glContext) {
 		SDL_GL_DestroyContext(glContext);
@@ -289,15 +294,10 @@ void Engine::processEvents() {
 				break;
 		}
 	}
-
-	// #ifdef BLACKTHORN_DEBUG
-	// 	if (inputManager.isKeyPressed(SDLK_F5))
-	// 		assetManager.reloadAllTyped<Graphics::Texture, Fonts::BitmapFont, Fonts::TrueTypeFont>();
-	// #endif
 }
 
 void Engine::update(float dt) {
-	assetManager.flushPendingUploads(4);
+	assetManager->flushPendingUploads(config.assets.uploadBudget);
 
 	sceneManager.update(dt);
 	inputManager.update(dt);
@@ -455,7 +455,9 @@ void Engine::logEngineInfo() {
 
 	BT_DEBUG("Depth Buffer: {} bits (requested {})", actualDepthSize, config.render.depthBits);
 	BT_DEBUG("Stencil Buffer: {} bits (requested {})", actualStencilSize, config.render.stencilBits);
-	BT_DEBUG("MSAA Samples: {}x (requested {}x)", actualMSAASamples, config.render.msaaSamples);
+	BT_DEBUG("MSAA Samples: {}x (requested {}x)",
+		actualMSAASamples, Core::Settings::instance().get<int>("graphics", "msaa_samples")
+	);
 
 	#if defined(GLM_FORCE_SIMD_AVX2)
 		BT_DEBUG("GLM using AVX2 SIMD");
