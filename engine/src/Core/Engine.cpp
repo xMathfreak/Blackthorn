@@ -141,6 +141,7 @@ bool Engine::init(const EngineConfig& cfg) {
 	}
 
 	initAssetLoaders();
+
 	int w, h;
 	SDL_GetWindowSizeInPixels(window, &w, &h);
 	renderer->setProjection(w, h);
@@ -153,7 +154,6 @@ bool Engine::init(const EngineConfig& cfg) {
 		*jobSystem,
 		sceneManager
 	);
-
 
 	initialized = true;
 

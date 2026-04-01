@@ -39,9 +39,8 @@ public:
 	}
 
 	Entity create() {
-		if (freeList.empty()) {
+		if (freeList.empty())
 			throw std::runtime_error("EntityPool: Out of entity slots");
-		}
 
 		Uint32 index = freeList.back();
 		freeList.pop_back();
@@ -232,12 +231,17 @@ private:
 	Uint64 requiredMask;
 	const std::vector<Entity>* entityList;
 
+	mutable std::vector<Entity> cachedMatching;
+	mutable bool cacheDirty = true;
+
 public:
 	View(EntityPool* p, Uint64 mask, const std::vector<Entity>* entities)
 		: pool(p)
 		, requiredMask(mask)
 		, entityList(entities)
 	{}
+
+	void invalidateCache() const { cacheDirty = true; }
 
 	/**
 	 * @brief Calls @p callback for every entity that has all required
@@ -247,21 +251,11 @@ public:
 	 *                 Components*...)` for optional pointer types.
 	 */
 	template <typename Callable>
-	// requires std::invocable<
-	// 	Callable&,
-	// 	Entity,
-	// 	decltype(getComponentForView<Components>(std::declval<Entity>()))...
-	// >
 	void each(Callable&& callback) {
-		if (!entityList)
-			return;
+		rebuildCache();
 
-		for (Entity e : *entityList) {
-			if (!matchesMask(e))
-				continue;
-
+		for (Entity e : cachedMatching)
 			callback(e, getComponentForView<Components>(e)...);
-		}
 	}
 
 	/**
@@ -285,30 +279,15 @@ public:
 	 *                  dispatch is used. Defaults to 64.
 	 */
 	template <typename Callable>
-	// requires std::invocable<
-	// 	Callable&,
-	// 	Entity,
-	// 	decltype(getComponentForView<Components>(std::declval<Entity>()))...
-	// >
 	void eachJobs(Jobs::JobSystem* js, Callable&& callback, size_t threshold = 64) {
-		if (!entityList)
-			return;
+		rebuildCache();
 
-		std::vector<Entity> matching;
-		matching.reserve(entityList->size());
-
-		for (Entity e : *entityList) {
-			if (matchesMask(e))
-				matching.push_back(e);
-		}
-
-		const size_t count = matching.size();
-
+		const size_t count = cachedMatching.size();
 		if (count == 0)
 			return;
 
 		if (!js || count < threshold) {
-			for (Entity e : matching)
+			for (Entity e : cachedMatching)
 				callback(e, getComponentForView<Components>(e)...);
 
 			return;
@@ -320,18 +299,16 @@ public:
 		auto handle = js->createHandle();
 		handle->addPending(static_cast<int>(batchCount) - 1);
 
-		const Entity* matchingPtr = matching.data();
+		const Entity* ptr = cachedMatching.data();
 
 		for (size_t b = 0; b < batchCount; ++b) {
 			const size_t begin = b * batchSize;
-			const size_t end = std::min(begin + batchSize, count);
+			const size_t end   = std::min(begin + batchSize, count);
 
 			js->submit(Jobs::Job(
-				[this, matchingPtr, begin, end, &callback] {
-					for (size_t i = begin; i < end; ++i) {
-						Entity e = matchingPtr[i];
-						callback(e, getComponentForView<Components>(e)...);
-					}
+				[this, ptr, begin, end, &callback] {
+					for (size_t i = begin; i < end; ++i)
+						callback(ptr[i], getComponentForView<Components>(ptr[i])...);
 				},
 				handle
 			));
@@ -341,10 +318,26 @@ public:
 	}
 
 private:
+	void rebuildCache() const {
+		if (!cacheDirty)
+			return;
+
+		cachedMatching.clear();
+
+		if (entityList) {
+			cachedMatching.reserve(entityList->size());
+			for (Entity e : *entityList) {
+				if (matchesMask(e))
+					cachedMatching.push_back(e);
+			}
+		}
+
+		cacheDirty = false;
+	}
+
 	bool matchesMask(Entity e) const {
 		Uint32 idx = Detail::entityIndex(e);
-		const auto& data = pool->getEntities()[idx];
-		return (data.componentMask & requiredMask) == requiredMask;
+		return (pool->getEntities()[idx].componentMask & requiredMask) == requiredMask;
 	}
 
 	template <typename Component>
