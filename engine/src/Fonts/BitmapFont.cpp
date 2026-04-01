@@ -548,8 +548,8 @@ void BitmapFont::generateVertices(const Layout& layout, float scale, Text::Align
 				continue;
 
 			const Glyph& glyph = it->second;
-			float glyphX = snap(currentX - glyph.xOffset * scale);
-			float glyphY = snap(currentY - glyph.yOffset * scale);
+			float glyphX = snap(currentX - glyph.xOffset * scale) - 1;
+			float glyphY = snap(currentY - (glyph.yOffset - 2) * scale) - 1;
 			float glyphW = glyph.rect.w * scale;
 			float glyphH = glyph.rect.h * scale;
 

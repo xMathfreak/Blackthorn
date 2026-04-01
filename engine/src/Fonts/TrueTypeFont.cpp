@@ -42,7 +42,6 @@ bool TrueTypeFont::loadFromFile(const std::string& filePath, int pointSize) {
 	TTF_SetFontKerning(font, true);
 
 	lineHeight = TTF_GetFontLineSkip(font);
-	descent = TTF_GetFontDescent(font);
 
 	atlas = std::make_unique<Graphics::Texture>();
 	atlas->create(ATLAS_SIZE, ATLAS_SIZE, 1, {
@@ -260,7 +259,7 @@ void TrueTypeFont::generateVertices(std::string_view text, float maxWidth, Text:
 	auto codePoints = utf8To32(text);
 	auto lines = layoutText(codePoints, maxWidth);
 
-	float cursorY = 0.0f;
+	float cursorY = 0;
 
 	for (const auto& line : lines) {
 		float offsetX = 0.0f;
@@ -452,7 +451,7 @@ std::vector<TrueTypeFont::LayoutLine> TrueTypeFont::layoutText(const std::vector
 		for (const auto& wg : word) {
 			cursorX += wg.kern;
 			lines.back().glyphs.push_back({wg.glyph, cursorX});
-			lines.back().width = cursorX + wg.glyph->advance;
+			lines.back().width = cursorX + wg.glyph->size.x;
 			cursorX += wg.glyph->advance;
 		}
 

@@ -90,7 +90,6 @@ private:
 	int atlasRowHeight = 0;
 
 	float lineHeight = 0.0f;
-	int descent = 0;
 
 	static constexpr Uint32 TAB_SPACES = 4;
 
