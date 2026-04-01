@@ -5,6 +5,7 @@
 #include <SDL3/SDL.h>
 
 #include "Debug/Logger.h"
+#include "Input/InputManager.h"
 #include "UI/Container.h"
 #include "UI/Widget.h"
 
@@ -197,7 +198,59 @@ void UIManager::render(Graphics::Renderer& renderer) {
 }
 
 void UIManager::handleInput(const Input::InputManager& input) {
-	// TODO: dispatch mouse/keyboard events from InputManager.
+	if (!root)
+		return;
+
+	const glm::vec2 mousePos = input.getMousePosition();
+
+	if (root)
+		root->onMouseMove(mousePos);
+
+	Widget* widgetUnderCursor = findWidgetAt(mousePos);
+	setHoveredWidget(widgetUnderCursor);
+
+	for (Uint8 btn = 1; btn <= 3; ++btn) {
+		if (input.isMouseButtonPressed(btn)) {
+			if (root->onMouseDown(mousePos, btn)) {
+				Widget* clicked = findWidgetAt(mousePos);
+
+				if (clicked && clicked->canFocus()) {
+					setFocusedWidget(clicked);
+				} else {
+					setFocusedWidget(nullptr);
+				}
+			}
+		}
+
+		if (input.isMouseButtonReleased(btn))
+			root->onMouseUp(mousePos, btn);
+	}
+
+	if (!focusedWidget)
+		return;
+
+	static constexpr SDL_Keycode uiKeys[] = {
+		SDLK_RETURN, SDLK_ESCAPE, SDLK_BACKSPACE, SDLK_DELETE,
+		SDLK_TAB, SDLK_LEFT, SDLK_RIGHT, SDLK_UP, SDLK_DOWN,
+		SDLK_HOME, SDLK_END, SDLK_PAGEUP, SDLK_PAGEDOWN,
+		SDLK_SPACE
+	};
+
+	for (SDL_Keycode key : uiKeys) {
+		if (input.isKeyPressed(key))
+			focusedWidget->onKeyDown(key);
+
+		if (input.isKeyReleased(key))
+			focusedWidget->onKeyUp(key);
+	}
+
+	for (SDL_Keycode key = 32; key <= 126; ++key) {
+		if (input.isKeyPressed(key))
+			focusedWidget->onKeyDown(key);
+
+		if (input.isKeyReleased(key))
+			focusedWidget->onKeyUp(key);
+	}
 }
 
 } // namespace Blackthorn::UI
