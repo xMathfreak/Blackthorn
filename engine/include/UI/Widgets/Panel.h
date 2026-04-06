@@ -4,6 +4,7 @@
 
 #include "Core/Export.h"
 #include "Graphics/RenderLayers.h"
+#include "Graphics/SliceMargins.h"
 #include "Graphics/Texture.h"
 #include "Math/Color.h"
 #include "UI/Container.h"
@@ -40,13 +41,10 @@ protected:
 	Math::Color color = Math::Colors::White;
 	float zDepth = Graphics::RenderLayers::UI;
 
-	/// Uniform border size used for nine-slice corners (design units).
-	/// Setting this to > 0 while a texture is assigned activates NineSlice mode.
-	float borderSize = 0.0f;
+	Graphics::SliceMargins sliceMargins;
 
 	RenderMode currentRenderMode() const;
 	SDL_FRect makeDestRect() const;
-	SDL_FRect makeSliceMargins() const;
 
 public:
 	Panel();
@@ -83,8 +81,8 @@ public:
 	 *
 	 * @param size Border size in design-unit pixels (must be >= 0).
 	 */
-	void setBorderSize(float size);
-	float getBorderSize() const { return borderSize; }
+	void setSliceMargins(const Graphics::SliceMargins& sm);
+	Graphics::SliceMargins getSliceMargins() const { return sliceMargins; }
 
 	/**
 	 * @brief Set the fill colour (Solid mode) or tint (Texture / NineSlice mode).

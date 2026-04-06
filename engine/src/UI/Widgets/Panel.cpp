@@ -12,7 +12,9 @@ Panel::RenderMode Panel::currentRenderMode() const {
 	if (!textureHandle)
 		return RenderMode::Solid;
 
-	return (borderSize > 0.0f) ? RenderMode::NineSlice : RenderMode::Texture;
+	return (!sliceMargins.isEmpty())
+		? RenderMode::NineSlice
+		: RenderMode::Texture;
 }
 
 SDL_FRect Panel::makeDestRect() const {
@@ -24,15 +26,6 @@ SDL_FRect Panel::makeDestRect() const {
 		pos.y,
 		size.x * scale,
 		size.y * scale
-	};
-}
-
-SDL_FRect Panel::makeSliceMargins() const {
-	return SDL_FRect{
-		borderSize,
-		borderSize,
-		borderSize,
-		borderSize
 	};
 }
 
@@ -54,7 +47,7 @@ void Panel::render(Graphics::Renderer& renderer) {
 			break;
 
 		case RenderMode::NineSlice:
-			renderer.drawNineSlice(*textureHandle, dest, makeSliceMargins(), zDepth, color);
+			renderer.drawNineSlice(*textureHandle, dest, sliceMargins, zDepth, color);
 			break;
 	}
 
@@ -76,14 +69,11 @@ void Panel::clearTexture() {
 	markRenderDirty();
 }
 
-void Panel::setBorderSize(float sz) {
-	if (sz < 0.0f)
-		sz = 0.0f;
-
-	if (borderSize == sz)
+void Panel::setSliceMargins(const Graphics::SliceMargins& sm) {
+	if (sliceMargins == sm)
 		return;
 
-	borderSize = sz;
+	sliceMargins = sm;
 	markRenderDirty();
 }
 
