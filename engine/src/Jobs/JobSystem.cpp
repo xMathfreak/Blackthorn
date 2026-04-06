@@ -6,9 +6,22 @@
 #include "Debug/Logger.h"
 #include "Threads/ThreadRegistry.h"
 
-namespace Blackthorn::Jobs {
+namespace {
+	thread_local int workerIndex = -1;
 
-thread_local int workerIndex = -1;
+	thread_local Uint32 stealRNG = 0x9E3779B9u;
+
+	inline Uint32 nextRand() {
+		stealRNG ^= stealRNG << 13;
+		stealRNG ^= stealRNG >> 17;
+		stealRNG ^= stealRNG << 5;
+
+		return stealRNG;
+	};
+
+}
+
+namespace Blackthorn::Jobs {
 
 JobSystem::JobSystem(size_t workerCount) {
 	if (workerCount == 0) {
@@ -102,17 +115,16 @@ void JobSystem::enqueueReady(Job&& job) {
 		++activeJobs;
 		++pendingWork;
 
-		size_t idx = nextWorker.fetch_add(1, std::memory_order_relaxed) % queues.size();
+		int localIdx = getWorkerIndex();
+		size_t idx = (localIdx >= 0)
+			? static_cast<size_t>(localIdx)
+			: nextWorker.fetch_add(1, std::memory_order_relaxed) % queues.size();
 
 		if (!queues[idx]->push(std::make_unique<Job>(std::move(job)))) {
 			--activeJobs;
 			--pendingWork;
 
-			BT_ERROR(
-				"JobSystem: worker queue {} full — job dropped, its handle will never complete",
-				idx
-			);
-
+			BT_ERROR("JobSystem: worker queue {} full, Job dropped", idx);
 			return;
 		}
 
@@ -134,7 +146,7 @@ bool JobSystem::executeOne(bool mainThreadOnly) {
 		--activeJobs;
 	};
 
-	if (mainThreadOnly || workerIndex == -1) {
+	if (mainThreadOnly || getWorkerIndex() == -1) {
 		MainThreadNode* tail = mainTail.load(std::memory_order_acquire);
 		MainThreadNode* next = tail->next.load(std::memory_order_acquire);
 
@@ -149,8 +161,8 @@ bool JobSystem::executeOne(bool mainThreadOnly) {
 			return false;
 	}
 
-	if (workerIndex >= 0) {
-		if (auto job = queues[workerIndex]->pop()) {
+	if (getWorkerIndex() >= 0) {
+		if (auto job = queues[getWorkerIndex()]->pop()) {
 			--pendingWork;
 			runJob(*job);
 			return true;
@@ -158,12 +170,14 @@ bool JobSystem::executeOne(bool mainThreadOnly) {
 	}
 
 	const size_t n = queues.size();
-	const size_t start = workerIndex >= 0
-		? static_cast<size_t>(workerIndex)
-		: 0;
 
-	for (size_t i = 1; i <= n; ++i) {
-		if (auto job = queues[(start + i) % n]->steal()) {
+	for (size_t i = 0; i < n; ++i) {
+		size_t target = nextRand() % n;
+
+		if (target == static_cast<size_t>(getWorkerIndex()))
+			continue;
+
+		if (auto job = queues[target]->steal()) {
 			--pendingWork;
 			runJob(*job);
 			return true;
@@ -174,7 +188,7 @@ bool JobSystem::executeOne(bool mainThreadOnly) {
 }
 
 void JobSystem::workerLoop(size_t idx) {
-	workerIndex = static_cast<int>(idx);
+	setWorkerIndex(idx);
 	Threads::ThreadRegistry::instance().registerCurrent(
 		"JobWorker-" + std::to_string(idx));
 
@@ -197,6 +211,14 @@ void JobSystem::workerLoop(size_t idx) {
 	while (executeOne(false)) {}
 
 	Threads::ThreadRegistry::instance().unregisterCurrent();
+}
+
+int JobSystem::getWorkerIndex() {
+	return workerIndex;
+}
+
+void JobSystem::setWorkerIndex(int idx) {
+	workerIndex = idx;
 }
 
 } // namespace Blackthorn::Jobs

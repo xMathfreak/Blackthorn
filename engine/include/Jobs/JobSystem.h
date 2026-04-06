@@ -83,6 +83,9 @@ public:
 
 	size_t workerCount() const { return workers.size(); }
 
+	static int getWorkerIndex();
+	static void setWorkerIndex(int idx);
+
 private:
 	void enqueueReady(Job&& fn);
 	bool executeOne(bool mainThreadOnly = false);
