@@ -317,7 +317,7 @@ void Renderer::drawTexture(const Texture& texture, const SDL_FRect& dest, const 
 	draw(dest, z, rotation, tint, &texture, src);
 }
 
-void Renderer::drawNineSlice(const Texture& texture, const SDL_FRect& dest, const SDL_FRect& sliceMargins, float z, const Math::Color& tint) {
+void Renderer::drawNineSlice(const Texture& texture, const SDL_FRect& dest, const SliceMargins& sliceMargins, float z, const Math::Color& tint) {
 	if (!isVisible(dest))
 		return;
 
@@ -344,13 +344,13 @@ void Renderer::drawNineSlice(const Texture& texture, const SDL_FRect& dest, cons
 	float texW = static_cast<float>(texture.getWidth());
 	float texH = static_cast<float>(texture.getHeight());
 
-	float L = sliceMargins.x;
-	float R = sliceMargins.w;
-	float T = sliceMargins.y;
-	float B = sliceMargins.h;
+	const float L = sliceMargins.left;
+	const float R = sliceMargins.right;
+	const float T = sliceMargins.top;
+	const float B = sliceMargins.bottom;
 
-	if (dest.w < L + R || dest.h < T + B)
-		return;
+	// if (dest.w < L + R || dest.h < T + B)
+	// 	return;
 
 	float dx[4] = { dest.x, dest.x + L, dest.x + dest.w - R, dest.x + dest.w };
 	float dy[4] = { dest.y, dest.y + T, dest.y + dest.h - B, dest.y + dest.h };

@@ -10,6 +10,7 @@
 #include "Graphics/EBO.h"
 #include "Graphics/FBO.h"
 #include "Graphics/Shader.h"
+#include "Graphics/SliceMargins.h"
 #include "Graphics/Texture.h"
 #include "Graphics/UBO.h"
 #include "Graphics/VAO.h"
@@ -341,7 +342,7 @@ public:
 	void drawNineSlice(
 		const Texture& texture,
 		const SDL_FRect& dest,
-		const SDL_FRect& sliceMargins,
+		const SliceMargins& sliceMargins,
 		float z = 0.0f,
 		const Math::Color& tint = Math::Colors::White
 	);
