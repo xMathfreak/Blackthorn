@@ -253,4 +253,9 @@ constexpr Color shiftHue(const Color& c, float degrees) {
 	return fromHSV(hsv.x + degrees, hsv.y, hsv.z, c.a);
 }
 
+[[nodiscard]]
+constexpr Color operator"" _hex(const char* hex, size_t len) {
+	return fromHex(std::string_view(hex, len));
+}
+
 } // namespace Blackthorn::Math
