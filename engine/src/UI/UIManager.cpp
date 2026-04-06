@@ -47,7 +47,7 @@ void UIManager::recomputeScale() {
 	float scaleY = screenDimensions.y / referenceResolution.y;
 
 	autoScale = std::min(scaleX, scaleY);
-	effectiveScale = autoScale * globalUIScale;
+	effectiveScale = std::max(1.0f, autoScale * globalUIScale);
 
 	layoutPending = true;
 }
