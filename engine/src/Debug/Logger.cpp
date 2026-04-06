@@ -158,10 +158,10 @@ std::string Logger::formatEntry(LogLevel level, std::string_view message, const 
 
 	std::string threadName = Threads::ThreadRegistry::instance().currentName();
 
-	if (threadName.size() < 9) {
-		threadName.resize(9, ' ');
-	} else if (threadName.size() > 9) {
-		threadName = threadName.substr(0, 9);
+	if (threadName.size() < 11) {
+		threadName.resize(11, ' ');
+	} else if (threadName.size() > 11) {
+		threadName = threadName.substr(0, 11);
 	}
 
 	std::string entry = std::format("[{}] [{}] [{}] {}", timeBuf, levelTag(level), threadName, message);
