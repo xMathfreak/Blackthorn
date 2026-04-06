@@ -5,6 +5,8 @@ out vec4 FragColor;
 
 uniform sampler2D u_ScreenTexture;
 
+uniform vec2 u_TexelSize;
+
 uniform bool u_Grayscale = false;
 uniform bool u_Invert = false;
 uniform float u_Brightness = 1.0;
@@ -82,27 +84,27 @@ vec3 applyChromaticAberration(vec3 color, vec2 uv) {
 	return vec3(redColor.r, greenColor.g, blueColor.b);
 }
 
-vec3 applyPixelation(vec3 color, vec2 uv, vec2 texelSize) {
-	uv = floor(uv / texelSize) * texelSize;
-	return texture(u_ScreenTexture, uv).rgb;
+vec3 applyPixelation(vec2 uv) {
+	vec2 pixelUV = floor(uv / u_TexelSize) * u_TexelSize;
+	return texture(u_ScreenTexture, pixelUV).rgb;
 }
 
-vec4 blur(sampler2D tex, vec2 uv, float radius, vec2 texelSize) {
+vec3 blur(vec2 uv) {
 	vec3 result = vec3(0.0);
 
-	result += texture(tex, uv).rgb * 0.227027;
+	result += texture(u_ScreenTexture, uv).rgb * 0.227027;
 
-	result += texture(tex, uv + texelSize * vec2(1.0, 0.0)).rgb * 0.194594;
-	result += texture(tex, uv - texelSize * vec2(1.0, 0.0)).rgb * 0.194594;
+	result += texture(u_ScreenTexture, uv + u_TexelSize * vec2( 1, 0)).rgb * 0.194594;
+	result += texture(u_ScreenTexture, uv + u_TexelSize * vec2(-1, 0)).rgb * 0.194594;
 
-	result += texture(tex, uv + texelSize * vec2(0.0, 1.0)).rgb * 0.194594;
-	result += texture(tex, uv - texelSize * vec2(0.0, 1.0)).rgb * 0.194594;
+	result += texture(u_ScreenTexture, uv + u_TexelSize * vec2( 0, 1)).rgb * 0.194594;
+	result += texture(u_ScreenTexture, uv + u_TexelSize * vec2( 0, -1)).rgb * 0.194594;
 
-	result += texture(tex, uv + texelSize * vec2(1.0, 1.0)).rgb * 0.121621;
-	result += texture(tex, uv - texelSize * vec2(1.0, 1.0)).rgb * 0.121621;
+	result += texture(u_ScreenTexture, uv + u_TexelSize * vec2( 1, 1)).rgb * 0.121621;
+	result += texture(u_ScreenTexture, uv + u_TexelSize * vec2(-1, -1)).rgb * 0.121621;
 
-	result += texture(tex, uv + texelSize * vec2(-1.0, 1.0)).rgb * 0.121621;
-	result += texture(tex, uv - texelSize * vec2(-1.0, 1.0)).rgb * 0.121621;
+	result += texture(u_ScreenTexture, uv + u_TexelSize * vec2(-1, 1)).rgb * 0.121621;
+	result += texture(u_ScreenTexture, uv + u_TexelSize * vec2( 1, -1)).rgb * 0.121621;
 
 	return result;
 }
@@ -135,7 +137,7 @@ void main() {
 		color = vec3(1.0) - color;
 
 	if (u_Blur || u_Bloom) {
-		vec3 blurred = blur(u_ScreenTexture, v_TexCoord, u_BlurRadius, texelSize).rgb;
+		vec3 blurred = blur(v_TexCoord);
 
 		if (u_Blur)
 			color = blurred;
@@ -151,7 +153,7 @@ void main() {
 		color = applyChromaticAberration(color, v_TexCoord);
 
 	if (u_Pixelation > 0.0)
-		color = applyPixelation(color, v_TexCoord, texelSize);
+		color = applyPixelation(v_TexCoord);
 
 	if (u_GammaCorrect != 1.0)
 		color = pow(max(color, vec3(0.0)), vec3(1.0 / u_GammaCorrect));
