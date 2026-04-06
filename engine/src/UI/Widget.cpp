@@ -46,10 +46,8 @@ void Widget::updateTransform() const {
 
 	if (parent) {
 		parentAbsPos = parent->getAbsolutePosition();
-		parentAbsPos.x += parent->getPadding().left * scale;
-		parentAbsPos.y += parent->getPadding().top * scale;
-
 		glm::vec2 parentSize = parent->getSize();
+
 		parentDesignSize.x = parentSize.x - parent->getPadding().left - parent->getPadding().right;
 		parentDesignSize.y = parentSize.y - parent->getPadding().top - parent->getPadding().bottom;
 	} else {
