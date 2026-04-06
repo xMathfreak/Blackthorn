@@ -198,9 +198,9 @@ void JobSystem::workerLoop(size_t idx) {
 
 		{
 			std::unique_lock<std::mutex> lock(wakeMutex);
-			wakeCondition.wait(lock, [this] {
-				return pendingWork.load(std::memory_order_relaxed) > 0
-					|| shutdown.load(std::memory_order_relaxed);
+			wakeCondition.wait_for(lock, std::chrono::microseconds(50), [this] {
+				return shutdown.load(std::memory_order_relaxed)
+					|| pendingWork.load(std::memory_order_relaxed) > 0;
 			});
 		}
 

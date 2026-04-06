@@ -97,13 +97,10 @@ private:
 	alignas(64) std::atomic<bool> shutdown { false };
 	alignas(64) std::atomic<size_t> activeJobs { 0 };
 	alignas(64) std::atomic<size_t> nextWorker { 0 };
+	alignas(64) std::atomic<size_t> pendingWork {0 };
 
 	std::mutex wakeMutex;
 	std::condition_variable wakeCondition;
-	std::atomic<size_t> pendingWork {0};
-
-	static int getWorkerIndex();
-	static void setWorkerIndex(int idx);
 
 	struct MainThreadNode {
 		Job job;
