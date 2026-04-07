@@ -3,6 +3,7 @@
 #include <glm/glm.hpp>
 
 #include "Core/Export.h"
+#include "Math/Edges.h"
 #include "UI/WidgetState.h"
 #include "UI/Alignment.h"
 
@@ -13,6 +14,9 @@ namespace Graphics {
 } // namespace Graphics
 
 namespace UI {
+
+using Margin = Math::Edges<float>;
+using Padding = Math::Edges<float>;
 
 class UIManager;
 class Container;
@@ -26,18 +30,6 @@ enum class SizeMode : Uint8 {
 class BLACKTHORN_API Widget {
 	friend class UIManager;
 	friend class Container;
-
-public:
-	struct Margins {
-		float top = 0, right = 0, bottom = 0, left = 0;
-
-		bool operator==(const Margins& other) {
-			return top == other.top
-				&& right == other.right
-				&& bottom == other.bottom
-				&&left == other.left;
-		}
-	};
 
 protected:
 	glm::vec2 position{0};
@@ -61,8 +53,8 @@ protected:
 	WidgetState state = WidgetState::Normal;
 	Alignment alignment = Alignment::topLeft();
 
-	Margins margin;
-	Margins padding;
+	Margin margin;
+	Padding padding;
 
 	virtual void updateLayout();
 	virtual void updateTransform() const;
@@ -104,13 +96,11 @@ public:
 	void setAlignment(const Alignment& align);
 	const Alignment& getAlignment() const { return alignment; }
 
-	void setMargin(float m);
-	void setMargin(float top, float right, float bottom, float left);
-	void setPadding(float p);
-	void setPadding(float top, float right, float bottom, float left);
+	void setMargin(const Margin& m);
+	void setPadding(const Padding& p);
 
-	const Margins& getMargin() const { return margin; }
-	const Margins& getPadding() const { return padding; }
+	const Margin& getMargin() const { return margin; }
+	const Padding& getPadding() const { return padding; }
 
 	void setParent(Container* container);
 	Container* getParent() const { return parent; }

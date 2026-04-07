@@ -125,24 +125,14 @@ void Widget::setAlignment(const Alignment& align) {
 	markTransformDirty();
 }
 
-void Widget::setMargin(float m) {
-	margin = {m, m, m, m};
+void Widget::setMargin(const Margin& m) {
+	margin = m;
 	markLayoutDirty();
 }
 
-void Widget::setMargin(float top, float right, float bottom, float left) {
-	margin = {top, right, bottom, left};
-	markLayoutDirty();
-}
 
-void Widget::setPadding(float p) {
-	padding = {p, p, p, p};
-	markLayoutDirty();
-	markTransformDirty();
-}
-
-void Widget::setPadding(float top, float right, float bottom, float left) {
-	padding = {top, right, bottom, left};
+void Widget::setPadding(const Padding& p) {
+	padding = p;
 	markLayoutDirty();
 	markTransformDirty();
 }

@@ -12,7 +12,7 @@ Panel::RenderMode Panel::currentRenderMode() const {
 	if (!textureHandle)
 		return RenderMode::Solid;
 
-	return (!sliceMargins.isEmpty())
+	return (sliceMargins.hasAny())
 		? RenderMode::NineSlice
 		: RenderMode::Texture;
 }

@@ -4,9 +4,9 @@
 
 #include "Core/Export.h"
 #include "Graphics/RenderLayers.h"
-#include "Graphics/SliceMargins.h"
 #include "Graphics/Texture.h"
 #include "Math/Color.h"
+#include "Graphics/Types.h"
 #include "UI/Container.h"
 
 namespace Blackthorn::UI {
