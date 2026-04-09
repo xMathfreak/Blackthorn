@@ -207,22 +207,8 @@ void Renderer::draw(const SDL_FRect& rect, float z, float rotation, const Math::
 
 	float texIndex = 0.0f;
 
-	if (texture) {
-		for (Uint32 i = 1; i < textureSlotIndex; ++i) {
-			if (textureSlots[i] == texture) {
-				texIndex = static_cast<float>(i);
-				goto textureFound;
-			}
-		}
-
-		if (textureSlotIndex >= MAX_TEXTURE_SLOTS)
-			nextBatch();
-
-		texIndex = static_cast<float>(textureSlotIndex);
-		textureSlots[textureSlotIndex++] = texture;
-
-	textureFound:;
-	}
+	if (texture)
+		texIndex = static_cast<float>(findOrAddTexture(texture));
 
 	glm::vec2 textureCoords[4];
 	constexpr glm::vec2 defaultTexCoords[4] = {
@@ -324,22 +310,7 @@ void Renderer::drawNineSlice(const Texture& texture, const SDL_FRect& dest, cons
 	if (quadIndexCount + 54 > MAX_INDICES)
 		nextBatch();
 
-	float texIndex = 0.0f;
-
-	for (Uint32 i = 1; i < textureSlotIndex; ++i) {
-		if (textureSlots[i] == &texture) {
-			texIndex = static_cast<float>(i);
-			goto textureFound;
-		}
-	}
-
-	if (textureSlotIndex >= MAX_TEXTURE_SLOTS)
-		nextBatch();
-
-	texIndex = static_cast<float>(textureSlotIndex);
-	textureSlots[textureSlotIndex++] = &texture;
-
-	textureFound:;
+	float texIndex = static_cast<float>(findOrAddTexture(&texture));
 
 	float texW = static_cast<float>(texture.getWidth());
 	float texH = static_cast<float>(texture.getHeight());
@@ -450,6 +421,20 @@ inline bool Renderer::isVisible(const SDL_FRect& rect, float rotation) const {
 		cy + aabbHalfH >= viewBounds.y &&
 		cy - aabbHalfH <= viewBounds.y + viewBounds.h
 	);
+}
+
+Uint32 Renderer::findOrAddTexture(const Texture* texture){
+	for (Uint32 i = 1; i < textureSlotIndex; ++i) {
+		if (textureSlots[i] == texture)
+			return i;
+	}
+
+	if (textureSlotIndex >= MAX_TEXTURE_SLOTS)
+		nextBatch();
+
+	const Uint32 slot = textureSlotIndex;
+	textureSlots[textureSlotIndex++] = texture;
+	return slot;
 }
 
 } // namespace Blackthorn::Graphics

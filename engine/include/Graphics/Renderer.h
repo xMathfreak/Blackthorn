@@ -172,6 +172,8 @@ private:
 	 */
 	inline bool isVisible(const SDL_FRect& rect, float rotation = 0.0f) const;
 
+	Uint32 findOrAddTexture(const Texture* texture);
+
 	/**
 	 * @brief Internal quad draw implementation.
 	 */
