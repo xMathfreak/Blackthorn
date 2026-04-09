@@ -29,9 +29,9 @@ JobSystem::JobSystem(size_t workerCount) {
 		workerCount = hw > 1 ? hw - 1 : 1;
 	}
 
-	auto* dummy = new MainThreadNode();
-	mainHead.store(dummy, std::memory_order_relaxed);
-	mainTail.store(dummy, std::memory_order_relaxed);
+	mainSentinel = new MainThreadNode();
+	mainHead.store(mainSentinel, std::memory_order_relaxed);
+	mainTail.store(mainSentinel, std::memory_order_relaxed);
 
 	queues.reserve(workerCount);
 	for (size_t i = 0; i < workerCount; ++i)
@@ -57,7 +57,8 @@ JobSystem::~JobSystem() {
 		t.join();
 
 	flushMainThread();
-	delete mainTail.load();
+	delete mainSentinel;
+	mainSentinel = nullptr;
 }
 
 JobHandlePtr JobSystem::createHandle() {

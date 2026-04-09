@@ -113,6 +113,8 @@ private:
 		{}
 	};
 
+	MainThreadNode* mainSentinel = nullptr;
+
 	std::atomic<MainThreadNode*> mainHead { nullptr };
 	std::atomic<MainThreadNode*> mainTail { nullptr };
 };
