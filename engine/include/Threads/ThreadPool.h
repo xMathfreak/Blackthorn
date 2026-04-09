@@ -55,7 +55,7 @@ private:
 
 	mutable std::mutex queueMutex;
 	std::condition_variable condition;
-	bool stop = false;
+	std::atomic<bool> stop{false};
 };
 
 } // namespace Blackthorn::Threads

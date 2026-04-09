@@ -17,8 +17,8 @@ ThreadPool::ThreadPool(size_t workerCount) {
 
 ThreadPool::~ThreadPool() {
 	{
-		std::unique_lock<std::mutex> lock(queueMutex);
-		stop = true;
+		std::unique_lock lock(queueMutex);
+		stop.store(true, std::memory_order_release);
 	}
 	condition.notify_all();
 
@@ -27,7 +27,7 @@ ThreadPool::~ThreadPool() {
 }
 
 size_t ThreadPool::pendingCount() const {
-	std::unique_lock<std::mutex> lock(queueMutex);
+	std::unique_lock lock(queueMutex);
 	return taskQueue.size();
 }
 
@@ -41,13 +41,13 @@ void ThreadPool::workerLoop() {
 		TaskPtr task;
 
 		{
-			std::unique_lock<std::mutex> lock(queueMutex);
+			std::unique_lock lock(queueMutex);
 			condition.wait(lock, [this] {
-				return stop || !taskQueue.empty();
+				return stop.load(std::memory_order_relaxed) || !taskQueue.empty();
 			});
 
-			if (stop && taskQueue.empty())
-				return;
+			if (stop.load(std::memory_order_relaxed) && taskQueue.empty())
+				break;
 
 			task = std::move(taskQueue.front());
 			taskQueue.pop();
