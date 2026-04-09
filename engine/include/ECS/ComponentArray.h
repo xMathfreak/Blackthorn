@@ -30,11 +30,15 @@ public:
 		Uint32 idx = Detail::entityIndex(entity);
 		Uint32 gen = Detail::entityGeneration(entity);
 
-		auto& entry = sparse[idx];
+		if (idx >= static_cast<Uint32>(sparse.size())) {
+			#ifdef BLACKTHORN_DEBUG
+				assert(false && "ComponentArray::insert: entity index out of range");
+			#endif
 
-		#ifdef BLACKTHORN_DEBUG
-			assert(idx < sparse.size());
-		#endif
+			sparse.resize(idx + 1, { INVALID_ENTITY, 0 });
+		}
+
+		auto& entry = sparse[idx];
 
 		if (entry.pos != INVALID_ENTITY && entry.generation == gen) {
 			components[entry.pos] = T{ std::forward<Args>(args)... };
@@ -53,6 +57,9 @@ public:
 	void remove(Entity entity) override {
 		Uint32 idx = Detail::entityIndex(entity);
 		Uint32 gen = Detail::entityGeneration(entity);
+
+		if (idx >= static_cast<Uint32>(sparse.size()))
+			return;
 
 		auto& entry = sparse[idx];
 
@@ -80,6 +87,9 @@ public:
 		Uint32 idx = Detail::entityIndex(entity);
 		Uint32 gen = Detail::entityGeneration(entity);
 
+		if (idx >= static_cast<Uint32>(sparse.size()))
+			return false;
+
 		const auto& entry = sparse[idx];
 
 		return entry.pos != INVALID_ENTITY && entry.generation == gen;
@@ -88,6 +98,9 @@ public:
 	T* get(Entity entity) {
 		Uint32 idx = Detail::entityIndex(entity);
 		Uint32 gen = Detail::entityGeneration(entity);
+
+		if (idx >= static_cast<Uint32>(sparse.size()))
+			return nullptr;
 
 		auto& entry = sparse[idx];
 		return (entry.pos != INVALID_ENTITY && entry.generation == gen)
@@ -99,7 +112,10 @@ public:
 		Uint32 idx = Detail::entityIndex(entity);
 		Uint32 gen = Detail::entityGeneration(entity);
 
-		auto& entry = sparse[idx];
+		if (idx >= static_cast<Uint32>(sparse.size()))
+			return nullptr;
+
+		const auto& entry = sparse[idx];
 		return (entry.pos != INVALID_ENTITY && entry.generation == gen)
 			? &components[entry.pos]
 			: nullptr;
