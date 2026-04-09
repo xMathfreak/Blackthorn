@@ -24,7 +24,12 @@ void JobHandle::signal(const std::function<void(std::function<void()>, bool)>& e
 	if (pendingCount.fetch_sub(1, std::memory_order_acq_rel) != 1)
 		return;
 
-	Continuation* list = continuationHead.exchange(COMPLETE_SENTINEL, std::memory_order_acq_rel);
+	Continuation* list = nullptr;
+
+	{
+		std::lock_guard lock(continuationMutex);
+		continuationHead.exchange(COMPLETE_SENTINEL, std::memory_order_acq_rel);
+	}
 
 	while (list && list != COMPLETE_SENTINEL) {
 		Continuation* next = list->next;
@@ -39,27 +44,23 @@ void JobHandle::addContinuation(
 	bool mainThread,
 	const std::function<void(std::function<void()>, bool)>& enqueue)
 {
-	auto* node = new Continuation{ std::move(fn), mainThread, nullptr };
+	bool runImmediately = false;
 
-	Continuation* head = continuationHead.load(std::memory_order_acquire);
+	{
+		std::lock_guard lock(continuationMutex);
 
-	while (true) {
+		Continuation* head = continuationHead.load(std::memory_order_relaxed);
+
 		if (head == COMPLETE_SENTINEL) {
-			enqueue(std::move(node->fn), node->mainThread);
-			delete node;
-			return;
-		}
-
-		node->next = head;
-
-		if (continuationHead.compare_exchange_weak(
-				head, node,
-				std::memory_order_release,
-				std::memory_order_acquire))
-		{
-			return;
+			runImmediately = true;
+		} else {
+			auto* node = new Continuation{ std::move(fn), mainThread, head };
+			continuationHead.store(node, std::memory_order_relaxed);
 		}
 	}
+
+	if (runImmediately)
+		enqueue(std::move(fn), mainThread);
 }
 
 } // namespace Blackthorn::Jobs

@@ -114,6 +114,8 @@ private:
 	std::atomic<int> pendingCount { 1 };
 	std::atomic<void*> output { nullptr };
 
+	mutable std::mutex continuationMutex;
+
 	// Lock-free intrusive singly-linked list of continuations.
 	// Head == nullptr means empty. Head == COMPLETE_SENTINEL means the
 	// handle has already fired — used to handle the race between
