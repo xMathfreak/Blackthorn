@@ -51,7 +51,7 @@ private:
 	 * @param name Uniform name..
 	 * @return Uniform location, or -1 if not.
 	 */
-	GLuint getUniformLocation(const std::string& name);
+	GLint getUniformLocation(const std::string& name);
 
 public:
 	/**

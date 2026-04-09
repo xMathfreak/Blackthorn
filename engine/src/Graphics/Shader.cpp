@@ -165,7 +165,7 @@ void Shader::unbind() {
 	glUseProgram(0);
 }
 
-GLuint Shader::getUniformLocation(const std::string& name) {
+GLint Shader::getUniformLocation(const std::string& name) {
 	if (auto it = uniformCache.find(name); it != uniformCache.end())
 		return it->second;
 
@@ -179,44 +179,44 @@ GLuint Shader::getUniformLocation(const std::string& name) {
 }
 
 void Shader::setBool(const std::string& name, bool value) {
-	GLuint location = getUniformLocation(name);
-	if (location != -1u)
+	GLint location = getUniformLocation(name);
+	if (location != -1)
 		glUniform1i(location, value);
 }
 
 void Shader::setInt(const std::string& name, int value) {
-	GLuint location = getUniformLocation(name);
-	if (location != -1u)
+	GLint location = getUniformLocation(name);
+	if (location != -1)
 		glUniform1i(location, value);
 }
 
 void Shader::setFloat(const std::string& name, float value) {
-	GLuint location = getUniformLocation(name);
-	if (location != -1u)
+	GLint location = getUniformLocation(name);
+	if (location != -1)
 		glUniform1f(location, value);
 }
 
 void Shader::setVec2(const std::string& name, float x, float y) {
-	GLuint location = getUniformLocation(name);
-	if (location != -1u)
+	GLint location = getUniformLocation(name);
+	if (location != -1)
 		glUniform2f(location, x, y);
 }
 
 void Shader::setVec3(const std::string& name, float x, float y, float z) {
-	GLuint location = getUniformLocation(name);
-	if (location != -1u)
+	GLint location = getUniformLocation(name);
+	if (location != -1)
 		glUniform3f(location, x, y, z);
 }
 
 void Shader::setVec4(const std::string& name, float x, float y, float z, float w) {
-	GLuint location = getUniformLocation(name);
-	if (location != -1u)
+	GLint location = getUniformLocation(name);
+	if (location != -1)
 		glUniform4f(location, x, y, z, w);
 }
 
 void Shader::setMat4(const std::string& name, const float* value) {
-	GLuint location = getUniformLocation(name);
-	if (location != -1u)
+	GLint location = getUniformLocation(name);
+	if (location != -1)
 		glUniformMatrix4fv(location, 1, GL_FALSE, value);
 }
 
