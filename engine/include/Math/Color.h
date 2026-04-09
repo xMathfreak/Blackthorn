@@ -8,7 +8,9 @@
 
 #include "Math/Interpolation.h"
 
-namespace Blackthorn::Math {
+namespace Blackthorn {
+
+namespace Math {
 
 // Normalized float RGBA [0, 1]
 using Color = glm::vec4;
@@ -253,9 +255,11 @@ constexpr Color shiftHue(const Color& c, float degrees) {
 	return fromHSV(hsv.x + degrees, hsv.y, hsv.z, c.a);
 }
 
+} // namespace Math
+
 [[nodiscard]]
-constexpr Color operator"" _hex(const char* hex, size_t len) {
-	return fromHex(std::string_view(hex, len));
+constexpr Math::Color operator"" _hex(const char* hex, size_t len) {
+	return Math::fromHex(std::string_view(hex, len));
 }
 
-} // namespace Blackthorn::Math
+} // namespace Blackthorn
