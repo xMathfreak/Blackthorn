@@ -150,7 +150,7 @@ public:
 	 */
 	template <typename... Args>
 	void log(LogLevel level, const char* srcFile, int srcLine, std::format_string<Args...> fmt, Args&&... args) {
-		if (static_cast<int>(level) > static_cast<int>(currentLevel.load(std::memory_order_relaxed)))
+		if (static_cast<int>(level) > static_cast<int>(currentLevel.load(std::memory_order::relaxed)))
 			return;
 
 		logImpl(level, std::format(fmt, std::forward<Args>(args)...), srcFile, srcLine);

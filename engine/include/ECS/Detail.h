@@ -26,7 +26,7 @@ namespace Blackthorn::ECS::Detail {
 
 	inline size_t nextComponentID() {
 		static std::atomic<size_t> id{0};
-		return id.fetch_add(1, std::memory_order_relaxed);
+		return id.fetch_add(1, std::memory_order::relaxed);
 	}
 
 	template <typename T>

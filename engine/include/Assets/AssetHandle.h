@@ -21,7 +21,7 @@ public:
 	{}
 
 	bool isReady() const {
-		return readyFlag && readyFlag->load(std::memory_order_acquire);
+		return readyFlag && readyFlag->load(std::memory_order::acquire);
 	}
 
 	bool isValid() const {

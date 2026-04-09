@@ -38,7 +38,7 @@ size_t AssetManager::flushPendingUploads(size_t uploadBudget) {
 }
 
 void AssetManager::flushAllPendingUploads() {
-	while (pendingTotal.load(std::memory_order_acquire) > 0) {
+	while (pendingTotal.load(std::memory_order::acquire) > 0) {
 		flushPendingUploads(64);
 		std::this_thread::yield();
 	}
@@ -46,7 +46,7 @@ void AssetManager::flushAllPendingUploads() {
 }
 
 size_t AssetManager::pendingCount() const {
-	return pendingTotal.load(std::memory_order_relaxed);
+	return pendingTotal.load(std::memory_order::relaxed);
 }
 
 } // namespace Blackthorn::Assets

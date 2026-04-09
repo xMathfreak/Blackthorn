@@ -221,7 +221,7 @@ void Logger::forwardToSDL(LogLevel level, const char* entry) {
 }
 
 void Logger::logImpl(LogLevel level, std::string_view message, const char* srcFile, int srcLine) {
-	const bool mirror = sdlMirror.load(std::memory_order_relaxed);
+	const bool mirror = sdlMirror.load(std::memory_order::relaxed);
 	const std::string entry = formatEntry(level, message, srcFile, srcLine);
 
 	{

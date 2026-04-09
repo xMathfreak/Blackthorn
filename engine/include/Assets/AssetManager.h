@@ -209,7 +209,7 @@ public:
 					inFlight.erase(raw->assetID);
 				}
 
-				readyFlag->store(true, std::memory_order_release);
+				readyFlag->store(true, std::memory_order::release);
 				--pendingTotal;
 			});
 		});

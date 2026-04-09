@@ -33,7 +33,7 @@ private:
 	std::atomic<Uint64> structuralEpoch{0};
 
 	void bumpEpoch() noexcept {
-		structuralEpoch.fetch_add(1, std::memory_order_release);
+		structuralEpoch.fetch_add(1, std::memory_order::release);
 	}
 
 public:
@@ -121,7 +121,7 @@ public:
 	std::vector<EntityData>& getEntities() { return entities; }
 
 	Uint64 getEpoch() const noexcept {
-		return structuralEpoch.load(std::memory_order_acquire);
+		return structuralEpoch.load(std::memory_order::acquire);
 	}
 
 	template <typename Component, typename... Args>

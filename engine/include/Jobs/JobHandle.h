@@ -85,7 +85,7 @@ public:
 	 */
 	template <typename T>
 	void setOutput(T* ptr) {
-		output.store(static_cast<void*>(ptr), std::memory_order_release);
+		output.store(static_cast<void*>(ptr), std::memory_order::release);
 	}
 
 	/**
@@ -99,7 +99,7 @@ public:
 	 */
 	template <typename T>
 	T* getOutput() const {
-		return static_cast<T*>(output.load(std::memory_order_acquire));
+		return static_cast<T*>(output.load(std::memory_order::acquire));
 	}
 
 private:

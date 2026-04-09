@@ -30,8 +30,8 @@ JobSystem::JobSystem(size_t workerCount) {
 	}
 
 	mainSentinel = new MainThreadNode();
-	mainHead.store(mainSentinel, std::memory_order_relaxed);
-	mainTail.store(mainSentinel, std::memory_order_relaxed);
+	mainHead.store(mainSentinel, std::memory_order::relaxed);
+	mainTail.store(mainSentinel, std::memory_order::relaxed);
 
 	queues.reserve(workerCount);
 	for (size_t i = 0; i < workerCount; ++i)
@@ -49,7 +49,7 @@ JobSystem::JobSystem(size_t workerCount) {
 }
 
 JobSystem::~JobSystem() {
-	shutdown.store(true, std::memory_order_release);
+	shutdown.store(true, std::memory_order::release);
 
 	wakeCondition.notify_all();
 
@@ -110,8 +110,8 @@ void JobSystem::enqueueReady(Job&& job) {
 	if (job.getAffinity() == ThreadAffinity::MainThread) {
 		++activeJobs;
 		auto* node = new MainThreadNode(std::move(job));
-		MainThreadNode* prev = mainHead.exchange(node, std::memory_order_acq_rel);
-		prev->next.store(node, std::memory_order_release);
+		MainThreadNode* prev = mainHead.exchange(node, std::memory_order::acq_rel);
+		prev->next.store(node, std::memory_order::release);
 	} else {
 		++activeJobs;
 		++pendingWork;
@@ -119,7 +119,7 @@ void JobSystem::enqueueReady(Job&& job) {
 		int localIdx = getWorkerIndex();
 		size_t idx = (localIdx >= 0)
 			? static_cast<size_t>(localIdx)
-			: nextWorker.fetch_add(1, std::memory_order_relaxed) % queues.size();
+			: nextWorker.fetch_add(1, std::memory_order::relaxed) % queues.size();
 
 		if (!queues[idx]->push(std::make_unique<Job>(std::move(job)))) {
 			--activeJobs;
@@ -148,11 +148,11 @@ bool JobSystem::executeOne(bool mainThreadOnly) {
 	};
 
 	if (mainThreadOnly || getWorkerIndex() == -1) {
-		MainThreadNode* tail = mainTail.load(std::memory_order_acquire);
-		MainThreadNode* next = tail->next.load(std::memory_order_acquire);
+		MainThreadNode* tail = mainTail.load(std::memory_order::acquire);
+		MainThreadNode* next = tail->next.load(std::memory_order::acquire);
 
 		if (next) {
-			mainTail.store(next, std::memory_order_release);
+			mainTail.store(next, std::memory_order::release);
 			runJob(next->job);
 			delete tail;
 			return true;
@@ -200,12 +200,12 @@ void JobSystem::workerLoop(size_t idx) {
 		{
 			std::unique_lock<std::mutex> lock(wakeMutex);
 			wakeCondition.wait_for(lock, std::chrono::microseconds(50), [this] {
-				return shutdown.load(std::memory_order_relaxed)
-					|| pendingWork.load(std::memory_order_relaxed) > 0;
+				return shutdown.load(std::memory_order::relaxed)
+					|| pendingWork.load(std::memory_order::relaxed) > 0;
 			});
 		}
 
-		if (shutdown.load(std::memory_order_relaxed))
+		if (shutdown.load(std::memory_order::relaxed))
 			break;
 	}
 
