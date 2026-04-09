@@ -43,8 +43,10 @@ public:
 		if (world)
 			world->update(dt);
 
-		if (uiManager)
+		if (uiManager) {
 			uiManager->update(dt);
+			uiManager->handleInput(context.getInputManager());
+		}
 	}
 
 	virtual void render(float alpha) {
