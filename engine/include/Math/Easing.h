@@ -13,13 +13,13 @@ constexpr float linear(float t) {
 }
 
 [[nodiscard]]
-constexpr float quadIn(float t)  {
-	return t * (2.0f - t);
+constexpr float quadIn(float t) {
+	return t * t;
 }
 
 [[nodiscard]]
 constexpr float quadOut(float t) {
-	return -t * (t - 2.0f);;
+	return t * (2.0f - t);
 }
 
 [[nodiscard]]
@@ -130,19 +130,22 @@ inline float expoInOut(float t) {
 
 [[nodiscard]]
 inline float circIn(float t) {
+	t = std::clamp(t, 0.0f, 1.0f);
 	return 1.0f - std::sqrt(1.0f - t * t);
 }
 
 [[nodiscard]]
 inline float circOut(float t) {
+	t = std::clamp(t, 0.0f, 1.0f);
 	return std::sqrt((2.0f - t) * t);
 }
 
 [[nodiscard]]
 inline float circInOut(float t) {
+	t = std::clamp(t, 0.0f, 1.0f);
 	return t < 0.5f
 		? 0.5f * (1.0f - std::sqrt(1.0f - 4.0f * t * t))
-        : 0.5f * (std::sqrt(-(2.0f * t - 3.0f) * (2.0f * t - 1.0f)) + 1.0f);
+		: 0.5f * (std::sqrt(-(2.0f * t - 3.0f) * (2.0f * t - 1.0f)) + 1.0f);
 }
 
 [[nodiscard]] constexpr float backIn(float t, float overshoot = 1.70158f) {
@@ -172,6 +175,7 @@ inline float circInOut(float t) {
 	if (t == 1.0f)
 		return 1.0f;
 
+	amplitude = std::max(amplitude, 1.0f);
 	float s = period / (2.0f * std::numbers::pi_v<float>) * std::asin(1.0f / amplitude);
 	float f = t - 1.0f;
 
@@ -186,6 +190,7 @@ inline float circInOut(float t) {
 	if (t == 1.0f)
 		return 1.0f;
 
+	amplitude = std::max(amplitude, 1.0f);
 	float s = period / (2.0f * std::numbers::pi_v<float>) * std::asin(1.0f / amplitude);
 
 	return amplitude * std::pow(2.0f, -10.0f * t) *
@@ -199,6 +204,7 @@ inline float circInOut(float t) {
 	if (t == 1.0f)
 		return 1.0f;
 
+	amplitude = std::max(amplitude, 1.0f);
 	float s = period / (2.0f * std::numbers::pi_v<float>) * std::asin(1.0f / amplitude);
 	float f = 2.0f * t - 1.0f;
 
