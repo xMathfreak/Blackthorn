@@ -11,9 +11,10 @@ struct ITask {
 };
 
 template <typename Callable>
+requires std::invocable<Callable>
 struct Task final : ITask {
 	static_assert(
-		std::is_invocable_v<Callable>,
+		std::invocable<Callable>,
 		"Task<Callable>: Callable must be invocable with no arguments"
 	);
 

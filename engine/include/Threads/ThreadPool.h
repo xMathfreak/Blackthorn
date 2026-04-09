@@ -5,7 +5,7 @@
 #include <thread>
 
 #include "Core/Export.h"
-#include "Threads/MoveOnlyTask.h"
+#include "Threads/Task.h"
 
 namespace Blackthorn::Threads {
 

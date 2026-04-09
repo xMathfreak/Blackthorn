@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <charconv>
+#include <concepts>
 #include <functional>
 #include <mutex>
 #include <optional>
@@ -12,6 +13,13 @@
 #include "Core/Export.h"
 
 namespace Blackthorn::Core {
+
+template <typename T>
+concept SupportedSettingType =
+	std::same_as<T, bool> ||
+	std::integral<T> ||
+	std::floating_point<T> ||
+	std::convertible_to<T, std::string>;
 
 /**
  * @brief Thread-safe singleton for INI-style key/value settings.
@@ -90,7 +98,7 @@ public:
 	 *                 cannot be parsed. Defaults to `T{}` if omitted.
 	 * @return T       The resolved value.
 	 */
-	template <typename T>
+	template <SupportedSettingType T>
 	T get(const std::string& section, const std::string& key, std::optional<T> fallback = std::nullopt) {
 		const std::string sec = this->normalize(section);
 		const std::string k = this->normalize(key);
@@ -146,11 +154,7 @@ public:
 	 * @param key Key name (case-insensitive, whitespace trimmed).
 	 * @param value Value to store.
 	 */
-	template <typename T>
-	requires std::is_same_v<T, bool>
-		|| 	 std::is_integral_v<T>
-		|| 	 std::is_floating_point_v<T>
-		||   std::is_convertible_v<T, std::string>
+	template <SupportedSettingType T>
 	void set(const std::string& section, const std::string& key, const T& value) {
 		writeRaw(section, key, serialize(value));
 	}
@@ -158,11 +162,7 @@ public:
 	/**
 	 * @brief Writes a default value only if the key does not exist.
 	 */
-	template <typename T>
-	requires std::is_same_v<T, bool>
-		|| 	 std::is_integral_v<T>
-		|| 	 std::is_floating_point_v<T>
-		||   std::is_convertible_v<T, std::string>
+	template <SupportedSettingType T>
 	void setDefault(const std::string& section, const std::string& key, const T& value) {
 		const std::string sec = normalize(section);
 		const std::string k = normalize(key);
@@ -311,17 +311,14 @@ private:
 	template <typename T>
 	requires std::is_floating_point_v<T>
 	static std::optional<T> parseFloat(const std::string& s) {
-		try {
-			size_t pos{};
+		T result{};
+		const char* begin = s.data();
+		const char* end = s.data() + s.size();
 
-			if constexpr (std::is_same_v<T, float>) {
-				return std::stof (s, &pos);
-			} else if constexpr (std::is_same_v<T, double>) {
-				return std::stod (s, &pos);
-			} else {
-				return std::stold(s, &pos);
-			}
-		} catch (...) {}
+		auto [ptr, ec] = std::from_chars(begin, end, result, std::chars_format::general);
+
+		if (ec == std::errc{} && ptr == end)
+			return result;
 
 		return std::nullopt;
 	}

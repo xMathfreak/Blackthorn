@@ -26,10 +26,8 @@ public:
 		, jobs(js)
 	{}
 
-	template <typename System, typename... Args>
+	template <SystemType System, typename... Args>
 	System* add(Args&&... args) {
-		static_assert(std::is_base_of_v<ISystem, System>, "System must inherit from ISystem");
-
 		auto system = std::make_unique<System>(std::forward<Args>(args)...);
 		System* ptr = system.get();
 		ptr->init(&pool);
@@ -37,7 +35,7 @@ public:
 		return ptr;
 	}
 
-	template <typename System>
+	template <SystemType System>
 	System* get() {
 		auto it = std::find_if(
 			systems.begin(),
@@ -53,7 +51,7 @@ public:
 		return nullptr;
 	}
 
-	template <typename System>
+	template <SystemType System>
 	void remove() {
 		auto it = std::remove_if(
 			systems.begin(),

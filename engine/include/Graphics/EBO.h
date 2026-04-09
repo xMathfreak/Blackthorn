@@ -1,5 +1,6 @@
 #pragma once
 
+#include <concepts>
 #include <vector>
 
 #include <glad/glad.h>
@@ -8,6 +9,12 @@
 #include "Debug/Logger.h"
 
 namespace Blackthorn::Graphics {
+
+template <typename T>
+concept IndexType =
+	std::same_as<T, GLuint> ||
+	std::same_as<T, GLushort> ||
+	std::same_as<T, GLubyte>;
 
 /**
  * @brief RAII wrapper for an OpenGL Element Buffer Object (index buffer).
@@ -122,14 +129,9 @@ public:
 	 * The index type is inferred from T and stored for later draw calls.
 	 * If the buffer has not been created yet, it will be created automatically.
 	 */
-	template <typename T>
+	template <IndexType T>
 	void setData(const std::vector<T>& data, GLenum usage = GL_STATIC_DRAW) {
-		static_assert(
-			std::is_same_v<T, GLuint> ||
-			std::is_same_v<T, GLushort> ||
-			std::is_same_v<T, GLubyte>,
-			"Index type must be GLuint, GLushort, or GLubyte"
-		);
+		static_assert(IndexType<T>, "Index type must be GLuint, GLushort, or GLubyte");
 
 		if (id == 0) {
 			BT_WARN("EBO: Buffer ID is 0, automatically creating buffer");
@@ -166,14 +168,9 @@ public:
 	 * @warning The update must not exceed the current buffer size.
 	 * If it does, the operation is aborted.
 	 */
-	template <typename T>
+	template <IndexType T>
 	void updateData(const std::vector<T>& data, size_t offsetInBytes = 0) {
-		static_assert(
-			std::is_same_v<T, GLuint> ||
-			std::is_same_v<T, GLushort> ||
-			std::is_same_v<T, GLubyte>,
-			"Index type must be GLuint, GLushort, or GLubyte"
-		);
+		static_assert(IndexType<T>, "Index type must be GLuint, GLushort, or GLubyte");
 
 		if (id == 0) {
 			BT_ERROR("EBO::updateData: Attempting to update uninitialized EBO");

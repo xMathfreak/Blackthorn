@@ -1,5 +1,7 @@
 #pragma once
 
+#include <concepts>
+
 #include "Core/Export.h"
 #include "ECS/EntityPool.h"
 
@@ -14,5 +16,8 @@ public:
 	virtual void render(EntityPool*, float alpha) {}
 	virtual void lateUpdate(EntityPool*, float dt, Jobs::JobSystem*) {}
 };
+
+template <typename T>
+concept SystemType = std::derived_from<T, ISystem>;
 
 } // namespace Blackthorn::ECS::Systems
