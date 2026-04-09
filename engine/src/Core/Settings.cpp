@@ -10,7 +10,7 @@ Settings& Settings::instance() {
 }
 
 bool Settings::loadFromFile(const std::string& path) {
-	std::lock_guard<std::mutex> lock(mutex);
+	std::lock_guard lock(mutex);
 
 	groupedValues.clear();
 	sectionOrder.clear();
@@ -68,7 +68,7 @@ bool Settings::loadFromFile(const std::string& path) {
 }
 
 bool Settings::saveToFile(const std::string& path) {
-	std::lock_guard<std::mutex> lock(mutex);
+	std::lock_guard lock(mutex);
 
 	std::ofstream out(path, std::ios::out | std::ios::trunc);
 	if (!out.is_open())
@@ -96,27 +96,27 @@ bool Settings::saveToFile(const std::string& path) {
 
 void Settings::onChange(const std::string& section, const std::string& key, std::function<void(const std::string&)> callback) {
 	const std::string cbKey = normalize(section) + "|" + normalize(key);
-	std::lock_guard<std::mutex> lock(mutex);
+	std::lock_guard lock(mutex);
 	changeCallbacks[cbKey].push_back(std::move(callback));
 }
 
 bool Settings::isDirty() const {
-	std::lock_guard<std::mutex> lock(mutex);
+	std::lock_guard lock(mutex);
 	return dirty;
 }
 
 void Settings::markClean() {
-	std::lock_guard<std::mutex> lock(mutex);
+	std::lock_guard lock(mutex);
 	dirty = false;
 }
 
 bool Settings::hasSection(const std::string& section) const {
-	std::lock_guard<std::mutex> lock(mutex);
+	std::lock_guard lock(mutex);
 	return groupedValues.count(normalize(section)) > 0;
 }
 
 bool Settings::hasKey(const std::string& section, const std::string& key) const {
-	std::lock_guard<std::mutex> lock(mutex);
+	std::lock_guard lock(mutex);
 	auto it = groupedValues.find(normalize(section));
 	if (it == groupedValues.end())
 		return false;
@@ -124,7 +124,7 @@ bool Settings::hasKey(const std::string& section, const std::string& key) const 
 }
 
 void Settings::remove(const std::string& section, const std::string& key) {
-	std::lock_guard<std::mutex> lock(mutex);
+	std::lock_guard lock(mutex);
 
 	auto it = groupedValues.find(normalize(section));
 	if (it == groupedValues.end())
@@ -138,7 +138,7 @@ void Settings::remove(const std::string& section, const std::string& key) {
 }
 
 void Settings::removeSection(const std::string& section) {
-	std::lock_guard<std::mutex> lock(mutex);
+	std::lock_guard lock(mutex);
 	const auto sec = normalize(section);
 	groupedValues.erase(sec);
 
@@ -151,7 +151,7 @@ void Settings::removeSection(const std::string& section) {
 }
 
 void Settings::clear() {
-	std::lock_guard<std::mutex> lock(mutex);
+	std::lock_guard lock(mutex);
 
 	groupedValues.clear();
 	sectionOrder.clear();

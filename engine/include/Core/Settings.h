@@ -228,7 +228,7 @@ private:
 
 	std::unordered_map<std::string, SectionData> groupedValues;
 	std::vector<std::string> sectionOrder;
-	mutable std::mutex mutex;
+	mutable std::recursive_mutex mutex;
 	bool dirty = false;
 
 	void writeRaw(const std::string& sec, const std::string& k, const std::string& rawValue) {
@@ -258,7 +258,7 @@ private:
 			std::vector<std::function<void(const std::string&)>> toFire;
 
 			{
-				std::lock_guard<std::mutex> lock(mutex);
+				std::lock_guard<std::recursive_mutex> lock(mutex);
 				auto it = changeCallbacks.find(cbKey);
 				if (it != changeCallbacks.end())
 					toFire = it->second;
