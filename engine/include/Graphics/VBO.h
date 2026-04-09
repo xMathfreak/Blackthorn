@@ -106,7 +106,7 @@ public:
 	template <typename T>
 	void setData(const std::vector<T>& data, GLenum usage = GL_STATIC_DRAW) {
 		if (id == 0) {
-			BT_WARN("Attempting to set data of uninitialized vertex buffer. Creating buffer automatically");
+			BT_WARN("VBO::setData: Buffer ID is 0, automatically creating buffer");
 			create();
 		}
 
@@ -139,7 +139,7 @@ public:
 	template <typename T>
 	void updateData(const std::vector<T>& data, size_t offset = 0) {
 		if (id == 0) {
-			BT_ERROR("Cannot update uninitialized EBO");
+			BT_ERROR("VBO::updateData: Cannot update uninitialized VBO");
 			return;
 		}
 

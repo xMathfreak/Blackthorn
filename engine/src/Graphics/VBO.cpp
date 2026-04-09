@@ -35,7 +35,7 @@ VBO& VBO::operator=(VBO&& other) noexcept {
 
 void VBO::create() {
 	if (id != 0) {
-		BT_WARN("VBO already created (ID: {})", id);
+		BT_WARN("VBO already exists (ID: {})", id);
 		return;
 	}
 
@@ -47,7 +47,7 @@ void VBO::create() {
 
 void VBO::bind() const {
 	if (id == 0) {
-		BT_WARN("Attempting to bind unitialized VBO. Request ignored.");
+		BT_WARN("VBO: Attempting to bind unitialized buffer, request ignored.");
 		return;
 	}
 
@@ -67,7 +67,7 @@ void VBO::destroy() {
 
 void VBO::setData(const void* data, size_t sizeInBytes, GLenum usage) {
 	if (id == 0) {
-		BT_WARN("Attempting to set data of uninitialized vertex buffer. Creating buffer automatically");
+		BT_WARN("VBO::setData: Buffer ID is 0, automatically creating buffer");
 		create();
 	}
 

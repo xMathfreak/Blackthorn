@@ -33,7 +33,7 @@ VAO& VAO::operator=(VAO&& other) noexcept {
 
 void VAO::create() {
 	if (id != 0) {
-		BT_WARN("VAO already created (ID: {})", id);
+		BT_WARN("VAO already exists (ID: {})", id);
 		return;
 	}
 
@@ -44,7 +44,7 @@ void VAO::create() {
 
 void VAO::bind() const {
 	if (id == 0) {
-		BT_WARN("Attempting to bind uninitialized VAO");
+		BT_WARN("VAO: Attempting to bind uninitialized array object, request ignored.");
 		return;
 	}
 
@@ -63,12 +63,12 @@ void VAO::unbind() {
 
 void VAO::enableAttrib(GLuint index, GLint size, GLenum type, GLsizei stride, size_t offset, bool normalized) {
 	if (id == 0) {
-		BT_ERROR("Cannot configure attributes on uninitialized VAO");
+		BT_ERROR("VAO: Cannot configure attributes on uninitialized array object");
 		return;
 	}
 
 	if (!isBound()) {
-		BT_WARN("Attempting to configure attributes on VAO {} while not bound. Binding", id);
+		BT_WARN("VAO: Attempting to configure attributes on unbound array object (ID: {}), binding now", id);
 		bind();
 	}
 
@@ -103,12 +103,12 @@ void VAO::enableAttrib(GLuint index, GLint size, GLenum type, GLsizei stride, si
 
 void VAO::disableAttrib(GLuint index) {
 	if (id == 0) {
-		BT_ERROR("Cannot disable attributes of an uninitialized VAO");
+		BT_ERROR("VAO: Attempting to disable attributes on uninitialized array object, request ignored");
 		return;
 	}
 
 	if (!isBound()) {
-		BT_WARN("Attempting to disable attributes on VAO {} while not bound. Binding", id);
+		BT_WARN("VAO: Attempting to disable attributes on unbound array object (ID: {}), binding now", id);
 		bind();
 	}
 

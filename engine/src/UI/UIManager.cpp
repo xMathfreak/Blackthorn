@@ -62,7 +62,7 @@ void UIManager::flushPendingLayout() {
 
 void UIManager::setReferenceResolution(float width, float height) {
 	if (width <= 0.0f || height <= 0.0f) {
-		BT_WARN("Invalid reference resolution ({:.0f} x {:.0f}). Values must be positive. Request ignored.", width, height);
+		BT_WARN("UIManager: Invalid reference resolution ({:.0f} x {:.0f}). Values must be positive, request ignored", width, height);
 		return;
 	}
 
@@ -72,12 +72,12 @@ void UIManager::setReferenceResolution(float width, float height) {
 
 void UIManager::setGlobalUIScale(float scale) {
 	if (scale <= 0.0f) {
-		BT_WARN("Ignoring non-positive global UI scale: {:.2f}", scale);
+		BT_WARN("UIManager: Ignoring non-positive global UI scale: {:.2f}", scale);
 		return;
 	}
 
 	if (scale < 0.5f || scale > 5.0f)
-		BT_WARN("Extreme global UI scale set: {:.2f}", scale);
+		BT_WARN("UIManager: Extreme global UI scale set: {:.2f}", scale);
 
 	globalUIScale = scale;
 	recomputeScale();
@@ -96,7 +96,7 @@ void UIManager::updateAllLayouts() {
 
 void UIManager::addWidget(std::unique_ptr<Widget> widget) {
 	if (!widget) {
-		BT_WARN("addWidget() received nullptr. Request ignored.");
+		BT_WARN("UIManager::addWidget() received nullptr, request ignored");
 		return;
 	}
 
@@ -105,7 +105,7 @@ void UIManager::addWidget(std::unique_ptr<Widget> widget) {
 
 void UIManager::removeWidget(Widget* widget) {
 	if (!widget) {
-		BT_WARN("removeWidget() received nullptr. Request ignored.");
+		BT_WARN("UIManager::removeWidget() received nullptr, request ignored");
 		return;
 	}
 

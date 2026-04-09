@@ -154,7 +154,7 @@ Shader& Shader::operator=(Shader&& other) noexcept {
 
 void Shader::bind() const {
 	if (programID == 0) {
-		BT_WARN("Attempting to bind invalid shader");
+		BT_WARN("Shader: Attempting to bind invalid shader, request ignored");
 		return;
 	}
 
@@ -172,7 +172,7 @@ GLint Shader::getUniformLocation(const std::string& name) {
 	GLint location = glGetUniformLocation(programID, name.c_str());
 
 	if (location == -1)
-		BT_WARN("Uniform '{}' not found in shader program {}", name, programID);
+		BT_WARN("Shader: Uniform '{}' not found in shader program {}", name, programID);
 
 	uniformCache[name] = location;
 	return location;

@@ -132,7 +132,7 @@ public:
 		);
 
 		if (id == 0) {
-			BT_WARN("Attempting to set data of uninitialized element buffer. Creating buffer automatically");
+			BT_WARN("EBO: Buffer ID is 0, automatically creating buffer");
 			create();
 		}
 
@@ -176,7 +176,7 @@ public:
 		);
 
 		if (id == 0) {
-			BT_ERROR("Cannot update uninitialized EBO");
+			BT_ERROR("EBO::updateData: Attempting to update uninitialized EBO");
 			return;
 		}
 

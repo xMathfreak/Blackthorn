@@ -43,7 +43,7 @@ EBO& EBO::operator=(EBO&& other) noexcept {
 
 void EBO::create() {
 	if (id != 0) {
-		BT_WARN("EBO already created (ID: {})", id);
+		BT_WARN("EBO already exists (ID: {})", id);
 		return;
 	}
 
@@ -72,7 +72,7 @@ void EBO::unbind() {
 
 void EBO::setData(const void* data, size_t indexCount, GLenum type, GLenum usage) {
 	if (id == 0) {
-		BT_WARN("Attempting to set data of uninitialized element buffer. Creating buffer automatically");
+			BT_WARN("EBO: Buffer ID is 0, automatically creating buffer");
 		create();
 	}
 
@@ -88,7 +88,7 @@ void EBO::setData(const void* data, size_t indexCount, GLenum type, GLenum usage
 			elementSize = sizeof(GLubyte);
 			break;
 		default:
-			BT_ERROR("Inalid index type: 0x{}", type);
+			BT_ERROR("EBO: Inalid index type: 0x{}", type);
 			return;
 	}
 

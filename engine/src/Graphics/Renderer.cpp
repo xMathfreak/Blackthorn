@@ -76,7 +76,7 @@ void Renderer::initQuadBuffers() {
 	QuadEBO->setData(indices);
 	VAO::unbind();
 
-	BT_DEBUG("Renderer Quad buffers initialized");
+	BT_DEBUG("Renderer: Quad buffers initialized");
 }
 
 void Renderer::initShader() {
@@ -87,7 +87,7 @@ void Renderer::initShader() {
 		shader->setInt("u_Textures[" + std::to_string(i) + "]", i);
 	}
 
-	BT_DEBUG("Renderer Shader initialized");
+	BT_DEBUG("Renderer: Shader initialized");
 }
 
 void Renderer::initScreenPass() {
@@ -107,7 +107,7 @@ void Renderer::initWhiteTexture() {
 
 	activeScreenShader = screenShader.get();
 
-	BT_DEBUG("Render screen pass initialized");
+	BT_DEBUG("Renderer: Screen pass initialized");
 }
 
 void Renderer::startBatch() {

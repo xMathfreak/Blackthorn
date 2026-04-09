@@ -142,14 +142,14 @@ bool BitmapFont::loadFromFile(const std::string& texturePath, const std::string&
 	texture = std::make_unique<Graphics::Texture>(texturePath);
 
 	if (!texture->isValid()) {
-		BT_ERROR("Failed to load font texture: {}", texturePath);
+		BT_ERROR("BitmapFont: Failed to load font texture: {}", texturePath);
 		return false;
 	}
 
 	std::ifstream file(metricsPath);
 
 	if (!file.is_open()) {
-		BT_ERROR("Failed to load font metrics: {}", metricsPath);
+		BT_ERROR("BitmapFont: Failed to load font metrics: {}", metricsPath);
 		return false;
 	}
 
@@ -185,7 +185,7 @@ bool BitmapFont::loadFromFile(const std::string& texturePath, const std::string&
 			Uint32 id = parseIntValue(line, "id");
 
 			if (id == 0) {
-				BT_WARN("Skipping glyph with missing or invalid id in {}", metricsPath);
+				BT_WARN("BitmapFont: Skipping glyph with missing/invalid id in {}", metricsPath);
 				continue;
 			}
 
@@ -208,7 +208,7 @@ bool BitmapFont::loadFromFile(const std::string& texturePath, const std::string&
 			glyphs[id] = glyph;
 		} else {
 			BT_WARN(
-				"Unknown command '{}' on line {} in {}",
+				"BitmapFont: Unknown command '{}' on line {} in {}",
 				command, lineNum, metricsPath
 			);
 		}
@@ -258,14 +258,14 @@ bool BitmapFont::loadFromBMFont(const std::string& bmfPath) {
 	std::ifstream file(bmfPath, std::ios::binary);
 
 	if (!file) {
-		BT_ERROR("Failed to open BMF file: {}", bmfPath);
+		BT_ERROR("BitmapFont: Failed to open BMF file: {}", bmfPath);
 		return false;
 	}
 
 	char sign[4];
 	file.read(sign, 4);
 	if (sign[0] != 'B' || sign[1] != 'M' || sign[2] != 'F' || sign[3] != '\0') {
-		BT_ERROR("Invalid BMF file format: {}", bmfPath);
+		BT_ERROR("BitmapFont: Invalid BMF file format: {}", bmfPath);
 		return false;
 	}
 
@@ -273,7 +273,7 @@ bool BitmapFont::loadFromBMFont(const std::string& bmfPath) {
 	file.read(reinterpret_cast<char*>(&version), sizeof(version));
 
 	if (version != 1) {
-		BT_ERROR("Unsupported BMF version {} in file: {}", version, bmfPath);
+		BT_ERROR("BitmapFont: Unsupported BMF version {} in file: {}", version, bmfPath);
 		return false;
 	}
 
@@ -289,13 +289,13 @@ bool BitmapFont::loadFromBMFont(const std::string& bmfPath) {
 
 	SDL_IOStream* rw = SDL_IOFromConstMem(imageData.data(), imageSize);
 	if (!rw) {
-		BT_ERROR("Failed to create SDL_IOStream from image data");
+		BT_ERROR("BitmapFont: Failed to create SDL_IOStream from image data");
 		return false;
 	}
 
 	SDL_Surface* surface = IMG_Load_IO(rw, true);
 	if (!surface) {
-		BT_ERROR("Failed to load image from BMF: {}", SDL_GetError());
+		BT_ERROR("BitmapFont: Failed to load image from BMF: {}", SDL_GetError());
 		return false;
 	}
 
@@ -304,7 +304,7 @@ bool BitmapFont::loadFromBMFont(const std::string& bmfPath) {
 	SDL_DestroySurface(surface);
 
 	if (!texture->isValid()) {
-		BT_ERROR("Failed to create texture from BMF image data");
+		BT_ERROR("BitmapFont: Failed to create texture from BMF image data");
 		return false;
 	}
 
@@ -425,7 +425,7 @@ void BitmapFont::initializeShader() {
 	if (!shader) {
 		shader = std::make_shared<Graphics::Shader>("assets/shaders/font_bitmap.vert", "assets/shaders/font_bitmap.frag");
 
-		BT_DEBUG("BitmapFont Shader initialized");
+		BT_DEBUG("BitmapFont: Shader initialized");
 	}
 }
 

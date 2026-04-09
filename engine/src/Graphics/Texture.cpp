@@ -102,7 +102,7 @@ bool Texture::loadFromFile(const std::string& path, const TextureParams& paramet
 
 	SDL_Surface* surface = IMG_Load(path.c_str());
 	if (!surface) {
-		BT_ERROR("Failed to load texture '{}': {}", path, SDL_GetError());
+		BT_ERROR("Failed to load texture from '{}': {}", path, SDL_GetError());
 		return false;
 	}
 
@@ -259,7 +259,11 @@ bool Texture::loadFromMemory(int w, int h, int ch, const void* data, const Textu
 
 bool Texture::create(int w, int h, int ch, const TextureParams& parameters) {
 	if (w <= 0 || h <= 0 || ch < 1 || ch > 4) {
-		BT_ERROR("Invalid texture dimensions");
+		BT_ERROR(
+			"Invalid texture dimensions: {} x {}; {} channel(s)",
+			w, h, ch
+		);
+
 		return false;
 	}
 
@@ -336,7 +340,7 @@ void Texture::updateRegion(int x, int y, int w, int h, const void* data) {
 	}
 
 	if (x < 0 || y < 0 || x + w > width || y + h > height) {
-		BT_ERROR("Texture udate region out of bounds ({}, {}, {}, {}) for {} x {}",
+		BT_ERROR("Texture update region out of bounds ({}, {}, {}, {}) for {} x {}",
 			x, y, w, h, width, height
 		);
 		return;

@@ -133,7 +133,7 @@ bool Engine::init(const EngineConfig& cfg) {
 		BT_LOG("Initializing Renderer");
 		renderer = std::make_unique<Graphics::Renderer>(cfg.render.maxQuads);
 		renderer->setClearColor(0.1f, 0.1f, 0.12f);
-		renderer->setPostProcessingEnabled(true);
+		renderer->setPostProcessingEnabled(settings.get<bool>("graphics", "post_processing"));
 	} catch (const std::exception& e) {
 		BT_ERROR("Failed to initialize Renderer: {}", e.what());
 		cleanupInitialization();
@@ -258,15 +258,15 @@ void Engine::processEvents() {
 			case SDL_EVENT_WINDOW_FOCUS_GAINED:
 				windowFocused = true;
 
-				if (SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN)
-					SDL_RestoreWindow(window);
+				if (settings.get<bool>("window", "fullscreen"))
+					SDL_SetWindowFullscreen(window, true);
 
 				break;
 			case SDL_EVENT_WINDOW_FOCUS_LOST:
 				windowFocused = false;
 
 				if (SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN)
-					SDL_MinimizeWindow(window);
+					SDL_SetWindowFullscreen(window, false);
 				break;
 			case SDL_EVENT_WINDOW_MAXIMIZED:
 				settings.set<bool>("window", "maximized", true);
