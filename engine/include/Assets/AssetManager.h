@@ -227,7 +227,7 @@ public:
 		auto* storage = getStorage<AssetType>();
 		if (!storage || !storage->has(id))
 			return nullptr;
-		return storage->get(id).get();
+		return storage->get(id);
 	}
 
 	template <typename AssetType>

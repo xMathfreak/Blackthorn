@@ -13,8 +13,14 @@ private:
 	std::unordered_map<std::string, std::unique_ptr<AssetType>> assets;
 
 public:
-	std::unique_ptr<AssetType>& get(const std::string& id) {
-		return assets[id];
+	AssetType* get(const std::string& id) {
+		auto it = assets.find(id);
+		return it != assets.end() ? it->second.get() : nullptr;
+	}
+
+	const AssetType* get(const std::string& id) const {
+		auto it = assets.find(id);
+		return it != assets.end() ? it->second.get() : nullptr;
 	}
 
 	bool has(const std::string& id) const override {
