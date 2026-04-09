@@ -2,6 +2,7 @@
 
 #include <array>
 #include <memory>
+#include <shared_mutex>
 
 #include "Core/Export.h"
 #include "ECS/ComponentArray.h"
@@ -29,6 +30,12 @@ private:
 	std::array<std::unique_ptr<IComponentArray>, Detail::MAX_COMPONENTS> componentArrays;
 	size_t entityCount = 0;
 
+	std::atomic<Uint64> structuralEpoch{0};
+
+	void bumpEpoch() noexcept {
+		structuralEpoch.fetch_add(1, std::memory_order_release);
+	}
+
 public:
 	explicit EntityPool(size_t maxEntities = Detail::MAX_ENTITIES) {
 		entities.resize(maxEntities);
@@ -51,6 +58,8 @@ public:
 
 		Entity entity = Detail::makeEntity(index, entities[index].generation);
 		++entityCount;
+
+		bumpEpoch();
 		return entity;
 	}
 
@@ -74,6 +83,7 @@ public:
 		entities[index].generation++;
 		freeList.push_back(index);
 		--entityCount;
+		bumpEpoch();
 	}
 
 	bool isValid(Entity entity) const {
@@ -104,9 +114,15 @@ public:
 		}
 
 		entityCount = 0;
+		bumpEpoch();
 	}
 
-	const std::vector<EntityData>& getEntities() { return entities; }
+	const std::vector<EntityData>& getEntities() const { return entities; }
+	std::vector<EntityData>& getEntities() { return entities; }
+
+	Uint64 getEpoch() const noexcept {
+		return structuralEpoch.load(std::memory_order_acquire);
+	}
 
 	template <typename Component, typename... Args>
 	Component& addComponent(Entity entity, Args&&... args) {
@@ -124,6 +140,7 @@ public:
 		Uint32 index = Detail::entityIndex(entity);
 		entities[index].componentMask |= Detail::componentMask<Component>();
 
+		bumpEpoch();
 		return component;
 	}
 
@@ -140,6 +157,8 @@ public:
 
 		Uint32 index = Detail::entityIndex(entity);
 		entities[index].componentMask &= ~Detail::componentMask<Component>();
+
+		bumpEpoch();
 	}
 
 	template <typename Component>
@@ -187,7 +206,7 @@ public:
 
 		if constexpr (N == 0) {
 			static std::vector<Entity> empty;
-			return View<Components...>(this, 0, &empty);
+			return Detail::View<Components...>(this, 0, &empty);
 		}
 
 		Uint64 requiredMask = 0;
@@ -231,8 +250,9 @@ private:
 	Uint64 requiredMask;
 	const std::vector<Entity>* entityList;
 
+	mutable std::shared_mutex cacheMutex;
 	mutable std::vector<Entity> cachedMatching;
-	mutable bool cacheDirty = true;
+	mutable Uint64 cachedEpoch = UINT64_MAX;
 
 public:
 	View(EntityPool* p, Uint64 mask, const std::vector<Entity>* entities)
@@ -241,7 +261,20 @@ public:
 		, entityList(entities)
 	{}
 
-	void invalidateCache() const { cacheDirty = true; }
+	View(const View&) = delete;
+	View& operator=(const View&) = delete;
+
+	View(View&& other) noexcept
+		: pool(other.pool)
+		, requiredMask(other.requiredMask)
+		, entityList(other.entityList)
+		, cachedMatching(std::move(other.cachedMatching))
+		, cachedEpoch(other.cachedEpoch)
+	{
+		other.cachedEpoch = UINT64_MAX;
+	}
+
+	View& operator=(View&&) = delete;
 
 	/**
 	 * @brief Calls @p callback for every entity that has all required
@@ -254,6 +287,7 @@ public:
 	void each(Callable&& callback) {
 		rebuildCache();
 
+		std::shared_lock lock(cacheMutex);
 		for (Entity e : cachedMatching)
 			callback(e, getComponentForView<Components>(e)...);
 	}
@@ -282,12 +316,18 @@ public:
 	void eachJobs(Jobs::JobSystem* js, Callable&& callback, size_t threshold = 64) {
 		rebuildCache();
 
-		const size_t count = cachedMatching.size();
+		std::shared_ptr<std::vector<Entity>> snapshot;
+		{
+			std::shared_lock lock(cacheMutex);
+			snapshot = std::make_shared<std::vector<Entity>>(cachedMatching);
+		}
+
+		const size_t count = snapshot->size();
 		if (count == 0)
 			return;
 
 		if (!js || count < threshold) {
-			for (Entity e : cachedMatching)
+			for (Entity e : *snapshot)
 				callback(e, getComponentForView<Components>(e)...);
 
 			return;
@@ -299,16 +339,14 @@ public:
 		auto handle = js->createHandle();
 		handle->addPending(static_cast<int>(batchCount) - 1);
 
-		const Entity* ptr = cachedMatching.data();
-
 		for (size_t b = 0; b < batchCount; ++b) {
 			const size_t begin = b * batchSize;
 			const size_t end   = std::min(begin + batchSize, count);
 
 			js->submit(Jobs::Job(
-				[this, ptr, begin, end, &callback] {
+				[this, snapshot, begin, end, &callback] {
 					for (size_t i = begin; i < end; ++i)
-						callback(ptr[i], getComponentForView<Components>(ptr[i])...);
+						callback((*snapshot)[i], getComponentForView<Components>((*snapshot)[i])...);
 				},
 				handle
 			));
@@ -319,20 +357,26 @@ public:
 
 private:
 	void rebuildCache() const {
-		if (!cacheDirty)
+		Uint64 currentEpoch = pool->getEpoch();
+
+		if (cachedEpoch == currentEpoch)
+			return;
+
+		std::unique_lock lock(cacheMutex);
+
+		currentEpoch = pool->getEpoch();
+		if (cachedEpoch == currentEpoch)
 			return;
 
 		cachedMatching.clear();
+		cachedMatching.reserve(entityList->size());
 
-		if (entityList) {
-			cachedMatching.reserve(entityList->size());
-			for (Entity e : *entityList) {
-				if (matchesMask(e))
-					cachedMatching.push_back(e);
-			}
+		for (Entity e : *entityList) {
+			if (matchesMask(e))
+				cachedMatching.push_back(e);
 		}
 
-		cacheDirty = false;
+		cachedEpoch = currentEpoch;
 	}
 
 	bool matchesMask(Entity e) const {

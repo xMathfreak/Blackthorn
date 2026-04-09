@@ -24,11 +24,7 @@ public:
 	World(const World&) = delete;
 	World& operator=(const World&) = delete;
 
-	World(World&& other)
-		: pool(std::move(other.pool))
-		, systemManager(pool)
-	{}
-
+	World(World&& other) = delete;
 	World& operator=(World&& other) = delete;
 
 	Entity createEntity() {
