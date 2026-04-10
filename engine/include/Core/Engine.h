@@ -5,6 +5,7 @@
 #include "Assets/AssetManager.h"
 #include "Core/EngineConfig.h"
 #include "Core/Export.h"
+#include "Core/SimClock.h"
 #include "Core/Settings.h"
 #include "Input/InputManager.h"
 #include "Graphics/Renderer.h"
@@ -39,6 +40,7 @@ public:
 	virtual void onRegisterSettings(Core::Settings& settings) {}
 
 	Scene::ISceneContext& getSceneContext() { return *sceneContext; }
+	const Core::SimClock& getSimClock() const { return *simClock; }
 
 private:
 	bool initialized = false;
@@ -49,6 +51,7 @@ private:
 
 	std::unique_ptr<Assets::AssetManager> assetManager{};
 	std::unique_ptr<Graphics::Renderer> renderer{};
+	std::unique_ptr<Core::SimClock> simClock{};
 	Input::InputManager inputManager;
 	Scene::SceneManager sceneManager;
 	SDL_Window* window = nullptr;

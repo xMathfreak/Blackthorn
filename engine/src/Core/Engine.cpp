@@ -47,6 +47,9 @@ bool Engine::init(const EngineConfig& cfg) {
 
 	registerEngineCallbacks(settings);
 
+	simClock = std::make_unique<Core::SimClock>(cfg.timing.fixedDeltaTime);
+	simClock->load();
+
 	SDL_InitFlags initFlags = SDL_INIT_VIDEO;
 	if (!SDL_Init(initFlags)) {
 		BT_ERROR("SDL_Init failed: {}", SDL_GetError());
@@ -149,6 +152,7 @@ bool Engine::init(const EngineConfig& cfg) {
 
 	sceneContext = std::make_unique<Scene::SceneContextImpl>(
 		*assetManager,
+		*simClock,
 		*renderer,
 		inputManager,
 		*jobSystem,
@@ -157,7 +161,7 @@ bool Engine::init(const EngineConfig& cfg) {
 
 	initialized = true;
 
-	BT_LOG("Initialization completed");
+	BT_LOG("Initialization completed (resuming from tick {})", simClock->getCurrentTick());
 
 	return true;
 }
@@ -304,6 +308,7 @@ void Engine::update(float dt) {
 }
 
 void Engine::fixedUpdate(float dt) {
+	simClock->tick();
 	sceneManager.fixedUpdate(dt);
 }
 
@@ -516,6 +521,8 @@ void Engine::registerEngineDefaults(Core::Settings& s) {
 	s.setDefault("audio", "master_volume", 1.0f);
 	s.setDefault("audio", "music_volume", 1.0f);
 	s.setDefault("audio", "sfx_volume", 1.0f);
+
+	s.setDefault<Uint64>("simulation", "tick", static_cast<Uint64>(0));
 
 	#ifdef BLACKTHORN_DEBUG
 		s.setDefault("developer", "log_level", 3); // Info

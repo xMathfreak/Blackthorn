@@ -5,6 +5,7 @@
 namespace Blackthorn {
 
 namespace Assets { class AssetManager; }
+namespace Core { class SimClock; }
 namespace Graphics { class Renderer; }
 namespace Input { class InputManager; }
 namespace Jobs { class JobSystem; }
@@ -22,6 +23,7 @@ public:
 	virtual Input::InputManager& getInputManager() = 0;
 	virtual SceneManager& getSceneManager() = 0;
 	virtual Jobs::JobSystem& getJobSystem() = 0;
+	virtual Core::SimClock& getSimClock() = 0;
 };
 
 } // namespace Scene
