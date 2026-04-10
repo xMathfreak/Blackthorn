@@ -200,6 +200,23 @@ public:
 		return array->get(entity);
 	}
 
+	void* getComponentRaw(Entity entity, size_t componentIndex) {
+		if (!isValid(entity))
+			return nullptr;
+
+		if (componentIndex >= componentArrays.size() || !componentArrays[componentIndex])
+			return nullptr;
+
+		if (!componentArrays[componentIndex]->has(entity))
+			return nullptr;
+
+		return componentArrays[componentIndex]->getRaw(entity);
+	}
+
+	const void* getComponentRaw(Entity entity, size_t componentIndex) const {
+		return const_cast<EntityPool*>(this)->getComponentRaw(entity, componentIndex);
+	}
+
 	template <typename... Components>
 	Detail::View<Components...> view() {
 		constexpr size_t N = sizeof...(Components);

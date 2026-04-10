@@ -121,6 +121,14 @@ public:
 			: nullptr;
 	}
 
+	void* getRaw(Entity entity) override {
+		return static_cast<void*>(get(entity));
+	}
+
+	const void* getRaw(Entity entity) const override {
+		return static_cast<const void*>(get(entity));
+	}
+
 	size_t size() const override { return components.size(); }
 	const std::vector<Entity>& entities() const override { return dense; }
 
