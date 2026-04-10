@@ -309,7 +309,7 @@ void Engine::update(float dt) {
 
 void Engine::fixedUpdate(float dt) {
 	simClock->tick();
-	sceneManager.fixedUpdate(dt);
+	sceneManager.fixedUpdate(dt, simClock->getCurrentTick());
 }
 
 void Engine::lateUpdate(float dt) {

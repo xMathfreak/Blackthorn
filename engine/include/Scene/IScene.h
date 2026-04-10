@@ -34,9 +34,9 @@ public:
 	virtual bool blocksUpdate() const { return true; }
 	virtual bool blocksRender() const { return true; }
 
-	virtual void fixedUpdate(float dt) {
+	virtual void fixedUpdate(float dt, Uint64 tick) {
 		if (world)
-			world->fixedUpdate(dt);
+			world->fixedUpdate(dt, tick);
 	}
 
 	virtual void update(float dt) {
