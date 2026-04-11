@@ -24,7 +24,13 @@ enum class PacketType : Uint8 {
 /**
  * @brief Packet-level flags carried in `PacketHeader::flags`.
  *
- * Individual bits. Combine with bitwise OR.
+ * Individual bits — combine with bitwise OR, clear with `clearFlag()` or
+ * `flags &= ~flag`.
+ *
+ * @note `Compressed` and `Encrypted` are reserved for future transport
+ * implementations. The engine sets these bits but does not perform
+ * compression or encryption itself — that responsibility belongs to the
+ * transport layer wrapping the raw ByteBuffer.
  */
 enum class PacketFlags : Uint8 {
 	None = 0x00,
@@ -40,8 +46,37 @@ inline PacketFlags operator|(PacketFlags a, PacketFlags b) {
 	);
 }
 
+inline PacketFlags operator&(PacketFlags a, PacketFlags b) {
+	return static_cast<PacketFlags>(
+		static_cast<Uint8>(a) & static_cast<Uint8>(b)
+	);
+}
+
+inline PacketFlags operator~(PacketFlags a) {
+	return static_cast<PacketFlags>(
+		static_cast<Uint8>(~static_cast<Uint8>(a))
+	);
+}
+
+inline PacketFlags& operator|=(PacketFlags& a, PacketFlags b) {
+	a = a | b;
+	return a;
+}
+
+inline PacketFlags& operator&=(PacketFlags& a, PacketFlags b) {
+	a = a & b;
+	return a;
+}
+/** @brief Returns true if `flags` contains `flag`. */
 inline bool hasFlag(PacketFlags flags, PacketFlags flag) {
 	return (static_cast<Uint8>(flags) & static_cast<Uint8>(flag)) != 0;
+}
+
+/** @brief Returns `flags` with `flag` cleared. */
+inline PacketFlags clearFlag(PacketFlags flags, PacketFlags flag) {
+	return static_cast<PacketFlags>(
+		static_cast<Uint8>(flags) & ~static_cast<Uint8>(flag)
+	);
 }
 
 /**
