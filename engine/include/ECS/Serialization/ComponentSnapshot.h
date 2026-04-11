@@ -1,27 +1,16 @@
 #pragma once
 
-#include <functional>
+#include <cstddef>
 
 #include <SDL3/SDL.h>
 
 #include "Core/Export.h"
 #include "ECS/EntityPool.h"
+#include "ECS/NetworkEntityRegistry.h"
 #include "ECS/Serialization/ComponentSerializer.h"
 #include "Net/ByteBuffer.h"
 
 namespace Blackthorn::ECS::Serialization {
-
-/**
- * @brief Network entity ID type.
- *
- * A stable, explicitly assigned identifier that is meaningful across
- * machines.
- * Distinct from the local ECS `Entity` handle, which is a
- * machine-local index + generation value.
- */
-using NetworkEntityId = Uint32;
-
-static constexpr NetworkEntityId INVALID_NET_ENTITY = UINT32_MAX;
 
 /**
  * @brief Describes a single entity entry read from a snapshot.
@@ -73,7 +62,7 @@ struct SnapshotEntity {
  *
  * // Write snapshot payload.
  * size_t payloadStart = buf.size();
- * ComponentSnapshotWriter writer(pool, netIdLookup, simClock.getCurrentTick());
+ * ComponentSnapshotWriter writer(pool, netRegistry, simClock.getCurrentTick());
  * writer.write(buf);
  *
  * // Back-patch the payload length field in the header.
@@ -84,27 +73,20 @@ struct SnapshotEntity {
 class BLACKTHORN_API ComponentSnapshotWriter {
 public:
 	/**
-	 * @brief Callback type used to look up a NetworkEntityId for a local Entity.
-	 *
-	 * The writer calls this for every candidate entity. Return
-	 * `INVALID_NET_ENTITY` to skip the entity (e.g. it has not yet been
-	 * assigned a network ID).
-	 */
-	using NetIdLookup = std::function<NetworkEntityId(Entity)>;
-
-	/**
 	 * @brief Constructs a ComponentSnapshotWriter.
-	 * @param pool   The entity pool to snapshot.
-	 * @param lookup Callback mapping local Entity to NetworkEntityId.
-	 * @param tick   The simulation tick this snapshot represents.
+	 * @param pool     The entity pool to snapshot.
+	 * @param registry The network entity registry used to look up each
+	 *                 entity's NetworkEntityId. Entities not present in
+	 *                 the registry are silently skipped.
+	 * @param tick     The simulation tick this snapshot represents.
 	 */
 	ComponentSnapshotWriter(
 		EntityPool& pool,
-		NetIdLookup lookup,
+		const NetworkEntityRegistry& registry,
 		Uint64 tick
 	)
 		: pool(pool)
-		, lookup(std::move(lookup))
+		, netRegistry(registry)
 		, tick(tick)
 	{}
 
@@ -114,7 +96,7 @@ public:
 	 *            been written before calling this.
 	 */
 	void write(Net::ByteBuffer& buf) const {
-		const auto& registry = SerializerRegistry::instance();
+		const auto& serializerReg = SerializerRegistry::instance();
 
 		buf.writeU64(tick);
 
@@ -135,17 +117,17 @@ public:
 			if (!pool.isValid(localEntity))
 				continue;
 
-			NetworkEntityId netId = lookup(localEntity);
+			NetworkEntityId netId = netRegistry.toNetId(localEntity);
 			if (netId == INVALID_NET_ENTITY)
 				continue;
 
-			Uint64 writeMask = buildWriteMask(ed.componentMask, registry);
+			Uint64 writeMask = buildWriteMask(ed.componentMask, serializerReg);
 			if (writeMask == 0)
 				continue;
 
-			buf.writeU32(netId);
+			buf.writeU64(netId);
 			buf.writeU64(writeMask);
-			writeComponents(buf, localEntity, writeMask, registry);
+			writeComponents(buf, localEntity, writeMask, serializerReg);
 
 			++entityCount;
 		}
@@ -155,7 +137,7 @@ public:
 
 private:
 	EntityPool& pool;
-	NetIdLookup lookup;
+	const NetworkEntityRegistry& netRegistry;
 	Uint64 tick;
 
 	static Uint64 buildWriteMask(
@@ -241,7 +223,7 @@ public:
 		if (entitiesRead >= entityCount || buf.exhausted())
 			return false;
 
-		out.netId = buf.readU32();
+		out.netId = buf.readU64();
 		out.componentMask = buf.readU64();
 		out.componentDataOffset = buf.readPosition();
 
@@ -262,8 +244,16 @@ public:
 	 * Safe to call before the next `readNext()` — it reads from the stored
 	 * offset rather than the live cursor.
 	 *
+	 * Typical usage after `readNext()`:
+	 * @code
+	 * Entity local = netRegistry.toLocal(entry.netId); // O(1) hot path
+	 * if (local != INVALID_ENTITY)
+	 *     reader.applyComponents(entry, local, pool);
+	 * @endcode
+	 *
 	 * @param entry  Snapshot entry returned by readNext().
-	 * @param entity Local ECS entity to write component state into.
+	 * @param entity Local ECS entity resolved from entry.netId via
+	 *               NetworkEntityRegistry::toLocal().
 	 * @param pool   Entity pool that owns the component arrays.
 	 */
 	void applyComponents(
@@ -301,14 +291,16 @@ private:
 	/**
 	 * @brief Advances the buffer cursor past all component data for `mask`.
 	 *
-	 * For fixed-size components this is equivalent to a seek. For
-	 * variable-size components (e.g. Tag/string) a full deserialize into
-	 * a discard target is required to advance correctly.
+	 * For fixed-size components (`entry->fixedSize > 0`), the cursor is
+	 * advanced directly via `ByteBuffer::skip()` — O(1), no allocation.
 	 *
-	 * @note A future optimization is to store a per-component byte-size
-	 * hint in SerializerRegistry::Entry for fixed-size components, allowing
-	 * a direct seek without deserializing. Variable-size components would
-	 * retain the current approach.
+	 * For variable-length components (`entry->fixedSize == 0`, e.g. `Tag`
+	 * which contains a string), the data is deserialized into a discard
+	 * buffer constructed over the remaining bytes. This correctly advances
+	 * past the variable-length field by reading its length prefix.
+	 *
+	 * Both paths leave the live cursor positioned immediately after the
+	 * component's wire data, ready for the next component or entity.
 	 */
 	void skipComponents(Uint64 mask) {
 		const auto& registry = SerializerRegistry::instance();
