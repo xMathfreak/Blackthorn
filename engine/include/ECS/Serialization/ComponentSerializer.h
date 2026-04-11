@@ -1,5 +1,6 @@
 #pragma once
 
+#include <concepts>
 #include <functional>
 #include <unordered_map>
 
@@ -97,8 +98,23 @@ public:
 	using DeserializeFn = std::function<void(void*, Net::ByteBuffer&)>;
 
 	struct Entry {
-		SerializeFn   serialize;
+		SerializeFn serialize;
 		DeserializeFn deserialize;
+
+		/**
+		 * @brief Fixed wire size in bytes, or 0 for variable-length components.
+		 *
+		 * When non-zero, `ComponentSnapshotReader::skipComponents()` uses
+		 * `ByteBuffer::skip()` to advance past this component in O(1) without
+		 * deserializing. When zero, a full deserialize into a discard target
+		 * is used instead to correctly advance past variable-length fields
+		 * such as strings.
+		 *
+		 * Set automatically by `registerComponent<T>()` via
+		 * `ComponentSerializer<T>::fixedSize()` if that static function exists,
+		 * otherwise defaults to 0.
+		 */
+		size_t fixedSize = 0;
 	};
 
 	static SerializerRegistry& instance() {
@@ -125,16 +141,23 @@ public:
 		if (entries.count(id))
 			return;
 
-		entries[id] = Entry{
-			[](const void* comp, Net::ByteBuffer& buf) {
-				ComponentSerializer<T>::serialize(
-					*static_cast<const T*>(comp), buf);
-			},
-			[](void* comp, Net::ByteBuffer& buf) {
-				ComponentSerializer<T>::deserialize(
-					*static_cast<T*>(comp), buf);
-			}
+		Entry entry;
+
+		entry.serialize = [](const void* comp, Net::ByteBuffer& buf) {
+			ComponentSerializer<T>::serialize(*static_cast<const T*>(comp), buf);
 		};
+
+		entry.deserialize = [](void* comp, Net::ByteBuffer& buf) {
+			ComponentSerializer<T>::deserialize(*static_cast<T*>(comp), buf);
+		};
+
+		if constexpr (requires { { ComponentSerializer<T>::fixedSize() } -> std::convertible_to<size_t>; }) {
+			entry.fixedSize = ComponentSerializer<T>::fixedSize();
+		} else {
+			entry.fixedSize = 0;
+		}
+
+		entries[id] = std::move(entry);
 	}
 
 	/**

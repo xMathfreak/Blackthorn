@@ -180,7 +180,7 @@ public:
 			return nullptr;
 
 		static const size_t id = Detail::componentID<Component>();
-		if(id >= componentArrays.size() || !componentArrays[id])
+		if (id >= componentArrays.size() || !componentArrays[id])
 			return nullptr;
 
 		auto* array = static_cast<ComponentArray<Component>*>(componentArrays[id].get());
@@ -193,7 +193,7 @@ public:
 			return nullptr;
 
 		static const size_t id = Detail::componentID<Component>();
-		if(id >= componentArrays.size() || !componentArrays[id])
+		if (id >= componentArrays.size() || !componentArrays[id])
 			return nullptr;
 
 		auto* array = static_cast<ComponentArray<Component>*>(componentArrays[id].get());
@@ -415,6 +415,6 @@ private:
 	}
 };
 
-} // namespace Blackthorn::ECS::Detail
+} // namespace Detail
 
 } // namespace Blackthorn::ECS
