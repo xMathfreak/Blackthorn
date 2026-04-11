@@ -321,14 +321,34 @@ private:
 			if (!entry)
 				continue;
 
-			Net::ByteBuffer discard(
-				buf.data() + buf.readPosition(),
-				buf.remaining()
-			);
-
-			(void)discard;
-			(void)entry;
+			if (entry->fixedSize > 0) {
+				buf.skip(entry->fixedSize);
+			} else {
+				const size_t before = buf.readPosition();
+				Net::ByteBuffer discard(buf.data() + before, buf.remaining());
+				entry->deserialize(discardSentinel(), discard);
+				buf.skip(discard.readPosition());
+			}
 		}
+	}
+
+	/**
+	 * @brief Returns a pointer to a static per-type discard target.
+	 *
+	 * Used exclusively by `skipComponents()` to give the deserialize
+	 * function a valid (but immediately discarded) write target. Returns
+	 * `nullptr` because the deserialize lambdas in SerializerRegistry
+	 * cast the `void*` to their concrete type before writing — passing
+	 * `nullptr` would crash them.
+	 *
+	 * Instead we allocate a small static scratch buffer aligned to
+	 * `max_align_t` and large enough for any built-in component. If a
+	 * user-defined variable-length component is larger, they must either
+	 * provide a `fixedSize()` override or increase this size.
+	 */
+	static void* discardSentinel() {
+		alignas(std::max_align_t) static thread_local std::byte scratch[256];
+		return static_cast<void*>(scratch);
 	}
 };
 
