@@ -272,6 +272,20 @@ public:
 	bool exhausted() const { return readCursor >= buffer.size(); }
 
 	/**
+	 * @brief Advances the read cursor by `count` bytes without returning data.
+	 *
+	 * Used by the snapshot system to move past component data for components
+	 * whose fixed wire size is known without deserializing them fully.
+	 *
+	 * @param count Number of bytes to skip.
+	 * @throws std::out_of_range if skipping would move past the end.
+	 */
+	void skip(size_t count) {
+		checkAvailable(count);
+		readCursor += count;
+	}
+
+	/**
 	 * @brief Resets the read cursor to the beginning without clearing data.
 	 *
 	 * Allows re-reading the same buffer from the start.
