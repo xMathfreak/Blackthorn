@@ -21,6 +21,8 @@ namespace Blackthorn::ECS::Serialization {
  */
 template <>
 struct ComponentSerializer<Components::Kinematics> {
+	static constexpr size_t fixedSize() { return 4 * sizeof(float); }
+
 	static void serialize(const Components::Kinematics& c, Net::ByteBuffer& buf) {
 		buf.writeF32(c.oldPosition.x);
 		buf.writeF32(c.oldPosition.y);

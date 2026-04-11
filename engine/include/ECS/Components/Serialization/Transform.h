@@ -18,6 +18,8 @@ namespace Blackthorn::ECS::Serialization {
  */
 template <>
 struct ComponentSerializer<Components::Transform> {
+	static constexpr size_t fixedSize() { return 4 * sizeof(float); }
+
 	static void serialize(const Components::Transform& c, Net::ByteBuffer& buf) {
 		buf.writeF32(c.position.x);
 		buf.writeF32(c.position.y);
