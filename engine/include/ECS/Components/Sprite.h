@@ -1,10 +1,15 @@
 #pragma once
 
 #include <glm/glm.hpp>
+#include "Core/Export.h"
 
-#include "Graphics/Texture.h"
+namespace Blackthorn {
 
-namespace Blackthorn::ECS::Components {
+namespace Graphics {
+	class Texture;
+}
+
+namespace ECS::Components {
 
 struct BLACKTHORN_API Sprite {
 	float width = 0.0f;
@@ -18,5 +23,7 @@ struct BLACKTHORN_API Sprite {
 		: width(w), height(h), texture(tex)
 	{}
 };
+
+}
 
 } // namespace Blackthorn::ECS::Components
