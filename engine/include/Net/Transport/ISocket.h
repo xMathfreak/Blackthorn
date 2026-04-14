@@ -21,6 +21,7 @@ enum class SocketResult : Uint8 {
 };
 
 /**
+ * @interface ISocket
  * @brief Abstract socket interface.
  *
  * @details All platform-specific socket implementations (@c UDPSocket,
