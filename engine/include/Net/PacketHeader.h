@@ -18,7 +18,9 @@ enum class PacketType : Uint8 {
 	Input = 0x02, ///< Client input stream (bit-packed payload).
 	Message = 0x03, ///< Tagged message (spawn, despawn, ability, UI event).
 	Heartbeat = 0x04, ///< Keep-alive with no payload.
-	Disconnect = 0x05, ///< Graceful disconnect notification.
+	ConnectRequest = 0x5, ///< Connection request.
+	ConnectAck = 0x06, ///< Connection acknowledgement.
+	Disconnect = 0x07, ///< Graceful disconnect notification.
 };
 
 /**
@@ -80,19 +82,20 @@ inline PacketFlags clearFlag(PacketFlags flags, PacketFlags flag) {
 }
 
 /**
- * @brief Fixed 20-byte header written at the start of every packet.
+ * @brief Fixed 24-byte header written at the start of every packet.
  *
  * Layout (little-endian, all fields mandatory):
  * @code
  * Offset  Size  Field
- *      0     4  magic          (0x424C4B54 == "BLKT")
- *      4     2  schemaVersion  (bumped on any breaking wire format change)
- *      6     1  packetType     (PacketType enum)
- *      7     1  flags          (PacketFlags bitmask)
- *      8     8  tick           (SimClock tick at time of send)
+ *      0     8  tick           (SimClock tick at time of send)
+ *      8     4  magic          (0x424C4B54 == "BLKT")
+ *     12     4  reserved
  *     16     4  payloadLength  (bytes following this header)
+ *     20     2  schemaVersion  (bumped on any breaking wire format change)
+ *     22     1  packetType     (PacketType enum)
+ *     23     1  flags          (PacketFlags bitmask)
  * @endcode
- * Total: 20 bytes.
+ * Total: 24 bytes.
  *
  * The magic constant lets receivers quickly reject garbage data without
  * attempting to interpret it. `schemaVersion` gates the payload parser —
@@ -109,22 +112,24 @@ struct BLACKTHORN_API PacketHeader {
 
 	Uint64 tick = 0;
 	Uint32 magic = MAGIC;
+	Uint32 reserved = 0;
 	Uint32 payloadLength = 0;
 	Uint16 schemaVersion = CURRENT_SCHEMA_VERSION;
 	PacketType packetType = PacketType::Heartbeat;
 	PacketFlags flags = PacketFlags::None;
 
 	/**
-	 * @brief Serializes the header into `buf` in the fixed 20-byte layout.
+	 * @brief Serializes the header into `buf` in the fixed 24-byte layout.
 	 * @param buf Destination buffer.
 	 */
 	void serialize(ByteBuffer& buf) const {
 		buf.writeU32(magic);
 		buf.writeU16(schemaVersion);
+		buf.writeU32(payloadLength);
+		buf.writeU64(tick);
 		buf.writeU8(static_cast<Uint8>(packetType));
 		buf.writeU8(static_cast<Uint8>(flags));
-		buf.writeU64(tick);
-		buf.writeU32(payloadLength);
+		buf.writeU32(reserved);
 	}
 
 	/**
@@ -138,10 +143,11 @@ struct BLACKTHORN_API PacketHeader {
 	void deserialize(ByteBuffer& buf) {
 		magic = buf.readU32();
 		schemaVersion = buf.readU16();
+		payloadLength = buf.readU32();
+		tick = buf.readU64();
 		packetType = static_cast<PacketType>(buf.readU8());
 		flags = static_cast<PacketFlags>(buf.readU8());
-		tick = buf.readU64();
-		payloadLength = buf.readU32();
+		reserved = buf.readU32();
 	}
 
 	/**
