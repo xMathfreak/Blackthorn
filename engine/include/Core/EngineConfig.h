@@ -50,12 +50,12 @@ struct BLACKTHORN_API TimingConfig {
 	int unfocusedFPS = 10;
 };
 
-struct DebugConfig {
+struct BLACKTHORN_API DebugConfig {
 	float profilingLogInterval = 1.0f;
 	Debug::LoggerConfig logger;
 };
 
-struct FontConfig {
+struct BLACKTHORN_API FontConfig {
 	Uint32 maxCachedText = 256;
 	Uint32 maxTextGlyphs = 2048;
 	int atlasSize = 1024;
@@ -68,7 +68,7 @@ private:
 	static FontConfig current;
 };
 
-struct AssetConfig {
+struct BLACKTHORN_API AssetConfig {
 	/// Maximum number of async asset uploads per frame.
 	size_t uploadBudget = 4;
 };
