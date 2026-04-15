@@ -35,10 +35,6 @@ TCPSocket::~TCPSocket() {
 	close();
 }
 
-// ---------------------------------------------------------------------------
-// Internal helpers
-// ---------------------------------------------------------------------------
-
 bool TCPSocket::openIPv4() {
 	fd = ::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 	if (fd == INVALID_SOCKET_HANDLE) {
@@ -70,10 +66,6 @@ std::string TCPSocket::platformError() {
 	return std::strerror(errno);
 #endif
 }
-
-// ---------------------------------------------------------------------------
-// ISocket implementation
-// ---------------------------------------------------------------------------
 
 bool TCPSocket::bind(const Address& address) {
 	if (fd == INVALID_SOCKET_HANDLE) {
@@ -220,20 +212,20 @@ SocketResult TCPSocket::recv(void* buffer, size_t bufferSize, size_t& outSize) {
 	ssize_t received;
 
 	do {
-	    received = ::recv(
-	        fd,
-	        static_cast<char*>(buffer),
-	        static_cast<int>(bufferSize),
-	        0
-	    );
+		received = ::recv(
+			fd,
+			static_cast<char*>(buffer),
+			static_cast<int>(bufferSize),
+			0
+		);
 
 	#ifdef _WIN32
-	    int err = WSAGetLastError();
-	    if (received < 0 && err == WSAEWOULDBLOCK)
-	        return SocketResult::WouldBlock;
+		int err = WSAGetLastError();
+		if (received < 0 && err == WSAEWOULDBLOCK)
+			return SocketResult::WouldBlock;
 	#else
-	    if (received < 0 && (errno == EAGAIN || errno == EWOULDBLOCK))
-	        return SocketResult::WouldBlock;
+		if (received < 0 && (errno == EAGAIN || errno == EWOULDBLOCK))
+			return SocketResult::WouldBlock;
 	#endif
 
 	} while (false);
@@ -320,25 +312,21 @@ Address TCPSocket::getLocalAddress() const {
 }
 
 bool TCPSocket::isConnected() const {
-	if (!connected || fd == INVALID_SOCKET_HANDLE)
+	if (fd == INVALID_SOCKET_HANDLE)
 		return false;
 
-#ifdef _WIN32
-	fd_set writeSet;
-	FD_ZERO(&writeSet);
-	FD_SET(fd, &writeSet);
-	timeval tv{0, 0};
-	int result = ::select(0, nullptr, &writeSet, nullptr, &tv);
-	return result > 0;
-#else
-	char probe;
-	ssize_t result = ::recv(fd, &probe, 1, MSG_PEEK | MSG_DONTWAIT);
-	if (result == 0) {
-		const_cast<TCPSocket*>(this)->connected = false;
+	if (connected)
+		return true;
+
+	int err = 0;
+	socklen_t errLen = sizeof(err);
+	if (::getsockopt(fd, SOL_SOCKET, SO_ERROR, reinterpret_cast<char*>(&err), &errLen) != 0)
 		return false;
-	}
-	return true;
-#endif
+
+	if (err != 0)
+		return false;
+
+	return false;
 }
 
 std::string TCPSocket::getLastError() const {

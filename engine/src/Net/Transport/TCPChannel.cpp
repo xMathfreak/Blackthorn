@@ -34,7 +34,7 @@ SocketResult TCPChannel::send(ISocket& socket, const Net::ByteBuffer& payload) {
 		);
 
 		if (result == SocketResult::WouldBlock)
-			continue;
+			return SocketResult::WouldBlock;
 
 		if (result != SocketResult::Ok)
 			return result;
