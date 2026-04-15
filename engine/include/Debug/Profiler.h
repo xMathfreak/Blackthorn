@@ -45,7 +45,7 @@ public:
 	};
 
 	// RAII scope guard
-	class ProfileScope {
+	class BLACKTHORN_API ProfileScope {
 	public:
 		explicit ProfileScope(const char* name);
 		~ProfileScope();
