@@ -75,6 +75,11 @@ struct BLACKTHORN_API NetworkPeer {
 	/// when `SDL_GetTicks() - lastReceivedMs > timeoutMs`.
 	Uint64 timeoutMs = 10000;
 
+	/// Set to true once the client has sent its ConnectRequest over the
+	/// established TCP socket.  Prevents pollTCP() from re-sending it on
+	/// every subsequent iteration before the server responds.
+	bool sentConnectRequest = false;
+
 	/// Optional human-readable label (e.g. "Player 1", "Server").
 	std::string label;
 
