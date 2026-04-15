@@ -1,40 +1,36 @@
 #pragma once
 
-#include "Graphics/Renderer.h"
-#include "Scene/ISceneContext.h"
+#include "Core/SimClock.h"
+#include "Scene/ISimContext.h"
 
 namespace Blackthorn::Scene {
 
 /**
- * @brief Concrete `ISceneContext` implementation owned by `Engine`.
+ * @brief Concrete `ISimContext` implementation owned by `EngineCore`.
  *
- * Extends `ISceneContext` (which extends `ISimContext`) with renderer
- * access. Only instantiated in the graphics-enabled client build — the
- * server uses `SimContextImpl` directly via `ISimContext`.
+ * Holds references to all simulation services. Passed into `Scene::init()`
+ * on both the client and the dedicated server build.
  */
-class SceneContextImpl : public ISceneContext {
+class SimContextImpl : public ISimContext {
 	Assets::AssetManager& assets;
 	Input::InputManager& input;
 	Jobs::JobSystem& jobs;
 	SceneManager& scene;
 	Core::SimClock& simClock;
-	Graphics::Renderer& renderer;
 
 public:
-	SceneContextImpl(
+	SimContextImpl(
 		Assets::AssetManager& am,
 		Input::InputManager& im,
 		Jobs::JobSystem& js,
 		SceneManager& sm,
-		Core::SimClock& clock,
-		Graphics::Renderer& ren
+		Core::SimClock& clock
 	)
 		: assets(am)
 		, input(im)
 		, jobs(js)
 		, scene(sm)
 		, simClock(clock)
-		, renderer(ren)
 	{}
 
 	Assets::AssetManager& getAssetManager() override { return assets; }
@@ -42,7 +38,6 @@ public:
 	Jobs::JobSystem& getJobSystem() override { return jobs; }
 	SceneManager& getSceneManager() override { return scene; }
 	Core::SimClock& getSimClock() override { return simClock; }
-	Graphics::Renderer& getRenderer() override { return renderer; }
 };
 
 } // namespace Blackthorn::Scene

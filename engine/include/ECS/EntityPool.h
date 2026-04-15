@@ -180,7 +180,7 @@ public:
 			return nullptr;
 
 		static const size_t id = Detail::componentID<Component>();
-		if(id >= componentArrays.size() || !componentArrays[id])
+		if (id >= componentArrays.size() || !componentArrays[id])
 			return nullptr;
 
 		auto* array = static_cast<ComponentArray<Component>*>(componentArrays[id].get());
@@ -193,11 +193,28 @@ public:
 			return nullptr;
 
 		static const size_t id = Detail::componentID<Component>();
-		if(id >= componentArrays.size() || !componentArrays[id])
+		if (id >= componentArrays.size() || !componentArrays[id])
 			return nullptr;
 
 		auto* array = static_cast<ComponentArray<Component>*>(componentArrays[id].get());
 		return array->get(entity);
+	}
+
+	void* getComponentRaw(Entity entity, size_t componentIndex) {
+		if (!isValid(entity))
+			return nullptr;
+
+		if (componentIndex >= componentArrays.size() || !componentArrays[componentIndex])
+			return nullptr;
+
+		if (!componentArrays[componentIndex]->has(entity))
+			return nullptr;
+
+		return componentArrays[componentIndex]->getRaw(entity);
+	}
+
+	const void* getComponentRaw(Entity entity, size_t componentIndex) const {
+		return const_cast<EntityPool*>(this)->getComponentRaw(entity, componentIndex);
 	}
 
 	template <typename... Components>
@@ -398,6 +415,6 @@ private:
 	}
 };
 
-} // namespace Blackthorn::ECS::Detail
+} // namespace Detail
 
 } // namespace Blackthorn::ECS

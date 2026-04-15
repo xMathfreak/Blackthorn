@@ -4,13 +4,25 @@
 #include <memory>
 #include <vector>
 
+#include <SDL3/SDL.h>
+
 #include "Core/Export.h"
 #include "Scene/IScene.h"
 
 namespace Blackthorn::Scene {
 
+/**
+ * @brief Simulation-only scene stack manager.
+ *
+ * Drives `fixedUpdate`, `update`, and `lateUpdate` across the scene stack.
+ * No render step — that is provided by `ClientSceneManager` in the client
+ * build.
+ *
+ * Used directly by `EngineBase` and the dedicated server. `Engine` replaces
+ * the `EngineBase` instance with a `ClientSceneManager` at init time.
+ */
 class BLACKTHORN_API SceneManager {
-private:
+protected:
 	enum class TransitionPhase {
 		FadeOut,
 		FadeIn
@@ -22,7 +34,6 @@ private:
 	TransitionPhase transitionPhase = TransitionPhase::FadeOut;
 	std::unique_ptr<IScene> pendingScene;
 	std::function<void(float)> transitionCallback;
-
 	float transitionDuration = 0.0f;
 	float transitionTime = 0.0f;
 
@@ -43,7 +54,7 @@ private:
 
 public:
 	SceneManager() = default;
-	~SceneManager() = default;
+	virtual ~SceneManager() = default;
 
 	SceneManager(const SceneManager&) = delete;
 	SceneManager& operator=(const SceneManager&) = delete;
@@ -91,21 +102,25 @@ public:
 		}
 	}
 
-	void changeSceneWithTransition(std::unique_ptr<IScene> scene, std::function<void(float)> transition, float duration = 1.0f) {
+	void changeSceneWithTransition(
+		std::unique_ptr<IScene> scene,
+		std::function<void(float)> transition,
+		float duration = 1.0f
+	) {
 		pendingScene = std::move(scene);
-		transitionCallback = transition;
+		transitionCallback = std::move(transition);
 		transitionDuration = duration;
 		transitionTime = 0.0f;
 		inTransition = true;
 		transitionPhase = TransitionPhase::FadeOut;
 	}
 
-	void fixedUpdate(float dt) {
+	void fixedUpdate(float dt, Uint64 tick) {
 		if (inTransition)
 			return;
 
 		for (auto it = scenes.rbegin(); it != scenes.rend(); ++it) {
-			(*it)->fixedUpdate(dt);
+			(*it)->fixedUpdate(dt, tick);
 
 			if ((*it)->blocksUpdate())
 				break;
@@ -138,32 +153,6 @@ public:
 		}
 	}
 
-	void render(float alpha) {
-		if (scenes.empty())
-			return;
-
-		auto firstRender = scenes.begin();
-		for (auto it = scenes.rbegin(); it != scenes.rend(); ++it) {
-			if ((*it)->blocksRender()) {
-				firstRender = (it + 1).base();
-				break;
-			}
-		}
-
-		for (auto it = firstRender; it != scenes.end(); ++it) {
-			(*it)->render(alpha);
-		}
-
-		if (inTransition && transitionCallback) {
-			float t = transitionTime / transitionDuration;
-			if (transitionPhase == TransitionPhase::FadeOut) {
-				transitionCallback(t);
-			} else {
-				transitionCallback(1.0f - t);
-			}
-		}
-	}
-
 	IScene* getCurrentScene() {
 		return scenes.empty() ? nullptr : scenes.back().get();
 	}
@@ -172,13 +161,8 @@ public:
 		return scenes.empty() ? nullptr : scenes.back().get();
 	}
 
-	size_t getSceneCount() const {
-		return scenes.size();
-	}
-
-	bool isEmpty() const {
-		return scenes.empty();
-	}
+	size_t getSceneCount() const { return scenes.size(); }
+	bool isEmpty() const { return scenes.empty(); }
 };
 
 } // namespace Blackthorn::Scene
