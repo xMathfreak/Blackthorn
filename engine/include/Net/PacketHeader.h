@@ -159,6 +159,13 @@ struct BLACKTHORN_API PacketHeader {
 	}
 };
 
-static_assert(sizeof(PacketHeader) == PacketHeader::SERIALIZED_SIZE, "PacketHeader::SERIALIZED_SIZE does not match sizeof(PacketHeader)");
+static_assert(
+	sizeof(Uint64) +
+	sizeof(Uint32) * 3 +
+	sizeof(Uint16) +
+	sizeof(Uint8) * 2
+	== PacketHeader::SERIALIZED_SIZE,
+	"PacketHeader: serialized field sizes do not sum to SERIALIZED_SIZE"
+);
 
 } // namespace Blackthorn::Net
