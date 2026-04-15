@@ -8,6 +8,7 @@ namespace Assets { class AssetManager; }
 namespace Core { class SimClock; }
 namespace Input { class InputManager; }
 namespace Jobs { class JobSystem; }
+namespace Net::Transport { class ConnectionManager; }
 
 namespace Scene {
 
@@ -48,6 +49,7 @@ public:
 	virtual SceneManager& getSceneManager() = 0;
 	virtual Jobs::JobSystem& getJobSystem() = 0;
 	virtual Core::SimClock& getSimClock() = 0;
+	virtual Net::Transport::ConnectionManager& getConnectionManager() = 0;
 };
 
 } // namespace Scene

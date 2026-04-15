@@ -147,7 +147,7 @@ protected:
 	std::unique_ptr<Scene::SceneManager> sceneManager;
 
 	Input::InputManager inputManager;
-	Net::Transport::ConnectionManager connectionMananger;
+	Net::Transport::ConnectionManager connectionManager;
 
 	virtual void processEvents();
 	virtual void fixedUpdate(float dt);

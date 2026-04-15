@@ -71,6 +71,7 @@ bool EngineCore::init(const EngineConfig& cfg) {
 
 	simContext = std::make_unique<Scene::SimContextImpl>(
 		*assetManager,
+		connectionManager,
 		inputManager,
 		*jobSystem,
 		*sceneManager,
@@ -234,7 +235,7 @@ void EngineCore::fixedUpdate(float dt) {
 
 void EngineCore::update(float dt) {
 	assetManager->flushPendingUploads(config.assets.uploadBudget);
-	connectionMananger.poll(jobSystem.get());
+	connectionManager.poll(jobSystem.get());
 	sceneManager->update(dt);
 	inputManager.update(dt);
 }
