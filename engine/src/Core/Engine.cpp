@@ -1,75 +1,91 @@
 #include "Core/Engine.h"
 
-#include <glad/glad.h>
 #include <SDL3_ttf/SDL_ttf.h>
 
-// Loaders
 #include "Assets/Loaders/BitmapFontLoader.h"
 #include "Assets/Loaders/ShaderLoader.h"
 #include "Assets/Loaders/TextureLoader.h"
 #include "Assets/Loaders/TrueTypeFontLoader.h"
 
 #include "Core/Settings.h"
-#include "Scene/SceneContext.h"
-#include "Debug/Profiler.h"
 #include "Debug/Logger.h"
-#include "Threads/ThreadRegistry.h"
+#include "Debug/Profiler.h"
+#include "Fonts/BitmapFont.h"
+#include "Fonts/TrueTypeFont.h"
+#include "Scene/SceneContext.h"
+#include "UI/UIManager.h"
 
 namespace Blackthorn {
-
-Engine::Engine()
-{}
 
 Engine::~Engine() {
 	shutdown();
 }
 
 bool Engine::init(const EngineConfig& cfg) {
-	if (initialized) {
-		BT_WARN("Engine already initialized.");
+	if (!EngineCore::init(cfg))
+		return false;
+
+	sceneManager = std::make_unique<Scene::ClientSceneManager>();
+
+	initGraphics(cfg);
+	if (!window || !glContext) {
+		EngineCore::shutdown();
 		return false;
 	}
 
-	config = cfg;
-	FontConfig::setCurrent(cfg.fonts);
+	applyEngineSettings();
+	initAssetLoaders();
 
-	Threads::ThreadRegistry::instance().registerCurrent("Main");
-	Debug::Logger::instance().init(cfg.debug.logger);
-
-	auto& settings = Core::Settings::instance();
-	settings.loadFromFile(cfg.settingsFilePath);
-
-	registerEngineDefaults(settings);
-	onRegisterSettings(settings);
-
-	if (settings.isDirty())
-		settings.saveToFile(cfg.settingsFilePath);
-
-	registerEngineCallbacks(settings);
-
-	simClock = std::make_unique<Core::SimClock>(cfg.timing.fixedDeltaTime);
-	simClock->load();
-
-	SDL_InitFlags initFlags = SDL_INIT_VIDEO;
-	if (!SDL_Init(initFlags)) {
-		BT_ERROR("SDL_Init failed: {}", SDL_GetError());
-		cleanupInitialization();
+	try {
+		BT_LOG("Initializing Renderer");
+		renderer = std::make_unique<Graphics::Renderer>(cfg.render.maxQuads);
+		renderer->setPostProcessingEnabled(
+			Core::Settings::instance().get<bool>("graphics", "post_processing")
+		);
+	} catch (const std::exception& e) {
+		BT_ERROR("Failed to initialize Renderer: {}", e.what());
+		cleanupGraphics();
+		EngineCore::shutdown();
 		return false;
 	}
 
-	if (!TTF_Init()) {
-		BT_ERROR("TTF_Init failed: {}", SDL_GetError());
-		cleanupInitialization();
-		return false;
-	}
+	int w, h;
+	SDL_GetWindowSizeInPixels(window, &w, &h);
+	renderer->setProjection(w, h);
+	UI::UIManager::onWindowResize(w, h);
 
+	simContext = std::make_unique<Scene::SceneContextImpl>(
+		*assetManager,
+		inputManager,
+		*jobSystem,
+		*sceneManager,
+		*simClock,
+		*renderer
+	);
 
+	applyPostProcessing();
+	logEngineInfo();
+
+	BT_LOG("Engine (graphics) initialized");
+	return true;
+}
+
+void Engine::initGraphics(const EngineConfig& cfg) {
 	#ifdef BLACKTHORN_DEBUG
-		BT_LOG("Initializing Blackthorn Engine");
 		SDL_SetLogPriority(SDL_LOG_CATEGORY_APPLICATION, SDL_LOG_PRIORITY_VERBOSE);
 	#else
 		SDL_SetLogPriority(SDL_LOG_CATEGORY_APPLICATION, SDL_LOG_PRIORITY_INFO);
 	#endif
+
+	if (!SDL_InitSubSystem(SDL_INIT_VIDEO)) {
+		BT_ERROR("SDL_InitSubSystem(VIDEO) failed: {}", SDL_GetError());
+		return;
+	}
+
+	if (!TTF_Init()) {
+		BT_ERROR("TTF_Init failed: {}", SDL_GetError());
+		return;
+	}
 
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
@@ -80,90 +96,78 @@ bool Engine::init(const EngineConfig& cfg) {
 	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, cfg.render.depthBits);
 	SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, cfg.render.stencilBits);
 
+	auto& settings = Core::Settings::instance();
+
 	int msaaSamples = settings.get<int>("graphics", "msaa_samples");
 	if (msaaSamples > 0) {
 		SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
 		SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, msaaSamples);
 	}
 
-	SDL_WindowFlags windowFlags = SDL_WINDOW_RESIZABLE | SDL_WINDOW_OPENGL;
+	window = SDL_CreateWindow(
+		cfg.window.title.c_str(),
+		cfg.window.width, cfg.window.height,
+		SDL_WINDOW_RESIZABLE | SDL_WINDOW_OPENGL
+	);
 
-	window = SDL_CreateWindow(cfg.window.title.c_str(), cfg.window.width, cfg.window.height, windowFlags);
 	if (!window) {
 		BT_ERROR("SDL_CreateWindow failed: {}", SDL_GetError());
-		cleanupInitialization();
-		return false;
+		return;
 	}
 
 	glContext = SDL_GL_CreateContext(window);
 	if (!glContext) {
 		BT_ERROR("SDL_GL_CreateContext failed: {}", SDL_GetError());
-		cleanupInitialization();
-		return false;
+		return;
 	}
 
 	if (!SDL_GL_MakeCurrent(window, glContext)) {
 		BT_ERROR("SDL_GL_MakeCurrent failed: {}", SDL_GetError());
-		cleanupInitialization();
-		return false;
+		return;
 	}
 
 	if (!gladLoadGLLoader((GLADloadproc)SDL_GL_GetProcAddress)) {
 		BT_ERROR("Failed to initialize GLAD");
-		cleanupInitialization();
-		return false;
+		return;
 	}
 
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LEQUAL);
 
 	if (msaaSamples > 0)
 		glEnable(GL_MULTISAMPLE);
 
-	applyEngineSettings();
-
 	glViewport(0, 0, cfg.window.width, cfg.window.height);
+}
 
-	logEngineInfo();
+void Engine::shutdown() {
+	if (!initialized)
+		return;
 
-	assetManager = std::make_unique<Assets::AssetManager>(cfg.threading.assetWorkerCount);
-	jobSystem = std::make_unique<Jobs::JobSystem>(cfg.threading.jobWorkerCount);
+	Fonts::TrueTypeFont::cleanupShader();
+	Fonts::BitmapFont::cleanupShader();
 
-	try {
-		BT_LOG("Initializing Renderer");
-		renderer = std::make_unique<Graphics::Renderer>(cfg.render.maxQuads);
-		renderer->setClearColor(0.1f, 0.1f, 0.12f);
-		renderer->setPostProcessingEnabled(settings.get<bool>("graphics", "post_processing"));
-	} catch (const std::exception& e) {
-		BT_ERROR("Failed to initialize Renderer: {}", e.what());
-		cleanupInitialization();
-		return false;
+	renderer.reset();
+	cleanupGraphics();
+
+	EngineCore::shutdown();
+}
+
+void Engine::cleanupGraphics() {
+	if (glContext) {
+		SDL_GL_DestroyContext(glContext);
+		glContext = nullptr;
 	}
 
-	initAssetLoaders();
+	if (window) {
+		SDL_DestroyWindow(window);
+		window = nullptr;
+	}
 
-	int w, h;
-	SDL_GetWindowSizeInPixels(window, &w, &h);
-	renderer->setProjection(w, h);
-	UI::UIManager::onWindowResize(w, h);
-
-	sceneContext = std::make_unique<Scene::SceneContextImpl>(
-		*assetManager,
-		*simClock,
-		*renderer,
-		inputManager,
-		*jobSystem,
-		sceneManager
-	);
-
-	initialized = true;
-
-	BT_LOG("Initialization completed (resuming from tick {})", simClock->getCurrentTick());
-
-	return true;
+	TTF_Quit();
+	SDL_QuitSubSystem(SDL_INIT_VIDEO);
 }
 
 void Engine::initAssetLoaders() {
@@ -185,146 +189,17 @@ void Engine::initAssetLoaders() {
 	);
 }
 
-void Engine::shutdown() {
-	if (!initialized)
-		return;
-
-	auto& s = Core::Settings::instance();
-
-	if (s.isDirty())
-		s.saveToFile(config.settingsFilePath);
-
-	Fonts::TrueTypeFont::cleanupShader();
-	Fonts::BitmapFont::cleanupShader();
-
-	if (assetManager)
-		assetManager->clear();
-
-	if (glContext) {
-		SDL_GL_DestroyContext(glContext);
-		glContext = nullptr;
-	}
-
-	if (window) {
-		SDL_DestroyWindow(window);
-		window = nullptr;
-	}
-
-	TTF_Quit();
-	SDL_Quit();
-
-	initialized = false;
-	running = false;
-	Debug::Logger::instance().shutdown();
-}
-
-void Engine::render(float alpha) {
-	renderer->beginScene();
-
-	sceneManager.render(alpha);
-
-	renderer->endScene();
-
-	SDL_GL_SwapWindow(window);
-}
-
-void Engine::processEvents() {
-	auto& settings = Core::Settings::instance();
-
-	SDL_Event event;
-	while (SDL_PollEvent(&event)) {
-		inputManager.handleEvent(event);
-
-		switch (event.type) {
-			case SDL_EVENT_QUIT:
-				running = false;
-				break;
-			case SDL_EVENT_WINDOW_RESIZED:
-				int pw, ph;
-				SDL_GetWindowSizeInPixels(window, &pw, &ph);
-
-				if (pw != config.window.width || ph != config.window.height) {
-					config.window.width = pw;
-					config.window.height = ph;
-
-					glViewport(0, 0, pw, ph);
-					renderer->setProjection(pw, ph);
-					UI::UIManager::onWindowResize(pw, ph);
-
-					if (!(SDL_GetWindowFlags(window) & SDL_WINDOW_MAXIMIZED)) {
-						settings.set<int>("window", "width", pw);
-						settings.set<int>("window", "height", ph);
-						settings.saveToFile(config.settingsFilePath);
-					}
-				}
-
-				break;
-			case SDL_EVENT_WINDOW_FOCUS_GAINED:
-				windowFocused = true;
-
-				if (settings.get<bool>("window", "fullscreen"))
-					SDL_SetWindowFullscreen(window, true);
-
-				break;
-			case SDL_EVENT_WINDOW_FOCUS_LOST:
-				windowFocused = false;
-
-				if (SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN)
-					SDL_SetWindowFullscreen(window, false);
-				break;
-			case SDL_EVENT_WINDOW_MAXIMIZED:
-				settings.set<bool>("window", "maximized", true);
-				settings.saveToFile(config.settingsFilePath);
-
-				break;
-			case SDL_EVENT_WINDOW_RESTORED:
-				settings.set<bool>("window", "maximized", false);
-				settings.saveToFile(config.settingsFilePath);
-
-				break;
-			case SDL_EVENT_WINDOW_MOVED:
-				if (!(SDL_GetWindowFlags(window) & SDL_WINDOW_MAXIMIZED)) {
-					int x, y;
-					SDL_GetWindowPosition(window, &x, &y);
-
-					settings.set("window", "pos_x", x);
-					settings.set("window", "pos_y", y);
-
-					settings.saveToFile(config.settingsFilePath);
-				}
-
-				break;
-			default:
-				break;
-		}
-	}
-}
-
-void Engine::update(float dt) {
-	assetManager->flushPendingUploads(config.assets.uploadBudget);
-
-	sceneManager.update(dt);
-	inputManager.update(dt);
-}
-
-void Engine::fixedUpdate(float dt) {
-	simClock->tick();
-	sceneManager.fixedUpdate(dt, simClock->getCurrentTick());
-}
-
-void Engine::lateUpdate(float dt) {
-	sceneManager.lateUpdate(dt);
-}
-
 void Engine::run() {
 	if (!initialized) {
-		BT_ERROR("Cannot run engine: Not initialized");
+		BT_ERROR("Cannot run: Engine not initialized");
 		return;
 	}
 
-	Uint64 lastFrameTime = SDL_GetPerformanceCounter();
-	float accumulatedTime = 0.0f;
-	const float frequency = static_cast<float>(SDL_GetPerformanceFrequency());
+	installSignalHandlers();
+
+	Uint64 lastTime = SDL_GetPerformanceCounter();
+	float accumulated = 0.0f;
+	const float freq = static_cast<float>(SDL_GetPerformanceFrequency());
 
 	running = true;
 	auto& settings = Core::Settings::instance();
@@ -333,57 +208,46 @@ void Engine::run() {
 		auto& profiler = Debug::Profiler::instance();
 	#endif
 
-	while (running) {
+	while (running && !signalReceived.load(std::memory_order::relaxed)) {
 		#ifdef BLACKTHORN_DEBUG
-			if (windowFocused)
-				profiler.beginFrame();
-
+			profiler.beginFrame();
 			PROFILE_SCOPE("Frame");
 		#endif
 
-		Uint64 currentTime = SDL_GetPerformanceCounter();
-		float frameTime = static_cast<float>(currentTime - lastFrameTime) / frequency;
-		lastFrameTime = currentTime;
+		const Uint64 now = SDL_GetPerformanceCounter();
+		float frameTime = static_cast<float>(now - lastTime) / freq;
+		lastTime = now;
 
 		{
 			PROFILE_SCOPE("Events");
 			processEvents();
 		}
 
-		if (!windowFocused) {
-			Uint32 unfocusedDelay = static_cast<Uint32>(1000.0f / config.timing.unfocusedFPS);
-			SDL_Delay(unfocusedDelay);
-
-			accumulatedTime = std::min(
-				accumulatedTime + frameTime,
-				config.timing.fixedDeltaTime * static_cast<float>(config.timing.maxFixedUpdates - 1)
-			);
-			lastFrameTime = SDL_GetPerformanceCounter();
-			continue;
-		}
-
 		if (frameTime > config.timing.maxDeltaTime) {
-			BT_WARN("Frame time capped: {:.3f} -> {:.3f}", frameTime, config.timing.maxDeltaTime);
+			BT_WARN("Frame time capped: {:.3f} -> {:.3f}",
+				frameTime, config.timing.maxDeltaTime);
 			frameTime = config.timing.maxDeltaTime;
 		}
 
-		accumulatedTime += frameTime;
+		accumulated += frameTime;
 
 		int numFixed = 0;
-		float accumulatedCopy = accumulatedTime;
+		float accumulatedCopy = accumulated;
 
-		while (accumulatedCopy >= config.timing.fixedDeltaTime && numFixed < config.timing.maxFixedUpdates) {
+		while (accumulatedCopy >= config.timing.fixedDeltaTime
+			 && numFixed < config.timing.maxFixedUpdates)
+		{
 			accumulatedCopy -= config.timing.fixedDeltaTime;
 			++numFixed;
 		}
 
 		if (numFixed >= config.timing.maxFixedUpdates) {
 			#ifdef BLACKTHORN_DEBUG
-				BT_WARN("Fixed update count capped at {} this frame", numFixed);
+				BT_WARN("Fixed update count capped at {}", numFixed);
 			#endif
-			accumulatedTime = 0.0f;
+			accumulated = 0.0f;
 		} else {
-			accumulatedTime = accumulatedCopy;
+			accumulated = accumulatedCopy;
 		}
 
 		{
@@ -404,165 +268,127 @@ void Engine::run() {
 			lateUpdate(frameTime);
 		}
 
-		const float alpha = accumulatedTime / config.timing.fixedDeltaTime;
+		jobSystem->flushMainThread();
+
+		const float alpha = accumulated / config.timing.fixedDeltaTime;
 
 		{
 			PROFILE_SCOPE("Render");
 			render(alpha);
 		}
 
-		if (settings.get<bool>("graphics", "frame_cap") &&
-		    !settings.get<bool>("window", "vsync"))
-		{
-			const float targetFrameTime = 1.0f / settings.get<int>("graphics", "target_fps");
-			const Uint64 endTime   = SDL_GetPerformanceCounter();
-			const float  elapsed   = static_cast<float>(endTime - currentTime) / frequency;
-			const float  sleepTime = (targetFrameTime - elapsed) - 0.002f;
+		if (
+			settings.get<bool>("graphics", "frame_cap") &&
+		 	!settings.get<bool>("window", "vsync")
+		) {
+			const float target = 1.0f / settings.get<int>("graphics", "target_fps");
+			const Uint64 end = SDL_GetPerformanceCounter();
+			const float elapsed = static_cast<float>(end - now) / freq;
+			const float sleepMs = (target - elapsed - 0.002f) * 1000.0f;
 
-			if (sleepTime > 0.0f)
-				SDL_Delay(static_cast<Uint32>(sleepTime * 1000.0f));
+			if (sleepMs > 0.0f)
+				SDL_Delay(static_cast<Uint32>(sleepMs));
 
-			while (static_cast<float>(SDL_GetPerformanceCounter() - currentTime) / frequency < targetFrameTime) {}
+			while (static_cast<float>(
+				SDL_GetPerformanceCounter() - now) / freq < target) {}
 		}
 
 		#ifdef BLACKTHORN_DEBUG
-			static float logCounter = 0.0f;
-			logCounter += frameTime;
-
+			static float logTimer = 0.0f;
+			logTimer += frameTime;
 			profiler.endFrame();
 
-			if (logCounter >= config.debug.profilingLogInterval) {
+			if (logTimer >= config.debug.profilingLogInterval) {
 				logProfilingInfo();
-				logCounter = 0.0f;
+				logTimer = 0.0f;
 			}
 		#endif
 	}
 }
 
-void Engine::logEngineInfo() {
-	BT_DEBUG("Engine Info");
-	BT_DEBUG("OpenGL Version: {}", reinterpret_cast<const char*>(glGetString(GL_VERSION)));
-	BT_DEBUG("Renderer: {}", reinterpret_cast<const char*>(glGetString(GL_RENDERER)));
-
-	GLint maxTextureSize;
-	glGetIntegerv(GL_MAX_TEXTURE_SIZE, &maxTextureSize);
-	BT_DEBUG("Max Texture Size: {}", maxTextureSize);
-
-	GLint maxVertexAttribs;
-	glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &maxVertexAttribs);
-	BT_DEBUG("Max Vertex Attributes: {}", maxVertexAttribs);
-
-	int actualDepthSize, actualStencilSize, actualMSAASamples;
-
-	SDL_GL_GetAttribute(SDL_GL_DEPTH_SIZE, &actualDepthSize);
-	SDL_GL_GetAttribute(SDL_GL_STENCIL_SIZE, &actualStencilSize);
-	SDL_GL_GetAttribute(SDL_GL_MULTISAMPLESAMPLES, &actualMSAASamples);
-
-	BT_DEBUG("Depth Buffer: {} bits (requested {})", actualDepthSize, config.render.depthBits);
-	BT_DEBUG("Stencil Buffer: {} bits (requested {})", actualStencilSize, config.render.stencilBits);
-	BT_DEBUG("MSAA Samples: {}x (requested {}x)",
-		actualMSAASamples, Core::Settings::instance().get<int>("graphics", "msaa_samples")
-	);
-
-	#if defined(GLM_FORCE_SIMD_AVX2)
-		BT_DEBUG("GLM using AVX2 SIMD");
-	#elif defined(GLM_FORCE_SIMD_AVX)
-		BT_DEBUG("GLM using AVX SIMD");
-	#elif defined(GLM_FORCE_SIMD_SSE42)
-		BT_DEBUG("GLM using SSE4.2 SIMD");
-	#elif defined(GLM_FORCE_SIMD_SSE41)
-		BT_DEBUG("GLM using SSE4.1 SIMD");
-	#elif defined(GLM_FORCE_SIMD_SSE3)
-		BT_DEBUG("GLM using SSE3 SIMD");
-	#elif defined(GLM_FORCE_SIMD_SSE2)
-		BT_DEBUG("GLM using SSE2 SIMD");
-	#else
-		BT_DEBUG("GLM using scalar math (no SIMD)");
-	#endif
+void Engine::render(float alpha) {
+	renderer->beginScene();
+	getClientSceneManager().render(alpha);
+	renderer->endScene();
+	SDL_GL_SwapWindow(window);
 }
 
-void Engine::cleanupInitialization() {
-	if (glContext) {
-		SDL_GL_DestroyContext(glContext);
-		glContext = nullptr;
-	}
+void Engine::processEvents() {
+	auto& settings = Core::Settings::instance();
 
-	if (window) {
-		SDL_DestroyWindow(window);
-		window = nullptr;
-	}
+	SDL_Event event;
+	while (SDL_PollEvent(&event)) {
+		inputManager.handleEvent(event);
 
-	TTF_Quit();
-	SDL_Quit();
-}
+		switch (event.type) {
+			case SDL_EVENT_QUIT:
+				running = false;
+				break;
 
-void Engine::registerEngineDefaults(Core::Settings& s) {
-	s.setDefault("window", "width", config.window.width);
-	s.setDefault("window", "height", config.window.height);
-	s.setDefault("window", "fullscreen", false);
-	s.setDefault("window", "vsync", false);
-	s.setDefault("window", "maximized", false);
-	s.setDefault("window", "pos_x", SDL_WINDOWPOS_CENTERED);
-	s.setDefault("window", "pos_y", SDL_WINDOWPOS_CENTERED);
+			case SDL_EVENT_WINDOW_RESIZED: {
+				int pw, ph;
+				SDL_GetWindowSizeInPixels(window, &pw, &ph);
 
-	s.setDefault("graphics", "frame_cap", false);
-	s.setDefault("graphics", "target_fps", 60);
-	s.setDefault("graphics", "msaa_samples", 0);
-	s.setDefault("graphics", "post_processing", true);
-	s.setDefault("graphics", "brightness", 1.0f);
-	s.setDefault("graphics", "contrast", 1.0f);
-	s.setDefault("graphics", "saturation", 1.0f);
-	s.setDefault("graphics", "gamma", 1.0f);
-	s.setDefault("graphics", "vignette", false);
-	s.setDefault("graphics", "vignette_intensity", 0.5f);
+				if (pw != config.window.width || ph != config.window.height) {
+					config.window.width = pw;
+					config.window.height = ph;
 
-	s.setDefault("ui", "scale", 1.0f);
+					glViewport(0, 0, pw, ph);
+					renderer->setProjection(pw, ph);
+					UI::UIManager::onWindowResize(pw, ph);
 
-	s.setDefault("audio", "master_volume", 1.0f);
-	s.setDefault("audio", "music_volume", 1.0f);
-	s.setDefault("audio", "sfx_volume", 1.0f);
+					if (!(SDL_GetWindowFlags(window) & SDL_WINDOW_MAXIMIZED)) {
+						settings.set<int>("window", "width", pw);
+						settings.set<int>("window", "height", ph);
+						settings.saveToFile(config.settingsFilePath);
+					}
+				}
+				break;
+			}
 
-	s.setDefault<Uint64>("simulation", "tick", static_cast<Uint64>(0));
+			case SDL_EVENT_WINDOW_FOCUS_GAINED:
+				if (settings.get<bool>("window", "fullscreen"))
+					SDL_SetWindowFullscreen(window, true);
+				break;
 
-	#ifdef BLACKTHORN_DEBUG
-		s.setDefault("developer", "log_level", 3); // Info
-	#endif
+			case SDL_EVENT_WINDOW_FOCUS_LOST:
+				if (SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN)
+					SDL_SetWindowFullscreen(window, false);
+				break;
 
-	s.setDefault("developer", "worker_threads", 0); // auto
-}
+			case SDL_EVENT_WINDOW_MAXIMIZED:
+				settings.set<bool>("window", "maximized", true);
+				settings.saveToFile(config.settingsFilePath);
+				break;
 
+			case SDL_EVENT_WINDOW_RESTORED:
+				settings.set<bool>("window", "maximized", false);
+				settings.saveToFile(config.settingsFilePath);
+				break;
 
-void Engine::registerEngineCallbacks(Core::Settings& s) {
-	s.onChange("window", "vsync", [](const std::string& val) {
-		SDL_GL_SetSwapInterval(val == "true" ? 1 : 0);
-	});
+			case SDL_EVENT_WINDOW_MOVED: {
+				if (!(SDL_GetWindowFlags(window) & SDL_WINDOW_MAXIMIZED)) {
+					int x, y;
+					SDL_GetWindowPosition(window, &x, &y);
+					settings.set("window", "pos_x", x);
+					settings.set("window", "pos_y", y);
+					settings.saveToFile(config.settingsFilePath);
+				}
+				break;
+			}
 
-	s.onChange("ui", "scale", [](const std::string& val) {
-		try { UI::UIManager::setGlobalUIScale(std::stof(val)); }
-		catch (...) {}
-	});
-
-	#ifdef BLACKTHORN_DEBUG
-		s.onChange("developer", "log_level", [](const std::string& val) {
-			try {
-				Debug::Logger::instance().setLevel(
-					static_cast<Debug::LogLevel>(std::stoi(val)));
-			} catch (...) {}
-		});
-	#endif
-
-	auto applyPP = [this](const std::string&) { applyPostProcessing(); };
-
-	for (const char* key : {
-		"post_processing", "brightness", "contrast",
-		"saturation", "gamma", "vignette", "vignette_intensity"
-	}) {
-		s.onChange("graphics", key, applyPP);
+			default:
+				break;
+		}
 	}
 }
 
 void Engine::applyEngineSettings() {
+	EngineCore::applyCoreSettings();
+
 	auto& s = Core::Settings::instance();
+
+	UI::UIManager::setGlobalUIScale(s.get<float>("ui", "scale", 1.0f));
 
 	bool fullscreen = s.get<bool>("window", "fullscreen", false);
 	bool maximized = s.get<bool>("window", "maximized", false);
@@ -575,8 +401,7 @@ void Engine::applyEngineSettings() {
 	if (posX != SDL_WINDOWPOS_CENTERED && posY != SDL_WINDOWPOS_CENTERED) {
 		int numDisplays;
 		SDL_GetDisplays(&numDisplays);
-
-		int displayIndex = -1;
+		int displayIndex = 0;
 
 		for (int i = 0; i < numDisplays; ++i) {
 			SDL_Rect bounds;
@@ -589,28 +414,18 @@ void Engine::applyEngineSettings() {
 			}
 		}
 
-		if (displayIndex < 0)
-			displayIndex = 0;
-
 		SDL_Rect usable;
 		if (SDL_GetDisplayUsableBounds(displayIndex, &usable)) {
 			const int margin = 50;
-
-			posX = std::max(
-				usable.x - width + margin,
-				std::min(posX, usable.x + usable.w - margin)
-			);
-
-			posY = std::max(
-				usable.y - height + margin,
-				std::min(posY, usable.y + usable.h - margin)
-			);
+			posX = std::max(usable.x - width + margin,
+				std::min(posX, usable.x + usable.w - margin));
+			posY = std::max(usable.y - height + margin,
+				std::min(posY, usable.y + usable.h - margin));
 		}
 	}
 
 	SDL_SetWindowFullscreen(window, false);
 	SDL_RestoreWindow(window);
-
 	SDL_SetWindowSize(window, width, height);
 	SDL_SetWindowPosition(window, posX, posY);
 
@@ -621,24 +436,17 @@ void Engine::applyEngineSettings() {
 	}
 
 	SDL_GL_SetSwapInterval(s.get<bool>("window", "vsync") ? 1 : 0);
-
-	UI::UIManager::setGlobalUIScale(s.get<float>("ui", "scale", 1.0f));
-
-	#ifdef BLACKTHORN_DEBUG
-		Debug::Logger::instance().setLevel(
-			static_cast<Debug::LogLevel>(s.get<int>("developer", "log_level", 3))
-		);
-	#endif
-
-	applyPostProcessing();
-	inputManager.loadBindingsFromSettings();
 }
 
 void Engine::applyPostProcessing() {
-	if (!renderer) return;
+	if (!renderer)
+		return;
+
 	auto& s = Core::Settings::instance();
 
-	renderer->setPostProcessingEnabled(s.get<bool>("graphics", "post_processing", true));
+	renderer->setPostProcessingEnabled(
+		s.get<bool>("graphics", "post_processing", true)
+	);
 
 	auto& shader = renderer->getScreenShader();
 	shader.setFloat("u_Brightness", s.get<float>("graphics", "brightness", 1.0f));
@@ -649,34 +457,56 @@ void Engine::applyPostProcessing() {
 	shader.setFloat("u_VignetteIntensity", s.get<float>("graphics", "vignette_intensity", 0.5f));
 }
 
-#ifdef BLACKTHORN_DEBUG
-	void Engine::logProfilingInfo() {
-		auto& profiler = Debug::Profiler::instance();
+void Engine::registerEngineCallbacks(Core::Settings& s) {
+	EngineCore::registerEngineCallbacks(s);
 
-		SDL_Log("Frame Time: %.2f ms (%.1f FPS)",
-			profiler.getAverageFrameTime(60),
-			1000.0f / profiler.getAverageFrameTime(60)
-		);
+	s.onChange("ui", "scale", [](const std::string& val) {
+		try { UI::UIManager::setGlobalUIScale(std::stof(val)); }
+		catch (...) {}
+	});
 
-		auto scopeNames = profiler.getAllScopeNames();
-		for (const auto& name : scopeNames) {
-			auto stats = profiler.getStats(name, 60);
+	s.onChange("window", "vsync", [](const std::string& val) {
+		SDL_GL_SetSwapInterval(val == "true" ? 1 : 0);
+	});
 
-			if (stats.average > 0.1f) {
-				SDL_Log(" %s: %.2f ms (min: %.2f, max: %.2f, calls: %d)",
-					name.c_str(),
-					stats.average,
-					stats.min,
-					stats.max,
-					stats.callCount
-				);
-			}
-		}
+	auto applyPP = [this](const std::string&) { applyPostProcessing(); };
+
+	for (const char* key : {
+		"post_processing", "brightness", "contrast",
+		"saturation", "gamma", "vignette", "vignette_intensity"
+	}) {
+		s.onChange("graphics", key, applyPP);
 	}
+}
 
-	float Engine::getFPS() const {
-		return 1000.0f / Debug::Profiler::instance().getAverageFrameTime(60);
-	}
-#endif
+void Engine::logEngineInfo() {
+	BT_DEBUG("OpenGL Version: {}",
+		reinterpret_cast<const char*>(glGetString(GL_VERSION)));
+	BT_DEBUG("Renderer: {}",
+		reinterpret_cast<const char*>(glGetString(GL_RENDERER)));
+
+	GLint maxTex, maxAttribs;
+	glGetIntegerv(GL_MAX_TEXTURE_SIZE, &maxTex);
+	glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &maxAttribs);
+	BT_DEBUG("Max Texture Size: {}", maxTex);
+	BT_DEBUG("Max Vertex Attributes: {}", maxAttribs);
+
+	int depthBits, stencilBits, msaaSamples;
+	SDL_GL_GetAttribute(SDL_GL_DEPTH_SIZE, &depthBits);
+	SDL_GL_GetAttribute(SDL_GL_STENCIL_SIZE, &stencilBits);
+	SDL_GL_GetAttribute(SDL_GL_MULTISAMPLESAMPLES, &msaaSamples);
+	BT_DEBUG("Depth: {} bits, Stencil: {} bits, MSAA: {}x",
+		depthBits, stencilBits, msaaSamples);
+
+	#if defined(GLM_FORCE_SIMD_AVX2)
+		BT_DEBUG("GLM: AVX2");
+	#elif defined(GLM_FORCE_SIMD_AVX)
+		BT_DEBUG("GLM: AVX");
+	#elif defined(GLM_FORCE_SIMD_SSE2)
+		BT_DEBUG("GLM: SSE2");
+	#else
+		BT_DEBUG("GLM: scalar");
+	#endif
+}
 
 } // namespace Blackthorn

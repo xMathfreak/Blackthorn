@@ -2,76 +2,99 @@
 
 #include <SDL3/SDL.h>
 
-#include "Assets/AssetManager.h"
-#include "Core/EngineConfig.h"
+#include "Core/EngineCore.h"
 #include "Core/Export.h"
-#include "Core/SimClock.h"
-#include "Core/Settings.h"
-#include "Input/InputManager.h"
 #include "Graphics/Renderer.h"
-#include "Jobs/JobSystem.h"
-#include "Scene/SceneManager.h"
+#include "Scene/ClientSceneManager.h"
+#include "Scene/ISceneContext.h"
 
 namespace Blackthorn {
 
-class BLACKTHORN_API Engine {
+/**
+ * @brief Graphics-enabled engine implementation for the client build.
+ *
+ * @details
+ * Extends `EngineCore` with rendering and presentation capabilities.
+ * In addition to the core simulation systems, this class initializes
+ * SDL video, creates an OpenGL context, and owns the `Renderer`.
+ *
+ * Overrides `run()` to include a render step and interpolation alpha,
+ * enabling smooth visual updates between fixed simulation ticks.
+ *
+ * @section usage Usage
+ * The dedicated server links against `BlackthornEngineCore` and uses
+ * `EngineCore` directly. Client applications link against
+ * `BlackthornEngine` and use this class.
+ *
+ * @note
+ * Do not define `BLACKTHORN_HEADLESS` when compiling this target, as
+ * rendering and windowing functionality are required.
+ */
+class BLACKTHORN_API Engine : public EngineCore {
 public:
-	Engine();
-	~Engine();
+	Engine() = default;
+	~Engine() override;
 
 	Engine(const Engine&) = delete;
 	Engine& operator=(const Engine&) = delete;
 
-	bool init(const EngineConfig& cfg = EngineConfig());
-	void shutdown();
+	/**
+	 * @brief Initializes simulation systems (via EngineCore) then graphics.
+	 *
+	 * Call order:
+	 *   1. `EngineCore::init()` — settings, logger, SDL events+timer,
+	 *      asset manager, job system.
+	 *   2. SDL video, OpenGL context creation, GLAD loading.
+	 *   3. Renderer construction, FBO, screen shader.
+	 *   4. Replaces `simContext` with a `SceneContextImpl` that also
+	 *      exposes the renderer via `ISceneContext`.
+	 *
+	 * @param cfg Engine configuration. All fields are consumed here,
+	 *            including `cfg.window` and `cfg.render`.
+	 */
+	bool init(const EngineConfig& cfg = EngineConfig()) override;
 
-	void run();
-	bool isRunning() const { return running; }
-	void stop() { running = false; }
+	/**
+	 * @brief Shuts down graphics resources then delegates to EngineCore.
+	 */
+	void shutdown() override;
 
-	void processEvents();
+	/**
+	 * @brief Runs the client loop (simulation + render).
+	 *
+	 * Identical to `EngineCore::run()` but adds a render step after
+	 * `lateUpdate()` using the interpolation alpha computed from the
+	 * accumulated fixed-update remainder.
+	 */
+	void run() override;
+
+	/**
+	 * @brief Returns the full scene context, including renderer access.
+	 */
+	Scene::ISceneContext& getSceneContext() {
+		return static_cast<Scene::ISceneContext&>(*simContext);
+	}
+
+	Scene::ClientSceneManager& getClientSceneManager() {
+		return static_cast<Scene::ClientSceneManager&>(*sceneManager);
+	}
+
+protected:
 	void render(float alpha);
-	void update(float dt);
-	void fixedUpdate(float dt);
-	void lateUpdate(float dt);
-
-	void logEngineInfo();
-
-	virtual void onRegisterSettings(Core::Settings& settings) {}
-
-	Scene::ISceneContext& getSceneContext() { return *sceneContext; }
-	const Core::SimClock& getSimClock() const { return *simClock; }
+	void processEvents() override;
+	void applyEngineSettings();
+	void applyPostProcessing();
+	void registerEngineCallbacks(Core::Settings& settings) override;
 
 private:
-	bool initialized = false;
-	bool running = false;
-
-	EngineConfig config;
-	bool windowFocused = true;
-
-	std::unique_ptr<Assets::AssetManager> assetManager{};
-	std::unique_ptr<Graphics::Renderer> renderer{};
-	std::unique_ptr<Core::SimClock> simClock{};
-	Input::InputManager inputManager;
-	Scene::SceneManager sceneManager;
+	std::unique_ptr<Graphics::Renderer> renderer;
 	SDL_Window* window = nullptr;
 	SDL_GLContext glContext = nullptr;
 
-	std::unique_ptr<Scene::ISceneContext> sceneContext{};
-	std::unique_ptr<Jobs::JobSystem> jobSystem{};
-
+	void initGraphics(const EngineConfig& cfg);
 	void initAssetLoaders();
-	void cleanupInitialization();
-
-	void registerEngineDefaults(Core::Settings& settings);
-	void registerEngineCallbacks(Core::Settings& settings);
-	void applyEngineSettings();
-	void applyPostProcessing();
-
-	#ifdef BLACKTHORN_DEBUG
-		void logProfilingInfo();
-		float getFPS() const;
-	#endif
+	void cleanupGraphics();
+	void logEngineInfo();
 };
 
 }

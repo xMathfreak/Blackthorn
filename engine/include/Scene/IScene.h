@@ -1,29 +1,30 @@
 #pragma once
 
+#include <SDL3/SDL.h>
+
 #include "Core/Export.h"
 #include "ECS/World.h"
-#include "Scene/ISceneContext.h"
-#include "UI/UIManager.h"
+#include "Scene/ISimContext.h"
 
 namespace Blackthorn::Scene {
 
 class BLACKTHORN_API IScene {
 protected:
 	std::unique_ptr<ECS::World> world;
-	std::unique_ptr<UI::UIManager> uiManager;
-
-	ISceneContext& context;
+	ISimContext& context;
 
 public:
-	IScene(ISceneContext& ctx)
+	explicit IScene(ISimContext& ctx)
 		: context(ctx)
 	{}
 
 	virtual ~IScene() = default;
 
 	virtual void init() {
-		world = std::make_unique<ECS::World>(ECS::Detail::MAX_ENTITIES, &context.getJobSystem());
-		uiManager = std::make_unique<UI::UIManager>();
+		world = std::make_unique<ECS::World>(
+			ECS::Detail::MAX_ENTITIES,
+			&context.getJobSystem()
+		);
 	}
 
 	virtual void onEnter() {}
@@ -42,19 +43,6 @@ public:
 	virtual void update(float dt) {
 		if (world)
 			world->update(dt);
-
-		if (uiManager) {
-			uiManager->update(dt);
-			uiManager->handleInput(context.getInputManager());
-		}
-	}
-
-	virtual void render(float alpha) {
-		if (world)
-			world->render(alpha);
-
-		if (uiManager)
-			uiManager->render(context.getRenderer());
 	}
 
 	virtual void lateUpdate(float dt) {
@@ -65,9 +53,7 @@ public:
 	ECS::World* getWorld() { return world.get(); }
 	const ECS::World* getWorld() const { return world.get(); }
 
-	/**
-	 * @brief Get scene name for debugging.
-	 */
+	/** @brief Human-readable scene name used for logging and debugging. */
 	virtual const char* getName() const = 0;
 };
 

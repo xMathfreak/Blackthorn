@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.16.0)
 
-add_subdirectory(glm/glm)
+set(GLM_BUILD_LIBRARY OFF CACHE BOOL "" FORCE)
+add_subdirectory(glm)
 
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
