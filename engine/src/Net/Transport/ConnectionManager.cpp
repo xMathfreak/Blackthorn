@@ -349,9 +349,6 @@ void ConnectionManager::pollTCPAccept() {
 
 	BT_LOG("ConnectionManager: TCP accepted from {} (peerId {})",
 		clientAddr.toString(), peerId);
-
-	if (connectHandler)
-		connectHandler(peerId, clientAddr);
 }
 
 void ConnectionManager::pollTCP() {
