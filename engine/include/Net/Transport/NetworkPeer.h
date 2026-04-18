@@ -77,6 +77,9 @@ struct BLACKTHORN_API NetworkPeer {
 	/// Used for timeout detection.
 	Uint64 lastReceivedMs = 0;
 
+	/// Timestamp of the last outbound Heartbeat sent to this peer.
+	Uint64 lastHeartbeatSentMs = 0;
+
 	/// Timeout threshold in milliseconds. A peer is considered timed out
 	/// when `SDL_GetTicks() - lastReceivedMs > timeoutMs`.
 	Uint64 timeoutMs = 10000;
@@ -100,6 +103,17 @@ struct BLACKTHORN_API NetworkPeer {
 			return false;
 
 		return (SDL_GetTicks() - lastReceivedMs) > timeoutMs;
+	}
+
+	bool needsHeartbeat(Uint32 intervalMs) const noexcept {
+		if (intervalMs == 0 || !tcpConnected || tcpSocket == nullptr)
+			return false;
+
+		const Uint64 now = SDL_GetTicks();
+		const bool silent = (now - lastReceivedMs) >= intervalMs;
+		const bool notSent = (now - lastHeartbeatSentMs) >= intervalMs;
+
+		return silent && notSent;
 	}
 
 	/** @brief Updates the last-received timestamp to now. */

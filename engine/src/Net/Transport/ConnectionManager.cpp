@@ -309,6 +309,7 @@ void ConnectionManager::ioThreadLoop() {
 			pollTCPAccept();
 
 		pollTCP();
+		sendHeartbeats();
 
 		{
 			std::lock_guard<std::mutex> lock(peerMutex);
@@ -726,6 +727,28 @@ size_t ConnectionManager::connectedPeerCount() const {
 			++count;
 
 	return count;
+}
+
+void ConnectionManager::sendHeartbeats() {
+	if (cfg.heartbeatIntervalMs == 0)
+		return;
+
+	std::lock_guard<std::mutex> lock(peerMutex);
+
+	for (auto& peer : peers) {
+		if (!peer.needsHeartbeat(cfg.heartbeatIntervalMs))
+			continue;
+
+		ByteBuffer buf;
+		PacketHeader hdr;
+		hdr.packetType = PacketType::Heartbeat;
+		hdr.serialize(buf);
+
+		peer.tcpChannel->send(*peer.tcpSocket, buf);
+		peer.lastHeartbeatSentMs = SDL_GetTicks();
+
+		BT_DEBUG("ConnectionManager: Sent Heartbeat to peer {}", peer.id);
+	}
 }
 
 } // namespace Blackthorn::Net::Transport

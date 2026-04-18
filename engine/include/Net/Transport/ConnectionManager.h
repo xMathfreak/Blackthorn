@@ -72,6 +72,16 @@ struct ConnectionConfig {
 
 	/// Block unknown UDP senders
 	bool allowUDPImplicitPeers = true;
+
+	/// How long to wait without receiving any data from a TCP peer before
+	/// sending a Heartbeat packet, in milliseconds.
+	///
+	/// Should be significantly less than the peer's @c timeoutMs so there
+	/// is time for at least one probe-and-response cycle before a timeout
+	/// fires. Default: 5000ms (half the default 10-second timeout).
+	///
+	/// Set to 0 to disable heartbeats (not recommended for production).
+	Uint32 heartbeatIntervalMs = 5000;
 };
 
 /**
@@ -290,6 +300,7 @@ private:
 	void pollTCP();
 	void pollTCPAccept();
 	void checkTimeouts();
+	void sendHeartbeats();
 
 	PeerId findPeer(const Address& address, bool tcp);
 	PeerId findOrCreatePeer(const Address& address, bool tcp);
