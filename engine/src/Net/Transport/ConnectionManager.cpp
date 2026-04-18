@@ -349,8 +349,15 @@ void ConnectionManager::pollUDP() {
 
 		Net::ByteBuffer datagram(recvScratch.data(), bytesRead);
 
-		if (datagram.remaining() < UDPHeader::SERIALIZED_SIZE)
+		if (datagram.remaining() < UDPChannel::MIN_DATAGRAM_SIZE) {
+			BT_WARN(
+				"ConnectionManager: Dropped undersized UDP datagram "
+				"({} bytes, minimum {})",
+				bytesRead, UDPChannel::MIN_DATAGRAM_SIZE
+			);
+
 			continue;
+		}
 
 		UDPHeader udpHdr;
 		udpHdr.deserialize(datagram);

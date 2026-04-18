@@ -8,6 +8,7 @@
 #include "Net/ByteBuffer.h"
 #include "Net/Transport/Address.h"
 #include "Net/Transport/ISocket.h"
+#include "Net/PacketHeader.h"
 
 namespace Blackthorn::Net::Transport {
 
@@ -90,6 +91,19 @@ public:
 
 	UDPChannel(UDPChannel&&) = default;
 	UDPChannel& operator=(UDPChannel&&) = default;
+
+	/// Practical MTU for outbound UDP datagrams, in bytes.
+	static constexpr size_t PRACTICAL_MTU = 1400;
+
+	/**
+	 * @brief Minimum valid inbound datagram size, in bytes.
+	 *
+	 * Every datagram must carry at least a @c UDPHeader (8 bytes) and a
+	 * @c PacketHeader (24 bytes). Anything smaller cannot be a valid packet
+	 * and is dropped by @c ConnectionManager::pollUDP() before peer lookup.
+	 */
+	static constexpr size_t MIN_DATAGRAM_SIZE =
+		UDPHeader::SERIALIZED_SIZE + PacketHeader::SERIALIZED_SIZE;
 
 	/**
 	 * @brief Sends `payload` to `address` via `socket`, prepending a

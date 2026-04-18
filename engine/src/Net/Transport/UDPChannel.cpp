@@ -36,6 +36,15 @@ SocketResult UDPChannel::send(
 
 	++localSeq;
 
+	if (datagram.size() > PRACTICAL_MTU) {
+		BT_WARN(
+			"UDPChannel: datagram size {} exceeds practical MTU {} — "
+			"may be dropped on internet paths. Consider reducing payload "
+			"size or implementing fragmentation.",
+			datagram.size(), PRACTICAL_MTU
+		);
+	}
+
 	return socket.sendTo(datagram.data(), datagram.size(), address);
 }
 
