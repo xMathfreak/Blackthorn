@@ -21,6 +21,11 @@
 
 namespace Blackthorn::Net::Transport {
 
+struct BLACKTHORN_API Endpoint {
+	std::string ip = "<invalid>";
+	Uint16 port = 0;
+};
+
 /**
  * @brief IP version carried by an `Address`.
  */
@@ -156,12 +161,36 @@ public:
 		return storage.ss_family == AF_INET6 ? IPVersion::IPv6 : IPVersion::IPv4;
 	}
 
+	/** @brief Returns the IP as a string. */
+	std::string ip() const {
+		char buf[INET6_ADDRSTRLEN] = {0};
+
+		if (storage.ss_family == AF_INET) {
+			const auto* sa = reinterpret_cast<const sockaddr_in*>(&storage);
+			if (inet_ntop(AF_INET, &sa->sin_addr, buf, sizeof(buf)) == nullptr)
+				return "<invalid>";
+		} else if (storage.ss_family == AF_INET6) {
+			const auto* sa = reinterpret_cast<const sockaddr_in6*>(&storage);
+			if (inet_ntop(AF_INET6, &sa->sin6_addr, buf, sizeof(buf)) == nullptr)
+				return "<invalid>";
+		} else {
+			return "<invalid>";
+		}
+
+		return std::string{buf};
+	}
+
 	/** @brief Returns the port in host byte order. */
 	Uint16 port() const noexcept {
 		if (storage.ss_family == AF_INET6)
 			return ntohs(reinterpret_cast<const sockaddr_in6*>(&storage)->sin6_port);
 
 		return ntohs(reinterpret_cast<const sockaddr_in*>(&storage)->sin_port);
+	}
+
+	/** @brief Returns the IP and Port. */
+	Endpoint getDetails() const {
+		return { ip(), port() };
 	}
 
 	/** @brief Returns true if the address was successfully constructed. */
