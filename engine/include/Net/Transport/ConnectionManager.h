@@ -124,7 +124,7 @@ struct ConnectionEvent {
  * cm.start(cfg);
  *
  * // Server tick:
- * cm.poll(jobSystem);  // called once per tick in EngineBase::update()
+ * cm.poll(jobSystem);  // called once per tick in EngineCore::update()
  *
  * // Sending:
  * cm.sendUDP(peerId, packetBuf);
@@ -237,6 +237,8 @@ public:
 	/** @brief Returns a const pointer to a peer by ID, or nullptr. */
 	const NetworkPeer* getPeer(PeerId id) const;
 
+	auto& getAllPeers() const { return peers; }
+
 	/** @brief Returns the number of currently connected peers. */
 	size_t connectedPeerCount() const;
 
@@ -250,15 +252,16 @@ private:
 	void pollTCPAccept();
 	void checkTimeouts();
 
-	PeerId findPeer(const Address& address);
-	PeerId findOrCreatePeer(const Address& address);
-	PeerId allocatePeerSlot(const Address& address);
-	void freePeerSlot(PeerId id);
+	PeerId findPeer(const Address& address, bool tcp);
+	PeerId findOrCreatePeer(const Address& address, bool tcp);
+	PeerId allocatePeerSlot(const Address& address, bool tcp);
+	void freePeerSlot(PeerId id, bool tcp);
 
 	ConnectionConfig cfg;
 
 	std::vector<NetworkPeer> peers;
-	std::unordered_map<Address, PeerId> addressToPeer;
+	std::unordered_map<Address, PeerId> addressToPeerTCP;
+	std::unordered_map<Address, PeerId> addressToPeerUDP;
 	mutable std::mutex peerMutex;
 
 	std::unique_ptr<UDPSocket> udpSocket;

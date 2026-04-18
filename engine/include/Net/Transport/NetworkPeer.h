@@ -40,7 +40,7 @@ enum class PeerState : Uint8 {
  * Either channel may be absent depending on the peer's capabilities:
  *
  * - UDP-only peers: @c tcpSocket is nullptr.
- * - TCP-only peers: @c udpEnabled is false (the UDP channel is still allocated
+ * - TCP-only peers: @c udpConnected is false (the UDP channel is still allocated
  *   but never used to keep the struct layout predictable).
  *
  * For the standard dual-channel configuration, both channels are active.
@@ -49,17 +49,23 @@ struct BLACKTHORN_API NetworkPeer {
 	/// Unique ID assigned by ConnectionManager on slot allocation.
 	PeerId id = INVALID_PEER_ID;
 
-	/// Remote address (used for both UDP datagrams and TCP connection).
-	Address address;
+	/// Remote address for TCP connection.
+	Address tcpAddress;
+
+	/// Remote address for UDP connection.
+	Address udpAddress;
 
 	/// Current connection state.
 	PeerState state = PeerState::Disconnected;
 
-	/// UDP simulation channel. Always allocated; only used when udpEnabled.
+	/// UDP simulation channel. Always allocated; only used when udpConnected.
 	UDPChannel udpChannel;
 
 	/// Whether UDP traffic is active for this peer.
-	bool udpEnabled = false;
+	bool udpConnected = false;
+
+	/// Whether TCP traffic is active for this peer.
+	bool tcpConnected = false;
 
 	/// TCP session channel. Nullptr if TCP is not used for this peer.
 	std::unique_ptr<TCPChannel> tcpChannel;
@@ -85,23 +91,19 @@ struct BLACKTHORN_API NetworkPeer {
 
 	/** @brief Returns true if the peer is in the Connected state. */
 	bool isConnected() const noexcept {
-		return state == PeerState::Connected;
-	}
-
-	bool isUDPConnected() const noexcept {
-		return udpEnabled;
+		return (tcpConnected && tcpSocket != nullptr) || udpConnected;
 	}
 
 	/** @brief Returns true if the peer has timed out. */
 	bool isTimedOut() const noexcept {
-		if (state != PeerState::Connected)
+		if (!(state == PeerState::Connected || state == PeerState::Connecting))
 			return false;
 
 		return (SDL_GetTicks() - lastReceivedMs) > timeoutMs;
 	}
 
 	/** @brief Updates the last-received timestamp to now. */
-	void touchReceived() noexcept {
+	void markAlive() noexcept {
 		lastReceivedMs = SDL_GetTicks();
 	}
 };
