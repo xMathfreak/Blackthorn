@@ -234,8 +234,18 @@ void ConnectionManager::poll(Jobs::JobSystem* jobs) {
 
 		if (!header.isValid()) {
 			BT_WARN(
-				"ConnectionManager: Invalid packet from peer {} — dropped",
+				"ConnectionManager: Dropped packet from peer {} - bad magic or schema version",
 				packet.peerId
+			);
+
+			continue;
+		}
+
+		const Uint32 actualBytes = static_cast<Uint32>(packet.data.remaining());
+		if (header.payloadLength != actualBytes) {
+			BT_WARN(
+				"ConnectionManager: Dropped packet from peer {} — payloadLength {} != actual bytes {}",
+				packet.peerId, header.payloadLength, actualBytes
 			);
 
 			continue;
