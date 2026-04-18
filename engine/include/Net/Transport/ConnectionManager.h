@@ -74,15 +74,28 @@ struct ConnectionConfig {
 	bool allowUDPImplicitPeers = true;
 };
 
+/**
+ * @brief Type of a connection lifecycle event queued by the I/O thread and
+ * drained by @c poll() on the simulation thread.
+ */
 enum class ConnectionEventType : Uint8 {
-	Connect,
-	Disconnect
+	Connect,    ///< A peer completed its handshake and is now Connected.
+	Disconnect, ///< A peer timed out or was explicitly disconnected.
 };
 
+/**
+ * @brief A single queued connection lifecycle event.
+ *
+ * @details Produced by the I/O thread (in @c pollUDP(), @c pollTCP(), and
+ * @c checkTimeouts()) and consumed by the simulation thread in @c poll().
+ * This decoupling ensures that @c ConnectHandler and @c DisconnectHandler
+ * are always invoked on the simulation thread, making it safe for handlers
+ * to mutate ECS or scene state without additional synchronisation.
+ */
 struct ConnectionEvent {
 	ConnectionEventType type;
-	PeerId peerId;
-	Address address;
+	PeerId              peerId  = INVALID_PEER_ID;
+	Address             address; ///< Populated for Connect; empty for Disconnect.
 };
 
 /**
@@ -237,7 +250,33 @@ public:
 	/** @brief Returns a const pointer to a peer by ID, or nullptr. */
 	const NetworkPeer* getPeer(PeerId id) const;
 
-	auto& getAllPeers() const { return peers; }
+	/**
+	 * @brief Returns a snapshot copy of the peer list at this instant.
+	 *
+	 * Acquires @c peerMutex. The returned vector is a value copy and is safe
+	 * to iterate on any thread after the call returns. Note that @c tcpSocket
+	 * and @c tcpChannel are move-only, so the copy contains nullptr for those
+	 * fields — use @c getPeer() when you need live socket access.
+	 */
+	std::vector<NetworkPeer> getPeerSnapshot() const;
+
+	/**
+	 * @brief Appends a lifecycle event to @c pendingEvents.
+	 *
+	 * Thread-safe; may be called from the I/O thread or the simulation
+	 * thread. Acquires @c eventMutex internally — caller must NOT hold it.
+	 */
+	void pushEvent(ConnectionEvent event);
+
+	/**
+	 * @brief Swaps @c pendingEvents out and fires the registered callbacks.
+	 *
+	 * Must be called on the simulation thread (from @c poll()). Holds
+	 * @c eventMutex only for the swap, then releases it before invoking
+	 * callbacks, so handlers may themselves call @c pushEvent() without
+	 * deadlocking.
+	 */
+	void dispatchPendingEvents();
 
 	/** @brief Returns the number of currently connected peers. */
 	size_t connectedPeerCount() const;
@@ -255,7 +294,7 @@ private:
 	PeerId findPeer(const Address& address, bool tcp);
 	PeerId findOrCreatePeer(const Address& address, bool tcp);
 	PeerId allocatePeerSlot(const Address& address, bool tcp);
-	void freePeerSlot(PeerId id, bool tcp);
+	void freePeerSlot(PeerId id);
 
 	ConnectionConfig cfg;
 
@@ -268,6 +307,15 @@ private:
 	std::unique_ptr<TCPSocket> tcpListenSocket;
 	mutable std::mutex sendMutex;
 
+	/**
+	 * @brief Lifecycle events queued by the I/O thread, drained by poll().
+	 *
+	 * Written by: @c pollUDP(), @c pollTCP(), @c checkTimeouts() — all via
+	 * @c pushEvent(), which acquires @c eventMutex.
+	 *
+	 * Read by: @c dispatchPendingEvents() inside @c poll(), which swaps the
+	 * vector out under @c eventMutex then fires callbacks without holding it.
+	 */
 	std::vector<ConnectionEvent> pendingEvents;
 	mutable std::mutex eventMutex;
 

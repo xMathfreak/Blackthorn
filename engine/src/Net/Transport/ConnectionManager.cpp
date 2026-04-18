@@ -74,6 +74,11 @@ void ConnectionManager::stop() {
 	if (ioThread.joinable())
 		ioThread.join();
 
+	{
+		std::lock_guard<std::mutex> lock(eventMutex);
+		pendingEvents.clear();
+	}
+
 	std::lock_guard<std::mutex> lock(peerMutex);
 
 	for (auto& peer : peers) {
@@ -91,6 +96,7 @@ void ConnectionManager::stop() {
 
 	addressToPeerTCP.clear();
 	addressToPeerUDP.clear();
+
 	BT_LOG("ConnectionManager: Stopped");
 }
 
@@ -219,6 +225,8 @@ void ConnectionManager::broadcastTCP(const Net::ByteBuffer& payload) {
 void ConnectionManager::poll(Jobs::JobSystem* jobs) {
 	checkTimeouts();
 
+	dispatchPendingEvents();
+
 	InboundPacket packet;
 	while (inboundQueue.pop(packet)) {
 		Net::PacketHeader header;
@@ -249,6 +257,33 @@ void ConnectionManager::poll(Jobs::JobSystem* jobs) {
 			));
 		} else {
 			handler(pid, hdr, payload);
+		}
+	}
+}
+
+void ConnectionManager::pushEvent(ConnectionEvent event) {
+	std::lock_guard<std::mutex> lock(eventMutex);
+	pendingEvents.push_back(std::move(event));
+}
+
+void ConnectionManager::dispatchPendingEvents() {
+	std::vector<ConnectionEvent> toFire;
+	{
+		std::lock_guard<std::mutex> lock(eventMutex);
+		toFire.swap(pendingEvents);
+	}
+
+	for (const auto& ev : toFire) {
+		switch (ev.type) {
+			case ConnectionEventType::Connect:
+				if (connectHandler)
+					connectHandler(ev.peerId, ev.address);
+				break;
+
+			case ConnectionEventType::Disconnect:
+				if (disconnectHandler)
+					disconnectHandler(ev.peerId);
+				break;
 		}
 	}
 }
@@ -284,13 +319,6 @@ void ConnectionManager::pollUDP() {
 	if (!udpSocket || !udpSocket->isOpen())
 		return;
 
-	struct UDPConnectEvent {
-		PeerId id;
-		Address address;
-	};
-
-	std::vector<UDPConnectEvent> connectEvents;
-
 	for (;;) {
 		Address srcAddress;
 		size_t bytesRead = 0;
@@ -316,7 +344,8 @@ void ConnectionManager::pollUDP() {
 		UDPHeader udpHdr;
 		udpHdr.deserialize(datagram);
 
-		PeerId peerId;
+		PeerId peerId = INVALID_PEER_ID;
+		bool newUDPPeer = false;
 
 		{
 			std::lock_guard<std::mutex> lock(peerMutex);
@@ -328,7 +357,8 @@ void ConnectionManager::pollUDP() {
 
 			if (peer.state == PeerState::Connecting && !peer.tcpSocket) {
 				peer.state = PeerState::Connected;
-				connectEvents.push_back({peerId, srcAddress});
+				newUDPPeer = true;
+
 				BT_LOG(
 					"ConnectionManager: UDP peer {} connected from {}",
 					peerId, srcAddress.toString()
@@ -337,6 +367,14 @@ void ConnectionManager::pollUDP() {
 
 			peer.udpChannel.processInboundHeader(udpHdr);
 			peer.markAlive();
+		}
+
+		if (newUDPPeer) {
+			pushEvent({
+				ConnectionEventType::Connect,
+				peerId,
+				srcAddress
+			});
 		}
 
 		Net::ByteBuffer payload(
@@ -352,11 +390,6 @@ void ConnectionManager::pollUDP() {
 
 		if (!inboundQueue.push(std::move(pkt)))
 			BT_WARN("ConnectionManager: Inbound queue full — UDP packet dropped");
-	}
-
-	if (connectHandler) {
-		for (const auto& ev : connectEvents)
-			connectHandler(ev.id, ev.address);
 	}
 }
 
@@ -398,8 +431,13 @@ void ConnectionManager::pollTCPAccept() {
 }
 
 void ConnectionManager::pollTCP() {
-	struct ConnectEvent { PeerId id; Address address; };
-	std::vector<ConnectEvent> connectEvents;
+	struct DeferredEvent {
+		ConnectionEventType type;
+		PeerId peerId;
+		Address address;
+	};
+
+	std::vector<DeferredEvent> deferred;
 
 	{
 		std::lock_guard<std::mutex> lock(peerMutex);
@@ -452,10 +490,18 @@ void ConnectionManager::pollTCP() {
 
 							peer.tcpChannel->send(*peer.tcpSocket, portBuf);
 
-							BT_LOG("ConnectionManager: Peer {} handshake complete "
-								"(server side)", peer.id);
-							connectEvents.push_back({peer.id, peer.tcpAddress});
+							BT_LOG(
+								"ConnectionManager: Peer {} handshake complete",
+								peer.id
+							);
+
+							deferred.push_back({
+								ConnectionEventType::Connect,
+								peer.id,
+								peer.tcpAddress
+							});
 						}
+
 						break;
 					}
 
@@ -473,11 +519,14 @@ void ConnectionManager::pollTCP() {
 							peer.tcpChannel->send(*peer.tcpSocket, portBuf);
 
 							BT_LOG(
-								"ConnectionManager: Client side peer {} handshake complete ",
+								"ConnectionManager: Peer {} handshake complete",
 								peer.id
 							);
-
-							connectEvents.push_back({peer.id, peer.tcpAddress});
+							deferred.push_back({
+								ConnectionEventType::Connect,
+								peer.id,
+								peer.tcpAddress
+							});
 						}
 						break;
 					}
@@ -531,10 +580,8 @@ void ConnectionManager::pollTCP() {
 		}
 	}
 
-	if (connectHandler) {
-		for (auto& ev : connectEvents)
-			connectHandler(ev.id, ev.address);
-	}
+	for (const auto& d : deferred)
+		pushEvent({ d.type, d.peerId, d.address });
 }
 
 void ConnectionManager::checkTimeouts() {
@@ -564,10 +611,8 @@ void ConnectionManager::checkTimeouts() {
 		}
 	}
 
-	if (disconnectHandler) {
-		for (PeerId id : timedOut)
-			disconnectHandler(id);
-	}
+	for (PeerId id : timedOut)
+		pushEvent({ ConnectionEventType::Disconnect, id, {} });
 }
 
 PeerId ConnectionManager::findPeer(const Address& address, bool tcp) {
