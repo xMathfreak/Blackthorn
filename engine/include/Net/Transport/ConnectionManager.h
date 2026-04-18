@@ -11,7 +11,7 @@
 #include <SDL3/SDL.h>
 
 #include "Core/Export.h"
-#include "Jobs/JobSystem.h"
+#include "Jobs/JobHandle.h"
 #include "Net/ByteBuffer.h"
 #include "Net/PacketHeader.h"
 #include "Net/Transport/Address.h"
@@ -20,7 +20,15 @@
 #include "Net/Transport/UDPSocket.h"
 #include "Net/Transport/TCPSocket.h"
 
-namespace Blackthorn::Net::Transport {
+namespace Blackthorn {
+
+namespace Jobs {
+
+class JobSystem;
+
+} // namespace Jobs
+
+namespace Net::Transport {
 
 /**
  * @brief Callback invoked on the simulation thread for each received packet.
@@ -332,6 +340,20 @@ private:
 
 	DefaultPacketQueue inboundQueue;
 
+	/**
+	 * @brief Handle covering all packet Jobs submitted during the previous
+	 * call to @c poll().
+	 *
+	 * At the start of each @c poll, if this handle is valid, the simulation
+	 * thread waits on it before submitting new jobs. This guarantees that
+	 * tick N-1's packet handlers have fully finished before tick N's handlers
+	 * start, prevent concurrent acces to shared simulation state.
+	 *
+	 * @see JobHandle
+	 * @see JobSystem
+	 */
+	Jobs::JobHandlePtr pendingJobHandle;
+
 	std::thread ioThread;
 	std::atomic<bool> ioRunning { false };
 
@@ -345,4 +367,6 @@ private:
 	std::vector<Uint8> recvScratch;
 };
 
-} // namespace Blackthorn::Net::Transport
+} // namespace Net::Transport
+
+} // namespace Blackthorn

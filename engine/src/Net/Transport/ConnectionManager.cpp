@@ -1,4 +1,5 @@
 #include "Net/Transport/ConnectionManager.h"
+#include "Jobs/JobSystem.h"
 
 #ifdef _WIN32
 	#include <winsock2.h>
@@ -78,6 +79,8 @@ void ConnectionManager::stop() {
 		std::lock_guard<std::mutex> lock(eventMutex);
 		pendingEvents.clear();
 	}
+
+	pendingJobHandle = nullptr;
 
 	std::lock_guard<std::mutex> lock(peerMutex);
 
@@ -223,9 +226,18 @@ void ConnectionManager::broadcastTCP(const Net::ByteBuffer& payload) {
 }
 
 void ConnectionManager::poll(Jobs::JobSystem* jobs) {
-	checkTimeouts();
+	if (jobs && pendingJobHandle) {
+		jobs->wait(pendingJobHandle);
+		pendingJobHandle = nullptr;
+	}
 
+	checkTimeouts();
 	dispatchPendingEvents();
+
+	if (!packetHandler)
+		return;
+
+	Jobs::JobHandlePtr tickHandle = jobs ? jobs->createHandle() : nullptr;
 
 	InboundPacket packet;
 	while (inboundQueue.pop(packet)) {
@@ -251,24 +263,35 @@ void ConnectionManager::poll(Jobs::JobSystem* jobs) {
 			continue;
 		}
 
-		if (!packetHandler)
-			continue;
-
 		PeerId pid = packet.peerId;
 		Net::PacketHeader hdr = header;
 		Net::ByteBuffer payload = std::move(packet.data);
 		auto handler = packetHandler;
 
 		if (jobs) {
+			tickHandle->addPending(1);
 			jobs->submit(Jobs::Job(
 				[pid, hdr, payload = std::move(payload), handler]() mutable {
 					handler(pid, hdr, payload);
-				}
+				},
+				tickHandle
 			));
 		} else {
 			handler(pid, hdr, payload);
 		}
 	}
+
+	if (tickHandle) {
+		tickHandle->signal([jobs](std::function<void()> fn, bool isMt) {
+			jobs->submit(Jobs::Job(
+				std::move(fn), nullptr, nullptr,
+				isMt ? Jobs::ThreadAffinity::MainThread : Jobs::ThreadAffinity::Any
+			));
+		});
+	}
+
+
+	pendingJobHandle = tickHandle;
 }
 
 void ConnectionManager::pushEvent(ConnectionEvent event) {
