@@ -56,7 +56,10 @@ bool ConnectionManager::start(const ConnectionConfig& config) {
 		BT_LOG("ConnectionManager: TCP listening on port {}", cfg.tcpPort);
 	}
 
-	BT_LOG("ConnectionManager: UDP bound on port {}", cfg.udpPort);
+	BT_LOG(
+		"ConnectionManager: UDP bound on port {}",
+		udpSocket->getLocalAddress().port()
+	);
 
 	ioRunning.store(true, std::memory_order::release);
 	ioThread = std::thread([this] { ioThreadLoop(); });
@@ -72,6 +75,7 @@ void ConnectionManager::stop() {
 		ioThread.join();
 
 	std::lock_guard<std::mutex> lock(peerMutex);
+
 	for (auto& peer : peers) {
 		if (peer.tcpSocket)
 			peer.tcpSocket->close();
@@ -108,7 +112,7 @@ PeerId ConnectionManager::connect(const Address& address) {
 
 	auto tcpSock = SocketFactory::createTCP();
 	if (tcpSock && tcpSock->connect(address)) {
-		peer.tcpSocket  = std::move(tcpSock);
+		peer.tcpSocket = std::move(tcpSock);
 		peer.tcpChannel = std::make_unique<TCPChannel>();
 		peer.state = PeerState::Connecting;
 
@@ -117,7 +121,11 @@ PeerId ConnectionManager::connect(const Address& address) {
 			address.toString(), id
 		);
 	} else {
-		// fallback to UDP-Only
+		peer.state = PeerState::Connecting;
+		BT_LOG(
+			"ConnectionManager: TCP unavailable for {}; UDP-only (peerId {})",
+			address.toString(), id
+		);
 	}
 
 	peer.markAlive();
@@ -158,7 +166,7 @@ void ConnectionManager::disconnect(PeerId peerId) {
 }
 
 bool ConnectionManager::sendUDP(PeerId peerId, const Net::ByteBuffer& payload) {
-	std::lock_guard<std::mutex> lock(sendMutex);
+	std::lock_guard<std::mutex> lock(peerMutex);
 
 	if (peerId >= peers.size())
 		return false;
@@ -177,7 +185,7 @@ bool ConnectionManager::sendUDP(PeerId peerId, const Net::ByteBuffer& payload) {
 }
 
 bool ConnectionManager::sendTCP(PeerId peerId, const Net::ByteBuffer& payload) {
-	std::lock_guard<std::mutex> lock(sendMutex);
+	std::lock_guard<std::mutex> lock(peerMutex);
 
 	if (peerId >= peers.size())
 		return false;
@@ -191,7 +199,7 @@ bool ConnectionManager::sendTCP(PeerId peerId, const Net::ByteBuffer& payload) {
 }
 
 void ConnectionManager::broadcastUDP(const Net::ByteBuffer& payload) {
-	std::lock_guard<std::mutex> lock(sendMutex);
+	std::lock_guard<std::mutex> lock(peerMutex);
 
 	for (auto& peer : peers) {
 		if (peer.udpConnected)
@@ -200,7 +208,8 @@ void ConnectionManager::broadcastUDP(const Net::ByteBuffer& payload) {
 }
 
 void ConnectionManager::broadcastTCP(const Net::ByteBuffer& payload) {
-	std::lock_guard<std::mutex> lock(sendMutex);
+	std::lock_guard<std::mutex> lock(peerMutex);
+
 	for (auto& peer : peers) {
 		if (peer.isConnected() && peer.tcpSocket && peer.tcpChannel)
 			peer.tcpChannel->send(*peer.tcpSocket, payload);
@@ -233,9 +242,11 @@ void ConnectionManager::poll(Jobs::JobSystem* jobs) {
 		auto handler = packetHandler;
 
 		if (jobs) {
-			jobs->submit(Jobs::Job([pid, hdr, payload = std::move(payload), handler]() mutable {
-				handler(pid, hdr, payload);
-			}));
+			jobs->submit(Jobs::Job(
+				[pid, hdr, payload = std::move(payload), handler]() mutable {
+					handler(pid, hdr, payload);
+				}
+			));
 		} else {
 			handler(pid, hdr, payload);
 		}
@@ -257,7 +268,8 @@ void ConnectionManager::ioThreadLoop() {
 		{
 			std::lock_guard<std::mutex> lock(peerMutex);
 			for (auto& peer : peers) {
-				peer.udpChannel.retransmitPending(*udpSocket, peer.udpAddress);
+				if (peer.udpConnected)
+					peer.udpChannel.retransmitPending(*udpSocket, peer.udpAddress);
 			}
 		}
 
@@ -273,9 +285,10 @@ void ConnectionManager::pollUDP() {
 		return;
 
 	struct UDPConnectEvent {
-		PeerId  id;
+		PeerId id;
 		Address address;
 	};
+
 	std::vector<UDPConnectEvent> connectEvents;
 
 	for (;;) {
@@ -335,7 +348,7 @@ void ConnectionManager::pollUDP() {
 		pkt.source = srcAddress;
 		pkt.data = std::move(payload);
 		pkt.channel = InboundPacket::Channel::UDP;
-		pkt.peerId  = peerId;
+		pkt.peerId = peerId;
 
 		if (!inboundQueue.push(std::move(pkt)))
 			BT_WARN("ConnectionManager: Inbound queue full — UDP packet dropped");
@@ -408,8 +421,7 @@ void ConnectionManager::pollTCP() {
 				reqHdr.serialize(reqBuf);
 				peer.tcpChannel->send(*peer.tcpSocket, reqBuf);
 				peer.sentConnectRequest = true;
-				BT_LOG("ConnectionManager: TCP connect complete, sent ConnectRequest "
-					"to peer {}", peer.id);
+				BT_LOG("ConnectionManager: sent ConnectRequest to peer {}", peer.id);
 			}
 
 			Net::ByteBuffer msg;
@@ -431,19 +443,19 @@ void ConnectionManager::pollTCP() {
 							peer.state = PeerState::Connected;
 							peer.tcpConnected = true;
 
-							BT_LOG("ConnectionManager: Peer {} handshake complete", peer.id);
-							connectEvents.push_back({peer.id, peer.tcpAddress});
-
 							ByteBuffer portBuf;
 							PacketHeader portHdr;
-							portHdr.packetType    = PacketType::UDPPortInfo;
+							portHdr.packetType = PacketType::UDPPortInfo;
 							portHdr.payloadLength = sizeof(Uint16);
 							portHdr.serialize(portBuf);
 							portBuf.writeU16(udpSocket->getLocalAddress().port());
 
 							peer.tcpChannel->send(*peer.tcpSocket, portBuf);
-						}
 
+							BT_LOG("ConnectionManager: Peer {} handshake complete "
+								"(server side)", peer.id);
+							connectEvents.push_back({peer.id, peer.tcpAddress});
+						}
 						break;
 					}
 
@@ -451,28 +463,29 @@ void ConnectionManager::pollTCP() {
 						if (peer.state == PeerState::Connecting) {
 							peer.state = PeerState::Connected;
 							peer.tcpConnected = true;
+
+							ByteBuffer portBuf;
+							PacketHeader portHdr;
+							portHdr.packetType = PacketType::UDPPortInfo;
+							portHdr.payloadLength = sizeof(Uint16);
+							portHdr.serialize(portBuf);
+							portBuf.writeU16(udpSocket->getLocalAddress().port());
+							peer.tcpChannel->send(*peer.tcpSocket, portBuf);
+
+							BT_LOG(
+								"ConnectionManager: Client side peer {} handshake complete ",
+								peer.id
+							);
+
 							connectEvents.push_back({peer.id, peer.tcpAddress});
-
-							BT_LOG("ConnectionManager: Client handshake complete with peer {}", peer.id);
-
-							if (!peer.udpConnected) {
-								ByteBuffer buf;
-								PacketHeader hdr;
-								hdr.packetType    = PacketType::UDPPortInfo;
-								hdr.payloadLength = sizeof(Uint16);
-								hdr.serialize(buf);
-								buf.writeU16(udpSocket->getLocalAddress().port());
-
-								peer.tcpChannel->send(*peer.tcpSocket, buf);
-							}
 						}
-
 						break;
 					}
 
 					case PacketType::UDPPortInfo: {
-						Uint16 remoteUDPPort = msg.readU16();
-						Address remoteUDP = Address::fromIPv4(peer.tcpAddress.ip(), remoteUDPPort);
+						const Uint16 remoteUDPPort = msg.readU16();
+						const Address remoteUDP =
+							Address::fromIPv4(peer.tcpAddress.ip(), remoteUDPPort);
 
 						if (peer.udpConnected)
 							addressToPeerUDP.erase(peer.udpAddress);
@@ -481,9 +494,8 @@ void ConnectionManager::pollTCP() {
 						peer.udpConnected = true;
 						addressToPeerUDP[remoteUDP] = peer.id;
 
-						BT_LOG("ConnectionManager: Peer {} UDP address registered as {}",
+						BT_LOG("ConnectionManager: Peer {} UDP registered as {}",
 							peer.id, remoteUDP.toString());
-
 						break;
 					}
 
@@ -491,16 +503,14 @@ void ConnectionManager::pollTCP() {
 						ByteBuffer buf;
 						PacketHeader hdr;
 						hdr.packetType = PacketType::HeartbeatAck;
-
 						hdr.serialize(buf);
 						peer.tcpChannel->send(*peer.tcpSocket, buf);
-
-						BT_LOG("ConnectionManager: Heartbeat received from peer {}", peer.id);
+						BT_LOG("ConnectionManager: Heartbeat from peer {}", peer.id);
 						break;
 					}
 
 					case PacketType::HeartbeatAck: {
-						BT_LOG("ConnectionManager: HeartbeatAck received from peer {}", peer.id);
+						BT_LOG("ConnectionManager: HeartbeatAck from peer {}", peer.id);
 						break;
 					}
 
@@ -512,11 +522,8 @@ void ConnectionManager::pollTCP() {
 						pkt.peerId = peer.id;
 
 						if (!inboundQueue.push(std::move(pkt)))
-							BT_WARN(
-								"ConnectionManager: Inbound queue full — "
-								"TCP packet dropped"
-							);
-
+							BT_WARN("ConnectionManager: Inbound queue full — "
+								"TCP packet dropped");
 						break;
 					}
 				}
@@ -531,102 +538,128 @@ void ConnectionManager::pollTCP() {
 }
 
 void ConnectionManager::checkTimeouts() {
-    std::vector<PeerId> timedOut;
-    {
-        std::lock_guard<std::mutex> lock(peerMutex);
-        for (auto& peer : peers) {
-            // isConnected() checks tcpConnected/udpConnected flags.
-            // isTimedOut()   checks state enum.
-            // With Bug 4 fixed, a TCP peer will have tcpConnected = true
-            // and state = Connected, so both agree.
-            if (!peer.isConnected() || !peer.isTimedOut())
-                continue;
+	std::vector<PeerId> timedOut;
 
-            BT_WARN("ConnectionManager: Peer {} timed out", peer.id);
-            timedOut.push_back(peer.id);
+	{
+		std::lock_guard<std::mutex> lock(peerMutex);
 
-            if (peer.tcpSocket)
-                peer.tcpSocket->close();
+		for (auto& peer : peers) {
+			if (!peer.isConnected())
+				continue;
 
-            peer.state        = PeerState::Disconnected;
-            peer.tcpConnected = false;
-            peer.udpConnected = false;
-            addressToPeerTCP.erase(peer.tcpAddress);
-            addressToPeerUDP.erase(peer.udpAddress);
-        }
-    }
+			if (!peer.isTimedOut())
+				continue;
 
-    if (disconnectHandler)
-        for (PeerId id : timedOut)
-            disconnectHandler(id);
+			BT_WARN("ConnectionManager: Peer {} timed out", peer.id);
+			timedOut.push_back(peer.id);
+
+			if (peer.tcpSocket)
+				peer.tcpSocket->close();
+
+			peer.state = PeerState::Disconnected;
+			peer.tcpConnected = false;
+			peer.udpConnected = false;
+			addressToPeerTCP.erase(peer.tcpAddress);
+			addressToPeerUDP.erase(peer.udpAddress);
+		}
+	}
+
+	if (disconnectHandler) {
+		for (PeerId id : timedOut)
+			disconnectHandler(id);
+	}
 }
 
 PeerId ConnectionManager::findPeer(const Address& address, bool tcp) {
 	if (tcp) {
 		auto it = addressToPeerTCP.find(address);
-		return it != addressToPeerTCP.end()
-			? it->second
-			: INVALID_PEER_ID;
+		return it != addressToPeerTCP.end() ? it->second : INVALID_PEER_ID;
 	} else {
 		auto it = addressToPeerUDP.find(address);
-		return it != addressToPeerUDP.end()
-			? it->second
-			: INVALID_PEER_ID;
+		return it != addressToPeerUDP.end() ? it->second : INVALID_PEER_ID;
 	}
 }
 
 PeerId ConnectionManager::findOrCreatePeer(const Address& address, bool tcp) {
-	PeerId localPeer = findPeer(address, tcp);
-	if (localPeer != INVALID_PEER_ID)
-		return localPeer;
+	PeerId id = findPeer(address, tcp);
+	if (id != INVALID_PEER_ID)
+		return id;
+
+	if (!tcp && !cfg.allowUDPImplicitPeers)
+		return INVALID_PEER_ID;
 
 	return allocatePeerSlot(address, tcp);
 }
 
 PeerId ConnectionManager::allocatePeerSlot(const Address& address, bool tcp) {
 	for (Uint32 i = 0; i < static_cast<Uint32>(peers.size()); ++i) {
-		if (peers[i].state == PeerState::Disconnected) {
-			peers[i].id = i;
-			peers[i].state = PeerState::Connecting;
+		if (peers[i].state != PeerState::Disconnected)
+			continue;
 
-			if (tcp) {
-				peers[i].tcpAddress = address;
-				addressToPeerTCP[address] = i;
-			} else {
-				peers[i].udpAddress = address;
-				addressToPeerUDP[address] = i;
-			}
+		peers[i].id = i;
+		peers[i].state = PeerState::Connecting;
 
-			return i;
+		if (tcp) {
+			peers[i].tcpAddress = address;
+			addressToPeerTCP[address] = i;
+		} else {
+			peers[i].udpAddress = address;
+			addressToPeerUDP[address] = i;
 		}
+
+		return i;
 	}
 
-	BT_WARN("ConnectionManager: Failed to allocate peer slot, returning INVALID_PEER_ID");
-
+	BT_WARN("ConnectionManager: No free peer slots");
 	return INVALID_PEER_ID;
 }
 
-void ConnectionManager::freePeerSlot(PeerId id, bool tcp) {
+void ConnectionManager::freePeerSlot(PeerId id) {
 	if (id >= peers.size())
 		return;
 
 	auto& peer = peers[id];
 
-	if (tcp) {
-		addressToPeerTCP.erase(peer.tcpAddress);
-	} else {
-		addressToPeerUDP.erase(peer.udpAddress);
-	}
+	if (peer.tcpSocket)
+		peer.tcpSocket->close();
 
-	peer.id = INVALID_PEER_ID;
+	addressToPeerTCP.erase(peer.tcpAddress);
+	addressToPeerUDP.erase(peer.udpAddress);
+
 	peer = NetworkPeer{};
 }
 
 const NetworkPeer* ConnectionManager::getPeer(PeerId id) const {
+	std::lock_guard<std::mutex> lock(peerMutex);
+
 	if (id >= peers.size())
 		return nullptr;
 
 	return &peers[id];
+}
+
+std::vector<NetworkPeer> ConnectionManager::getPeerSnapshot() const {
+	std::lock_guard<std::mutex> lock(peerMutex);
+
+	std::vector<NetworkPeer> snapshot;
+	snapshot.reserve(peers.size());
+
+	for (const auto& p : peers) {
+		NetworkPeer copy;
+		copy.id = p.id;
+		copy.tcpAddress = p.tcpAddress;
+		copy.udpAddress = p.udpAddress;
+		copy.state = p.state;
+		copy.udpConnected = p.udpConnected;
+		copy.tcpConnected = p.tcpConnected;
+		copy.lastReceivedMs = p.lastReceivedMs;
+		copy.timeoutMs = p.timeoutMs;
+		copy.label = p.label;
+
+		snapshot.push_back(std::move(copy));
+	}
+
+	return snapshot;
 }
 
 size_t ConnectionManager::connectedPeerCount() const {
