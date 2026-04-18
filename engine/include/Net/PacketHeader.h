@@ -19,7 +19,9 @@ enum class PacketType : Uint8 {
 	Disconnect = 0x02, ///< Graceful disconnect notification.
 
 	Heartbeat = 0x03, ///< Keep-alive with no payload.
-	HeartbeatAck = 0x4,
+	HeartbeatAck = 0x4, ///< Heartbeat acknowledgement.
+
+	UDPPortInfo = 0x5, ///< Info containing a UDP port. Must have a 16 bit payload.
 
 	Snapshot = 0x10, ///< Full or delta entity snapshot (raw binary payload).
 	Input = 0x11, ///< Client input stream (bit-packed payload).
