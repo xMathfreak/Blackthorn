@@ -65,7 +65,11 @@ bool UDPSocket::bind(const Address& address) {
 		bool ok = (address.version() == IPVersion::IPv6)
 			? openIPv6()
 			: openIPv4();
-		if (!ok) return false;
+
+		if (!ok)
+			return false;
+
+		setReuseAddr(true);
 	}
 
 	if (::bind(fd, address.raw(), address.rawSize()) != 0) {
@@ -115,8 +119,10 @@ SocketResult UDPSocket::recvFrom(
 	size_t& outSize,
 	Address& outAddress)
 {
-	if (fd == INVALID_SOCKET_HANDLE)
+	if (fd == INVALID_SOCKET_HANDLE) {
+		BT_ERROR("Socket is not open");
 		return SocketResult::Error;
+	}
 
 	sockaddr_storage srcAddr{};
 	socklen_t addrLen = sizeof(srcAddr);
@@ -133,10 +139,14 @@ SocketResult UDPSocket::recvFrom(
 	if (received < 0) {
 		#ifdef _WIN32
 			int err = WSAGetLastError();
-			if (err == WSAEWOULDBLOCK) return SocketResult::WouldBlock;
+
+			if (err == WSAEWOULDBLOCK)
+				return SocketResult::WouldBlock;
 		#else
-			if (errno == EAGAIN || errno == EWOULDBLOCK) return SocketResult::WouldBlock;
+			if (errno == EAGAIN || errno == EWOULDBLOCK)
+				return SocketResult::WouldBlock;
 		#endif
+
 		return SocketResult::Error;
 	}
 

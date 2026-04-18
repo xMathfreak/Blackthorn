@@ -70,7 +70,10 @@ std::string TCPSocket::platformError() {
 bool TCPSocket::bind(const Address& address) {
 	if (fd == INVALID_SOCKET_HANDLE) {
 		bool ok = (address.version() == IPVersion::IPv6) ? openIPv6() : openIPv4();
-		if (!ok) return false;
+		if (!ok)
+			return false;
+
+		setReuseAddr();
 	}
 
 	setNonBlocking();
