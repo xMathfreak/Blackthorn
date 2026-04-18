@@ -14,13 +14,16 @@ namespace Blackthorn::Net {
  * is additive — existing values must never be renumbered.
  */
 enum class PacketType : Uint8 {
-	Snapshot = 0x01, ///< Full or delta entity snapshot (raw binary payload).
-	Input = 0x02, ///< Client input stream (bit-packed payload).
-	Message = 0x03, ///< Tagged message (spawn, despawn, ability, UI event).
-	Heartbeat = 0x04, ///< Keep-alive with no payload.
-	ConnectRequest = 0x5, ///< Connection request.
-	ConnectAck = 0x06, ///< Connection acknowledgement.
-	Disconnect = 0x07, ///< Graceful disconnect notification.
+	ConnectRequest = 0x0, ///< Connection request.
+	ConnectAck = 0x01, ///< Connection acknowledgement.
+	Disconnect = 0x02, ///< Graceful disconnect notification.
+
+	Heartbeat = 0x03, ///< Keep-alive with no payload.
+	HeartbeatAck = 0x4,
+
+	Snapshot = 0x10, ///< Full or delta entity snapshot (raw binary payload).
+	Input = 0x11, ///< Client input stream (bit-packed payload).
+	Message = 0x12, ///< Tagged message (spawn, despawn, ability, UI event).
 };
 
 /**

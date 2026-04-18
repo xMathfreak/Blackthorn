@@ -349,6 +349,9 @@ void ConnectionManager::pollTCPAccept() {
 
 	BT_LOG("ConnectionManager: TCP accepted from {} (peerId {})",
 		clientAddr.toString(), peerId);
+
+	if (connectHandler)
+		connectHandler(peerId, clientAddr);
 }
 
 void ConnectionManager::pollTCP() {
@@ -396,20 +399,37 @@ void ConnectionManager::pollTCP() {
 							peer.tcpChannel->send(*peer.tcpSocket, ackBuf);
 
 							peer.state = PeerState::Connected;
-							BT_LOG("ConnectionManager: peer {} handshake complete", peer.id);
+							BT_LOG("ConnectionManager: Peer {} handshake complete", peer.id);
 							connectEvents.push_back({peer.id, peer.address});
 						}
+
 						break;
 					}
 
 					case PacketType::ConnectAck: {
 						if (peer.state == PeerState::Connecting) {
 							peer.state = PeerState::Connected;
-							BT_LOG("ConnectionManager: client handshake complete "
-								"with peer {}", peer.id);
+							BT_LOG("ConnectionManager: Client handshake complete with peer {}", peer.id);
 							connectEvents.push_back({peer.id, peer.address});
 						}
 
+						break;
+					}
+
+					case PacketType::Heartbeat: {
+						ByteBuffer buf;
+						PacketHeader hdr;
+						hdr.packetType = PacketType::HeartbeatAck;
+
+						hdr.serialize(buf);
+						peer.tcpChannel->send(*peer.tcpSocket, buf);
+
+						BT_LOG("ConnectionManager: Heartbeat received from peer {}", peer.id);
+						break;
+					}
+
+					case PacketType::HeartbeatAck: {
+						BT_LOG("ConnectionManager: HeartbeatAck received from peer {}", peer.id);
 						break;
 					}
 
@@ -422,7 +442,7 @@ void ConnectionManager::pollTCP() {
 
 						if (!inboundQueue.push(std::move(pkt)))
 							BT_WARN(
-								"ConnectionManager: inbound queue full — "
+								"ConnectionManager: Inbound queue full — "
 								"TCP packet dropped"
 							);
 
