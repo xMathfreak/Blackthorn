@@ -7,9 +7,9 @@
 #include <SDL3/SDL.h>
 
 #include "Core/Export.h"
-#include "Net/ByteBuffer.h"
+#include "Net/Connection/NetworkPeer.h"
+#include "Net/Core/ByteBuffer.h"
 #include "Net/Transport/Address.h"
-#include "Net/Transport/NetworkPeer.h"
 
 namespace Blackthorn::Net::Transport {
 
@@ -22,13 +22,13 @@ struct BLACKTHORN_API InboundPacket {
 
 	/// Full datagram bytes (UDPHeader + PacketHeader + payload for UDP,
 	/// or PacketHeader + payload for TCP).
-	Net::ByteBuffer data;
+	Core::ByteBuffer data;
 
 	/// Identifies which channel this packet arrived on.
 	enum class Channel : Uint8 { UDP, TCP } channel = Channel::UDP;
 
 	/// The peer that sent this packet, or INVALID_PEER_ID if unknown.
-	PeerId peerId = INVALID_PEER_ID;
+	Connection::PeerId peerId = Connection::INVALID_PEER_ID;
 };
 
 /**

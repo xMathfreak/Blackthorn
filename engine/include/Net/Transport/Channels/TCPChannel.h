@@ -5,10 +5,10 @@
 #include <SDL3/SDL.h>
 
 #include "Core/Export.h"
-#include "Net/ByteBuffer.h"
-#include "Net/Transport/ISocket.h"
+#include "Net/Core/ByteBuffer.h"
+#include "Net/Transport/Sockets/ISocket.h"
 
-namespace Blackthorn::Net::Transport {
+namespace Blackthorn::Net::Transport::Channels {
 
 /**
  * @brief Per-peer TCP session channel with 4-byte length-prefix framing.
@@ -62,7 +62,7 @@ public:
 	 *                automatically — do not include it in `payload`.
 	 * @return SocketResult of the underlying send call.
 	 */
-	SocketResult send(ISocket& socket, const Net::ByteBuffer& payload);
+	Sockets::SocketResult send(Sockets::ISocket& socket, const Core::ByteBuffer& payload);
 
 	/**
 	 * @brief Reads available bytes from `socket` and assembles complete
@@ -70,7 +70,7 @@ public:
 	 *
 	 * Call this in a loop until it returns false:
 	 * @code
-	 * Net::ByteBuffer msg;
+	 * Core::ByteBuffer msg;
 	 * while (channel.receive(socket, msg)) {
 	 *     // msg contains one complete message (without the length prefix)
 	 *     queue.push(peerId, std::move(msg));
@@ -82,7 +82,7 @@ public:
 	 * @return true if a complete message was assembled, false if more data
 	 *         is needed or if the socket would block.
 	 */
-	bool receive(ISocket& socket, Net::ByteBuffer& outMessage);
+	bool receive(Sockets::ISocket& socket, Core::ByteBuffer& outMessage);
 
 	/** @brief Returns true if the channel has partial data buffered. */
 	bool hasPendingData() const noexcept {
@@ -104,4 +104,4 @@ private:
 	static constexpr size_t LENGTH_PREFIX_SIZE = sizeof(Uint32);
 };
 
-} // namespace Blackthorn::Net::Transport
+} // namespace Blackthorn::Net::Transport::Channels

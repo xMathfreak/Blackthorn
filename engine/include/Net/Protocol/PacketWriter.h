@@ -2,10 +2,10 @@
 
 #include <cassert>
 
-#include "Net/ByteBuffer.h"
-#include "Net/PacketHeader.h"
+#include "Net/Core/ByteBuffer.h"
+#include "Net/Protocol/PacketHeader.h"
 
-namespace Blackthorn::Net {
+namespace Blackthorn::Net::Protocol {
 
 /**
  * @brief RAII helper that builds a packet into a @c ByteBuffer and
@@ -58,7 +58,7 @@ public:
 	 * @param flags      Optional @c PacketFlags (default @c None).
 	 */
 	explicit PacketWriter(
-		ByteBuffer& buf,
+		Core::ByteBuffer& buf,
 		PacketType packetType,
 		Uint64 tick = 0,
 		PacketFlags flags = PacketFlags::None
@@ -97,7 +97,7 @@ public:
 	 * pw.finish();
 	 * @endcode
 	 */
-	ByteBuffer& buffer() { return buf; }
+	Core::ByteBuffer& buffer() { return buf; }
 
 	/**
 	 * @brief Finalises the packet by computing and patching
@@ -146,11 +146,11 @@ public:
 	}
 
 private:
-	ByteBuffer& buf;
+	Core::ByteBuffer& buf;
 	bool finished = false;
 	size_t headerOffset = 0; ///< Offset of first header byte in buf.
 	size_t payloadStart = 0; ///< Offset of first payload byte in buf.
 	Uint32 cachedPayloadLength = 0;
 };
 
-} // namespace Blackthorn::Net
+} // namespace Blackthorn::Net::Protocol

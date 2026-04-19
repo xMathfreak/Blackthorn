@@ -5,12 +5,12 @@
 #include <SDL3/SDL.h>
 
 #include "Core/Export.h"
-#include "Net/ByteBuffer.h"
+#include "Net/Core/ByteBuffer.h"
 #include "Net/Transport/Address.h"
-#include "Net/Transport/ISocket.h"
-#include "Net/PacketHeader.h"
+#include "Net/Transport/Sockets/ISocket.h"
+#include "Net/Protocol/PacketHeader.h"
 
-namespace Blackthorn::Net::Transport {
+namespace Blackthorn::Net::Transport::Channels {
 
 /**
  * @brief Wire header prepended to every UDP datagram, before the PacketHeader.
@@ -33,13 +33,13 @@ struct BLACKTHORN_API UDPHeader {
 	Uint16 ack = 0;
 	Uint32 ackBits = 0;
 
-	void serialize(Net::ByteBuffer& buf) const {
+	void serialize(Core::ByteBuffer& buf) const {
 		buf.writeU16(seq);
 		buf.writeU16(ack);
 		buf.writeU32(ackBits);
 	}
 
-	void deserialize(Net::ByteBuffer& buf) {
+	void deserialize(Core::ByteBuffer& buf) {
 		seq = buf.readU16();
 		ack = buf.readU16();
 		ackBits = buf.readU32();
@@ -103,7 +103,7 @@ public:
 	 * and is dropped by @c ConnectionManager::pollUDP() before peer lookup.
 	 */
 	static constexpr size_t MIN_DATAGRAM_SIZE =
-		UDPHeader::SERIALIZED_SIZE + PacketHeader::SERIALIZED_SIZE;
+		UDPHeader::SERIALIZED_SIZE + Protocol::PacketHeader::SERIALIZED_SIZE;
 
 	/**
 	 * @brief Sends `payload` to `address` via `socket`, prepending a
@@ -119,10 +119,10 @@ public:
 	 *                followed by the payload bytes.
 	 * @return SocketResult of the underlying sendTo call.
 	 */
-	SocketResult send(
-		ISocket& socket,
+	Sockets::SocketResult send(
+		Sockets::ISocket& socket,
 		const Address& address,
-		const Net::ByteBuffer& payload);
+		const Core::ByteBuffer& payload);
 
 	/**
 	 * @brief Processes the `UDPHeader` from a received datagram.
@@ -143,7 +143,7 @@ public:
 	 * @param socket  Open UDP socket.
 	 * @param address Destination peer address.
 	 */
-	void retransmitPending(ISocket& socket, const Address& address);
+	void retransmitPending(Sockets::ISocket& socket, const Address& address);
 
 	Uint16 getLocalSeq() const noexcept { return localSeq; }
 	Uint16 getRemoteSeq() const noexcept { return remoteSeq; }
@@ -175,7 +175,7 @@ private:
 	Uint32 ackBits = 0; ///< ACK bitmask for the 32 packets before remoteSeq.
 
 	struct RetransmitEntry {
-		Net::ByteBuffer payload; ///< Full datagram bytes (UDPHeader + PacketHeader + data).
+		Core::ByteBuffer payload; ///< Full datagram bytes (UDPHeader + PacketHeader + data).
 		Uint64 sentAtMs = 0; ///< SDL_GetTicks() at time of send.
 		Uint16 seq = 0; ///< Sequence number of this packet.
 		bool occupied = false;
@@ -185,8 +185,8 @@ private:
 	std::array<RetransmitEntry, MAX_RETRANSMIT_ENTRIES> retransmitQueue{};
 	size_t retransmitHead = 0; ///< Next slot to write into (circular).
 
-	void enqueueRetransmit(Uint16 seq, const Net::ByteBuffer& payload);
+	void enqueueRetransmit(Uint16 seq, const Core::ByteBuffer& payload);
 	void acknowledgeSeq(Uint16 seq);
 };
 
-} // namespace Blackthorn::Net::Transport
+} // namespace Blackthorn::Net::Transport::Channels

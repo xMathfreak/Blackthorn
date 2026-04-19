@@ -8,7 +8,7 @@
 #include "Core/Export.h"
 #include "Net/Transport/Address.h"
 
-namespace Blackthorn::Net::Transport {
+namespace Blackthorn::Net::Transport::Sockets {
 
 /**
  * @brief Result of a non-blocking socket operation.
@@ -163,4 +163,4 @@ public:
 	virtual std::string getLastError() const = 0;
 };
 
-} // namespace Blackthorn::Net::Transport
+} // namespace Blackthorn::Net::Transport::Sockets

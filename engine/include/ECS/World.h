@@ -109,6 +109,14 @@ public:
 		systemManager.lateUpdate(dt);
 	}
 
+	auto& getPool() {
+		return pool;
+	}
+
+	const auto& getPool() const {
+		return pool;
+	}
+
 private:
 	EntityPool pool;
 	Systems::SystemManager systemManager;

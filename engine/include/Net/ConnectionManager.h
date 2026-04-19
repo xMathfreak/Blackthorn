@@ -12,14 +12,14 @@
 
 #include "Core/Export.h"
 #include "Jobs/JobHandle.h"
-#include "Net/ByteBuffer.h"
-#include "Net/PacketHeader.h"
+#include "Net/Connection/NetworkPeer.h"
+#include "Net/Connection/PeerRateLimiter.h"
+#include "Net/Core/ByteBuffer.h"
+#include "Net/Protocol/PacketHeader.h"
 #include "Net/Transport/Address.h"
-#include "Net/Transport/NetworkPeer.h"
 #include "Net/Transport/PacketQueue.h"
-#include "Net/Transport/PeerRateLimiter.h"
-#include "Net/Transport/UDPSocket.h"
-#include "Net/Transport/TCPSocket.h"
+#include "Net/Transport/Sockets/TCPSocket.h"
+#include "Net/Transport/Sockets/UDPSocket.h"
 
 namespace Blackthorn {
 
@@ -29,7 +29,7 @@ class JobSystem;
 
 } // namespace Jobs
 
-namespace Net::Transport {
+namespace Net {
 
 /**
  * @brief Callback invoked on the simulation thread for each received packet.
@@ -40,9 +40,9 @@ namespace Net::Transport {
  *                (after the PacketHeader bytes).
  */
 using PacketHandler = std::function<void(
-	PeerId peerId,
-	const PacketHeader& header,
-	Net::ByteBuffer& payload
+	Connection::PeerId peerId,
+	const Protocol::PacketHeader& header,
+	Core::ByteBuffer& payload
 )>;
 
 /**
@@ -50,13 +50,13 @@ using PacketHandler = std::function<void(
  * @param peerId  The newly connected peer.
  * @param address Remote address of the peer.
  */
-using ConnectHandler = std::function<void(PeerId, const Address&)>;
+using ConnectHandler = std::function<void(Connection::PeerId, const Transport::Address&)>;
 
 /**
  * @brief Callback invoked on the simulation thread when a peer disconnects.
  * @param peerId  The peer that disconnected.
  */
-using DisconnectHandler = std::function<void(PeerId)>;
+using DisconnectHandler = std::function<void(Connection::PeerId)>;
 
 /**
  * @brief Configuration passed to `ConnectionManager::start()`.
@@ -98,7 +98,7 @@ struct ConnectionConfig {
 	///
 	/// Set @c maxPacketsPerSec or @c maxBytesPerSec to 0 to disable
 	/// the respective limit (not recommended for internet-facing servers).
-	RateLimitConfig rateLimitDefaults = RateLimitConfig{};
+	Connection::RateLimitConfig rateLimitDefaults = Connection::RateLimitConfig{};
 };
 
 /**
@@ -121,8 +121,8 @@ enum class ConnectionEventType : Uint8 {
  */
 struct ConnectionEvent {
 	ConnectionEventType type;
-	PeerId              peerId  = INVALID_PEER_ID;
-	Address             address; ///< Populated for Connect; empty for Disconnect.
+	Connection::PeerId peerId = Connection::INVALID_PEER_ID;
+	Transport::Address address; ///< Populated for Connect; empty for Disconnect.
 };
 
 /**
@@ -209,7 +209,7 @@ public:
 	 * @param address Server address (IP + TCP port).
 	 * @return The assigned PeerId, or INVALID_PEER_ID on failure.
 	 */
-	PeerId connect(const Address& address);
+	Connection::PeerId connect(const Transport::Address& address);
 
 	/**
 	 * @brief Disconnects a peer gracefully, sending a Disconnect packet
@@ -217,7 +217,7 @@ public:
 	 *
 	 * @param peerId Peer to disconnect.
 	 */
-	void disconnect(PeerId peerId);
+	void disconnect(Connection::PeerId peerId);
 
 	/**
 	 * @brief Sends `payload` to `peerId` over UDP.
@@ -229,7 +229,7 @@ public:
 	 * @param payload ByteBuffer beginning with a serialized PacketHeader.
 	 * @return true if the packet was sent successfully.
 	 */
-	bool sendUDP(PeerId peerId, const Net::ByteBuffer& payload);
+	bool sendUDP(Connection::PeerId peerId, const Core::ByteBuffer& payload);
 
 	/**
 	 * @brief Sends `payload` to `peerId` over TCP with length-prefix framing.
@@ -239,19 +239,19 @@ public:
 	 * @param payload ByteBuffer beginning with a serialized PacketHeader.
 	 * @return true if the message was sent successfully.
 	 */
-	bool sendTCP(PeerId peerId, const Net::ByteBuffer& payload);
+	bool sendTCP(Connection::PeerId peerId, const Core::ByteBuffer& payload);
 
 	/**
 	 * @brief Broadcasts `payload` over UDP to all connected peers.
 	 * Thread-safe.
 	 */
-	void broadcastUDP(const Net::ByteBuffer& payload);
+	void broadcastUDP(const Core::ByteBuffer& payload);
 
 	/**
 	 * @brief Broadcasts `payload` over TCP to all connected peers.
 	 * Thread-safe.
 	 */
-	void broadcastTCP(const Net::ByteBuffer& payload);
+	void broadcastTCP(const Core::ByteBuffer& payload);
 
 	/**
 	 * @brief Drains the inbound packet queue and dispatches each packet as
@@ -275,7 +275,7 @@ public:
 	void onDisconnect(DisconnectHandler handler) { disconnectHandler = std::move(handler); }
 
 	/** @brief Returns a const pointer to a peer by ID, or nullptr. */
-	const NetworkPeer* getPeer(PeerId id) const;
+	const Connection::NetworkPeer* getPeer(Connection::PeerId id) const;
 
 	/**
 	 * @brief Returns a snapshot copy of the peer list at this instant.
@@ -285,7 +285,7 @@ public:
 	 * and @c tcpChannel are move-only, so the copy contains nullptr for those
 	 * fields — use @c getPeer() when you need live socket access.
 	 */
-	std::vector<NetworkPeer> getPeerSnapshot() const;
+	std::vector<Connection::NetworkPeer> getPeerSnapshot() const;
 
 	/**
 	 * @brief Appends a lifecycle event to @c pendingEvents.
@@ -323,7 +323,7 @@ public:
 	 * @param peerId Peer to reconfigure.
 	 * @param config New rate limit parameters.
 	 */
-	void setPeerRateLimit(PeerId peerId, const RateLimitConfig& config);
+	void setPeerRateLimit(Connection::PeerId peerId, const Connection::RateLimitConfig& config);
 
 private:
 	void ioThreadLoop();
@@ -333,20 +333,20 @@ private:
 	void checkTimeouts();
 	void sendHeartbeats();
 
-	PeerId findPeer(const Address& address, bool tcp);
-	PeerId findOrCreatePeer(const Address& address, bool tcp);
-	PeerId allocatePeerSlot(const Address& address, bool tcp);
-	void freePeerSlot(PeerId id);
+	Connection::PeerId findPeer(const Transport::Address& address, bool tcp);
+	Connection::PeerId findOrCreatePeer(const Transport::Address& address, bool tcp);
+	Connection::PeerId allocatePeerSlot(const Transport::Address& address, bool tcp);
+	void freePeerSlot(Connection::PeerId id);
 
 	ConnectionConfig cfg;
 
-	std::vector<NetworkPeer> peers;
-	std::unordered_map<Address, PeerId> addressToPeerTCP;
-	std::unordered_map<Address, PeerId> addressToPeerUDP;
+	std::vector<Connection::NetworkPeer> peers;
+	std::unordered_map<Transport::Address, Connection::PeerId> addressToPeerTCP;
+	std::unordered_map<Transport::Address, Connection::PeerId> addressToPeerUDP;
 	mutable std::mutex peerMutex;
 
-	std::unique_ptr<UDPSocket> udpSocket;
-	std::unique_ptr<TCPSocket> tcpListenSocket;
+	std::unique_ptr<Transport::Sockets::UDPSocket> udpSocket;
+	std::unique_ptr<Transport::Sockets::TCPSocket> tcpListenSocket;
 	mutable std::mutex sendMutex;
 
 	/**
@@ -361,7 +361,7 @@ private:
 	std::vector<ConnectionEvent> pendingEvents;
 	mutable std::mutex eventMutex;
 
-	DefaultPacketQueue inboundQueue;
+	Transport::DefaultPacketQueue inboundQueue;
 
 	/**
 	 * @brief Handle covering all packet Jobs submitted during the previous
@@ -390,6 +390,6 @@ private:
 	std::vector<Uint8> recvScratch;
 };
 
-} // namespace Net::Transport
+} // namespace Net
 
 } // namespace Blackthorn

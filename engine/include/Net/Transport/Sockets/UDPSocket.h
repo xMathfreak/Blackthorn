@@ -1,10 +1,10 @@
 #pragma once
 
 #include "Core/Export.h"
-#include "Net/Transport/ISocket.h"
-#include "Net/Transport/SocketHandle.h"
+#include "Net/Transport/Sockets/ISocket.h"
+#include "Net/Transport/Sockets/SocketHandle.h"
 
-namespace Blackthorn::Net::Transport {
+namespace Blackthorn::Net::Transport::Sockets {
 
 /**
  * @brief Platform UDP socket.
@@ -30,21 +30,21 @@ public:
 	UDPSocket(const UDPSocket&) = delete;
 	UDPSocket& operator=(const UDPSocket&) = delete;
 
-	bool bind(const Address& address) override;
+	bool bind(const Transport::Address& address) override;
 
 	/// Not applicable to UDP — always returns false.
-	bool connect(const Address&) override { return false; }
+	bool connect(const Transport::Address&) override { return false; }
 
 	/// Not applicable to UDP — always returns false.
 	bool listen(int) override { return false; }
 
 	/// Not applicable to UDP — always returns nullptr.
-	std::unique_ptr<ISocket> accept(Address&) override { return nullptr; }
+	std::unique_ptr<ISocket> accept(Transport::Address&) override { return nullptr; }
 
 	SocketResult sendTo(
 		const void* data,
 		size_t size,
-		const Address& address) override;
+		const Transport::Address& address) override;
 
 	/// Equivalent to sendTo with the last address passed to bind().
 	/// Not useful for connectionless UDP — prefer sendTo.
@@ -54,7 +54,7 @@ public:
 		void* buffer,
 		size_t bufferSize,
 		size_t& outSize,
-		Address& outAddress) override;
+		Transport::Address& outAddress) override;
 
 	SocketResult recv(
 		void* buffer,
@@ -68,7 +68,7 @@ public:
 	bool isOpen() const override { return fd != INVALID_SOCKET_HANDLE; }
 	bool isConnected() const override { return false; }
 
-	Address getLocalAddress() const override;
+	Transport::Address getLocalAddress() const override;
 	std::string getLastError() const override;
 
 	/** @brief Returns the raw socket handle. Used by ConnectionManager::select(). */
@@ -83,4 +83,4 @@ private:
 	static std::string platformError();
 };
 
-} // namespace Blackthorn::Net::Transport
+} // namespace Blackthorn::Net::Transport::Sockets

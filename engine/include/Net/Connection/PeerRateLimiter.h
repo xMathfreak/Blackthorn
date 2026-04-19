@@ -4,7 +4,7 @@
 
 #include "Core/Export.h"
 
-namespace Blackthorn::Net::Transport {
+namespace Blackthorn::Net::Connection {
 
 /**
  * @brief Enforcement stage for a peer's current rate-limit status.
@@ -306,4 +306,4 @@ struct BLACKTHORN_API PeerRateLimiter {
 	}
 };
 
-} // namespace Blackthorn::Net::Transport
+} // namespace Blackthorn::Net::Connection

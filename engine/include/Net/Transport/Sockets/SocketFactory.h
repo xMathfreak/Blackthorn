@@ -3,10 +3,10 @@
 #include <memory>
 
 #include "Core/Export.h"
-#include "Net/Transport/TCPSocket.h"
-#include "Net/Transport/UDPSocket.h"
+#include "Net/Transport/Sockets/TCPSocket.h"
+#include "Net/Transport/Sockets/UDPSocket.h"
 
-namespace Blackthorn::Net::Transport {
+namespace Blackthorn::Net::Transport::Sockets {
 
 /**
  * @brief Creates platform socket instances and manages WinSock lifetime.
@@ -76,4 +76,4 @@ private:
 	static inline bool initialized = false;
 };
 
-} // namespace Blackthorn::Net::Transport
+} // namespace Blackthorn::Net::Transport::Sockets

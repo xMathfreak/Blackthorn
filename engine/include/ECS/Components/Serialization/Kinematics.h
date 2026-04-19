@@ -23,14 +23,14 @@ template <>
 struct ComponentSerializer<Components::Kinematics> {
 	static constexpr size_t fixedSize() { return 4 * sizeof(float); }
 
-	static void serialize(const Components::Kinematics& c, Net::ByteBuffer& buf) {
+	static void serialize(const Components::Kinematics& c, Net::Core::ByteBuffer& buf) {
 		buf.writeF32(c.oldPosition.x);
 		buf.writeF32(c.oldPosition.y);
 		buf.writeF32(c.acceleration.x);
 		buf.writeF32(c.acceleration.y);
 	}
 
-	static void deserialize(Components::Kinematics& c, Net::ByteBuffer& buf) {
+	static void deserialize(Components::Kinematics& c, Net::Core::ByteBuffer& buf) {
 		c.oldPosition.x = buf.readF32();
 		c.oldPosition.y = buf.readF32();
 		c.acceleration.x = buf.readF32();

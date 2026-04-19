@@ -1,4 +1,4 @@
-#include "Net/Transport/TCPSocket.h"
+#include "Net/Transport/Sockets/TCPSocket.h"
 
 #ifdef _WIN32
 	#include <winsock2.h>
@@ -17,7 +17,7 @@
 
 #include "Debug/Logger.h"
 
-namespace Blackthorn::Net::Transport {
+namespace Blackthorn::Net::Transport::Sockets {
 
 TCPSocket::TCPSocket() {}
 
@@ -336,4 +336,4 @@ std::string TCPSocket::getLastError() const {
 	return platformError();
 }
 
-} // namespace Blackthorn::Net::Transport
+} // namespace Blackthorn::Net::Transport::Sockets

@@ -13,7 +13,7 @@
 #include "Core/SimClock.h"
 #include "Input/InputManager.h"
 #include "Jobs/JobSystem.h"
-#include "Net/Transport/ConnectionManager.h"
+#include "Net/ConnectionManager.h"
 #include "Scene/ISimContext.h"
 #include "Scene/SceneManager.h"
 
@@ -134,6 +134,14 @@ public:
 	 */
 	virtual void onRegisterSettings(Core::Settings&) {}
 
+	void setConnectionManager(Net::ConnectionManager* cm) {
+		connectionManager = cm;
+	}
+
+	void setConnectionManager(Net::ConnectionManager& cm) {
+		connectionManager = &cm;
+	}
+
 protected:
 	bool initialized = false;
 	bool running = false;
@@ -147,7 +155,7 @@ protected:
 	std::unique_ptr<Scene::SceneManager> sceneManager;
 
 	Input::InputManager inputManager;
-	Net::Transport::ConnectionManager connectionManager;
+	Net::ConnectionManager* connectionManager = nullptr;
 
 	virtual void processEvents();
 	virtual void fixedUpdate(float dt);

@@ -56,7 +56,7 @@ bool Engine::init(const EngineConfig& cfg) {
 
 	simContext = std::make_unique<Scene::SceneContextImpl>(
 		*assetManager,
-		connectionManager,
+		*connectionManager,
 		inputManager,
 		*jobSystem,
 		*sceneManager,

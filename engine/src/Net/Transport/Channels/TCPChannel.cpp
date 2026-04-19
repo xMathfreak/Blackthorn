@@ -1,10 +1,10 @@
-#include "Net/Transport/TCPChannel.h"
+#include "Net/Transport/Channels/TCPChannel.h"
 
 #include "Debug/Logger.h"
 
-namespace Blackthorn::Net::Transport {
+namespace Blackthorn::Net::Transport::Channels {
 
-SocketResult TCPChannel::send(ISocket& socket, const Net::ByteBuffer& payload) {
+Sockets::SocketResult TCPChannel::send(Sockets::ISocket& socket, const Core::ByteBuffer& payload) {
 	const Uint32 len = static_cast<Uint32>(payload.size());
 
 	sendBuffer.clear();
@@ -27,25 +27,25 @@ SocketResult TCPChannel::send(ISocket& socket, const Net::ByteBuffer& payload) {
 	while (totalSent < totalSize) {
 		size_t sentNow = 0;
 
-		SocketResult result = socket.send(
+		Sockets::SocketResult result = socket.send(
 			sendBuffer.data() + totalSent,
 			totalSize - totalSent,
 			sentNow
 		);
 
-		if (result == SocketResult::WouldBlock)
-			return SocketResult::WouldBlock;
+		if (result == Sockets::SocketResult::WouldBlock)
+			return Sockets::SocketResult::WouldBlock;
 
-		if (result != SocketResult::Ok)
+		if (result != Sockets::SocketResult::Ok)
 			return result;
 
 		totalSent += sentNow;
 	}
 
-	return SocketResult::Ok;
+	return Sockets::SocketResult::Ok;
 }
 
-bool TCPChannel::receive(ISocket& socket, Net::ByteBuffer& outMessage) {
+bool TCPChannel::receive(Sockets::ISocket& socket, Core::ByteBuffer& outMessage) {
 	bool needMoreData =
 		(pendingMessageSize == 0 && recvBuffer.size() < LENGTH_PREFIX_SIZE) ||
 		(pendingMessageSize >  0 && recvBuffer.size() < pendingMessageSize);
@@ -54,11 +54,11 @@ bool TCPChannel::receive(ISocket& socket, Net::ByteBuffer& outMessage) {
 		Uint8 chunk[4096];
 		size_t bytesRead = 0;
 
-		SocketResult result = socket.recv(chunk, sizeof(chunk), bytesRead);
+		Sockets::SocketResult result = socket.recv(chunk, sizeof(chunk), bytesRead);
 
-		if (result == SocketResult::WouldBlock) {
+		if (result == Sockets::SocketResult::WouldBlock) {
 			// No new data available
-		} else if (result == SocketResult::Disconnected || result == SocketResult::Error) {
+		} else if (result == Sockets::SocketResult::Disconnected || result == Sockets::SocketResult::Error) {
 			return false;
 		} else if (bytesRead > 0) {
 			recvBuffer.insert(recvBuffer.end(), chunk, chunk + bytesRead);
@@ -87,11 +87,11 @@ bool TCPChannel::receive(ISocket& socket, Net::ByteBuffer& outMessage) {
 	if (recvBuffer.size() < pendingMessageSize)
 		return false;
 
-	outMessage = Net::ByteBuffer(recvBuffer.data(), pendingMessageSize);
+	outMessage = Core::ByteBuffer(recvBuffer.data(), pendingMessageSize);
 	recvBuffer.erase(recvBuffer.begin(), recvBuffer.begin() + pendingMessageSize);
 	pendingMessageSize = 0;
 
 	return true;
 }
 
-} // namespace Blackthorn::Net::Transport
+} // namespace Blackthorn::Net::Transport::Channels

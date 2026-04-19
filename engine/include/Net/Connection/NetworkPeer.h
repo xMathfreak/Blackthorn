@@ -6,13 +6,14 @@
 #include <SDL3/SDL.h>
 
 #include "Core/Export.h"
+#include "Net/Connection/PeerRateLimiter.h"
+#include "Net/Connection/PeerRateLimiter.h"
 #include "Net/Transport/Address.h"
-#include "Net/Transport/ISocket.h"
-#include "Net/Transport/PeerRateLimiter.h"
-#include "Net/Transport/TCPChannel.h"
-#include "Net/Transport/UDPChannel.h"
+#include "Net/Transport/Channels/TCPChannel.h"
+#include "Net/Transport/Channels/UDPChannel.h"
+#include "Net/Transport/Sockets/ISocket.h"
 
-namespace Blackthorn::Net::Transport {
+namespace Blackthorn::Net::Connection {
 
 /** @brief Numeric identifier for a peer, assigned by ConnectionManager. */
 using PeerId = Uint32;
@@ -51,16 +52,16 @@ struct BLACKTHORN_API NetworkPeer {
 	PeerId id = INVALID_PEER_ID;
 
 	/// Remote address for TCP connection.
-	Address tcpAddress;
+	Transport::Address tcpAddress;
 
 	/// Remote address for UDP connection.
-	Address udpAddress;
+	Transport::Address udpAddress;
 
 	/// Current connection state.
 	PeerState state = PeerState::Disconnected;
 
 	/// UDP simulation channel. Always allocated; only used when udpConnected.
-	UDPChannel udpChannel;
+	Transport::Channels::UDPChannel udpChannel;
 
 	/// Whether UDP traffic is active for this peer.
 	bool udpConnected = false;
@@ -69,10 +70,10 @@ struct BLACKTHORN_API NetworkPeer {
 	bool tcpConnected = false;
 
 	/// TCP session channel. Nullptr if TCP is not used for this peer.
-	std::unique_ptr<TCPChannel> tcpChannel;
+	std::unique_ptr<Transport::Channels::TCPChannel> tcpChannel;
 
 	/// TCP socket for this peer. Nullptr if TCP is not established.
-	std::unique_ptr<ISocket> tcpSocket;
+	std::unique_ptr<Transport::Sockets::ISocket> tcpSocket;
 
 	/// Timestamp of the last received packet (either channel), in ms.
 	/// Used for timeout detection.
@@ -139,4 +140,4 @@ struct BLACKTHORN_API NetworkPeer {
 	}
 };
 
-} // namespace Blackthorn::Net::Transport
+} // namespace Blackthorn::Net::Connection

@@ -20,14 +20,14 @@ template <>
 struct ComponentSerializer<Components::Transform> {
 	static constexpr size_t fixedSize() { return 4 * sizeof(float); }
 
-	static void serialize(const Components::Transform& c, Net::ByteBuffer& buf) {
+	static void serialize(const Components::Transform& c, Net::Core::ByteBuffer& buf) {
 		buf.writeF32(c.position.x);
 		buf.writeF32(c.position.y);
 		buf.writeF32(c.angle);
 		buf.writeF32(c.scale);
 	}
 
-	static void deserialize(Components::Transform& c, Net::ByteBuffer& buf) {
+	static void deserialize(Components::Transform& c, Net::Core::ByteBuffer& buf) {
 		c.position.x = buf.readF32();
 		c.position.y = buf.readF32();
 		c.angle = buf.readF32();

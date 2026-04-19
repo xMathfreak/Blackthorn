@@ -22,11 +22,11 @@ namespace Blackthorn::ECS::Serialization {
  */
 template <>
 struct ComponentSerializer<Components::Tag> {
-	static void serialize(const Components::Tag& c, Net::ByteBuffer& buf) {
+	static void serialize(const Components::Tag& c, Net::Core::ByteBuffer& buf) {
 		buf.writeString(c.name);
 	}
 
-	static void deserialize(Components::Tag& c, Net::ByteBuffer& buf) {
+	static void deserialize(Components::Tag& c, Net::Core::ByteBuffer& buf) {
 		c.name = buf.readString();
 	}
 };

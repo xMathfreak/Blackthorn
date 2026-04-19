@@ -1,10 +1,10 @@
 #pragma once
 
 #include "Core/Export.h"
-#include "Net/Transport/ISocket.h"
-#include "Net/Transport/SocketHandle.h"
+#include "Net/Transport/Sockets/ISocket.h"
+#include "Net/Transport/Sockets/SocketHandle.h"
 
-namespace Blackthorn::Net::Transport {
+namespace Blackthorn::Net::Transport::Sockets {
 
 /**
  * @brief Platform TCP socket.
@@ -35,15 +35,15 @@ public:
 	TCPSocket(const TCPSocket&) = delete;
 	TCPSocket& operator=(const TCPSocket&) = delete;
 
-	bool bind(const Address& address) override;
-	bool connect(const Address& address) override;
+	bool bind(const Transport::Address& address) override;
+	bool connect(const Transport::Address& address) override;
 	bool listen(int backlog = 8) override;
-	std::unique_ptr<ISocket> accept(Address& outAddress) override;
+	std::unique_ptr<ISocket> accept(Transport::Address& outAddress) override;
 
 	SocketResult sendTo(
 		const void* data,
 		size_t size,
-		const Address& address) override;
+		const Transport::Address& address) override;
 
 	SocketResult send(const void* data, size_t size, size_t& outBytesSent) override;
 
@@ -51,7 +51,7 @@ public:
 		void* buffer,
 		size_t bufferSize,
 		size_t& outSize,
-		Address& outAddress) override;
+		Transport::Address& outAddress) override;
 
 	SocketResult recv(
 		void* buffer,
@@ -69,7 +69,7 @@ public:
 	bool isOpen() const override { return fd != INVALID_SOCKET_HANDLE; }
 	bool isConnected() const override;
 
-	Address getLocalAddress() const override;
+	Transport::Address getLocalAddress() const override;
 	std::string getLastError() const override;
 
 	SocketHandle handle() const { return fd; }
@@ -84,4 +84,4 @@ private:
 	static std::string platformError();
 };
 
-} // namespace Blackthorn::Net::Transport
+} // namespace Blackthorn::Net::Transport::Sockets

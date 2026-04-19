@@ -1,4 +1,4 @@
-#include "Net/Transport/SocketFactory.h"
+#include "Net/Transport/Sockets/SocketFactory.h"
 
 #ifdef _WIN32
 	#include <winsock2.h>
@@ -10,7 +10,7 @@
 
 #include "Debug/Logger.h"
 
-namespace Blackthorn::Net::Transport {
+namespace Blackthorn::Net::Transport::Sockets {
 
 bool SocketFactory::init() {
 	if (initialized)
@@ -72,4 +72,4 @@ std::unique_ptr<TCPSocket> SocketFactory::createTCP() {
 	return sock;
 }
 
-} // namespace Blackthorn::Net::Transport
+} // namespace Blackthorn::Net::Transport::Sockets

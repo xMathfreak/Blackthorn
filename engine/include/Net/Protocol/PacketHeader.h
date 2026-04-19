@@ -3,9 +3,9 @@
 #include <SDL3/SDL.h>
 
 #include "Core/Export.h"
-#include "Net/ByteBuffer.h"
+#include "Net/Core/ByteBuffer.h"
 
-namespace Blackthorn::Net {
+namespace Blackthorn::Net::Protocol {
 
 /**
  * @brief Packet types carried in `PacketHeader::packetType`.
@@ -127,7 +127,7 @@ struct BLACKTHORN_API PacketHeader {
 	 * @brief Serializes the header into `buf` in the fixed 24-byte layout.
 	 * @param buf Destination buffer.
 	 */
-	void serialize(ByteBuffer& buf) const {
+	void serialize(Core::ByteBuffer& buf) const {
 		buf.writeU32(magic);
 		buf.writeU16(schemaVersion);
 		buf.writeU32(payloadLength);
@@ -145,7 +145,7 @@ struct BLACKTHORN_API PacketHeader {
 	 *
 	 * @param buf Source buffer positioned at the start of the header.
 	 */
-	void deserialize(ByteBuffer& buf) {
+	void deserialize(Core::ByteBuffer& buf) {
 		magic = buf.readU32();
 		schemaVersion = buf.readU16();
 		payloadLength = buf.readU32();
@@ -173,4 +173,4 @@ static_assert(
 	"PacketHeader: serialized field sizes do not sum to SERIALIZED_SIZE"
 );
 
-} // namespace Blackthorn::Net
+} // namespace Blackthorn::Net::Protocol

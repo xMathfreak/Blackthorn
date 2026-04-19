@@ -1,16 +1,16 @@
-#include "Net/Transport/UDPChannel.h"
+#include "Net/Transport/Channels/UDPChannel.h"
 
 #include "Debug/Logger.h"
-#include "Net/PacketHeader.h"
+#include "Net/Protocol/PacketHeader.h"
 
-namespace Blackthorn::Net::Transport {
+namespace Blackthorn::Net::Transport::Channels {
 
-SocketResult UDPChannel::send(
-	ISocket& socket,
+Sockets::SocketResult UDPChannel::send(
+	Sockets::ISocket& socket,
 	const Address& address,
-	const Net::ByteBuffer& payload
+	const Core::ByteBuffer& payload
 ) {
-	Net::ByteBuffer datagram;
+	Core::ByteBuffer datagram;
 	datagram.reserve(UDPHeader::SERIALIZED_SIZE + payload.size());
 
 	UDPHeader hdr;
@@ -22,13 +22,13 @@ SocketResult UDPChannel::send(
 	datagram.writeBytes(payload.data(), payload.size());
 
 	bool reliable = false;
-	if (payload.size() >= Net::PacketHeader::SERIALIZED_SIZE) {
-		Net::ByteBuffer tmp(payload.data(), payload.size());
+	if (payload.size() >= Protocol::PacketHeader::SERIALIZED_SIZE) {
+		Core::ByteBuffer tmp(payload.data(), payload.size());
 
-		PacketHeader packetHdr;
+		Protocol::PacketHeader packetHdr;
 		packetHdr.deserialize(tmp);
 
-		reliable = (packetHdr.flags & PacketFlags::Reliable) == PacketFlags::Reliable;
+		reliable = (packetHdr.flags & Protocol::PacketFlags::Reliable) == Protocol::PacketFlags::Reliable;
 	}
 
 	if (reliable)
@@ -78,7 +78,7 @@ void UDPChannel::processInboundHeader(const UDPHeader& header) {
 	}
 }
 
-void UDPChannel::retransmitPending(ISocket& socket, const Address& address) {
+void UDPChannel::retransmitPending(Sockets::ISocket& socket, const Address& address) {
 	const Uint64 now = SDL_GetTicks();
 
 	for (auto& entry : retransmitQueue) {
@@ -94,7 +94,7 @@ void UDPChannel::retransmitPending(ISocket& socket, const Address& address) {
 	}
 }
 
-void UDPChannel::enqueueRetransmit(Uint16 seq, const Net::ByteBuffer& payload) {
+void UDPChannel::enqueueRetransmit(Uint16 seq, const Core::ByteBuffer& payload) {
 	for (size_t i = 0; i < MAX_RETRANSMIT_ENTRIES; ++i) {
 		size_t idx = (retransmitHead + i) % MAX_RETRANSMIT_ENTRIES;
 		auto& entry = retransmitQueue[idx];
@@ -124,4 +124,4 @@ void UDPChannel::acknowledgeSeq(Uint16 seq) {
 	}
 }
 
-} // namespace Blackthorn::Net::Transport
+} // namespace Blackthorn::Net::Transport::Channels

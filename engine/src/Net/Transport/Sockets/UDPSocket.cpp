@@ -1,4 +1,4 @@
-#include "Net/Transport/UDPSocket.h"
+#include "Net/Transport/Sockets/UDPSocket.h"
 
 #ifdef _WIN32
 	#include <winsock2.h>
@@ -15,7 +15,7 @@
 
 #include "Debug/Logger.h"
 
-namespace Blackthorn::Net::Transport {
+namespace Blackthorn::Net::Transport::Sockets {
 
 UDPSocket::UDPSocket() {
 
@@ -229,4 +229,4 @@ std::string UDPSocket::getLastError() const {
 	return platformError();
 }
 
-} // namespace Blackthorn::Net::Transport
+} // namespace Blackthorn::Net::Transport::Sockets

@@ -13,7 +13,7 @@ namespace Blackthorn::Scene {
  */
 class SimContextImpl : public ISimContext {
 	Assets::AssetManager& assets;
-	Net::Transport::ConnectionManager& connection;
+	Net::ConnectionManager& connection;
 	Input::InputManager& input;
 	Jobs::JobSystem& jobs;
 	SceneManager& scene;
@@ -22,7 +22,7 @@ class SimContextImpl : public ISimContext {
 public:
 	SimContextImpl(
 		Assets::AssetManager& am,
-		Net::Transport::ConnectionManager& cm,
+		Net::ConnectionManager& cm,
 		Input::InputManager& im,
 		Jobs::JobSystem& js,
 		SceneManager& sm,
@@ -37,7 +37,7 @@ public:
 	{}
 
 	Assets::AssetManager& getAssetManager() override { return assets; }
-	Net::Transport::ConnectionManager& getConnectionManager() override { return connection; }
+	Net::ConnectionManager& getConnectionManager() override { return connection; }
 	Input::InputManager& getInputManager() override { return input; }
 	Jobs::JobSystem& getJobSystem() override { return jobs; }
 	SceneManager& getSceneManager() override { return scene; }

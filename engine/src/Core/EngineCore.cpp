@@ -4,7 +4,7 @@
 #include "Core/SimClock.h"
 #include "Debug/Logger.h"
 #include "Debug/Profiler.h"
-#include "Net/Transport/SocketFactory.h"
+#include "Net/Transport/Sockets/SocketFactory.h"
 #include "Scene/SimContext.h"
 #include "Threads/ThreadRegistry.h"
 
@@ -57,7 +57,7 @@ bool EngineCore::init(const EngineConfig& cfg) {
 		return false;
 	}
 
-	Net::Transport::SocketFactory::init();
+	Net::Transport::Sockets::SocketFactory::init();
 
 	assetManager = std::make_unique<Assets::AssetManager>(
 		cfg.threading.assetWorkerCount);
@@ -71,7 +71,7 @@ bool EngineCore::init(const EngineConfig& cfg) {
 
 	simContext = std::make_unique<Scene::SimContextImpl>(
 		*assetManager,
-		connectionManager,
+		*connectionManager,
 		inputManager,
 		*jobSystem,
 		*sceneManager,
@@ -235,7 +235,7 @@ void EngineCore::fixedUpdate(float dt) {
 
 void EngineCore::update(float dt) {
 	assetManager->flushPendingUploads(config.assets.uploadBudget);
-	connectionManager.poll(jobSystem.get());
+	connectionManager->poll(jobSystem.get());
 	sceneManager->update(dt);
 	inputManager.update(dt);
 }

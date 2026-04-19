@@ -23,13 +23,13 @@ template <>
 struct ComponentSerializer<Components::Sprite> {
 	static constexpr size_t fixedSize() { return 3 * sizeof(float); }
 
-	static void serialize(const Components::Sprite& c, Net::ByteBuffer& buf) {
+	static void serialize(const Components::Sprite& c, Net::Core::ByteBuffer& buf) {
 		buf.writeF32(c.width);
 		buf.writeF32(c.height);
 		buf.writeF32(c.zOrder);
 	}
 
-	static void deserialize(Components::Sprite& c, Net::ByteBuffer& buf) {
+	static void deserialize(Components::Sprite& c, Net::Core::ByteBuffer& buf) {
 		c.width = buf.readF32();
 		c.height = buf.readF32();
 		c.zOrder = buf.readF32();
