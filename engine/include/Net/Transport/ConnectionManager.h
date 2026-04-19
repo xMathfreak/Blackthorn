@@ -17,6 +17,7 @@
 #include "Net/Transport/Address.h"
 #include "Net/Transport/NetworkPeer.h"
 #include "Net/Transport/PacketQueue.h"
+#include "Net/Transport/PeerRateLimiter.h"
 #include "Net/Transport/UDPSocket.h"
 #include "Net/Transport/TCPSocket.h"
 
@@ -61,6 +62,8 @@ using DisconnectHandler = std::function<void(PeerId)>;
  * @brief Configuration passed to `ConnectionManager::start()`.
  */
 struct ConnectionConfig {
+	ConnectionConfig() = default;
+
 	/// UDP port to bind on (server and client). 0 = OS-assigned ephemeral.
 	Uint16 udpPort = 7777;
 
@@ -90,6 +93,14 @@ struct ConnectionConfig {
 	///
 	/// Set to 0 to disable heartbeats (not recommended for production).
 	Uint32 heartbeatIntervalMs = 5000;
+
+	/// Default inbound rate limit applied to every new peer.
+	/// Individual peers may be re-configured after connection via
+	/// @c ConnectionManager::setPeerRateLimit().
+	///
+	/// Set @c maxPacketsPerSec or @c maxBytesPerSec to 0 to disable
+	/// the respective limit (not recommended for internet-facing servers).
+	RateLimitConfig rateLimitDefaults;
 };
 
 /**
@@ -301,6 +312,20 @@ public:
 
 	/** @brief Returns the maximum number of peers this manager supports. */
 	size_t maxPeers() const noexcept { return peers.size(); }
+
+	/**
+	 * @brief Overrides the inbound rate limit for a specific peer.
+	 *
+	 * Safe to call from the simulation thread at any time after the peer
+	 * connects. Acquires @c peerMutex internally.
+	 *
+	 * Typical use: grant trusted peers (e.g. server-to-server links) higher
+	 * limits, or restrict known-bad clients before disconnecting them.
+	 *
+	 * @param peerId Peer to reconfigure.
+	 * @param config New rate limit parameters.
+	 */
+	void setPeerRateLimit(PeerId peerId, const RateLimitConfig& config);
 
 private:
 	void ioThreadLoop();

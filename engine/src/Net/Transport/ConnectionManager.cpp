@@ -386,7 +386,9 @@ void ConnectionManager::pollUDP() {
 		udpHdr.deserialize(datagram);
 
 		PeerId peerId = INVALID_PEER_ID;
+		PeerId kickedId = INVALID_PEER_ID;
 		bool newUDPPeer = false;
+		bool rateLimitDrop = false;
 
 		{
 			std::lock_guard<std::mutex> lock(peerMutex);
@@ -406,17 +408,72 @@ void ConnectionManager::pollUDP() {
 				);
 			}
 
-			peer.udpChannel.processInboundHeader(udpHdr);
-			peer.markAlive();
+			const RateLimitStage rlStage = peer.rateLimiter.update(bytesRead);
+
+			switch (rlStage) {
+				case RateLimitStage::Disconnect: {
+					BT_WARN(
+						"ConnectionManager: Peer {} force-disconnected for UDP "
+						"rate abuse — peak {:.0f} pkts/s, {:.0f} KB/s, "
+						"violation sustained {}ms",
+						peer.id,
+						peer.rateLimiter.peakPacketRate,
+						peer.rateLimiter.peakByteRate / 1024.0f,
+						peer.rateLimiter.stageDurationMs()
+					);
+
+					if (peer.tcpSocket)
+						peer.tcpSocket->close();
+
+					peer.state = PeerState::Disconnected;
+					peer.tcpConnected = false;
+					peer.udpConnected = false;
+					addressToPeerTCP.erase(peer.tcpAddress);
+					addressToPeerUDP.erase(peer.udpAddress);
+
+					kickedId = peerId;
+					newUDPPeer = false;
+					break;
+				}
+
+				case RateLimitStage::Warn: {
+					if (peer.rateLimiter.shouldWarn()) {
+						BT_WARN(
+							"ConnectionManager: Peer {} UDP rate limit — "
+							"{:.0f} pkts/s, {:.0f} KB/s (dropping)",
+							peer.id,
+							peer.rateLimiter.peakPacketRate,
+							peer.rateLimiter.peakByteRate / 1024.0f
+						);
+					}
+
+					rateLimitDrop = true;
+					break;
+				}
+
+				case RateLimitStage::Drop: {
+					rateLimitDrop = true;
+					break;
+				}
+
+				default: {
+					peer.udpChannel.processInboundHeader(udpHdr);
+					peer.markAlive();
+					break;
+				}
+			}
 		}
 
-		if (newUDPPeer) {
-			pushEvent({
-				ConnectionEventType::Connect,
-				peerId,
-				srcAddress
-			});
+		if (newUDPPeer)
+			pushEvent({ ConnectionEventType::Connect, peerId, srcAddress });
+
+		if (kickedId != INVALID_PEER_ID) {
+			pushEvent({ ConnectionEventType::Disconnect, kickedId, {} });
+			continue;
 		}
+
+		if (rateLimitDrop)
+			continue;
 
 		Net::ByteBuffer payload(
 			datagram.data() + datagram.readPosition(),
@@ -605,6 +662,55 @@ void ConnectionManager::pollTCP() {
 					}
 
 					default: {
+						const RateLimitStage rlStage =
+							peer.rateLimiter.update(msg.size());
+
+						if (rlStage == RateLimitStage::Disconnect) {
+							BT_WARN(
+								"ConnectionManager: Peer {} force-disconnected "
+								"for TCP rate abuse — peak {:.0f} pkts/s, "
+								"{:.0f} KB/s, violation sustained {}ms",
+								peer.id,
+								peer.rateLimiter.peakPacketRate,
+								peer.rateLimiter.peakByteRate / 1024.0f,
+								peer.rateLimiter.stageDurationMs()
+							);
+
+							if (peer.tcpSocket)
+								peer.tcpSocket->close();
+
+							peer.state = PeerState::Disconnected;
+							peer.tcpConnected = false;
+							peer.udpConnected = false;
+							addressToPeerTCP.erase(peer.tcpAddress);
+							addressToPeerUDP.erase(peer.udpAddress);
+
+							deferred.push_back({
+								ConnectionEventType::Disconnect,
+								peer.id,
+								{}
+							});
+
+							break;
+						}
+
+						if (rlStage == RateLimitStage::Warn) {
+							if (peer.rateLimiter.shouldWarn()) {
+								BT_WARN(
+									"ConnectionManager: Peer {} TCP rate limit "
+									"— {:.0f} pkts/s, {:.0f} KB/s (dropping)",
+									peer.id,
+									peer.rateLimiter.peakPacketRate,
+									peer.rateLimiter.peakByteRate / 1024.0f
+								);
+							}
+
+							break;
+						}
+
+						if (rlStage == RateLimitStage::Drop)
+							break;
+
 						InboundPacket pkt;
 						pkt.source = peer.tcpAddress;
 						pkt.data = ByteBuffer(msg.data(), msg.size());
@@ -684,6 +790,7 @@ PeerId ConnectionManager::allocatePeerSlot(const Address& address, bool tcp) {
 
 		peers[i].id = i;
 		peers[i].state = PeerState::Connecting;
+		peers[i].rateLimiter = PeerRateLimiter(cfg.rateLimitDefaults);
 
 		if (tcp) {
 			peers[i].tcpAddress = address;
@@ -779,6 +886,15 @@ void ConnectionManager::sendHeartbeats() {
 
 		BT_DEBUG("ConnectionManager: Sent Heartbeat to peer {}", peer.id);
 	}
+}
+
+void ConnectionManager::setPeerRateLimit(PeerId peerId, const RateLimitConfig& config) {
+	std::lock_guard<std::mutex> lock(peerMutex);
+
+	if (peerId >= peers.size())
+		return;
+
+	peers[peerId].rateLimiter.cfg = config;
 }
 
 } // namespace Blackthorn::Net::Transport

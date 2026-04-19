@@ -8,6 +8,7 @@
 #include "Core/Export.h"
 #include "Net/Transport/Address.h"
 #include "Net/Transport/ISocket.h"
+#include "Net/Transport/PeerRateLimiter.h"
 #include "Net/Transport/TCPChannel.h"
 #include "Net/Transport/UDPChannel.h"
 
@@ -92,6 +93,11 @@ struct BLACKTHORN_API NetworkPeer {
 	/// Optional human-readable label (e.g. "Player 1", "Server").
 	std::string label;
 
+	/// Per-peer inbound rate limiter. Initialised with defaults from
+	/// ConnectionConfig; may be overridden after connection via
+	/// ConnectionManager::setPeerRateLimit().
+	PeerRateLimiter rateLimiter;
+
 	/** @brief Returns true if the peer is in the Connected state. */
 	bool isConnected() const noexcept {
 		return (tcpConnected && tcpSocket != nullptr) || udpConnected;
@@ -105,6 +111,17 @@ struct BLACKTHORN_API NetworkPeer {
 		return (SDL_GetTicks() - lastReceivedMs) > timeoutMs;
 	}
 
+	/**
+	 * @brief Returns true if a Heartbeat should be sent to this peer.
+	 *
+	 * @param intervalMs Interval from @c ConnectionConfig::heartbeatIntervalMs.
+	 *
+	 * A heartbeat is due when:
+	 *   - The peer is fully Connected over TCP (we only heartbeat TCP peers).
+	 *   - No data has been received for at least @p intervalMs milliseconds.
+	 *   - We have not already sent a heartbeat within the same interval
+	 *     (prevents flooding if the remote side stops responding entirely).
+	 */
 	bool needsHeartbeat(Uint32 intervalMs) const noexcept {
 		if (intervalMs == 0 || !tcpConnected || tcpSocket == nullptr)
 			return false;
