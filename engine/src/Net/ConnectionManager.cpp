@@ -561,7 +561,34 @@ void ConnectionManager::pollTCP() {
 			}
 
 			Core::ByteBuffer msg;
-			while (peer.tcpChannel->receive(*peer.tcpSocket, msg)) {
+			for (;;) {
+				const Transport::Channels::ReceiveResult rr =
+					peer.tcpChannel->receive(*peer.tcpSocket, msg);
+
+				if (rr == Transport::Channels::ReceiveResult::FatalError) {
+					BT_WARN(
+						"ConnectionManager: Peer {} TCP framing error - disconnecting",
+						peer.id
+					);
+
+					peer.tcpSocket->close();
+					peer.state = Connection::PeerState::Disconnected;
+					peer.tcpConnected = false;
+					peer.udpConnected = false;
+					addressToPeerTCP.erase(peer.tcpAddress);
+					addressToPeerUDP.erase(peer.udpAddress);
+
+					deferred.push_back({
+						ConnectionEventType::Disconnect,
+						peer.id,
+						{}
+					});
+
+					break;
+				}
+
+				if (rr == Transport::Channels::ReceiveResult::NeedMore)
+					break;
 				peer.markAlive();
 
 				Protocol::PacketHeader header;
@@ -815,6 +842,9 @@ void ConnectionManager::freePeerSlot(Connection::PeerId id) {
 
 	if (peer.tcpSocket)
 		peer.tcpSocket->close();
+
+	if (peer.tcpChannel)
+		peer.tcpChannel->reset();
 
 	addressToPeerTCP.erase(peer.tcpAddress);
 	addressToPeerUDP.erase(peer.udpAddress);

@@ -45,53 +45,64 @@ Sockets::SocketResult TCPChannel::send(Sockets::ISocket& socket, const Core::Byt
 	return Sockets::SocketResult::Ok;
 }
 
-bool TCPChannel::receive(Sockets::ISocket& socket, Core::ByteBuffer& outMessage) {
-	bool needMoreData =
-		(pendingMessageSize == 0 && recvBuffer.size() < LENGTH_PREFIX_SIZE) ||
-		(pendingMessageSize >  0 && recvBuffer.size() < pendingMessageSize);
+ReceiveResult TCPChannel::receive(Sockets::ISocket& socket,	Core::ByteBuffer& outMessage) {
+	const bool havePrefix = pendingMessageSize > 0;
+	const bool haveEnough = havePrefix
+		? (available() >= pendingMessageSize)
+		: (available() >= LENGTH_PREFIX_SIZE);
 
-	if (needMoreData) {
+	if (!haveEnough) {
 		Uint8 chunk[4096];
 		size_t bytesRead = 0;
 
-		Sockets::SocketResult result = socket.recv(chunk, sizeof(chunk), bytesRead);
+		Sockets::SocketResult result =
+			socket.recv(chunk, sizeof(chunk), bytesRead);
 
-		if (result == Sockets::SocketResult::WouldBlock) {
-			// No new data available
-		} else if (result == Sockets::SocketResult::Disconnected || result == Sockets::SocketResult::Error) {
-			return false;
-		} else if (bytesRead > 0) {
+		if (result == Sockets::SocketResult::Disconnected || result == Sockets::SocketResult::Error)
+			return ReceiveResult::FatalError;
+
+		if (bytesRead > 0)
 			recvBuffer.insert(recvBuffer.end(), chunk, chunk + bytesRead);
-		}
 	}
 
 	if (pendingMessageSize == 0) {
-		if (recvBuffer.size() < LENGTH_PREFIX_SIZE)
-			return false;
+		if (available() < LENGTH_PREFIX_SIZE)
+			return ReceiveResult::NeedMore;
 
-		Uint32 len =
-			static_cast<Uint32>(recvBuffer[0])
-			| (static_cast<Uint32>(recvBuffer[1]) << 8)
-			| (static_cast<Uint32>(recvBuffer[2]) << 16)
-			| (static_cast<Uint32>(recvBuffer[3]) << 24);
+		const Uint8* p = recvBuffer.data() + readHead;
+		const Uint32 len = static_cast<Uint32>(p[0])
+						| (static_cast<Uint32>(p[1]) << 8)
+						| (static_cast<Uint32>(p[2]) << 16)
+						| (static_cast<Uint32>(p[3]) << 24);
 
 		if (len == 0 || len > MAX_MESSAGE_SIZE) {
-			BT_WARN("TCPChannel: invalid message length {} — ignoring", len);
-			return false;
+			BT_WARN(
+				"TCPChannel: invalid length prefix {} "
+				"(max {}) — stream desynced, disconnecting",
+				len, MAX_MESSAGE_SIZE
+			);
+
+			return ReceiveResult::FatalError;
 		}
 
+		consume(LENGTH_PREFIX_SIZE);
 		pendingMessageSize = len;
-		recvBuffer.erase(recvBuffer.begin(), recvBuffer.begin() + LENGTH_PREFIX_SIZE);
 	}
 
-	if (recvBuffer.size() < pendingMessageSize)
-		return false;
+	if (available() < pendingMessageSize)
+		return ReceiveResult::NeedMore;
 
-	outMessage = Core::ByteBuffer(recvBuffer.data(), pendingMessageSize);
-	recvBuffer.erase(recvBuffer.begin(), recvBuffer.begin() + pendingMessageSize);
+	outMessage = Core::ByteBuffer(
+		recvBuffer.data() + readHead,
+		pendingMessageSize
+	);
+
+	consume(pendingMessageSize);
 	pendingMessageSize = 0;
 
-	return true;
+	maybeCompact();
+
+	return ReceiveResult::Message;
 }
 
 } // namespace Blackthorn::Net::Transport::Channels
