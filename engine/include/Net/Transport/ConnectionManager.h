@@ -62,8 +62,6 @@ using DisconnectHandler = std::function<void(PeerId)>;
  * @brief Configuration passed to `ConnectionManager::start()`.
  */
 struct ConnectionConfig {
-	ConnectionConfig() = default;
-
 	/// UDP port to bind on (server and client). 0 = OS-assigned ephemeral.
 	Uint16 udpPort = 7777;
 
@@ -100,7 +98,7 @@ struct ConnectionConfig {
 	///
 	/// Set @c maxPacketsPerSec or @c maxBytesPerSec to 0 to disable
 	/// the respective limit (not recommended for internet-facing servers).
-	RateLimitConfig rateLimitDefaults;
+	RateLimitConfig rateLimitDefaults = RateLimitConfig{};
 };
 
 /**
