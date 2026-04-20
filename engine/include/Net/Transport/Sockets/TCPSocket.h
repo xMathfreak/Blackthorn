@@ -76,7 +76,7 @@ public:
 
 private:
 	SocketHandle fd = INVALID_SOCKET_HANDLE;
-	bool connected = false;
+	mutable bool connected = false;
 
 	bool openIPv4();
 	bool openIPv6();

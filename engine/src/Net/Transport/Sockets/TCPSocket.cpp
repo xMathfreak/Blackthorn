@@ -329,7 +329,8 @@ bool TCPSocket::isConnected() const {
 	if (err != 0)
 		return false;
 
-	return false;
+	connected = true;
+	return true;
 }
 
 std::string TCPSocket::getLastError() const {
