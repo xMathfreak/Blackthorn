@@ -169,6 +169,7 @@ void NetworkIOWorker::pollUDP() {
 				&& !peer.tcpSocket)
 			{
 				peer.state = Connection::PeerState::Connected;
+				peer.negotiatedSchemaVersion = Protocol::CURRENT_SCHEMA_VERSION;
 				newUDPPeer = true;
 				BT_LOG("NetworkIOWorker: UDP peer {} connected from {}",
 					peerId, srcAddress.toString());
@@ -315,11 +316,16 @@ void NetworkIOWorker::pollTCP() {
 				Core::ByteBuffer reqBuf;
 				Protocol::PacketHeader reqHdr;
 				reqHdr.packetType = Protocol::PacketType::ConnectRequest;
+				reqHdr.payloadLength = sizeof(Uint16);
 				reqHdr.serialize(reqBuf);
+				reqBuf.writeU16(Protocol::CURRENT_SCHEMA_VERSION);
 				peer.tcpChannel->send(*peer.tcpSocket, reqBuf);
 				peer.sentConnectRequest = true;
 
-				BT_LOG("NetworkIOWorker: Sent ConnectRequest to peer {}", peer.id);
+				BT_LOG(
+					"NetworkIOWorker: Sent ConnectRequest (schema v{}) to peer {}",
+					Protocol::CURRENT_SCHEMA_VERSION, peer.id
+				);
 			}
 
 			if (peer.state == Connection::PeerState::Connecting
@@ -365,14 +371,41 @@ void NetworkIOWorker::pollTCP() {
 
 					case Protocol::PacketType::ConnectRequest: {
 						if (peer.state == Connection::PeerState::Connecting) {
+							const Uint16 clientVersion = msg.readU16();
+
+							if (clientVersion != Protocol::CURRENT_SCHEMA_VERSION) {
+								BT_WARN(
+									"NetworkIOWorker: Peer {} schema mismatch "
+									"(client v{}, server v{}) — disconnecting",
+									peer.id, clientVersion,
+									Protocol::CURRENT_SCHEMA_VERSION
+								);
+
+								peer.tcpSocket->close();
+								peer.state = Connection::PeerState::Disconnected;
+								peer.tcpConnected = false;
+								peer.udpConnected = false;
+								registry->tcpMap().erase(peer.tcpAddress);
+								registry->udpMap().erase(peer.udpAddress);
+
+								deferred.push_back({
+									ConnectionEventType::Disconnect, peer.id, {}
+								});
+
+								break;
+							}
+
 							Core::ByteBuffer ackBuf;
 							Protocol::PacketHeader ackHdr;
 							ackHdr.packetType = Protocol::PacketType::ConnectAck;
+							ackHdr.payloadLength = sizeof(Uint16);
 							ackHdr.serialize(ackBuf);
+							ackBuf.writeU16(Protocol::CURRENT_SCHEMA_VERSION);
 							peer.tcpChannel->send(*peer.tcpSocket, ackBuf);
 
 							peer.state = Connection::PeerState::Connected;
 							peer.tcpConnected = true;
+							peer.negotiatedSchemaVersion = clientVersion;
 
 							Core::ByteBuffer portBuf;
 							Protocol::PacketHeader portHdr;
@@ -382,8 +415,10 @@ void NetworkIOWorker::pollTCP() {
 							portBuf.writeU16(udpSocket->getLocalAddress().port());
 							peer.tcpChannel->send(*peer.tcpSocket, portBuf);
 
-							BT_LOG("NetworkIOWorker: Peer {} handshake complete (server)",
-								peer.id);
+							BT_LOG(
+								"NetworkIOWorker: Peer {} handshake complete (server, schema v{})",
+								peer.id, clientVersion
+							);
 
 							deferred.push_back({
 								ConnectionEventType::Connect,
@@ -397,6 +432,8 @@ void NetworkIOWorker::pollTCP() {
 
 					case Protocol::PacketType::ConnectAck: {
 						if (peer.state == Connection::PeerState::Connecting) {
+							const Uint16 acceptedVersion = msg.readU16();
+							peer.negotiatedSchemaVersion = acceptedVersion;
 							peer.state = Connection::PeerState::Connected;
 							peer.tcpConnected = true;
 
@@ -408,8 +445,11 @@ void NetworkIOWorker::pollTCP() {
 							portBuf.writeU16(udpSocket->getLocalAddress().port());
 							peer.tcpChannel->send(*peer.tcpSocket, portBuf);
 
-							BT_LOG("NetworkIOWorker: Peer {} handshake complete (client)",
-								peer.id);
+							BT_LOG(
+								"NetworkIOWorker: Peer {} handshake complete (client, schema v{})",
+								peer.id, acceptedVersion
+							);
+
 							deferred.push_back({
 								ConnectionEventType::Connect,
 								peer.id,

@@ -99,6 +99,10 @@ struct BLACKTHORN_API NetworkPeer {
 	/// ConnectionManager::setPeerRateLimit().
 	PeerRateLimiter rateLimiter;
 
+	/// Schema version agreed during the TCP handshake.
+	/// 0 = not yet negotiated (peer is still Connecting).
+	Uint16 negotiatedSchemaVersion = 0;
+
 	/** @brief Returns true if the peer is in the Connected state. */
 	bool isConnected() const noexcept {
 		return (tcpConnected && tcpSocket != nullptr) || udpConnected;

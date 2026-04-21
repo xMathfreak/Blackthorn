@@ -29,12 +29,34 @@ void PacketDispatcher::poll(Jobs::JobSystem* jobs) {
 
 		if (!header.isValid()) {
 			BT_WARN(
-				"PacketDispatcher: Dropped packet from peer {} - "
-				"bad magic or schema version",
+				"PacketDispatcher: Dropped packet from peer {} — bad magic",
 				packet.peerId
 			);
 
 			continue;
+		}
+
+		{
+			std::lock_guard<std::mutex> lock(registry->mutex());
+			const auto* peer = [&]() -> const Connection::NetworkPeer* {
+				const auto& list = registry->peerList();
+				if (packet.peerId >= list.size())
+					return nullptr;
+
+				return &list[packet.peerId];
+			}();
+
+			if (!peer || peer->negotiatedSchemaVersion != Protocol::CURRENT_SCHEMA_VERSION) {
+				BT_WARN(
+					"PacketDispatcher: Dropped packet from peer {} — "
+					"schema version mismatch (peer v{}, local v{})",
+					packet.peerId,
+					peer ? peer->negotiatedSchemaVersion : 0,
+					Protocol::CURRENT_SCHEMA_VERSION
+				);
+
+				continue;
+			}
 		}
 
 		const Uint32 actualBytes = static_cast<Uint32>(packet.data.remaining());

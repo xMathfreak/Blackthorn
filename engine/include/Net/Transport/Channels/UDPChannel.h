@@ -24,7 +24,7 @@ namespace Blackthorn::Net::Transport::Channels {
  * @endcode
  *
  * Total UDP overhead per datagram:
- * 8 bytes (@c UDPHeader) + 24 bytes (@c PacketHeader) = 32 bytes.
+ * 8 bytes (@c UDPHeader) + 12 bytes (@c PacketHeader) = 20 bytes.
  */
 struct BLACKTHORN_API UDPHeader {
 	static constexpr size_t SERIALIZED_SIZE = 8;
@@ -50,8 +50,6 @@ static_assert(
 	(2 * sizeof(Uint16) + sizeof(Uint32)) == UDPHeader::SERIALIZED_SIZE,
 	"UDPHeader wire field sizes do not sum to SERIALIZED_SIZE"
 );
-
-// ---------------------------------------------------------------------------
 
 /**
  * @brief Per-peer UDP state machine: sequence numbers, ACK bitfield, and
@@ -99,8 +97,9 @@ public:
 	 * @brief Minimum valid inbound datagram size, in bytes.
 	 *
 	 * Every datagram must carry at least a @c UDPHeader (8 bytes) and a
-	 * @c PacketHeader (24 bytes). Anything smaller cannot be a valid packet
-	 * and is dropped by @c ConnectionManager::pollUDP() before peer lookup.
+	 * @c PacketHeader (12 bytes) = 20 bytes minimum. Anything smaller cannot
+	 * be a valid packet and is dropped by @c NetworkIOWorker::pollUDP()
+	 * before peer lookup.
 	 */
 	static constexpr size_t MIN_DATAGRAM_SIZE =
 		UDPHeader::SERIALIZED_SIZE + Protocol::PacketHeader::SERIALIZED_SIZE;

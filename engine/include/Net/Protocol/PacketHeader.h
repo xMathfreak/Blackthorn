@@ -14,8 +14,8 @@ namespace Blackthorn::Net::Protocol {
  * is additive — existing values must never be renumbered.
  */
 enum class PacketType : Uint8 {
-	ConnectRequest = 0x0, ///< Connection request.
-	ConnectAck = 0x01, ///< Connection acknowledgement.
+	ConnectRequest = 0x0, ///< Connection request (carries local schema version).
+	ConnectAck = 0x01, ///< Connection acknowledgement (carries accepted schema version).
 	Disconnect = 0x02, ///< Graceful disconnect notification.
 
 	Heartbeat = 0x03, ///< Keep-alive with no payload.
@@ -23,9 +23,26 @@ enum class PacketType : Uint8 {
 
 	UDPPortInfo = 0x5, ///< Info containing a UDP port. Must have a 16 bit payload.
 
+	AuthRequest = 0x06, ///< Authentication Request.
+	AuthResponse = 0x07, ///< Authentication Response.
+	AuthToken = 0x08, ///< Session token for persistent connection.
+
 	Snapshot = 0x10, ///< Full or delta entity snapshot (raw binary payload).
 	Input = 0x11, ///< Client input stream (bit-packed payload).
 	Message = 0x12, ///< Tagged message (spawn, despawn, ability, UI event).
+
+	ChatMessage = 0x20, ///< General chat message.
+	Whisper = 0x21, ///< Private message between players.
+	SystemMessage = 0x22, ///< Message broadcasted by the system.
+
+	FileRequest = 0x30, ///< Request for file or asset.
+	FileData = 0x31, ///< File chunk data.
+	FileAck = 0x32, ///< Acknowledgement for file chunk receipt.
+	FileSync = 0x33, ///< File synchronization or patching.
+	FileTransferComplete = 0x34, ///< Indicates the ending of a file transfer.
+
+	Ping = 0x40, ///< Measure round-trip latency.
+	Pong = 0x41, ///< Response to ping.
 };
 
 /**
@@ -87,90 +104,102 @@ inline PacketFlags clearFlag(PacketFlags flags, PacketFlags flag) {
 }
 
 /**
- * @brief Fixed 24-byte header written at the start of every packet.
+ * @brief Schema version negotiated during the TCP handshake.
+ *
+ * Carried in the @c ConnectRequest and @c ConnectAck payloads,
+ * then stored per-peer in @c NetworkPeer::negotiatedSchemaVersion.
+ */
+static constexpr Uint16 CURRENT_SCHEMA_VERSION = 1;
+
+/**
+ * @brief Fixed 12-byte header written at the start of every packet.
  *
  * Layout (little-endian, all fields mandatory):
  * @code
  * Offset  Size  Field
- *      0     8  tick           (SimClock tick at time of send)
- *      8     4  magic          (0x424C4B54 == "BLKT")
- *     12     4  reserved
- *     16     4  payloadLength  (bytes following this header)
- *     20     2  schemaVersion  (bumped on any breaking wire format change)
- *     22     1  packetType     (PacketType enum)
- *     23     1  flags          (PacketFlags bitmask)
+ *      0     2  magic          (0x4254 == "BT")
+ *      2     2  payloadLength  (bytes following this header, max 65535)
+ *      4     4  tick           (SimClock tick at time of send)
+ *      8     1  packetType     (PacketType enum)
+ *      9     1  flags          (PacketFlags bitmask)
+ *     10     2  reserved       (Keeps alignment)
  * @endcode
- * Total: 24 bytes.
+ * Total: 12 bytes.
  *
- * The magic constant lets receivers quickly reject garbage data without
- * attempting to interpret it. `schemaVersion` gates the payload parser —
- * if the version is unrecognised the packet is dropped before any payload
- * bytes are read.
+ * @par Schema version
+ * Schema version is negotiated once during the TCP handshake
+ * (@c ConnectRequest / @c ConnectAck payloads) and stored per-peer
+ * in @c NetworkPeer::negotiatedSchemaVersion.
+ *
+ * @par Tick
+ * A 32 bit simulation tick counter. Wrap around is handled by
+ * @c tickisNewer().
+ *
+ * @par Payload Length
+ * Maximum value is 65535. TCP messages larger than this are rejected
+ * by @c TCPChannel. UDP datagrams are constrained by the practical MTU
+ * (1400 bytes) in @c UDPChannel.
+ *
  */
 struct BLACKTHORN_API PacketHeader {
-	static constexpr Uint32 MAGIC = 0x424C4B54u; // "BLKT"
-	static constexpr size_t SERIALIZED_SIZE = 24;
+	static constexpr Uint16 MAGIC = 0x4254u; // "BT"
+	static constexpr size_t SERIALIZED_SIZE = 12;
 
-	/// Current schema version. Bump this whenever the wire format changes
-	/// in a way that is not backwards compatible.
-	static constexpr Uint16 CURRENT_SCHEMA_VERSION = 1;
-
-	Uint64 tick = 0;
-	Uint32 magic = MAGIC;
-	Uint32 reserved = 0;
-	Uint32 payloadLength = 0;
-	Uint16 schemaVersion = CURRENT_SCHEMA_VERSION;
+	Uint16 magic = MAGIC;
+	Uint16 payloadLength = 0;
+	Uint32 tick = 0;
 	PacketType packetType = PacketType::Heartbeat;
 	PacketFlags flags = PacketFlags::None;
+	Uint16 reserved = 0;
 
 	/**
-	 * @brief Serializes the header into `buf` in the fixed 24-byte layout.
+	 * @brief Serializes the header into `buf` in the fixed 12-byte layout.
 	 * @param buf Destination buffer.
 	 */
 	void serialize(Core::ByteBuffer& buf) const {
-		buf.writeU32(magic);
-		buf.writeU16(schemaVersion);
-		buf.writeU32(payloadLength);
-		buf.writeU64(tick);
+		buf.writeU16(magic);
+		buf.writeU16(payloadLength);
+		buf.writeU32(tick);
 		buf.writeU8(static_cast<Uint8>(packetType));
 		buf.writeU8(static_cast<Uint8>(flags));
-		buf.writeU32(reserved);
+		buf.writeU16(reserved);
 	}
 
 	/**
 	 * @brief Deserializes a header from `buf`.
 	 *
-	 * Does not validate the magic value or schema version. Call
-	 * `isValid()` after deserializing to check both.
+	 * Does not validate the magic value. Call `isValid()`
+	 * after deserializing to check.
 	 *
 	 * @param buf Source buffer positioned at the start of the header.
 	 */
 	void deserialize(Core::ByteBuffer& buf) {
-		magic = buf.readU32();
-		schemaVersion = buf.readU16();
-		payloadLength = buf.readU32();
-		tick = buf.readU64();
+		magic = buf.readU16();
+		payloadLength = buf.readU16();
+		tick = buf.readU32();
 		packetType = static_cast<PacketType>(buf.readU8());
 		flags = static_cast<PacketFlags>(buf.readU8());
-		reserved = buf.readU32();
+		reserved = buf.readU16();
 	}
 
 	/**
-	 * @brief Returns true if the magic constant matches and the schema
-	 * version is the one this build understands.
+	 * @brief Returns true if the magic constant matches.
 	 */
 	bool isValid() const {
-		return magic == MAGIC && schemaVersion == CURRENT_SCHEMA_VERSION;
+		return magic == MAGIC;
 	}
 };
 
 static_assert(
-	sizeof(Uint64) +
-	sizeof(Uint32) * 3 +
-	sizeof(Uint16) +
+	sizeof(Uint32) * 1 +
+	sizeof(Uint16) * 3 +
 	sizeof(Uint8) * 2
 	== PacketHeader::SERIALIZED_SIZE,
-	"PacketHeader: serialized field sizes do not sum to SERIALIZED_SIZE"
+	"PacketHeader: Serialized field sizes do not sum to SERIALIZED_SIZE"
 );
+
+inline bool tickIsNewer(Uint32 a, Uint32 b) noexcept {
+	return static_cast<Sint32>(a - b) > 0;
+}
 
 } // namespace Blackthorn::Net::Protocol

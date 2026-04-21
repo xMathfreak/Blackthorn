@@ -251,6 +251,21 @@ public:
 		buffer[offset + 3] = static_cast<Uint8>(v >> 24);
 	}
 
+	/**
+	 * @brief Overwrites 2 bytes at `offset` with `v` in little-endian order.
+	 *
+	 * Used to back-patch length or size fields written before the data
+	 * that determines their value.
+	 *
+	 * @param offset Byte offset of the field to overwrite.
+	 * @param v      Value to write.
+	 */
+	void patchU16(size_t offset, Uint16 v) {
+		assert(offset + 2 <= buffer.size());
+		buffer[offset] = static_cast<Uint8>(v);
+		buffer[offset + 1] = static_cast<Uint8>(v >> 8);
+	}
+
 	/** @brief Returns a pointer to the raw buffer contents. */
 	const Uint8* data() const { return buffer.data(); }
 
