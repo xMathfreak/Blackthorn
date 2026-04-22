@@ -18,9 +18,9 @@ namespace Blackthorn::Net::Transport::Channels {
  * @details Wire layout (8 bytes, little-endian):
  *
  * @code
- * uint16 seq     — outbound sequence number of this packet
- * uint16 ack     — last inbound sequence number received from the remote peer
- * uint32 ackBits — bitmask: bit i set means (ack - 1 - i) was also received
+ * uint16 seq     - outbound sequence number of this packet
+ * uint16 ack     - last inbound sequence number received from the remote peer
+ * uint32 ackBits - bitmask: bit i set means (ack - 1 - i) was also received
  * @endcode
  *
  * Total UDP overhead per datagram:

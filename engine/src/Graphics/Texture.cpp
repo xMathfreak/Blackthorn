@@ -211,7 +211,7 @@ bool Texture::loadFromMemory(int w, int h, int ch, const void* data, const Textu
 		glDeleteTextures(1, &id);
 
 	if (data == nullptr || w <= 0 || h <= 0 || ch < 1 || ch > 4) {
-		BT_ERROR("Invalid texture parameters");
+		BT_ERROR("Texture: Creation failed - invalid parameters (w: {}, h: {}, channels: {})", w, h, ch);
 		return false;
 	}
 
@@ -320,7 +320,7 @@ void Texture::destroy() {
 
 void Texture::bind(GLuint slot) const {
 	if (id == 0) {
-		BT_WARN("Attempting to bind invalid an invalid texture");
+		BT_WARN("Texture: Bind skipped - invalid texture (id: 0)");
 		return;
 	}
 
@@ -335,14 +335,18 @@ void Texture::unbind(GLuint slot) {
 
 void Texture::updateRegion(int x, int y, int w, int h, const void* data) {
 	if (id == 0 || data == nullptr) {
-		BT_ERROR("Cannot update invalid texture");
+		BT_ERROR(
+			"Texture: Update failed - {}",
+			id == 0 ? "invalid texture" : "null data"
+		);
 		return;
 	}
 
 	if (x < 0 || y < 0 || x + w > width || y + h > height) {
-		BT_ERROR("Texture update region out of bounds ({}, {}, {}, {}) for {} x {}",
-			x, y, w, h, width, height
-		);
+		BT_ERROR(
+			"Texture: Update failed - region out of bounds (x: {}, y: {}, w: {}, h: {}, tex: {}x{})",
+    		x, y, w, h, width, height
+    	);
 		return;
 	}
 

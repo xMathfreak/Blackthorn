@@ -26,7 +26,7 @@ namespace Connection {
  * @par Peer lifecycle
  *
  * Peers are allocated into a fixed-size flat array by @c allocateSlot().
- * Slots are reused after a peer disconnects — call @c freeSlot() to reset
+ * Slots are reused after a peer disconnects - call @c freeSlot() to reset
  * a slot and remove its address mappings.
  *
  * @par Sending
@@ -34,7 +34,7 @@ namespace Connection {
  * Send methods live here rather than in a separate sender class because
  * every send touches peer state (@c udpChannel, @c tcpChannel) under
  * @c peerMutex. Separating them would require exposing the lock or passing
- * many references — both worse than co-location.
+ * many references - both worse than co-location.
  */
 class BLACKTHORN_API PeerRegistry {
 public:
@@ -72,7 +72,7 @@ public:
 	/**
 	 * @brief Looks up a peer, allocating a new slot if not found.
 	 *
-	 * For UDP, respects @c allowUDPImplicitPeers — returns
+	 * For UDP, respects @c allowUDPImplicitPeers - returns
 	 * @c INVALID_PEER_ID without allocating if the flag is false.
 	 *
 	 * @param address Source address.

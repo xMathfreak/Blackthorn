@@ -128,7 +128,7 @@ public:
 	/**
 	 * @brief Registers serialize/deserialize functions for component type T.
 	 *
-	 * Idempotent — registering the same type twice has no effect.
+	 * Idempotent - registering the same type twice has no effect.
 	 * A `ComponentSerializer<T>` specialization must be visible at the
 	 * call site (i.e. its header must be included before calling this).
 	 *

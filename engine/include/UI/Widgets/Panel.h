@@ -17,10 +17,10 @@ namespace Blackthorn::UI {
  * Panel supports three render modes, selected automatically based on what
  * has been configured:
  *
- *   Solid      — no texture set; draws a filled quad in `color`.
- *   Texture    — texture set, borderSize == 0; draws a scaled textured quad,
+ *   Solid      - no texture set; draws a filled quad in `color`.
+ *   Texture    - texture set, borderSize == 0; draws a scaled textured quad,
  *                optionally tinted by `color`.
- *   NineSlice  — texture set, borderSize  > 0; draws a nine-slice textured
+ *   NineSlice  - texture set, borderSize  > 0; draws a nine-slice textured
  *                quad so corners stay pixel-perfect at any size, optionally
  *                tinted by `color`.
  *

@@ -28,7 +28,7 @@ set(CLIENT_ONLY_SOURCES
 	"${CMAKE_CURRENT_SOURCE_DIR}/src/Graphics/VAO.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/src/Graphics/VBO.cpp"
 
-	# Fonts (TTF/bitmap — depend on SDL3_ttf and OpenGL)
+	# Fonts (TTF/bitmap - depend on SDL3_ttf and OpenGL)
 	"${CMAKE_CURRENT_SOURCE_DIR}/src/Fonts/BitmapFont.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/src/Fonts/TrueTypeFont.cpp"
 
@@ -47,7 +47,7 @@ foreach(src ${CLIENT_ONLY_SOURCES})
 endforeach()
 
 # ---------------------------------------------------------------------------
-# BlackthornEngineCore — simulation only
+# BlackthornEngineCore - simulation only
 #
 # No SDL3_image, no SDL3_ttf, no glad, no OpenGL, no UIManager.
 # Server binaries link only this target.
@@ -95,7 +95,7 @@ if(WIN32)
 endif()
 
 # ---------------------------------------------------------------------------
-# BlackthornEngine — full client build
+# BlackthornEngine - full client build
 #
 # Links BlackthornEngineCore and adds all graphics-related dependencies.
 # Client binaries link this target (which transitively brings in Core).
@@ -185,7 +185,7 @@ foreach(TARGET BlackthornEngineCore BlackthornEngine)
 endforeach()
 
 # ---------------------------------------------------------------------------
-# Windows DLL copy — client target only
+# Windows DLL copy - client target only
 # ---------------------------------------------------------------------------
 
 if(WIN32)

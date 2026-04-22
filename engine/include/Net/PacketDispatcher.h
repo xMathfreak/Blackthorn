@@ -55,7 +55,7 @@ using DisconnectHandler = std::function<void(
  * @c ConnectHandler, @c DisconnectHandler, and (when @p jobs is nullptr)
  * @c PacketHandler are always called on the simulation thread inside
  * @c poll(). When @p jobs is non-null, @c PacketHandler is called on a
- * worker thread — callers must ensure the handler is safe to invoke
+ * worker thread - callers must ensure the handler is safe to invoke
  * concurrently with other simulation work that runs between two @c poll()
  * calls.
  */
@@ -84,7 +84,7 @@ public:
 	void onConnect(ConnectHandler h) { connectHandler = std::move(h); }
 	void onDisconnect(DisconnectHandler h) { disconnectHandler = std::move(h); }
 
-	/** @brief Inbound packet queue — written by @c NetworkIOWorker. */
+	/** @brief Inbound packet queue - written by @c NetworkIOWorker. */
 	Transport::DefaultPacketQueue inboundQueue;
 
 	Connection::PeerRegistry* registry = nullptr;

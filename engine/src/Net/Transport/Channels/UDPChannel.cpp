@@ -38,7 +38,7 @@ Sockets::SocketResult UDPChannel::send(
 
 	if (datagram.size() > PRACTICAL_MTU) {
 		BT_WARN(
-			"UDPChannel: datagram size {} exceeds practical MTU {} — "
+			"UDPChannel: datagram size {} exceeds practical MTU {} - "
 			"may be dropped on internet paths. Consider reducing payload "
 			"size or implementing fragmentation.",
 			datagram.size(), PRACTICAL_MTU
@@ -112,7 +112,7 @@ void UDPChannel::enqueueRetransmit(Uint16 seq, const Core::ByteBuffer& payload) 
 		}
 	}
 
-	BT_WARN("UDPChannel: retransmit queue full — reliable packet seq {} dropped", seq);
+	BT_WARN("UDPChannel: retransmit queue full - reliable packet seq {} dropped", seq);
 }
 
 void UDPChannel::acknowledgeSeq(Uint16 seq) {

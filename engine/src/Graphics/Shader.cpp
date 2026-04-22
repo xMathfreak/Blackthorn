@@ -52,14 +52,11 @@ GLuint Shader::compileShader(const std::string& source, GLenum type) {
 
 		glDeleteShader(shader);
 
-		std::string errorMsg = std::string(shaderTypeToString(type)) + " shader compilation failed:\n" + log;
-
-		BT_ERROR("{}", errorMsg);
-
-		throw std::runtime_error(errorMsg);
+		BT_ERROR("Shader: Compilation failed ({}):\n{}", shaderTypeToString(type), log);
+		throw std::runtime_error("Shader compilation failed");
 	}
 
-	BT_DEBUG("{} shader compiled successfully", shaderTypeToString(type));
+	BT_DEBUG("Shader: Compiled ({})", shaderTypeToString(type));
 	return shader;
 }
 
@@ -85,10 +82,8 @@ void Shader::linkProgram(GLuint vertexShader, GLuint fragmentShader) {
 		glDeleteProgram(programID);
 		programID = 0;
 
-		std::string errorMsg = "Shader program linking failed:\n" + log;
-		BT_ERROR("{}", errorMsg);
-
-		throw std::runtime_error(errorMsg);
+		BT_ERROR("Shader: Linking failed:\n{}", log);
+		throw std::runtime_error("Shader linking failed");
 	}
 
 	BT_DEBUG("Shader program linked successfully (ID: {})", programID);
@@ -98,7 +93,7 @@ void Shader::linkProgram(GLuint vertexShader, GLuint fragmentShader) {
 }
 
 Shader::Shader(const std::string& vertexPath, const std::string& fragmentPath) {
-	BT_DEBUG("Loading shader: {}, {}", vertexPath, fragmentPath);
+	BT_DEBUG("Shader: Loading (vertex: {}, fragment: {})", vertexPath, fragmentPath);
 
 	try {
 		std::string vertexSource = readFile(vertexPath);

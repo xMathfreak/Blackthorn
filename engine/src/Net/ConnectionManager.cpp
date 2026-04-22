@@ -113,7 +113,7 @@ void ConnectionManager::disconnect(Connection::PeerId peerId) {
 	registry.tcpMap().erase(peer.tcpAddress);
 	registry.udpMap().erase(peer.udpAddress);
 
-	BT_LOG("ConnectionManager: Peer {} disconnected", peerId);
+	BT_DEBUG("ConnectionManager: Peer {} disconnected", peerId);
 }
 
 bool ConnectionManager::sendUDP(

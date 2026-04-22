@@ -29,7 +29,7 @@ void PacketDispatcher::poll(Jobs::JobSystem* jobs) {
 
 		if (!header.isValid()) {
 			BT_WARN(
-				"PacketDispatcher: Dropped packet from peer {} — bad magic",
+				"PacketDispatcher: Dropped packet from peer {} - bad magic",
 				packet.peerId
 			);
 
@@ -48,7 +48,7 @@ void PacketDispatcher::poll(Jobs::JobSystem* jobs) {
 
 			if (!peer || peer->negotiatedSchemaVersion != Protocol::CURRENT_SCHEMA_VERSION) {
 				BT_WARN(
-					"PacketDispatcher: Dropped packet from peer {} — "
+					"PacketDispatcher: Dropped packet from peer {} - "
 					"schema version mismatch (peer v{}, local v{})",
 					packet.peerId,
 					peer ? peer->negotiatedSchemaVersion : 0,

@@ -77,7 +77,7 @@ public:
 	 * @brief Stores a typed output pointer produced by a contributing job.
 	 *
 	 * The pointer must remain valid until all downstream consumers have
-	 * finished reading it. Ownership is not transferred — the job lambda
+	 * finished reading it. Ownership is not transferred - the job lambda
 	 * is responsible for the buffer lifetime.
 	 *
 	 * @tparam T Output type.
@@ -118,7 +118,7 @@ private:
 
 	// Lock-free intrusive singly-linked list of continuations.
 	// Head == nullptr means empty. Head == COMPLETE_SENTINEL means the
-	// handle has already fired — used to handle the race between
+	// handle has already fired - used to handle the race between
 	// addContinuation and signal.
 	std::atomic<Continuation*> continuationHead { nullptr };
 

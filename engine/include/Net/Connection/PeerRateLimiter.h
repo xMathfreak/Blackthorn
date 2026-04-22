@@ -66,7 +66,7 @@ struct RateLimitConfig {
  * @details Each inbound packet is passed to @c update(), which advances
  * the limiter's internal sliding window and violation scores, then returns
  * the current @c RateLimitStage. The caller decides what to do based on
- * the returned stage — typically drop the packet or disconnect the peer.
+ * the returned stage - typically drop the packet or disconnect the peer.
  *
  * @par Stage transitions
  *
@@ -105,10 +105,6 @@ struct BLACKTHORN_API PeerRateLimiter {
 	/// optionally overridden per-peer afterwards).
 	RateLimitConfig cfg;
 
-	// -----------------------------------------------------------------------
-	// Sliding window state (two 500ms buckets)
-	// -----------------------------------------------------------------------
-
 	/// Timestamp at which the current bucket started, in ms.
 	Uint64 bucketStartMs = 0;
 
@@ -123,10 +119,6 @@ struct BLACKTHORN_API PeerRateLimiter {
 
 	/// Byte count in the previous 500ms bucket.
 	Uint32 prevBucketBytes = 0;
-
-	// -----------------------------------------------------------------------
-	// Violation scores
-	// -----------------------------------------------------------------------
 
 	/// Accumulated Stage 2 violation score. Triggers Warn when it
 	/// exceeds @c cfg.stage2Threshold.

@@ -125,7 +125,7 @@ public:
 	 * @brief Resolves a hostname to an address, preferring IPv4.
 	 *
 	 * Performs a blocking `getaddrinfo` call. Do not call this on the
-	 * simulation or I/O thread — resolve addresses at startup or on a
+	 * simulation or I/O thread - resolve addresses at startup or on a
 	 * worker thread.
 	 *
 	 * @param hostname Hostname or numeric IP string.

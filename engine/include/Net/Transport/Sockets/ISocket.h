@@ -61,7 +61,7 @@ public:
 	/**
 	 * @brief Initiates a TCP connection to a remote address.
 	 *
-	 * Not applicable to UDP sockets — use `sendTo()` directly.
+	 * Not applicable to UDP sockets - use `sendTo()` directly.
 	 *
 	 * @param address Remote address to connect to.
 	 * @return true if the connection was initiated successfully. In

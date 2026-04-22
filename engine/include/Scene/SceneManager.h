@@ -15,7 +15,7 @@ namespace Blackthorn::Scene {
  * @brief Simulation-only scene stack manager.
  *
  * Drives `fixedUpdate`, `update`, and `lateUpdate` across the scene stack.
- * No render step — that is provided by `ClientSceneManager` in the client
+ * No render step - that is provided by `ClientSceneManager` in the client
  * build.
  *
  * Used directly by `EngineBase` and the dedicated server. `Engine` replaces

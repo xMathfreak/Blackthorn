@@ -24,10 +24,9 @@ Logger::~Logger() {
 void Logger::init(const LoggerConfig& cfg) {
 	std::lock_guard<std::mutex> lock(mutex);
 
-	if (file.is_open()) {
-		writeSessionFooter();
+	if (file.is_open())
 		file.close();
-	}
+
 
 	config = cfg;
 	sdlMirror = cfg.mirrorToSDL;
@@ -41,7 +40,6 @@ void Logger::init(const LoggerConfig& cfg) {
 	openFile();
 
 	if (file.is_open()) {
-		writeSessionHeader();
 		initialized = true;
 	}
 }
@@ -53,7 +51,6 @@ void Logger::shutdown() {
 		return;
 
 	if (file.is_open()) {
-		writeSessionFooter();
 		file.flush();
 		file.close();
 	}
@@ -116,32 +113,6 @@ void Logger::openFile() {
 	}
 }
 
-void Logger::writeSessionHeader() {
-	auto now = std::chrono::system_clock::now();
-	std::time_t t = std::chrono::system_clock::to_time_t(now);
-	std::tm tm{};
-
-	#ifdef _WIN32
-		localtime_s(&tm, &t);
-	#else
-		localtime_r(&t, &tm);
-	#endif
-
-	char dateBuf[32];
-	std::strftime(dateBuf, sizeof(dateBuf), "%Y-%m-%d %H:%M:%S", &tm);
-
-	file << "================================================================\n"
-		 << "  Blackthorn Engine  |  Session started: " << dateBuf << "\n"
-		 << "================================================================\n";
-	file.flush();
-}
-
-void Logger::writeSessionFooter() {
-	file << "================================================================\n"
-		 << "  Session ended\n"
-		 << "================================================================\n";
-}
-
 std::string Logger::formatEntry(LogLevel level, std::string_view message, const char* srcFile, int srcLine) {
 	auto now = std::chrono::system_clock::now();
 	std::time_t t = std::chrono::system_clock::to_time_t(now);
@@ -158,13 +129,7 @@ std::string Logger::formatEntry(LogLevel level, std::string_view message, const 
 
 	std::string threadName = Threads::ThreadRegistry::instance().currentName();
 
-	if (threadName.size() < 11) {
-		threadName.resize(11, ' ');
-	} else if (threadName.size() > 11) {
-		threadName = threadName.substr(0, 11);
-	}
-
-	std::string entry = std::format("[{}] [{}] [{}] {}", timeBuf, levelTag(level), threadName, message);
+	std::string entry = std::format("[{}] [{:<5}] [{}] {}", timeBuf, levelTag(level), threadName, message);
 
 	if (srcFile && srcLine > 0)
 		entry += std::format("  ({}:{})", stripPath(srcFile), srcLine);
@@ -175,17 +140,17 @@ std::string Logger::formatEntry(LogLevel level, std::string_view message, const 
 const char* Logger::levelTag(LogLevel level) {
 	switch (level) {
 		case LogLevel::Error:
-			return "ERROR  ";
+			return "ERROR";
 		case LogLevel::Warning:
-			return "WARN   ";
+			return "WARN";
 		case LogLevel::Info:
-			return "INFO   ";
-		case LogLevel::Verbose:
-			return "VERBOSE";
+			return "INFO";
+		case LogLevel::Trace:
+			return "TRACE";
 		case LogLevel::Debug:
-			return "DEBUG  ";
+			return "DEBUG";
 		default:
-			return "???????";
+			return "UNKNOWN";
 	}
 }
 

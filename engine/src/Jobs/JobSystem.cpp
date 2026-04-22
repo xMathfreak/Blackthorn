@@ -44,8 +44,7 @@ JobSystem::JobSystem(size_t workerCount) {
 		});
 	}
 
-	BT_DEBUG("JobSystem initialised ({} worker thread{})",
-		workerCount, workerCount == 1 ? "" : "s");
+	BT_DEBUG("JobSystem: Initialized (Workers: {})", workerCount);
 }
 
 JobSystem::~JobSystem() {

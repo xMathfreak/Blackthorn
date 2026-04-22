@@ -14,22 +14,22 @@ namespace Blackthorn::Debug {
 /**
  * @brief Controls which messages the Logger writes.
  *
- * Ordered by verbosity — a message is emitted only when its level is <=
+ * Ordered by verbosity - a message is emitted only when its level is <=
  * the currently configured level:
  *
- *   Silent   — Nothing is written.
- *   Error    — Only errors.
- *   Warning  — Errors + warnings.
- *   Info     — Errors + warnings + informational messages  (Release default).
- *   Verbose  — All of the above + verbose trace detail.
- *   Debug    — Everything, including fine-grained debug output  (Debug default).
+ *   Silent   - Nothing is written.
+ *   Error    - Only errors.
+ *   Warning  - Errors + warnings.
+ *   Info     - Errors + warnings + informational messages  (Release default).
+ *   Trace  - All of the above + verbose trace detail.
+ *   Debug    - Everything, including fine-grained debug output  (Debug default).
  */
 enum class LogLevel : int {
 	Silent   = 0,
 	Error    = 1,
 	Warning  = 2,
 	Info     = 3,
-	Verbose  = 4,
+	Trace    = 4,
 	Debug    = 5,
 };
 
@@ -60,25 +60,28 @@ struct BLACKTHORN_API LoggerConfig {
  * @brief Thread-safe file logger with compile-time validated format strings.
  *
  * @section lifecycle Lifecycle
- * ---------
- *   `Logger::instance().init(config);`
- *   `BT_LOG("Engine started");`
- *   `Logger::instance().shutdown();`
+ * @code
+ * Logger::instance().init(config);
+ * BT_LOG("Engine started");
+ * Logger::instance().shutdown();
+ * @endcode
  *
  * @section format Log entry format
- * ----------------
- *   [HH:MM:SS] [LEVEL  ] [ThreadName] message  (filename:line)
+ * @code
+ * [HH:MM:SS] [LEVEL  ] [ThreadName] message  (filename:line)
+ * @endcode
  *
  * The source location suffix is only appended in Debug builds via the BT_*
  * macros, which inject __FILE__ and __LINE__ automatically.
  *
  * @section runtime_strings Runtime strings
- * ---------------
  * Because format strings must be compile-time constants, a pre-built
  * std::string must be passed through a format specifier:
  *
- *   std::string msg = buildMessage();
- *   BT_ERROR("{}", msg);
+ * @code
+ * std::string msg = buildMessage();
+ * BT_ERROR("{}", msg);
+ * @endcode
  */
 class BLACKTHORN_API Logger {
 public:
@@ -172,8 +175,8 @@ public:
 	}
 
 	template <typename... Args>
-	void verbose(std::format_string<Args...> fmt, Args&&... args) {
-		log(LogLevel::Verbose, fmt, std::forward<Args>(args)...);
+	void trace(std::format_string<Args...> fmt, Args&&... args) {
+		log(LogLevel::Trace, fmt, std::forward<Args>(args)...);
 	}
 
 	template <typename... Args>
@@ -186,10 +189,6 @@ private:
 
 	/// Open (or re-open) the log file, creating the directory if needed.
 	void openFile();
-
-	/// Write a formatted session divider + timestamp line to the open file.
-	void writeSessionHeader();
-	void writeSessionFooter();
 
 	/// Build a complete, formatted log entry string.
 	static std::string formatEntry(
@@ -236,12 +235,12 @@ private:
 	#define BT_LOG(...)     ::Blackthorn::Debug::Logger::instance().log(::Blackthorn::Debug::LogLevel::Info,    __FILE__, __LINE__, __VA_ARGS__)
 	#define BT_WARN(...)    ::Blackthorn::Debug::Logger::instance().log(::Blackthorn::Debug::LogLevel::Warning, __FILE__, __LINE__, __VA_ARGS__)
 	#define BT_ERROR(...)   ::Blackthorn::Debug::Logger::instance().log(::Blackthorn::Debug::LogLevel::Error,   __FILE__, __LINE__, __VA_ARGS__)
-	#define BT_VERBOSE(...) ::Blackthorn::Debug::Logger::instance().log(::Blackthorn::Debug::LogLevel::Verbose, __FILE__, __LINE__, __VA_ARGS__)
+	#define BT_TRACE(...) ::Blackthorn::Debug::Logger::instance().log(::Blackthorn::Debug::LogLevel::Trace, __FILE__, __LINE__, __VA_ARGS__)
 	#define BT_DEBUG(...)   ::Blackthorn::Debug::Logger::instance().log(::Blackthorn::Debug::LogLevel::Debug,   __FILE__, __LINE__, __VA_ARGS__)
 #else
 	#define BT_LOG(...)     ::Blackthorn::Debug::Logger::instance().log(::Blackthorn::Debug::LogLevel::Info,    nullptr, 0, __VA_ARGS__)
 	#define BT_WARN(...)    ::Blackthorn::Debug::Logger::instance().log(::Blackthorn::Debug::LogLevel::Warning, nullptr, 0, __VA_ARGS__)
 	#define BT_ERROR(...)   ::Blackthorn::Debug::Logger::instance().log(::Blackthorn::Debug::LogLevel::Error,   nullptr, 0, __VA_ARGS__)
-	#define BT_VERBOSE(...) ::Blackthorn::Debug::Logger::instance().log(::Blackthorn::Debug::LogLevel::Verbose, nullptr, 0, __VA_ARGS__)
+	#define BT_TRACE(...) ::Blackthorn::Debug::Logger::instance().log(::Blackthorn::Debug::LogLevel::Trace, nullptr, 0, __VA_ARGS__)
 	#define BT_DEBUG(...)   ::Blackthorn::Debug::Logger::instance().log(::Blackthorn::Debug::LogLevel::Debug,   nullptr, 0, __VA_ARGS__)
 #endif

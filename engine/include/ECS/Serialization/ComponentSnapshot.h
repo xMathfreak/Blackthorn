@@ -39,7 +39,7 @@ struct SnapshotEntity {
  *   [uint32  networkId]
  *   [uint64  componentMask]
  *   per set bit i in componentMask (low to high):
- *     [N bytes — fixed layout per ComponentSerializer<T> specialization]
+ *     [N bytes - fixed layout per ComponentSerializer<T> specialization]
  * @endcode
  *
  * This payload is intended to follow a `Net::PacketHeader` with
@@ -241,7 +241,7 @@ public:
 	 * mask order into the matching component arrays in `pool`. Components
 	 * not present in the pool are skipped.
 	 *
-	 * Safe to call before the next `readNext()` — it reads from the stored
+	 * Safe to call before the next `readNext()` - it reads from the stored
 	 * offset rather than the live cursor.
 	 *
 	 * Typical usage after `readNext()`:
@@ -292,7 +292,7 @@ private:
 	 * @brief Advances the buffer cursor past all component data for `mask`.
 	 *
 	 * For fixed-size components (`entry->fixedSize > 0`), the cursor is
-	 * advanced directly via `ByteBuffer::skip()` — O(1), no allocation.
+	 * advanced directly via `ByteBuffer::skip()` - O(1), no allocation.
 	 *
 	 * For variable-length components (`entry->fixedSize == 0`, e.g. `Tag`
 	 * which contains a string), the data is deserialized into a discard
@@ -330,7 +330,7 @@ private:
 	 * Used exclusively by `skipComponents()` to give the deserialize
 	 * function a valid (but immediately discarded) write target. Returns
 	 * `nullptr` because the deserialize lambdas in SerializerRegistry
-	 * cast the `void*` to their concrete type before writing — passing
+	 * cast the `void*` to their concrete type before writing - passing
 	 * `nullptr` would crash them.
 	 *
 	 * Instead we allocate a small static scratch buffer aligned to

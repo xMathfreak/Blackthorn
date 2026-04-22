@@ -100,7 +100,7 @@ bool TCPSocket::connect(const Address& address) {
 	if (result == SOCKET_ERROR) {
 		int err = WSAGetLastError();
 		if (err == WSAEWOULDBLOCK || err == WSAEINPROGRESS) {
-			// Non-blocking connect in progress — poll isConnected().
+			// Non-blocking connect in progress - poll isConnected().
 			return true;
 		}
 		BT_ERROR("TCPSocket: connect failed: {}", platformError());

@@ -21,38 +21,43 @@
 
 namespace Blackthorn::Assets {
 
-// ---------------------------------------------------------------------------
-// AssetManager
-// ---------------------------------------------------------------------------
-// Unified synchronous + asynchronous asset manager.
-//
-// Both load paths share the same typed AssetStorage<T>, so an asset loaded
-// by either path is accessible via the same get<T>(id) call. The only
-// difference between the two paths from the caller's perspective is whether
-// the returned handle is immediately ready.
-//
-// Registration:
-//   // Sync only — async path not available for this type:
-//   manager.registerLoader<Texture>(make_unique<TextureLoader>());
-//
-//   // Sync + async — both paths available:
-//   manager.registerLoader<Texture>(
-//       make_unique<TextureLoader>(),
-//       make_unique<AsyncTextureLoader>()
-//   );
-//
-// Loading:
-//   AssetHandle<Texture> h1 = manager.load<Texture>("id", params);   // ready immediately
-//   AssetHandle<Texture> h2 = manager.loadAsync<Texture>("id", p);   // ready later
-//
-//   if (h2.isReady()) { Texture* t = h2.get(); }
-//   h2.wait();           // block until ready (loading screens only)
-//
-// Flushing (call once per frame before beginScene, or call flushAll from
-// a loading screen):
-//   manager.flushPendingUploads(4);
-//   manager.flushAllPendingUploads();
-// ---------------------------------------------------------------------------
+/**
+ * @class AssetManager
+ * @brief Unified synchronous and asynchronous asset manager.
+ *
+ * Both load paths share the same typed AssetStorage<T>, so an asset loaded
+ * by either path is accessible via the same get<T>(id) call. The only
+ * difference between the two paths from the caller's perspective is whether
+ * the returned handle is immediately ready.
+ *
+ * @section registration Registration
+ * @code
+ * // Sync only - async path not available for this type:
+ * manager.registerLoader<Texture>(make_unique<TextureLoader>());
+ *
+ * // Sync + async - both paths available:
+ * manager.registerLoader<Texture>(
+ *     make_unique<TextureLoader>(),
+ *     make_unique<AsyncTextureLoader>()
+ * );
+ * @endcode
+ *
+ * @section loading Loading
+ * @code
+ * AssetHandle<Texture> h1 = manager.load<Texture>("id", params);   // ready immediately
+ * AssetHandle<Texture> h2 = manager.loadAsync<Texture>("id", p);   // ready later
+ *
+ * if (h2.isReady()) { Texture* t = h2.get(); }
+ * h2.wait();           // block until ready (loading screens only)
+ * @endcode
+ *
+ * @section flushing Flushing
+ * Call once per frame before beginScene, or call flushAll from a loading screen:
+ * @code
+ * manager.flushPendingUploads(4);
+ * manager.flushAllPendingUploads();
+ * @endcode
+ */
 class BLACKTHORN_API AssetManager {
 public:
 	// workerCount == 0  →  max(1, hardware_concurrency - 1) worker threads.

@@ -146,7 +146,7 @@ public:
 		manager.add<Texture>(raw.assetID, std::move(texture));
 
 		BT_DEBUG(
-			"AsyncTextureLoader: '{}' ready — {}x{} RGBA, source '{}'",
+			"AsyncTextureLoader: '{}' ready - {}x{} RGBA, source '{}'",
 			raw.assetID, raw.width, raw.height, raw.srcPath
 		);
 	}

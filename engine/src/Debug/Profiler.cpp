@@ -71,10 +71,10 @@ void Profiler::endScope(const char* name) {
 
 	const ScopeEntry& entry = stack.back();
 
-	// Validate nesting — mismatched names indicate incorrect RAII usage.
+	// Validate nesting - mismatched names indicate incorrect RAII usage.
 	if (std::string_view(entry.name) != std::string_view(name)) {
 		BT_WARN(
-			"Profiler: scope mismatch — expected '{}', got '{}'",
+			"Profiler: scope mismatch - expected '{}', got '{}'",
 			entry.name, name
 		);
 	}
@@ -90,7 +90,7 @@ void Profiler::endScope(const char* name) {
 
 	stack.pop_back();
 
-	// Write into shared history — this is the only place we lock.
+	// Write into shared history - this is the only place we lock.
 	{
 		std::lock_guard<std::mutex> lock(historyMutex);
 

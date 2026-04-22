@@ -26,7 +26,7 @@ static constexpr PeerId INVALID_PEER_ID = 0xFFFFFFFFu;
 enum class PeerState : Uint8 {
 	Disconnected, ///< No active connection.
 	Connecting, ///< Handshake in progress (TCP connect or UDP hello).
-	Connected, ///< Fully established — simulation traffic may flow.
+	Connected, ///< Fully established - simulation traffic may flow.
 	Disconnecting, ///< Graceful shutdown in progress.
 };
 

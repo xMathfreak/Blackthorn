@@ -8,7 +8,7 @@ AssetManager::AssetManager(size_t workerCount)
 	: threadPool(workerCount)
 {
 	BT_DEBUG(
-		"AssetManager initialised ({} worker thread{})",
+		"AssetManager: Initialised ({} worker thread{})",
 		threadPool.workerCount(),
 		threadPool.workerCount() == 1 ? "" : "s"
 	);

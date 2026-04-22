@@ -24,15 +24,15 @@ namespace Blackthorn::Graphics {
  *
  * Rendering follows a strict begin/end pattern:
  *
- *   beginScene()  — binds the internal FBO, clears color + depth
+ *   beginScene()  - binds the internal FBO, clears color + depth
  *   draw calls
- *   endScene()    — flushes batches, runs the fullscreen pass to the
+ *   endScene()    - flushes batches, runs the fullscreen pass to the
  *                   default framebuffer
  *
  * The renderer owns an internal FBO with a color texture and depth
  * renderbuffer. At endScene(), a fullscreen pass draws the FBO color
  * attachment to the default framebuffer using an oversized triangle (no
- * vertex buffer — positions are generated from gl_VertexID in the shader).
+ * vertex buffer - positions are generated from gl_VertexID in the shader).
  *
  * Post-processing is supported by swapping the screen shader via
  * setScreenShader(). The built-in screen shader supports grayscale, invert,
@@ -59,7 +59,7 @@ private:
 	};
 
 private:
-	/// Default number of quads per batch — overridable at construction
+	/// Default number of quads per batch - overridable at construction
 	static constexpr Uint32 DEFAULT_MAX_QUADS = 1 << 12;
 
 	/// Maximum number of texture slots per batch
@@ -112,7 +112,7 @@ private:
 	/// Whether view frustum culling is enabled
 	bool cullingEnabled = true;
 
-	/// CPU-side vertex buffer — written each batch, uploaded via glBufferSubData
+	/// CPU-side vertex buffer - written each batch, uploaded via glBufferSubData
 	std::unique_ptr<Vertex[]> quadBuffer;
 
 	/// Pointer to the current write position within quadBuffer
@@ -278,7 +278,7 @@ public:
 	 *
 	 * When enabled (default), endScene() draws the FBO through the active
 	 * screen shader. When disabled, endScene() falls back to a raw
-	 * glBlitFramebuffer call — marginally faster but no shader effects.
+	 * glBlitFramebuffer call - marginally faster but no shader effects.
 	 */
 	void setPostProcessingEnabled(bool enabled);
 	bool isPostProcessingEnabled() const { return postProcessingEnabled; }
@@ -287,7 +287,7 @@ public:
 	 * @brief Override the screen shader used for the fullscreen pass.
 	 *
 	 * Pass nullptr to restore the built-in passthrough / post-process shader.
-	 * The renderer does NOT take ownership — the caller must keep the shader
+	 * The renderer does NOT take ownership - the caller must keep the shader
 	 * alive for as long as it is active.
 	 *
 	 * @param customShader Shader to use, or nullptr to reset to built-in.

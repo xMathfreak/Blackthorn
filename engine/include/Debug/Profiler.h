@@ -16,7 +16,7 @@ namespace Blackthorn::Debug {
  * @brief Thread-safe hierarchical CPU profiler.
  *
  * Thread safety model:
- *   - scopeStack is thread_local — each thread has its own independent stack.
+ *   - scopeStack is thread_local - each thread has its own independent stack.
  *     beginScope / endScope on the hot path acquire no locks.
  *   - scopeHistory and frameTimeHistory are shared state protected by
  *     historyMutex. Only endScope (write) and getStats (read) touch them.

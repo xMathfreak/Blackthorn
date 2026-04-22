@@ -11,7 +11,7 @@ namespace Blackthorn::Net::Protocol {
  * @brief Packet types carried in `PacketHeader::packetType`.
  *
  * Both the engine and server must agree on these values. Adding new types
- * is additive — existing values must never be renumbered.
+ * is additive - existing values must never be renumbered.
  */
 enum class PacketType : Uint8 {
 	ConnectRequest = 0x0, ///< Connection request (carries local schema version).
@@ -48,12 +48,12 @@ enum class PacketType : Uint8 {
 /**
  * @brief Packet-level flags carried in `PacketHeader::flags`.
  *
- * Individual bits — combine with bitwise OR, clear with `clearFlag()` or
+ * Individual bits - combine with bitwise OR, clear with `clearFlag()` or
  * `flags &= ~flag`.
  *
  * @note `Compressed` and `Encrypted` are reserved for future transport
  * implementations. The engine sets these bits but does not perform
- * compression or encryption itself — that responsibility belongs to the
+ * compression or encryption itself - that responsibility belongs to the
  * transport layer wrapping the raw ByteBuffer.
  */
 enum class PacketFlags : Uint8 {

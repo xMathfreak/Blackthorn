@@ -120,7 +120,7 @@ SocketResult UDPSocket::recvFrom(
 	Address& outAddress)
 {
 	if (fd == INVALID_SOCKET_HANDLE) {
-		BT_ERROR("Socket is not open");
+		BT_ERROR("UDPSocket: recvFrom failed: socket not open");
 		return SocketResult::Error;
 	}
 

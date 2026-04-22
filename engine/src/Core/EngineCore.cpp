@@ -37,6 +37,8 @@ bool EngineCore::init(const EngineConfig& cfg) {
 	Threads::ThreadRegistry::instance().registerCurrent("Main");
 	Debug::Logger::instance().init(cfg.debug.logger);
 
+	BT_LOG("Engine: Initializing");
+
 	auto& settings = Core::Settings::instance();
 	settings.loadFromFile(cfg.settingsFilePath);
 
@@ -102,6 +104,7 @@ void EngineCore::shutdown() {
 
 	initialized = false;
 	running = false;
+	BT_LOG("Engine: Shutting down");
 	Debug::Logger::instance().shutdown();
 }
 

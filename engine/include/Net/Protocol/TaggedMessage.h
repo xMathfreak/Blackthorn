@@ -167,7 +167,7 @@ public:
 	 * The callback receives the field tag and a ByteBuffer scoped to
 	 * exactly the field's bytes. Any bytes not consumed by the callback
 	 * are skipped before moving to the next field. This means partial
-	 * reads of a field are safe — the reader will still advance correctly.
+	 * reads of a field are safe - the reader will still advance correctly.
 	 *
 	 * @param callback Invocable as `void(Uint16 tag, ByteBuffer& field)`.
 	 */

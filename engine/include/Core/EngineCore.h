@@ -70,7 +70,7 @@ public:
 	 * loaders. Does not touch SDL video, OpenGL, or any windowing system.
 	 *
 	 * @param cfg Engine configuration. `cfg.window` and `cfg.render` fields
-	 *            are ignored by `EngineCore` — they are only consumed by
+	 *            are ignored by `EngineCore` - they are only consumed by
 	 *            the `Engine` subclass.
 	 * @return true on success, false if any critical system failed to initialize.
 	 */
@@ -79,7 +79,7 @@ public:
 	/**
 	 * @brief Shuts down all simulation systems and saves persistent state.
 	 *
-	 * Safe to call multiple times — subsequent calls are no-ops.
+	 * Safe to call multiple times - subsequent calls are no-ops.
 	 * Called automatically by the destructor.
 	 */
 	virtual void shutdown();

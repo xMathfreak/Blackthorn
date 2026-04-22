@@ -17,7 +17,7 @@ namespace Blackthorn::Scene {
  * `render()` walks the scene stack in the same render-visibility order as
  * the update walk, downcasting each scene to `IClientScene*`. Scenes that
  * are not `IClientScene` (e.g. a shared sim scene pushed onto a client
- * stack for testing) are silently skipped during render — they still
+ * stack for testing) are silently skipped during render - they still
  * receive all simulation updates normally.
  *
  * The transition overlay callback is also dispatched here, so fade effects

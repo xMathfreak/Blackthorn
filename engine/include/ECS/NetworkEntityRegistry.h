@@ -211,7 +211,7 @@ public:
 	/**
 	 * @brief Returns the local `Entity` for `netId`.
 	 *
-	 * Hot path — O(1) flat array lookup. Called for every entity in every
+	 * Hot path - O(1) flat array lookup. Called for every entity in every
 	 * received snapshot.
 	 *
 	 * @param netId The network entity ID to look up.
@@ -226,7 +226,7 @@ public:
 	/**
 	 * @brief Returns the `NetworkEntityId` for a local `entity`.
 	 *
-	 * Cold path — O(1) average hash map lookup. Called only when building
+	 * Cold path - O(1) average hash map lookup. Called only when building
 	 * outgoing snapshots, not on the receive path.
 	 *
 	 * @param entity The local entity to look up.

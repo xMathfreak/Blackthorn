@@ -41,15 +41,15 @@ enum class ReceiveResult : Uint8 {
 /**
  * @brief Per-peer TCP session channel with 4-byte length-prefix framing.
  *
- * @details Raw TCP is a byte stream — it provides no message boundaries.
+ * @details Raw TCP is a byte stream - it provides no message boundaries.
  * @c TCPChannel adds a simple framing layer where every message is preceded
  * by a 4-byte little-endian unsigned integer representing the message size.
  *
  * @section Wire layout per message
  *
  * @code
- * [uint32 length]  — byte count of the following payload
- * [length bytes]   — PacketHeader + message payload
+ * [uint32 length]  - byte count of the following payload
+ * [length bytes]   - PacketHeader + message payload
  * @endcode
  *
  * @section Reading
@@ -87,7 +87,7 @@ public:
 	 *
 	 * @param socket  Open, connected TCP socket.
 	 * @param payload Bytes to send. The length prefix is prepended
-	 *                automatically — do not include it in `payload`.
+	 *                automatically - do not include it in `payload`.
 	 * @return SocketResult of the underlying send call.
 	 */
 	Sockets::SocketResult send(Sockets::ISocket& socket, const Core::ByteBuffer& payload);

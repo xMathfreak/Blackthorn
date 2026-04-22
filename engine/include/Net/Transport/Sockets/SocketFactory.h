@@ -41,7 +41,7 @@ public:
 	 * @brief Initializes the socket subsystem.
 	 *
 	 * Must be called before any socket is created. Safe to call multiple
-	 * times — only the first call has any effect.
+	 * times - only the first call has any effect.
 	 *
 	 * @return true on success.
 	 */
