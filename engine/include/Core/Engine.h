@@ -5,6 +5,7 @@
 #include "Core/EngineCore.h"
 #include "Core/Export.h"
 #include "Graphics/Renderer.h"
+#include "Input/InputManager.h"
 #include "Scene/ClientSceneManager.h"
 #include "Scene/ISceneContext.h"
 
@@ -79,15 +80,22 @@ public:
 		return static_cast<Scene::ClientSceneManager&>(*sceneManager);
 	}
 
+	void update(float dt) override;
+
+	Input::InputManager& getInputManager() { return inputManager; }
+	Graphics::Renderer& getRenderer() { return *renderer; }
+
 protected:
 	void render(float alpha);
 	void processEvents() override;
 	void applyEngineSettings();
 	void applyPostProcessing();
 	void registerEngineCallbacks(Core::Settings& settings) override;
+	void registerDefaultSettings(Core::Settings& s) override;
 
 private:
 	std::unique_ptr<Graphics::Renderer> renderer;
+	Input::InputManager inputManager;
 	SDL_Window* window = nullptr;
 	SDL_GLContext glContext = nullptr;
 

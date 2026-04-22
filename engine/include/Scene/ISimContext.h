@@ -6,7 +6,6 @@ namespace Blackthorn {
 
 namespace Assets { class AssetManager; }
 namespace Core { class SimClock; }
-namespace Input { class InputManager; }
 namespace Jobs { class JobSystem; }
 namespace Net { class ConnectionManager; }
 
@@ -20,8 +19,8 @@ class SceneManager;
  *
  * @details
  * `EngineCore` implements this interface and provides access to core
- * simulation services such as ECS, asset management, job system, input,
- * and the simulation clock. It intentionally excludes any rendering or
+ * simulation services such as ECS, asset management, job system and
+ * the simulation clock. It intentionally excludes any rendering or
  * presentation-specific functionality so it can be used in headless builds.
  *
  * Scenes that depend only on simulation should accept an `ISimContext&`
@@ -45,7 +44,6 @@ public:
 	virtual ~ISimContext() = default;
 
 	virtual Assets::AssetManager& getAssetManager() = 0;
-	virtual Input::InputManager& getInputManager() = 0;
 	virtual SceneManager& getSceneManager() = 0;
 	virtual Jobs::JobSystem& getJobSystem() = 0;
 	virtual Core::SimClock& getSimClock() = 0;

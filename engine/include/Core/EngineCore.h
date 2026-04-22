@@ -11,7 +11,6 @@
 #include "Core/Export.h"
 #include "Core/Settings.h"
 #include "Core/SimClock.h"
-#include "Input/InputManager.h"
 #include "Jobs/JobSystem.h"
 #include "Net/ConnectionManager.h"
 #include "Scene/ISimContext.h"
@@ -29,7 +28,6 @@ namespace Blackthorn {
  * @li SimClock (tick counter, persistence)
  * @li AssetManager (synchronous and asynchronous loading)
  * @li JobSystem (worker thread pool)
- * @li InputManager (event-driven, window-independent)
  * @li SceneManager (scene stack)
  *
  * Initializes only `SDL_INIT_EVENTS`. No video,
@@ -120,7 +118,6 @@ public:
 	Scene::ISimContext& getSimContext() { return *simContext; }
 	Scene::SceneManager& getSceneManager() { return *sceneManager; }
 	Assets::AssetManager& getAssetManager() { return *assetManager; }
-	Input::InputManager& getInputManager() { return inputManager; }
 	Jobs::JobSystem& getJobSystem() { return *jobSystem; }
 	Core::SimClock& getSimClock() { return *simClock; }
 	const Core::SimClock& getSimClock() const { return *simClock; }
@@ -154,7 +151,6 @@ protected:
 	std::unique_ptr<Scene::ISimContext> simContext;
 	std::unique_ptr<Scene::SceneManager> sceneManager;
 
-	Input::InputManager inputManager;
 	Net::ConnectionManager* connectionManager = nullptr;
 
 	virtual void processEvents();
@@ -162,8 +158,8 @@ protected:
 	virtual void update(float dt);
 	virtual void lateUpdate(float dt);
 
-	void registerEngineDefaults(Core::Settings& s);
 	virtual void registerEngineCallbacks(Core::Settings& s);
+	virtual void registerDefaultSettings(Core::Settings& s);
 	void applyCoreSettings();
 	void cleanupInitialization();
 

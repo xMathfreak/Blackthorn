@@ -27,7 +27,7 @@ EngineCore::~EngineCore() {
 
 bool EngineCore::init(const EngineConfig& cfg) {
 	if (initialized) {
-		BT_WARN("EngineCore already initialized.");
+		BT_WARN("Engine: Initialization skipped - already initialized");
 		return false;
 	}
 
@@ -40,7 +40,7 @@ bool EngineCore::init(const EngineConfig& cfg) {
 	auto& settings = Core::Settings::instance();
 	settings.loadFromFile(cfg.settingsFilePath);
 
-	registerEngineDefaults(settings);
+	registerDefaultSettings(settings);
 	onRegisterSettings(settings);
 
 	if (settings.isDirty())
@@ -52,7 +52,7 @@ bool EngineCore::init(const EngineConfig& cfg) {
 	simClock->load();
 
 	if (!SDL_Init(SDL_INIT_EVENTS)) {
-		BT_ERROR("SDL_Init failed: {}", SDL_GetError());
+		BT_ERROR("SDL: Failed to initialize - {}", SDL_GetError());
 		cleanupInitialization();
 		return false;
 	}
@@ -72,7 +72,6 @@ bool EngineCore::init(const EngineConfig& cfg) {
 	simContext = std::make_unique<Scene::SimContextImpl>(
 		*assetManager,
 		*connectionManager,
-		inputManager,
 		*jobSystem,
 		*sceneManager,
 		*simClock
@@ -80,7 +79,7 @@ bool EngineCore::init(const EngineConfig& cfg) {
 
 	initialized = true;
 
-	BT_LOG("EngineCore initialized (tick {})", simClock->getCurrentTick());
+	BT_LOG("Engine: Initialization complete [Headless | Tick: {}]", simClock->getCurrentTick());
 	return true;
 }
 
@@ -108,7 +107,7 @@ void EngineCore::shutdown() {
 
 void EngineCore::run() {
 	if (!initialized) {
-		BT_ERROR("Cannot run: EngineCore not initialized");
+		BT_ERROR("Engine: Cannot run - not initialized");
 		return;
 	}
 
@@ -141,8 +140,11 @@ void EngineCore::run() {
 		}
 
 		if (frameTime > config.timing.maxDeltaTime) {
-			BT_WARN("EngineCore: frame time capped {:.3f} -> {:.3f}",
-				frameTime, config.timing.maxDeltaTime);
+			BT_WARN(
+				"Timing: Frame time capped {:.3f} -> {:.3f}",
+				frameTime, config.timing.maxDeltaTime
+			);
+
 			frameTime = config.timing.maxDeltaTime;
 		}
 
@@ -160,8 +162,9 @@ void EngineCore::run() {
 
 		if (numFixed >= config.timing.maxFixedUpdates) {
 			#ifdef BLACKTHORN_DEBUG
-				BT_WARN("EngineCore: fixed update capped at {}", numFixed);
+				BT_WARN("Timing: Fixed update count capped at {}", numFixed);
 			#endif
+
 			accumulated = 0.0f;
 		} else {
 			accumulated = accumulatedCopy;
@@ -203,14 +206,7 @@ void EngineCore::run() {
 		}
 
 		#ifdef BLACKTHORN_DEBUG
-			static float logTimer = 0.0f;
-			logTimer += frameTime;
 			profiler.endFrame();
-
-			if (logTimer >= config.debug.profilingLogInterval) {
-				logProfilingInfo();
-				logTimer = 0.0f;
-			}
 		#endif
 	}
 
@@ -221,8 +217,6 @@ void EngineCore::run() {
 void EngineCore::processEvents() {
 	SDL_Event event;
 	while (SDL_PollEvent(&event)) {
-		inputManager.handleEvent(event);
-
 		if (event.type == SDL_EVENT_QUIT)
 			running = false;
 	}
@@ -237,38 +231,13 @@ void EngineCore::update(float dt) {
 	assetManager->flushPendingUploads(config.assets.uploadBudget);
 	connectionManager->poll(jobSystem.get());
 	sceneManager->update(dt);
-	inputManager.update(dt);
 }
 
 void EngineCore::lateUpdate(float dt) {
 	sceneManager->lateUpdate(dt);
 }
 
-void EngineCore::registerEngineDefaults(Core::Settings& s) {
-	s.setDefault("window", "width", config.window.width);
-	s.setDefault("window", "height", config.window.height);
-	s.setDefault("window", "fullscreen", false);
-	s.setDefault("window", "vsync", false);
-	s.setDefault("window", "maximized", false);
-	s.setDefault("window", "pos_x", SDL_WINDOWPOS_CENTERED);
-	s.setDefault("window", "pos_y", SDL_WINDOWPOS_CENTERED);
-
-	s.setDefault("graphics", "frame_cap", false);
-	s.setDefault("graphics", "target_fps", 60);
-	s.setDefault("graphics", "msaa_samples", 0);
-	s.setDefault("graphics", "post_processing", true);
-	s.setDefault("graphics", "brightness", 1.0f);
-	s.setDefault("graphics", "contrast", 1.0f);
-	s.setDefault("graphics", "saturation", 1.0f);
-	s.setDefault("graphics", "gamma", 1.0f);
-	s.setDefault("graphics", "vignette", false);
-	s.setDefault("graphics", "vignette_intensity",0.5f);
-
-	s.setDefault("ui", "scale", 1.0f);
-	s.setDefault("audio", "master_volume", 1.0f);
-	s.setDefault("audio", "music_volume", 1.0f);
-	s.setDefault("audio", "sfx_volume", 1.0f);
-
+void EngineCore::registerDefaultSettings(Core::Settings& s) {
 	s.setDefault<Uint64>("simulation", "tick", static_cast<Uint64>(0));
 
 	#ifdef BLACKTHORN_DEBUG
@@ -290,15 +259,13 @@ void EngineCore::registerEngineCallbacks(Core::Settings& s) {
 }
 
 void EngineCore::applyCoreSettings() {
-	auto& s = Core::Settings::instance();
-
 	#ifdef BLACKTHORN_DEBUG
+		auto& s = Core::Settings::instance();
+
 		Debug::Logger::instance().setLevel(
 			static_cast<Debug::LogLevel>(s.get<int>("developer", "log_level", 3))
 		);
 	#endif
-
-	inputManager.loadBindingsFromSettings();
 }
 
 void EngineCore::cleanupInitialization() {

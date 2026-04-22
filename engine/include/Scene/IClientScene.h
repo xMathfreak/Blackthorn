@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Core/Export.h"
-#include "Debug/Logger.h"
 #include "Scene/IScene.h"
 #include "Scene/ISceneContext.h"
 #include "UI/UIManager.h"
@@ -30,7 +29,7 @@ public:
 
 		if (uiManager) {
 			uiManager->update(dt);
-			uiManager->handleInput(context.getInputManager());
+			uiManager->handleInput(getContext().getInputManager());
 		}
 	}
 
@@ -38,10 +37,8 @@ public:
 		if (world)
 			world->render(alpha);
 
-		if (uiManager) {
-			auto& fullCtx = static_cast<ISceneContext&>(context);
-			uiManager->render(fullCtx.getRenderer());
-		}
+		if (uiManager)
+			uiManager->render(getContext().getRenderer());
 	}
 
 	UI::UIManager* getUIManager() { return uiManager.get(); }

@@ -6,6 +6,7 @@
 namespace Blackthorn {
 
 namespace Graphics { class Renderer; }
+namespace Input { class InputManager; }
 
 namespace Scene {
 
@@ -40,6 +41,7 @@ public:
 	virtual ~ISceneContext() = default;
 
 	virtual Graphics::Renderer& getRenderer() = 0;
+	virtual Input::InputManager& getInputManager() = 0;
 };
 
 } // namespace Scene

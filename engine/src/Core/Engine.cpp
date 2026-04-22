@@ -37,13 +37,13 @@ bool Engine::init(const EngineConfig& cfg) {
 	initAssetLoaders();
 
 	try {
-		BT_LOG("Initializing Renderer");
+		BT_LOG("Renderer: Initializing");
 		renderer = std::make_unique<Graphics::Renderer>(cfg.render.maxQuads);
 		renderer->setPostProcessingEnabled(
 			Core::Settings::instance().get<bool>("graphics", "post_processing")
 		);
 	} catch (const std::exception& e) {
-		BT_ERROR("Failed to initialize Renderer: {}", e.what());
+		BT_ERROR("Renderer: Failed to initialize - {}", e.what());
 		cleanupGraphics();
 		EngineCore::shutdown();
 		return false;
@@ -67,7 +67,7 @@ bool Engine::init(const EngineConfig& cfg) {
 	applyPostProcessing();
 	logEngineInfo();
 
-	BT_LOG("Engine (graphics) initialized");
+	BT_LOG("Engine: Initialization complete [Runtime]");
 	return true;
 }
 
@@ -79,12 +79,12 @@ void Engine::initGraphics(const EngineConfig& cfg) {
 	#endif
 
 	if (!SDL_InitSubSystem(SDL_INIT_VIDEO)) {
-		BT_ERROR("SDL_InitSubSystem(VIDEO) failed: {}", SDL_GetError());
+		BT_ERROR("SDL: Failed to initialize Video subsystem - {}", SDL_GetError());
 		return;
 	}
 
 	if (!TTF_Init()) {
-		BT_ERROR("TTF_Init failed: {}", SDL_GetError());
+		BT_ERROR("SDL_ttf: Failed to initialize font subsystem - {}", SDL_GetError());
 		return;
 	}
 
@@ -112,23 +112,23 @@ void Engine::initGraphics(const EngineConfig& cfg) {
 	);
 
 	if (!window) {
-		BT_ERROR("SDL_CreateWindow failed: {}", SDL_GetError());
+		BT_ERROR("Window: Failed to create SDL window - {}", SDL_GetError());
 		return;
 	}
 
 	glContext = SDL_GL_CreateContext(window);
 	if (!glContext) {
-		BT_ERROR("SDL_GL_CreateContext failed: {}", SDL_GetError());
+		BT_ERROR("Renderer (OpenGL): Failed to create GL context - {}", SDL_GetError());
 		return;
 	}
 
 	if (!SDL_GL_MakeCurrent(window, glContext)) {
-		BT_ERROR("SDL_GL_MakeCurrent failed: {}", SDL_GetError());
+		BT_ERROR("Renderer (OpenGL): Failed to make context current - {}", SDL_GetError());
 		return;
 	}
 
 	if (!gladLoadGLLoader((GLADloadproc)SDL_GL_GetProcAddress)) {
-		BT_ERROR("Failed to initialize GLAD");
+		BT_ERROR("Renderer (OpenGL): Failed to initialize GLAD");
 		return;
 	}
 
@@ -225,8 +225,11 @@ void Engine::run() {
 		}
 
 		if (frameTime > config.timing.maxDeltaTime) {
-			BT_WARN("Frame time capped: {:.3f} -> {:.3f}",
-				frameTime, config.timing.maxDeltaTime);
+			BT_WARN(
+				"Timing: Frame time capped {:.3f} -> {:.3f}",
+				frameTime, config.timing.maxDeltaTime
+			);
+
 			frameTime = config.timing.maxDeltaTime;
 		}
 
@@ -244,8 +247,9 @@ void Engine::run() {
 
 		if (numFixed >= config.timing.maxFixedUpdates) {
 			#ifdef BLACKTHORN_DEBUG
-				BT_WARN("Fixed update count capped at {}", numFixed);
+				BT_WARN("Timing: Fixed update count capped at {}", numFixed);
 			#endif
+
 			accumulated = 0.0f;
 		} else {
 			accumulated = accumulatedCopy;
@@ -280,7 +284,7 @@ void Engine::run() {
 
 		if (
 			settings.get<bool>("graphics", "frame_cap") &&
-		 	!settings.get<bool>("window", "vsync")
+			!settings.get<bool>("window", "vsync")
 		) {
 			const float target = 1.0f / settings.get<int>("graphics", "target_fps");
 			const Uint64 end = SDL_GetPerformanceCounter();
@@ -312,6 +316,11 @@ void Engine::render(float alpha) {
 	getClientSceneManager().render(alpha);
 	renderer->endScene();
 	SDL_GL_SwapWindow(window);
+}
+
+void Engine::update(float dt) {
+	EngineCore::update(dt);
+	inputManager.update(dt);
 }
 
 void Engine::processEvents() {
@@ -384,6 +393,35 @@ void Engine::processEvents() {
 	}
 }
 
+void Engine::registerDefaultSettings(Core::Settings& s) {
+	EngineCore::registerDefaultSettings(s);
+
+	s.setDefault("window", "width", config.window.width);
+	s.setDefault("window", "height", config.window.height);
+	s.setDefault("window", "fullscreen", false);
+	s.setDefault("window", "vsync", false);
+	s.setDefault("window", "maximized", false);
+	s.setDefault("window", "pos_x", SDL_WINDOWPOS_CENTERED);
+	s.setDefault("window", "pos_y", SDL_WINDOWPOS_CENTERED);
+
+	s.setDefault("graphics", "frame_cap", false);
+	s.setDefault("graphics", "target_fps", 60);
+	s.setDefault("graphics", "msaa_samples", 0);
+	s.setDefault("graphics", "post_processing", true);
+	s.setDefault("graphics", "brightness", 1.0f);
+	s.setDefault("graphics", "contrast", 1.0f);
+	s.setDefault("graphics", "saturation", 1.0f);
+	s.setDefault("graphics", "gamma", 1.0f);
+	s.setDefault("graphics", "vignette", false);
+	s.setDefault("graphics", "vignette_intensity",0.5f);
+
+	s.setDefault("ui", "scale", 1.0f);
+	s.setDefault("audio", "master_volume", 1.0f);
+	s.setDefault("audio", "music_volume", 1.0f);
+	s.setDefault("audio", "sfx_volume", 1.0f);
+
+}
+
 void Engine::applyEngineSettings() {
 	EngineCore::applyCoreSettings();
 
@@ -437,6 +475,7 @@ void Engine::applyEngineSettings() {
 	}
 
 	SDL_GL_SetSwapInterval(s.get<bool>("window", "vsync") ? 1 : 0);
+	inputManager.loadBindingsFromSettings();
 }
 
 void Engine::applyPostProcessing() {
@@ -481,33 +520,48 @@ void Engine::registerEngineCallbacks(Core::Settings& s) {
 }
 
 void Engine::logEngineInfo() {
-	BT_DEBUG("OpenGL Version: {}",
-		reinterpret_cast<const char*>(glGetString(GL_VERSION)));
-	BT_DEBUG("Renderer: {}",
-		reinterpret_cast<const char*>(glGetString(GL_RENDERER)));
+	std::string glVersion =
+		reinterpret_cast<const char*>(glGetString(GL_VERSION));
+	std::string rd =
+		reinterpret_cast<const char*>(glGetString(GL_RENDERER));
 
-	GLint maxTex, maxAttribs;
+	GLint maxTex = 0, maxAttribs = 0;
 	glGetIntegerv(GL_MAX_TEXTURE_SIZE, &maxTex);
 	glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &maxAttribs);
-	BT_DEBUG("Max Texture Size: {}", maxTex);
-	BT_DEBUG("Max Vertex Attributes: {}", maxAttribs);
 
-	int depthBits, stencilBits, msaaSamples;
+	int depthBits = 0, stencilBits = 0, msaaSamples = 0;
 	SDL_GL_GetAttribute(SDL_GL_DEPTH_SIZE, &depthBits);
 	SDL_GL_GetAttribute(SDL_GL_STENCIL_SIZE, &stencilBits);
 	SDL_GL_GetAttribute(SDL_GL_MULTISAMPLESAMPLES, &msaaSamples);
-	BT_DEBUG("Depth: {} bits, Stencil: {} bits, MSAA: {}x",
-		depthBits, stencilBits, msaaSamples);
 
+	std::string simd;
 	#if defined(GLM_FORCE_SIMD_AVX2)
-		BT_DEBUG("GLM: AVX2");
+		simd = "AVX2";
 	#elif defined(GLM_FORCE_SIMD_AVX)
-		BT_DEBUG("GLM: AVX");
+		simd = "AVX";
 	#elif defined(GLM_FORCE_SIMD_SSE2)
-		BT_DEBUG("GLM: SSE2");
+		simd = "SSE2";
 	#else
-		BT_DEBUG("GLM: scalar");
+		simd = "scalar";
 	#endif
+
+	BT_LOG(
+		"Engine: Graphics Info\n"
+		"    OpenGL: {}\n"
+		"    Renderer: {}\n"
+		"    Max Texture Size: {}\n"
+		"    Max Vertex Attributes: {}\n"
+		"    Depth: {} bits | Stencil: {} bits | MSAA: {}x\n"
+		"    GLM SIMD: {}",
+		glVersion,
+		rd,
+		maxTex,
+		maxAttribs,
+		depthBits,
+		stencilBits,
+		msaaSamples,
+		simd
+	);
 }
 
 } // namespace Blackthorn
