@@ -5,10 +5,15 @@
 
 namespace Blackthorn::Net::Connection {
 
-void PeerRegistry::init(size_t maxPeers, const RateLimitConfig& defaults) {
+void PeerRegistry::init(
+	size_t maxPeers,
+	const RateLimitConfig& defaults,
+	size_t& globalFragmentBytes
+) {
 	std::lock_guard<std::mutex> lock(peerMutex);
 	peers.resize(maxPeers);
 	rateLimitDefaults = defaults;
+	globalFragmentBytesPtr = &globalFragmentBytes;
 }
 
 void PeerRegistry::reset() {
@@ -17,6 +22,7 @@ void PeerRegistry::reset() {
 	for (auto& peer : peers) {
 		if (peer.tcpSocket)
 			peer.tcpSocket->close();
+
 		peer.state = PeerState::Disconnected;
 	}
 
@@ -58,6 +64,13 @@ PeerId PeerRegistry::allocateSlot(const Transport::Address& address, bool tcp) {
 		peers[i].state = PeerState::Connecting;
 		peers[i].rateLimiter = PeerRateLimiter(rateLimitDefaults);
 
+		if (globalFragmentBytesPtr) {
+			peers[i].fragmentAssembler =
+				std::make_unique<Protocol::FragmentAssembler>(
+					*globalFragmentBytesPtr
+				);
+		}
+
 		if (tcp) {
 			peers[i].tcpAddress = address;
 			addressToPeerTCP[address] = i;
@@ -84,6 +97,9 @@ void PeerRegistry::freeSlot(PeerId id) {
 
 	if (peer.tcpChannel)
 		peer.tcpChannel->reset();
+
+	if (peer.fragmentAssembler)
+		peer.fragmentAssembler->reset();
 
 	addressToPeerTCP.erase(peer.tcpAddress);
 	addressToPeerUDP.erase(peer.udpAddress);

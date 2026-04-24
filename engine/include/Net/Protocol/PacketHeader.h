@@ -117,12 +117,11 @@ static constexpr Uint16 CURRENT_SCHEMA_VERSION = 1;
  * Layout (little-endian, all fields mandatory):
  * @code
  * Offset  Size  Field
- *      0     2  magic          (0x4254 == "BT")
- *      2     2  payloadLength  (bytes following this header, max 65535)
- *      4     4  tick           (SimClock tick at time of send)
- *      8     1  packetType     (PacketType enum)
- *      9     1  flags          (PacketFlags bitmask)
- *     10     2  reserved       (Keeps alignment)
+ *      0     4  payloadLength  (bytes following this header, max 4GB).
+ *      4     4  tick           (SimClock tick at time of send).
+ *      8     2  magic          (0x4254 == "BT").
+ *     10     1  packetType     (PacketType enum).
+ *     11     1  flags          (PacketFlags bitmask).
  * @endcode
  * Total: 12 bytes.
  *
@@ -134,23 +133,16 @@ static constexpr Uint16 CURRENT_SCHEMA_VERSION = 1;
  * @par Tick
  * A 32 bit simulation tick counter. Wrap around is handled by
  * @c tickisNewer().
- *
- * @par Payload Length
- * Maximum value is 65535. TCP messages larger than this are rejected
- * by @c TCPChannel. UDP datagrams are constrained by the practical MTU
- * (1400 bytes) in @c UDPChannel.
- *
  */
 struct BLACKTHORN_API PacketHeader {
 	static constexpr Uint16 MAGIC = 0x4254u; // "BT"
 	static constexpr size_t SERIALIZED_SIZE = 12;
 
-	Uint16 magic = MAGIC;
-	Uint16 payloadLength = 0;
+	Uint32 payloadLength = 0;
 	Uint32 tick = 0;
+	Uint16 magic = MAGIC;
 	PacketType packetType = PacketType::Heartbeat;
 	PacketFlags flags = PacketFlags::None;
-	Uint16 reserved = 0;
 
 	/**
 	 * @brief Serializes the header into `buf` in the fixed 12-byte layout.
@@ -162,7 +154,6 @@ struct BLACKTHORN_API PacketHeader {
 		buf.writeU32(tick);
 		buf.writeU8(static_cast<Uint8>(packetType));
 		buf.writeU8(static_cast<Uint8>(flags));
-		buf.writeU16(reserved);
 	}
 
 	/**
@@ -179,7 +170,6 @@ struct BLACKTHORN_API PacketHeader {
 		tick = buf.readU32();
 		packetType = static_cast<PacketType>(buf.readU8());
 		flags = static_cast<PacketFlags>(buf.readU8());
-		reserved = buf.readU16();
 	}
 
 	/**
@@ -191,8 +181,8 @@ struct BLACKTHORN_API PacketHeader {
 };
 
 static_assert(
-	sizeof(Uint32) * 1 +
-	sizeof(Uint16) * 3 +
+	sizeof(Uint32) * 2 +
+	sizeof(Uint16) +
 	sizeof(Uint8) * 2
 	== PacketHeader::SERIALIZED_SIZE,
 	"PacketHeader: Serialized field sizes do not sum to SERIALIZED_SIZE"

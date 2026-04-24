@@ -72,7 +72,7 @@ class BLACKTHORN_API TCPChannel {
 public:
 	/// Maximum message length accepted. Prevents runaway memory allocation
 	/// if a malformed or malicious length prefix is received.
-	static constexpr Uint32 MAX_MESSAGE_SIZE = 65535u;
+	static constexpr Uint32 MAX_MESSAGE_SIZE = 1 << 20u;
 
 	TCPChannel() = default;
 

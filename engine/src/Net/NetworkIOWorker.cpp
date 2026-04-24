@@ -8,6 +8,8 @@
 
 #include "Debug/Logger.h"
 #include "Net/Connection/PeerRegistry.h"
+#include "Net/Protocol/FragmentAssembler.h"
+#include "Net/Protocol/FragmentHeader.h"
 #include "Net/Protocol/PacketHeader.h"
 #include "Net/Transport/Channels/TCPChannel.h"
 #include "Net/Transport/Channels/UDPChannel.h"
@@ -105,6 +107,9 @@ void NetworkIOWorker::ioThreadLoop() {
 			for (auto& peer : registry->peerList()) {
 				if (peer.udpConnected)
 					peer.udpChannel.retransmitPending(*udpSocket, peer.udpAddress);
+
+				if (peer.fragmentAssembler)
+					peer.fragmentAssembler->evictExpired();
 			}
 		}
 
@@ -150,10 +155,23 @@ void NetworkIOWorker::pollUDP() {
 		Transport::Channels::UDPHeader udpHdr;
 		udpHdr.deserialize(datagram);
 
+		if (datagram.remaining() < 1)
+			continue;
+
+		Protocol::FragmentHeader fragHdr;
+		fragHdr.deserialize(datagram);
+
+		if (fragHdr.isFragmented() && fragHdr.totalFrags == 0) {
+			BT_WARN("NetworkIOWorker: Malformed fragment header - dropped");
+			continue;
+		}
+
 		Connection::PeerId peerId = Connection::INVALID_PEER_ID;
 		Connection::PeerId kickedId = Connection::INVALID_PEER_ID;
 		bool newUDPPeer = false;
 		bool rateDropped = false;
+
+		std::optional<Core::ByteBuffer> reassembled;
 
 		{
 			std::lock_guard<std::mutex> lock(registry->mutex());
@@ -223,6 +241,20 @@ void NetworkIOWorker::pollUDP() {
 				default:
 					peer.udpChannel.processInboundHeader(udpHdr);
 					peer.markAlive();
+
+					if (fragHdr.isFragmented()) {
+						if (peer.fragmentAssembler) {
+							Core::ByteBuffer slice(
+								datagram.data() + datagram.readPosition(),
+								datagram.remaining()
+							);
+
+							reassembled = peer.fragmentAssembler->ingest(
+								fragHdr, slice
+							);
+						}
+					}
+
 					break;
 			}
 		}
@@ -237,6 +269,24 @@ void NetworkIOWorker::pollUDP() {
 
 		if (rateDropped)
 			continue;
+
+		if (fragHdr.isFragmented()) {
+			if (!reassembled.has_value())
+				continue;
+
+			Transport::InboundPacket pkt;
+			pkt.source = srcAddress;
+			pkt.data = std::move(*reassembled);
+			pkt.channel = Transport::InboundPacket::Channel::UDP;
+			pkt.peerId = peerId;
+
+			if (!inboundQueue->push(std::move(pkt)))
+				BT_WARN(
+					"NetworkIOWorker: Inbound queue full - reassembled UDP packet dropped"
+				);
+
+			continue;
+		}
 
 		Core::ByteBuffer payload(
 			datagram.data() + datagram.readPosition(),
@@ -285,8 +335,10 @@ void NetworkIOWorker::pollTCPAccept() {
 		peer.markAlive();
 	}
 
-	BT_DEBUG("NetworkIOWorker: TCP accepted from {} (peerId {})",
-		clientAddr.toString(), peerId);
+	BT_DEBUG(
+		"NetworkIOWorker: TCP accepted from {} (peerId {})",
+		clientAddr.toString(), peerId
+	);
 }
 
 void NetworkIOWorker::pollTCP() {

@@ -50,8 +50,13 @@ public:
 	 *
 	 * @param maxPeers Maximum simultaneous peers.
 	 * @param rateLimitDefaults Default rate-limit config applied to new peers.
+	 * @param globalFragmentBytes Reference to the engine-wide reassembly byte counter.
 	 */
-	void init(size_t maxPeers, const RateLimitConfig& rateLimitDefaults);
+	void init(
+		size_t maxPeers,
+		const RateLimitConfig& rateLimitDefaults,
+		size_t& globalFragmentBytes
+	);
 
 	/**
 	 * @brief Closes all sockets and resets all peer slots.
@@ -175,6 +180,10 @@ private:
 	std::unordered_map<Transport::Address, PeerId> addressToPeerUDP;
 	mutable std::mutex peerMutex;
 	RateLimitConfig rateLimitDefaults;
+
+	/// Non-owning pointer to NetworkIOWorker::globalFragmentBytes.
+	/// Set by init(). used by allocateSlot() to construct FragmentAssemblers.
+	size_t* globalFragmentBytesPtr = nullptr;
 };
 
 } // namespace Connection

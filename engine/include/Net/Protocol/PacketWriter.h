@@ -109,16 +109,16 @@ public:
 	 * @return The number of payload bytes written (i.e. the patched
 	 *         @c payloadLength value).
 	 */
-	Uint16 finish() {
+	Uint32 finish() {
 		if (finished)
 			return cachedPayloadLength;
 
 		static constexpr size_t PAYLOAD_LENGTH_OFFSET = 2;
 
-		const Uint16 payloadBytes =
-			static_cast<Uint16>(buf.size() - payloadStart);
+		const Uint32 payloadBytes =
+			static_cast<Uint32>(buf.size() - payloadStart);
 
-		buf.patchU16(headerOffset + PAYLOAD_LENGTH_OFFSET, payloadBytes);
+		buf.patchU32(headerOffset + PAYLOAD_LENGTH_OFFSET, payloadBytes);
 
 		cachedPayloadLength = payloadBytes;
 		finished = true;

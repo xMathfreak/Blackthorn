@@ -19,7 +19,7 @@ bool ConnectionManager::start(const ConnectionConfig& cfg) {
 		return false;
 	}
 
-	registry.init(cfg.maxPeers, cfg.rateLimitDefaults);
+	registry.init(cfg.maxPeers, cfg.rateLimitDefaults, ioWorker.getGlobalFragmentBytes());
 
 	dispatcher.registry = &registry;
 	dispatcher.eventBus = &eventBus;

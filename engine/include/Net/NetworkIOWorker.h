@@ -83,6 +83,8 @@ public:
 		return udpSocket.get();
 	}
 
+	size_t& getGlobalFragmentBytes() { return globalFragmentBytes; }
+
 private:
 	void ioThreadLoop();
 	void pollUDP();
@@ -102,6 +104,11 @@ private:
 	std::atomic<bool> ioRunning { false };
 
 	ConnectionConfig cfg;
+
+	/// Engine-wide in-flight reassembly byte counter shared across
+	/// all peer @c FragmentAssembler instances. Enforces the 16 MB
+	/// global cap.
+	size_t globalFragmentBytes = 0;
 
 	static constexpr size_t RECV_BUFFER_SIZE = 65536;
 	std::vector<Uint8> recvScratch;

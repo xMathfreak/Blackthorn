@@ -9,6 +9,7 @@
 #include "Net/Transport/Address.h"
 #include "Net/Transport/Sockets/ISocket.h"
 #include "Net/Protocol/PacketHeader.h"
+#include "Net/Protocol/FragmentHeader.h"
 
 namespace Blackthorn::Net::Transport::Channels {
 
@@ -52,31 +53,36 @@ static_assert(
 );
 
 /**
- * @brief Per-peer UDP state machine: sequence numbers, ACK bitfield, and
- * reliable packet retransmission.
+ * @brief Per-peer UDP state machine: sequence numbers, ACK bitfield,
+ * reliable packet retransmission, and transparent fragmentation.
  *
- * @section Sequence numbers
+ * @section Fragmentation
  *
- * Both the outbound (@c localSeq) and inbound (@c remoteSeq) sequence numbers
- * are 16-bit and wrap freely. Comparisons use sequence arithmetic
- * (@c seqGreaterThan) to handle wrap-around correctly.
+ * When the assembled datagram (UDPHeader + FragmentHeader + PacketHeader +
+ * payload) would exceed @c PRACTICAL_MTU, @c send() automatically splits the
+ * payload into fragments. Each fragment is a separate datagram carrying the
+ * @c UDPHeader (for ACK tracking) and a @c FragmentHeader identifying its
+ * position in the sequence. The @c PacketHeader is only present in fragment 0.
  *
- * @section ACK bitfield
+ * The usable payload per fragment is:
+ *   - Fragment 0:    PRACTICAL_MTU - UDPHeader(8) - FragHeader(5) - PacketHeader(12) = 1375 bytes
+ *   - Fragment 1..N: PRACTICAL_MTU - UDPHeader(8) - FragHeader(5)                   = 1387 bytes
  *
- * Every datagram carries the sender's @c remoteSeq (last received sequence)
- * and a 32-bit @c ackBits bitmask where bit i=0 is (remoteSeq-1), bit i=1
- * is (remoteSeq-2), etc. This encodes ACKs for the 32 packets before the
- * latest received without additional overhead.
+ * Reassembly lives in @c FragmentAssembler (one per peer, in @c NetworkPeer).
+ *
+ * @section Sequence numbers and ACK bitfield
+ *
+ * See class documentation for ACK bitmask semantics — unchanged from the
+ * non-fragmented design.
  *
  * @section Reliability
  *
- * Packets sent with @c PacketFlags::Reliable are copied into the retransmit
- * queue alongside a send timestamp. When an ACK for a packet is received
- * (via the remote's @c ackBits), its entry is marked acknowledged and freed.
- * Unacknowledged entries older than @c retransmitTimeoutMs are resent.
- *
- * Unreliable packets bypass the queue entirely.
+ * Packets marked @c PacketFlags::Reliable are enqueued for retransmission.
+ * Fragmented reliable packets enqueue all fragments individually so the
+ * retransmit logic can re-send only the missing ones (once per-fragment ACK
+ * tracking is implemented; currently the whole set is retransmitted).
  */
+
 class BLACKTHORN_API UDPChannel {
 public:
 	static constexpr size_t MAX_RETRANSMIT_ENTRIES = 64;
@@ -93,16 +99,36 @@ public:
 	/// Practical MTU for outbound UDP datagrams, in bytes.
 	static constexpr size_t PRACTICAL_MTU = 1400;
 
+	/// Per-fragment overhead: UDPHeader(8) + FrgamentHeader fragmented form(5).
+	static constexpr size_t FRAGMENT_OVERHEAD =
+		UDPHeader::SERIALIZED_SIZE
+		+ Protocol::FragmentHeader::FRAGMENTED_SIZE;
+
+	/// Usable payload bytes in fragment 0 (also carries PacketHeader).
+	static constexpr size_t FRAG_0_PAYLOAD_BYTES =
+		PRACTICAL_MTU
+		- FRAGMENT_OVERHEAD
+		- Protocol::PacketHeader::SERIALIZED_SIZE;
+
+	/// Usable payload bytes in fragments 1...N.
+	static constexpr size_t FRAG_N_PAYLOAD_BYTES =
+		PRACTICAL_MTU
+		- FRAGMENT_OVERHEAD;
+
 	/**
 	 * @brief Minimum valid inbound datagram size, in bytes.
 	 *
 	 * Every datagram must carry at least a @c UDPHeader (8 bytes) and a
-	 * @c PacketHeader (12 bytes) = 20 bytes minimum. Anything smaller cannot
-	 * be a valid packet and is dropped by @c NetworkIOWorker::pollUDP()
-	 * before peer lookup.
+	 * @c FragmentHeader flags byte (1 byte). The @c PacketHeader (12 bytes)
+	 * follows only if the packet is unfragmented or is fragment 0.
+	 *
+	 * The minimum is therefore UDPHeader + FragmentHeader(unfragmented) +
+	 * PacketHeader = 8 + 1 + 12 = 21 bytes.
 	 */
 	static constexpr size_t MIN_DATAGRAM_SIZE =
-		UDPHeader::SERIALIZED_SIZE + Protocol::PacketHeader::SERIALIZED_SIZE;
+		UDPHeader::SERIALIZED_SIZE
+		+ Protocol::PacketHeader::SERIALIZED_SIZE
+		+ Protocol::FragmentHeader::UNFRAGMENTED_SIZE;
 
 	/**
 	 * @brief Sends `payload` to `address` via `socket`, prepending a
@@ -159,6 +185,15 @@ public:
 	}
 
 private:
+	/// Sends a single datagram (either unfragmented or one fragment of many).
+	/// Stanps the next @c localSeq and optionally enqueues for retransmit.
+	Sockets::SocketResult sendDatagram(
+		Sockets::ISocket& socket,
+		const Address& address,
+		const Core::ByteBuffer& datagram,
+		bool reliable
+	);
+
 	static bool seqGreaterThan(Uint16 a, Uint16 b) noexcept {
 		constexpr Uint16 val = 0x8000u;
 		return ((a > b) && (a - b <= val))
@@ -172,6 +207,10 @@ private:
 	Uint16 localSeq = 0; ///< Next outbound sequence number.
 	Uint16 remoteSeq = 0; ///< Latest inbound sequence number received.
 	Uint32 ackBits = 0; ///< ACK bitmask for the 32 packets before remoteSeq.
+
+	/// Per-peer fragment message Id counter.
+	/// Used by send() to tag all datagrams belonging to the same logical message.
+	Uint16 nextFragmentId = 0;
 
 	struct RetransmitEntry {
 		Core::ByteBuffer payload; ///< Full datagram bytes (UDPHeader + PacketHeader + data).

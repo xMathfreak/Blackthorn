@@ -8,6 +8,7 @@
 #include "Core/Export.h"
 #include "Net/Connection/PeerRateLimiter.h"
 #include "Net/Connection/PeerRateLimiter.h"
+#include "Net/Protocol/FragmentAssembler.h"
 #include "Net/Transport/Address.h"
 #include "Net/Transport/Channels/TCPChannel.h"
 #include "Net/Transport/Channels/UDPChannel.h"
@@ -102,6 +103,13 @@ struct BLACKTHORN_API NetworkPeer {
 	/// Schema version agreed during the TCP handshake.
 	/// 0 = not yet negotiated (peer is still Connecting).
 	Uint16 negotiatedSchemaVersion = 0;
+
+	/// Per-peer UDP fragment reassembler.
+	/// Initialised by PeerRegistry::allocateSlot() with a reference to
+	/// NetworkIOWorker::globalFragmentBytes so the assembler can enforce
+	/// the engine-wide memory cap.
+	/// nullptr until the peer slot is allocated.
+	std::unique_ptr<Protocol::FragmentAssembler> fragmentAssembler;
 
 	/** @brief Returns true if the peer is in the Connected state. */
 	bool isConnected() const noexcept {
