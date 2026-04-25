@@ -5,6 +5,11 @@
 
 namespace Blackthorn::Net::Transport::Channels {
 
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wfree-nonheap-object"
+#endif
+
 Sockets::SocketResult UDPChannel::send(
 	Sockets::ISocket& socket,
 	const Address& address,
@@ -229,5 +234,9 @@ void UDPChannel::acknowledgeSeq(Uint16 seq) {
 		}
 	}
 }
+
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
 
 } // namespace Blackthorn::Net::Transport::Channels
