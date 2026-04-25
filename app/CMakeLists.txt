@@ -14,6 +14,8 @@ add_executable(${PROJECT_NAME}
 	${APP_HEADERS}
 )
 
+enable_windows_gui(${PROJECT_NAME})
+
 target_compile_definitions(${PROJECT_NAME}
 	PRIVATE
 		$<$<CONFIG:Debug>:BLACKTHORN_DEBUG>
@@ -34,11 +36,6 @@ target_include_directories(${PROJECT_NAME}
 		${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
-target_link_directories(${PROJECT_NAME}
-	PRIVATE
-		${CMAKE_LIBRARY_OUTPUT_DIRECTORY}
-)
-
 target_link_libraries(${PROJECT_NAME}
 	PRIVATE
 		BlackthornEngine
@@ -52,11 +49,4 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
 	OUTPUT_NAME "Game"
-	RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
 )
-
-if (CMAKE_BUILD_TYPE STREQUAL "Release" AND CMAKE_INTERPROCEDURAL_OPTIMIZATION)
-	set_target_properties(${PROJECT_NAME} PROPERTIES
-		INTERPROCEDURAL_OPTIMIZATION TRUE
-	)
-endif()

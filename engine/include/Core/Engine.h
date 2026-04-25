@@ -23,7 +23,7 @@ namespace Blackthorn {
  * enabling smooth visual updates between fixed simulation ticks.
  *
  * @section usage Usage
- * The dedicated server links against `BlackthornEngineCore` and uses
+ * The dedicated server links against `BlackthornCore` and uses
  * `EngineCore` directly. Client applications link against
  * `BlackthornEngine` and use this class.
  *

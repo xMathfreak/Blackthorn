@@ -1,20 +1,12 @@
 cmake_minimum_required(VERSION 3.16.0)
 project(BlackthornEngine VERSION 0.1.0 LANGUAGES CXX)
 
-# ---------------------------------------------------------------------------
-# Source discovery
-# ---------------------------------------------------------------------------
-
+# Source Directories
 file(GLOB_RECURSE ALL_ENGINE_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
 file(GLOB_RECURSE ALL_ENGINE_HEADERS "${CMAKE_CURRENT_SOURCE_DIR}/include/*.h")
 file(GLOB_RECURSE ALL_ENGINE_PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/private/*.h")
 
-# ---------------------------------------------------------------------------
-# Client-only translation units
-# Excluded from BlackthornEngineCore. Any file that includes glad, OpenGL,
-# SDL3_image, SDL3_ttf, or UIManager belongs here.
-# ---------------------------------------------------------------------------
-
+# Client only sources (Excluded from Core)
 set(CLIENT_ONLY_SOURCES
 	# Engine graphics entry point
 	"${CMAKE_CURRENT_SOURCE_DIR}/src/Core/Engine.cpp"
@@ -46,20 +38,14 @@ foreach(src ${CLIENT_ONLY_SOURCES})
 	list(REMOVE_ITEM CORE_SOURCES "${src}")
 endforeach()
 
-# ---------------------------------------------------------------------------
-# BlackthornEngineCore - simulation only
-#
-# No SDL3_image, no SDL3_ttf, no glad, no OpenGL, no UIManager.
-# Server binaries link only this target.
-# ---------------------------------------------------------------------------
-
-add_library(BlackthornEngineCore SHARED
+# Simulation only (headless)
+add_library(BlackthornCore SHARED
 	${CORE_SOURCES}
 	${ALL_ENGINE_HEADERS}
 	${ALL_ENGINE_PRIVATE}
 )
 
-target_compile_definitions(BlackthornEngineCore
+target_compile_definitions(BlackthornCore
 	PRIVATE
 		BLACKTHORN_EXPORTS
 		BLACKTHORN_HEADLESS
@@ -70,7 +56,7 @@ target_compile_definitions(BlackthornEngineCore
 		BLACKTHORN_HEADLESS
 )
 
-target_include_directories(BlackthornEngineCore
+target_include_directories(BlackthornCore
 	PUBLIC
 		$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
 		$<INSTALL_INTERFACE:include>
@@ -79,28 +65,18 @@ target_include_directories(BlackthornEngineCore
 		${CMAKE_CURRENT_SOURCE_DIR}/private
 )
 
-target_link_libraries(BlackthornEngineCore
+target_link_libraries(BlackthornCore
 	PUBLIC
 		glm::glm
 		SDL3::SDL3
 )
 
-set_target_properties(BlackthornEngineCore PROPERTIES
-	CXX_VISIBILITY_PRESET hidden
-)
-
 # Transport layer requires WinSock2 on Windows.
 if(WIN32)
-	target_link_libraries(BlackthornEngineCore PUBLIC ws2_32)
+	target_link_libraries(BlackthornCore PUBLIC ws2_32)
 endif()
 
-# ---------------------------------------------------------------------------
-# BlackthornEngine - full client build
-#
-# Links BlackthornEngineCore and adds all graphics-related dependencies.
-# Client binaries link this target (which transitively brings in Core).
-# ---------------------------------------------------------------------------
-
+# Full client build
 add_library(BlackthornEngine SHARED
 	${CLIENT_ONLY_SOURCES}
 	${ALL_ENGINE_HEADERS}
@@ -127,9 +103,7 @@ target_include_directories(BlackthornEngine
 
 target_link_libraries(BlackthornEngine
 	PUBLIC
-		BlackthornEngineCore
-		glm::glm
-		SDL3::SDL3
+		BlackthornCore
 		SDL3_image::SDL3_image
 		SDL3_ttf::SDL3_ttf
 		glad
@@ -139,17 +113,14 @@ target_link_libraries(BlackthornEngine
 		OpenGL::GL
 )
 
-# ---------------------------------------------------------------------------
 # Shared compiler options
-# ---------------------------------------------------------------------------
-
-foreach(TARGET BlackthornEngineCore BlackthornEngine)
+foreach(TARGET BlackthornCore BlackthornEngine)
 	if(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64|amd64")
 		target_compile_definitions(${TARGET} PUBLIC
-			GLM_FORCE_SIMD_AVX
+			GLM_FORCE_SIMD_SSE42
 			GLM_FORCE_DEFAULT_ALIGNED_GENTYPES
 		)
-		target_compile_options(${TARGET} PRIVATE -mavx)
+		target_compile_options(${TARGET} PRIVATE -msse4.2)
 
 	elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "i686|i386|x86")
 		target_compile_definitions(${TARGET} PUBLIC
@@ -177,17 +148,14 @@ foreach(TARGET BlackthornEngineCore BlackthornEngine)
 		ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}
 	)
 
-	if(CMAKE_BUILD_TYPE STREQUAL "Release" AND CMAKE_INTERPROCEDURAL_OPTIMIZATION)
+	if (IPO_SUPPORTED)
 		set_target_properties(${TARGET} PROPERTIES
-			INTERPROCEDURAL_OPTIMIZATION TRUE
+			INTERPROCEDURAL_OPTIMIZATION $<$<CONFIG:Release>:TRUE>
 		)
 	endif()
 endforeach()
 
-# ---------------------------------------------------------------------------
-# Windows DLL copy - client target only
-# ---------------------------------------------------------------------------
-
+# Windows dll copy
 if(WIN32)
 	foreach(LIB BlackthornEngine SDL3::SDL3 SDL3_image::SDL3_image SDL3_ttf::SDL3_ttf)
 		add_custom_command(TARGET BlackthornEngine POST_BUILD
