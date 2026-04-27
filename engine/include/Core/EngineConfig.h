@@ -6,7 +6,7 @@
 
 #include "Core/Export.h"
 #include "Debug/Logger.h"
-
+#include "Net/Connection/PeerRateLimiter.h"
 
 namespace Blackthorn {
 
@@ -73,14 +73,45 @@ struct BLACKTHORN_API AssetConfig {
 	size_t uploadBudget = 4;
 };
 
+/**
+ * @brief Configuration passed to @c ConnectionManager::start().
+ */
+struct BLACKTHORN_API ConnectionConfig {
+	/// Default rate-limit config applied to every new peer.
+	Net::Connection::RateLimitConfig rateLimitDefaults = Net::Connection::RateLimitConfig{};
+
+	/// Maximum number of simultaneous peers.
+	size_t maxPeers = 64;
+
+	/// Capacity of the inbound packet queue. Must be a power of two.
+	size_t queueCapacity = 256;
+
+	/// I/O thread poll interval in microseconds. Default: 500µs.
+	Uint32 pollIntervalMicros = 500;
+
+	/// Idle time before a TCP peer is probed with a Heartbeat, in ms.
+	/// Set to 0 to disable. Default: 5000ms (half the default timeout).
+	Uint32 heartbeatIntervalMs = 5000;
+
+	/// UDP port to bind on (server and client). 0 = OS-assigned ephemeral.
+	Uint16 udpPort = 7777;
+
+	/// TCP port to listen on (server only). 0 = disabled.
+	Uint16 tcpPort = 7778;
+
+	/// When false, UDP datagrams from unknown addresses are silently dropped.
+	bool allowUDPImplicitPeers = true;
+};
+
 struct BLACKTHORN_API EngineConfig {
+	DebugConfig debug;
+	ConnectionConfig net;
 	WindowConfig window;
 	RenderConfig render;
 	TimingConfig timing;
 	FontConfig fonts;
-	AssetConfig assets;
 	ThreadingConfig threading;
-	DebugConfig debug;
+	AssetConfig assets;
 
 	std::string settingsFilePath = "settings.ini";
 };

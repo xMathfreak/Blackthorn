@@ -8,7 +8,7 @@
 #include <SDL3/SDL.h>
 
 #include "Core/Export.h"
-#include "Net/ConnectionConfig.h"
+#include "Core/EngineConfig.h"
 #include "Net/ConnectionEventBus.h"
 #include "Net/Transport/PacketQueue.h"
 #include "Net/Transport/Sockets/TCPSocket.h"

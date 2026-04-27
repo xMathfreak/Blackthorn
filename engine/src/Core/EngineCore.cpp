@@ -62,10 +62,17 @@ bool EngineCore::init(const EngineConfig& cfg) {
 	Net::Transport::Sockets::SocketFactory::init();
 
 	assetManager = std::make_unique<Assets::AssetManager>(
-		cfg.threading.assetWorkerCount);
+		cfg.threading.assetWorkerCount
+	);
 
 	jobSystem = std::make_unique<Jobs::JobSystem>(
-		cfg.threading.jobWorkerCount);
+		cfg.threading.jobWorkerCount
+	);
+
+	Net::Transport::Sockets::SocketFactory::init();
+
+	connectionManager = std::make_unique<Net::ConnectionManager>();
+	connectionManager->start(cfg.net);
 
 	applyCoreSettings();
 
@@ -99,6 +106,9 @@ void EngineCore::shutdown() {
 
 	if (assetManager)
 		assetManager->clear();
+
+	connectionManager->stop();
+	Net::Transport::Sockets::SocketFactory::shutdown();
 
 	SDL_Quit();
 

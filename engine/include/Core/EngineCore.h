@@ -121,6 +121,7 @@ public:
 	Jobs::JobSystem& getJobSystem() { return *jobSystem; }
 	Core::SimClock& getSimClock() { return *simClock; }
 	const Core::SimClock& getSimClock() const { return *simClock; }
+	Net::ConnectionManager& getConnectionManager() { return *connectionManager; }
 
 	/**
 	 * @brief Called during `init()` after engine defaults are registered
@@ -131,14 +132,6 @@ public:
 	 */
 	virtual void onRegisterSettings(Core::Settings&) {}
 
-	void setConnectionManager(Net::ConnectionManager* cm) {
-		connectionManager = cm;
-	}
-
-	void setConnectionManager(Net::ConnectionManager& cm) {
-		connectionManager = &cm;
-	}
-
 protected:
 	bool initialized = false;
 	bool running = false;
@@ -146,12 +139,11 @@ protected:
 	EngineConfig config;
 
 	std::unique_ptr<Assets::AssetManager> assetManager;
+	std::unique_ptr<Net::ConnectionManager> connectionManager;
 	std::unique_ptr<Jobs::JobSystem> jobSystem;
 	std::unique_ptr<Core::SimClock> simClock;
 	std::unique_ptr<Scene::ISimContext> simContext;
 	std::unique_ptr<Scene::SceneManager> sceneManager;
-
-	Net::ConnectionManager* connectionManager = nullptr;
 
 	virtual void processEvents();
 	virtual void fixedUpdate(float dt);

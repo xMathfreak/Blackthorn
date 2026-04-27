@@ -3,7 +3,7 @@
 #include <vector>
 
 #include "Core/Export.h"
-#include "Net/ConnectionConfig.h"
+#include "Core/EngineConfig.h"
 #include "Net/Connection/NetworkPeer.h"
 #include "Net/Connection/PeerRateLimiter.h"
 #include "Net/Connection/PeerRegistry.h"

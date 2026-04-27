@@ -9,11 +9,11 @@
 #include "Net/Transport/Address.h"
 #include "Net/Transport/Sockets/UDPSocket.h"
 
-namespace Blackthorn::Net {
+namespace Blackthorn {
 
 struct ConnectionConfig;
 
-namespace Connection {
+namespace Net::Connection {
 
 /**
  * @brief Owns and manages the flat array of @c NetworkPeer slots and the
