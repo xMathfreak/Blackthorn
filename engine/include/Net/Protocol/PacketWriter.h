@@ -58,12 +58,12 @@ public:
 	 * @param flags      Optional @c PacketFlags (default @c None).
 	 */
 	explicit PacketWriter(
-		Core::ByteBuffer& buf,
+		Core::ByteBuffer& bf,
 		PacketType packetType,
 		Uint64 tick = 0,
 		PacketFlags flags = PacketFlags::None
 	)
-		: buf(buf)
+		: buf(bf)
 		, headerOffset(buf.size())
 	{
 		PacketHeader hdr;

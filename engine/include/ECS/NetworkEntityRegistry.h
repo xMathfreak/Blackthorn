@@ -10,9 +10,9 @@
 
 #include "Core/Export.h"
 #include "ECS/Entity.h"
+#include "Net/Core/ByteBuffer.h"
 
 namespace Blackthorn::ECS {
-
 
 /**
  * @brief Network entity ID type.
@@ -27,6 +27,22 @@ using NetworkEntityId = Uint64;
 static constexpr NetworkEntityId INVALID_NET_ENTITY =
 	std::numeric_limits<Uint64>::max();
 
+/**
+ * @brief Reason codes carried in @c DespawnPacket payloads.
+ *
+ * The server writes one of these values when notifying clients that a
+ * network entity has been destroyed.
+ *
+ * Clients can use the reason to play different visuals or audio effects.
+ *
+ * Values are stable on the wire. Never renumber existing entries.
+ */
+enum DespawnReason : Uint8 {
+	Unknown = 0x00, ///< Unspecified reason.
+	Disconnect = 0x01, ///< The owning peer disconnected.
+	Death = 0x02, ///< The entity was destroyed by game logic.
+	LevelUnload = 0x03 ///< The scene or level containing the entity is being unloaded.
+};
 
 /**
  * @brief Bidirectional mapping between NetworkEntityId and local Entity.
@@ -278,6 +294,19 @@ public:
 	void restoreNextId(NetworkEntityId id) noexcept {
 		nextId = id;
 	}
+
+	void serializeSpawn(
+		Net::Core::ByteBuffer& buf,
+		NetworkEntityId netId,
+		Uint32 tick = 0
+	) const;
+
+	void serializeDespawn(
+		Net::Core::ByteBuffer& buf,
+		NetworkEntityId netId,
+		DespawnReason reason = DespawnReason::Unknown,
+		Uint32 tick = 0
+	) const;
 
 private:
 	/// Hot path: flat array indexed by NetworkEntityId.

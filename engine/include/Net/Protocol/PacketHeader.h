@@ -29,7 +29,9 @@ enum class PacketType : Uint8 {
 
 	Snapshot = 0x10, ///< Full or delta entity snapshot (raw binary payload).
 	Input = 0x11, ///< Client input stream (bit-packed payload).
-	Message = 0x12, ///< Tagged message (spawn, despawn, ability, UI event).
+	Message = 0x12, ///< Tagged message (ability, UI event).
+	EntityCreate = 0x13, ///< A new network entity has been created.
+	EntityDestroy = 0x14, ///< A network entity has been destroyed.
 
 	ChatMessage = 0x20, ///< General chat message.
 	Whisper = 0x21, ///< Private message between players.
