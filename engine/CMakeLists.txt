@@ -69,6 +69,8 @@ target_link_libraries(BlackthornCore
 	PUBLIC
 		glm::glm
 		SDL3::SDL3
+		libzstd_static
+		sodium
 )
 
 # Transport layer requires WinSock2 on Windows.

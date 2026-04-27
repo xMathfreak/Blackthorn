@@ -4,3 +4,9 @@
 [submodule "third_party/glm"]
 	path = third_party/glm
 	url = https://github.com/g-truc/glm.git
+[submodule "third_party/zstd"]
+	path = third_party/zstd
+	url = https://github.com/facebook/zstd.git
+[submodule "third_party/libsodium"]
+	path = third_party/libsodium
+	url = https://github.com/robinlinden/libsodium-cmake.git
