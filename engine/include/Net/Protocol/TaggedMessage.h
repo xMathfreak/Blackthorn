@@ -7,7 +7,7 @@
 #include <SDL3/SDL.h>
 
 #include "Core/Export.h"
-#include "Net/Core/ByteBuffer.h"
+#include "IO/ByteBuffer.h"
 
 namespace Blackthorn::Net::Protocol {
 
@@ -46,7 +46,7 @@ public:
 	 * @param buf            Destination buffer.
 	 * @param messageVersion Schema version of this specific message type.
 	 */
-	explicit MessageWriter(Core::ByteBuffer& buf, Uint32 messageVersion)
+	explicit MessageWriter(IO::ByteBuffer& buf, Uint32 messageVersion)
 		: buf(buf)
 	{
 		buf.writeU32(messageVersion);
@@ -115,7 +115,7 @@ public:
 	}
 
 private:
-	Core::ByteBuffer& buf;
+	IO::ByteBuffer& buf;
 
 	void writeFieldHeader(Uint16 tag, Uint16 fieldLength) {
 		buf.writeU16(tag);
@@ -150,7 +150,7 @@ public:
 	 * @brief Constructs a MessageReader and reads the version prefix.
 	 * @param buf Source buffer positioned at the start of the message payload.
 	 */
-	explicit MessageReader(Core::ByteBuffer& buf)
+	explicit MessageReader(IO::ByteBuffer& buf)
 		: buf(buf)
 		, version(buf.readU32())
 	{}
@@ -171,7 +171,7 @@ public:
 	 *
 	 * @param callback Invocable as `void(Uint16 tag, ByteBuffer& field)`.
 	 */
-	void read(const std::function<void(Uint16, Core::ByteBuffer&)>& callback) {
+	void read(const std::function<void(Uint16, IO::ByteBuffer&)>& callback) {
 		while (!buf.exhausted()) {
 			// At minimum we need 4 bytes for tag + length.
 			if (buf.remaining() < 4)
@@ -183,7 +183,7 @@ public:
 			if (buf.remaining() < fieldLength)
 				break;
 
-			Core::ByteBuffer fieldView(buf.data() + buf.readPosition(), fieldLength);
+			IO::ByteBuffer fieldView(buf.data() + buf.readPosition(), fieldLength);
 			callback(tag, fieldView);
 
 			skipBytes(fieldLength);
@@ -191,7 +191,7 @@ public:
 	}
 
 private:
-	Core::ByteBuffer& buf;
+	IO::ByteBuffer& buf;
 	Uint32 version;
 
 	void skipBytes(Uint16 count) {

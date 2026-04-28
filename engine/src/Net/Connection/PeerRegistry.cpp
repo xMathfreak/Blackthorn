@@ -109,7 +109,7 @@ void PeerRegistry::freeSlot(PeerId id) {
 
 bool PeerRegistry::sendUDP(
 	PeerId peerId,
-	const Core::ByteBuffer& payload,
+	const IO::ByteBuffer& payload,
 	Transport::Sockets::UDPSocket& socket
 ) {
 	std::lock_guard<std::mutex> lock(peerMutex);
@@ -129,7 +129,7 @@ bool PeerRegistry::sendUDP(
 	return result == Transport::Sockets::SocketResult::Ok;
 }
 
-bool PeerRegistry::sendTCP(PeerId peerId, const Core::ByteBuffer& payload) {
+bool PeerRegistry::sendTCP(PeerId peerId, const IO::ByteBuffer& payload) {
 	std::lock_guard<std::mutex> lock(peerMutex);
 
 	if (peerId >= peers.size())
@@ -144,7 +144,7 @@ bool PeerRegistry::sendTCP(PeerId peerId, const Core::ByteBuffer& payload) {
 }
 
 void PeerRegistry::broadcastUDP(
-	const Core::ByteBuffer& payload,
+	const IO::ByteBuffer& payload,
 	Transport::Sockets::UDPSocket& socket
 ) {
 	std::lock_guard<std::mutex> lock(peerMutex);
@@ -155,7 +155,7 @@ void PeerRegistry::broadcastUDP(
 	}
 }
 
-void PeerRegistry::broadcastTCP(const Core::ByteBuffer& payload) {
+void PeerRegistry::broadcastTCP(const IO::ByteBuffer& payload) {
 	std::lock_guard<std::mutex> lock(peerMutex);
 
 	for (auto& peer : peers) {

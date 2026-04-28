@@ -3,7 +3,7 @@
 #include <SDL3/SDL.h>
 
 #include "Core/Export.h"
-#include "Net/Core/ByteBuffer.h"
+#include "IO/ByteBuffer.h"
 
 namespace Blackthorn::Net::Protocol {
 
@@ -150,7 +150,7 @@ struct BLACKTHORN_API PacketHeader {
 	 * @brief Serializes the header into `buf` in the fixed 12-byte layout.
 	 * @param buf Destination buffer.
 	 */
-	void serialize(Core::ByteBuffer& buf) const {
+	void serialize(IO::ByteBuffer& buf) const {
 		buf.writeU16(magic);
 		buf.writeU16(payloadLength);
 		buf.writeU32(tick);
@@ -166,7 +166,7 @@ struct BLACKTHORN_API PacketHeader {
 	 *
 	 * @param buf Source buffer positioned at the start of the header.
 	 */
-	void deserialize(Core::ByteBuffer& buf) {
+	void deserialize(IO::ByteBuffer& buf) {
 		magic = buf.readU16();
 		payloadLength = buf.readU16();
 		tick = buf.readU32();

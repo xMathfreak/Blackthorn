@@ -17,7 +17,7 @@
 #include <SDL3/SDL.h>
 
 #include "Core/Export.h"
-#include "Net/Core/ByteBuffer.h"
+#include "IO/ByteBuffer.h"
 
 namespace Blackthorn::Net::Transport {
 
@@ -223,7 +223,7 @@ public:
 	 * @brief Writes the address into `buf` in the fixed layout described
 	 * in the class documentation.
 	 */
-	void serialize(Core::ByteBuffer& buf) const {
+	void serialize(IO::ByteBuffer& buf) const {
 		buf.writeU8(static_cast<Uint8>(version()));
 		buf.writeU16(port());
 
@@ -242,7 +242,7 @@ public:
 	 * @brief Reads an address from `buf` written by `serialize()`.
 	 * @return Deserialized address, or invalid address on parse error.
 	 */
-	static Address deserialize(Core::ByteBuffer& buf) {
+	static Address deserialize(IO::ByteBuffer& buf) {
 		Address addr;
 		Uint8 ver = buf.readU8();
 		Uint16 p = buf.readU16();

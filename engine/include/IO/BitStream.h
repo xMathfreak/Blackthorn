@@ -5,9 +5,9 @@
 #include <SDL3/SDL.h>
 
 #include "Core/Export.h"
-#include "Net/Core/ByteBuffer.h"
+#include "IO/ByteBuffer.h"
 
-namespace Blackthorn::Net::Core {
+namespace Blackthorn::IO {
 
 namespace BitCodec {
 
@@ -210,4 +210,4 @@ private:
 	int bitCount = 0;
 };
 
-} // namespace Blackthorn::Net::Core
+} // namespace Blackthorn::IO

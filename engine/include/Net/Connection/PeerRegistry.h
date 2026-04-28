@@ -118,7 +118,7 @@ public:
 	 */
 	bool sendUDP(
 		PeerId peerId,
-		const Core::ByteBuffer& payload,
+		const IO::ByteBuffer& payload,
 		Transport::Sockets::UDPSocket& socket
 	);
 
@@ -126,20 +126,20 @@ public:
 	 * @brief Sends @p payload to @p peerId over TCP.
 	 * @return true on success.
 	 */
-	bool sendTCP(PeerId peerId, const Core::ByteBuffer& payload);
+	bool sendTCP(PeerId peerId, const IO::ByteBuffer& payload);
 
 	/**
 	 * @brief Broadcasts @p payload over UDP to all UDP-connected peers.
 	 */
 	void broadcastUDP(
-		const Core::ByteBuffer& payload,
+		const IO::ByteBuffer& payload,
 		Transport::Sockets::UDPSocket& socket
 	);
 
 	/**
 	 * @brief Broadcasts @p payload over TCP to all TCP-connected peers.
 	 */
-	void broadcastTCP(const Core::ByteBuffer& payload);
+	void broadcastTCP(const IO::ByteBuffer& payload);
 
 	/** Overrides the rate-limit config for a specific peer */
 	void setRateLimit(PeerId peerId, const RateLimitConfig& config);

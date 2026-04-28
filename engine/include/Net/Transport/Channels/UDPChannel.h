@@ -5,7 +5,7 @@
 #include <SDL3/SDL.h>
 
 #include "Core/Export.h"
-#include "Net/Core/ByteBuffer.h"
+#include "IO/ByteBuffer.h"
 #include "Net/Transport/Address.h"
 #include "Net/Transport/Sockets/ISocket.h"
 #include "Net/Protocol/PacketHeader.h"
@@ -34,13 +34,13 @@ struct BLACKTHORN_API UDPHeader {
 	Uint16 ack = 0;
 	Uint32 ackBits = 0;
 
-	void serialize(Core::ByteBuffer& buf) const {
+	void serialize(IO::ByteBuffer& buf) const {
 		buf.writeU16(seq);
 		buf.writeU16(ack);
 		buf.writeU32(ackBits);
 	}
 
-	void deserialize(Core::ByteBuffer& buf) {
+	void deserialize(IO::ByteBuffer& buf) {
 		seq = buf.readU16();
 		ack = buf.readU16();
 		ackBits = buf.readU32();
@@ -147,7 +147,7 @@ public:
 	Sockets::SocketResult send(
 		Sockets::ISocket& socket,
 		const Address& address,
-		const Core::ByteBuffer& payload);
+		const IO::ByteBuffer& payload);
 
 	/**
 	 * @brief Processes the `UDPHeader` from a received datagram.
@@ -190,7 +190,7 @@ private:
 	Sockets::SocketResult sendDatagram(
 		Sockets::ISocket& socket,
 		const Address& address,
-		const Core::ByteBuffer& datagram,
+		const IO::ByteBuffer& datagram,
 		bool reliable
 	);
 
@@ -213,7 +213,7 @@ private:
 	Uint16 nextFragmentId = 0;
 
 	struct RetransmitEntry {
-		Core::ByteBuffer payload; ///< Full datagram bytes (UDPHeader + PacketHeader + data).
+		IO::ByteBuffer payload; ///< Full datagram bytes (UDPHeader + PacketHeader + data).
 		Uint64 sentAtMs = 0; ///< SDL_GetTicks() at time of send.
 		Uint16 seq = 0; ///< Sequence number of this packet.
 		bool occupied = false;
@@ -223,7 +223,7 @@ private:
 	std::array<RetransmitEntry, MAX_RETRANSMIT_ENTRIES> retransmitQueue{};
 	size_t retransmitHead = 0; ///< Next slot to write into (circular).
 
-	void enqueueRetransmit(Uint16 seq, const Core::ByteBuffer& payload);
+	void enqueueRetransmit(Uint16 seq, const IO::ByteBuffer& payload);
 	void acknowledgeSeq(Uint16 seq);
 };
 

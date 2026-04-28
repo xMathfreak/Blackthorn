@@ -5,7 +5,7 @@
 #include <vector>
 
 #include "Core/Export.h"
-#include "Net/Core/ByteBuffer.h"
+#include "IO/ByteBuffer.h"
 #include "Net/Protocol/FragmentHeader.h"
 
 namespace Blackthorn::Net::Protocol {
@@ -32,7 +32,7 @@ struct BLACKTHORN_API FragmentSet {
 	 * Index corresponds to @c FragmentHeader::fragIndex.
 	 * Empty slots have zero size until the fragment arrives.
 	 */
-	std::vector<Core::ByteBuffer> fragments;
+	std::vector<IO::ByteBuffer> fragments;
 
 	/// Total bytes stored across all received fragments.
 	size_t totalBytesStored = 0;
@@ -87,9 +87,9 @@ public:
 	 * 		   if the set is now complete, or @c std::nullopt if more
 	 * 		   fragments are still needed.
 	 */
-	std::optional<Core::ByteBuffer> ingest(
+	std::optional<IO::ByteBuffer> ingest(
 		const FragmentHeader& header,
-		const Core::ByteBuffer& payload
+		const IO::ByteBuffer& payload
 	);
 
 	/**

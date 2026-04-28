@@ -10,7 +10,7 @@
 
 #include "Core/Export.h"
 
-namespace Blackthorn::Net::Core {
+namespace Blackthorn::IO {
 
 /**
  * @brief Flat read/write byte buffer with explicit little-endian encoding.
@@ -342,4 +342,4 @@ private:
 	}
 };
 
-} // namespace Blackthorn::Net::Core
+} // namespace Blackthorn::IO

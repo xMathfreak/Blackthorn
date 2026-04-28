@@ -6,7 +6,7 @@
 
 #include "Core/Export.h"
 #include "ECS/Detail.h"
-#include "Net/Core/ByteBuffer.h"
+#include "IO/ByteBuffer.h"
 
 namespace Blackthorn::ECS::Serialization {
 
@@ -27,8 +27,8 @@ namespace Blackthorn::ECS::Serialization {
  * Each specialization must implement exactly two static functions:
  *
  * @code
- * static void serialize(const T& component, Core::ByteBuffer& buf);
- * static void deserialize(T& component, Core::ByteBuffer& buf);
+ * static void serialize(const T& component, IO::ByteBuffer& buf);
+ * static void deserialize(T& component, IO::ByteBuffer& buf);
  * @endcode
  *
  * Requirements:
@@ -46,10 +46,10 @@ namespace Blackthorn::ECS::Serialization {
  *
  * template <>
  * struct Blackthorn::ECS::Serialization::ComponentSerializer<MyComponent> {
- *     static void serialize(const MyComponent& c, Core::ByteBuffer& buf) {
+ *     static void serialize(const MyComponent& c, IO::ByteBuffer& buf) {
  *         buf.writeF32(c.someField);
  *     }
- *     static void deserialize(MyComponent& c, Core::ByteBuffer& buf) {
+ *     static void deserialize(MyComponent& c, IO::ByteBuffer& buf) {
  *         c.someField = buf.readF32();
  *     }
  * };
@@ -57,7 +57,7 @@ namespace Blackthorn::ECS::Serialization {
  */
 template <typename T>
 struct ComponentSerializer {
-	static void serialize(const T&, Net::Core::ByteBuffer&) {
+	static void serialize(const T&, IO::ByteBuffer&) {
 		static_assert(
 			sizeof(T) == 0,
 			"No ComponentSerializer specialization exists for this component type. "
@@ -65,7 +65,7 @@ struct ComponentSerializer {
 		);
 	}
 
-	static void deserialize(T&, Net::Core::ByteBuffer&) {}
+	static void deserialize(T&, IO::ByteBuffer&) {}
 };
 
 /**
@@ -94,8 +94,8 @@ struct ComponentSerializer {
  */
 class BLACKTHORN_API SerializerRegistry {
 public:
-	using SerializeFn   = std::function<void(const void*, Net::Core::ByteBuffer&)>;
-	using DeserializeFn = std::function<void(void*, Net::Core::ByteBuffer&)>;
+	using SerializeFn   = std::function<void(const void*, IO::ByteBuffer&)>;
+	using DeserializeFn = std::function<void(void*, IO::ByteBuffer&)>;
 
 	struct Entry {
 		SerializeFn serialize;
@@ -143,11 +143,11 @@ public:
 
 		Entry entry;
 
-		entry.serialize = [](const void* comp, Net::Core::ByteBuffer& buf) {
+		entry.serialize = [](const void* comp, IO::ByteBuffer& buf) {
 			ComponentSerializer<T>::serialize(*static_cast<const T*>(comp), buf);
 		};
 
-		entry.deserialize = [](void* comp, Net::Core::ByteBuffer& buf) {
+		entry.deserialize = [](void* comp, IO::ByteBuffer& buf) {
 			ComponentSerializer<T>::deserialize(*static_cast<T*>(comp), buf);
 		};
 

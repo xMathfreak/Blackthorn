@@ -24,7 +24,7 @@ namespace Connection {
 using PacketHandler = std::function<void(
 	Connection::PeerId,
 	const Protocol::PacketHeader&,
-	Core::ByteBuffer&
+	IO::ByteBuffer&
 )>;
 
 using ConnectHandler = std::function<void(

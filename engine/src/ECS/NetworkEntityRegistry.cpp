@@ -5,7 +5,7 @@
 namespace Blackthorn::ECS {
 
 void NetworkEntityRegistry::serializeSpawn(
-	Net::Core::ByteBuffer& buf,
+	IO::ByteBuffer& buf,
 	NetworkEntityId netId,
 	Uint32 tick
 ) const {
@@ -26,7 +26,7 @@ void NetworkEntityRegistry::serializeSpawn(
 }
 
 void NetworkEntityRegistry::serializeDespawn(
-	Net::Core::ByteBuffer& buf,
+	IO::ByteBuffer& buf,
 	NetworkEntityId netId,
 	DespawnReason reason,
 	Uint32 tick

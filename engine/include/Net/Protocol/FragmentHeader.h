@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Core/Export.h"
-#include "Net/Core/ByteBuffer.h"
+#include "IO/ByteBuffer.h"
 
 namespace Blackthorn::Net::Protocol {
 
@@ -76,7 +76,7 @@ struct BLACKTHORN_API FragmentHeader {
 	 * Always writes at least the 1 byte flags. If @c isFragmented() is
 	 * true, writes the remaining 4 bytes as well.
 	 */
-	void serialize(Core::ByteBuffer& buf) const {
+	void serialize(IO::ByteBuffer& buf) const {
 		buf.writeU8(flags);
 		if (isFragmented()) {
 			buf.writeU16(fragmentId);
@@ -92,7 +92,7 @@ struct BLACKTHORN_API FragmentHeader {
 	 * the remaining 4 bytes. The caller must verify sufficient
 	 * remaining bytes before calling.
 	 */
-	void deserialize(Core::ByteBuffer& buf) {
+	void deserialize(IO::ByteBuffer& buf) {
 		flags = buf.readU8();
 		if (isFragmented()) {
 			fragmentId = buf.readU16();

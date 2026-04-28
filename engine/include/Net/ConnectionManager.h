@@ -4,11 +4,11 @@
 
 #include "Core/Export.h"
 #include "Core/EngineConfig.h"
+#include "IO/ByteBuffer.h"
 #include "Net/Connection/NetworkPeer.h"
 #include "Net/Connection/PeerRateLimiter.h"
 #include "Net/Connection/PeerRegistry.h"
 #include "Net/ConnectionEventBus.h"
-#include "Net/Core/ByteBuffer.h"
 #include "Net/NetworkIOWorker.h"
 #include "Net/PacketDispatcher.h"
 #include "Net/Transport/Address.h"
@@ -101,16 +101,16 @@ public:
 	void disconnect(Connection::PeerId peerId);
 
 	/** @brief Sends @p payload to @p peerId over UDP. */
-	bool sendUDP(Connection::PeerId peerId, const Core::ByteBuffer& payload);
+	bool sendUDP(Connection::PeerId peerId, const IO::ByteBuffer& payload);
 
 	/** @brief Sends @p payload to @p peerId over TCP. */
-	bool sendTCP(Connection::PeerId peerId, const Core::ByteBuffer& payload);
+	bool sendTCP(Connection::PeerId peerId, const IO::ByteBuffer& payload);
 
 	/** @brief Broadcasts @p payload over UDP to all UDP-connected peers. */
-	void broadcastUDP(const Core::ByteBuffer& payload);
+	void broadcastUDP(const IO::ByteBuffer& payload);
 
 	/** @brief Broadcasts @p payload over TCP to all TCP-connected peers. */
-	void broadcastTCP(const Core::ByteBuffer& payload);
+	void broadcastTCP(const IO::ByteBuffer& payload);
 
 	/**
 	 * @brief Drains the packet queue and event bus, dispatches work.

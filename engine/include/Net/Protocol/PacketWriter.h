@@ -2,7 +2,7 @@
 
 #include <cassert>
 
-#include "Net/Core/ByteBuffer.h"
+#include "IO/ByteBuffer.h"
 #include "Net/Protocol/PacketHeader.h"
 
 namespace Blackthorn::Net::Protocol {
@@ -58,7 +58,7 @@ public:
 	 * @param flags      Optional @c PacketFlags (default @c None).
 	 */
 	explicit PacketWriter(
-		Core::ByteBuffer& bf,
+		IO::ByteBuffer& bf,
 		PacketType packetType,
 		Uint64 tick = 0,
 		PacketFlags flags = PacketFlags::None
@@ -97,7 +97,7 @@ public:
 	 * pw.finish();
 	 * @endcode
 	 */
-	Core::ByteBuffer& buffer() { return buf; }
+	IO::ByteBuffer& buffer() { return buf; }
 
 	/**
 	 * @brief Finalises the packet by computing and patching
@@ -146,7 +146,7 @@ public:
 	}
 
 private:
-	Core::ByteBuffer& buf;
+	IO::ByteBuffer& buf;
 	bool finished = false;
 	size_t headerOffset = 0; ///< Offset of first header byte in buf.
 	size_t payloadStart = 0; ///< Offset of first payload byte in buf.

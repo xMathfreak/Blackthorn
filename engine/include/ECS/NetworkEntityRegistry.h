@@ -10,7 +10,7 @@
 
 #include "Core/Export.h"
 #include "ECS/Entity.h"
-#include "Net/Core/ByteBuffer.h"
+#include "IO/ByteBuffer.h"
 
 namespace Blackthorn::ECS {
 
@@ -296,13 +296,13 @@ public:
 	}
 
 	void serializeSpawn(
-		Net::Core::ByteBuffer& buf,
+		IO::ByteBuffer& buf,
 		NetworkEntityId netId,
 		Uint32 tick = 0
 	) const;
 
 	void serializeDespawn(
-		Net::Core::ByteBuffer& buf,
+		IO::ByteBuffer& buf,
 		NetworkEntityId netId,
 		DespawnReason reason = DespawnReason::Unknown,
 		Uint32 tick = 0

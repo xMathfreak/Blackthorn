@@ -72,7 +72,7 @@ void PacketDispatcher::poll(Jobs::JobSystem* jobs) {
 
 		Connection::PeerId pid = packet.peerId;
 		Protocol::PacketHeader hdr = header;
-		Core::ByteBuffer payload = std::move(packet.data);
+		IO::ByteBuffer payload = std::move(packet.data);
 		auto handler = packetHandler;
 
 		if (jobs) {

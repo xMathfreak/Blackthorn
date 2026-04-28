@@ -93,7 +93,7 @@ void ConnectionManager::disconnect(Connection::PeerId peerId) {
 		return;
 
 	if (peer.tcpConnected && peer.tcpSocket && peer.tcpChannel) {
-		Core::ByteBuffer buf;
+		IO::ByteBuffer buf;
 		Protocol::PacketHeader hdr;
 		hdr.packetType = Protocol::PacketType::Disconnect;
 		hdr.tick = 0;
@@ -118,7 +118,7 @@ void ConnectionManager::disconnect(Connection::PeerId peerId) {
 
 bool ConnectionManager::sendUDP(
 	Connection::PeerId peerId,
-	const Core::ByteBuffer& payload
+	const IO::ByteBuffer& payload
 ) {
 	auto* sock = ioWorker.udpSocketPtr();
 	if (!sock)
@@ -129,18 +129,18 @@ bool ConnectionManager::sendUDP(
 
 bool ConnectionManager::sendTCP(
 	Connection::PeerId peerId,
-	const Core::ByteBuffer& payload
+	const IO::ByteBuffer& payload
 ) {
 	return registry.sendTCP(peerId, payload);
 }
 
-void ConnectionManager::broadcastUDP(const Core::ByteBuffer& payload) {
+void ConnectionManager::broadcastUDP(const IO::ByteBuffer& payload) {
 	auto* sock = ioWorker.udpSocketPtr();
 	if (sock)
 		registry.broadcastUDP(payload, *sock);
 }
 
-void ConnectionManager::broadcastTCP(const Core::ByteBuffer& payload) {
+void ConnectionManager::broadcastTCP(const IO::ByteBuffer& payload) {
 	registry.broadcastTCP(payload);
 }
 

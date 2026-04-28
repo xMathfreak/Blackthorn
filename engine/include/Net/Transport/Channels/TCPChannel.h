@@ -5,7 +5,7 @@
 #include <SDL3/SDL.h>
 
 #include "Core/Export.h"
-#include "Net/Core/ByteBuffer.h"
+#include "IO/ByteBuffer.h"
 #include "Net/Transport/Sockets/ISocket.h"
 
 namespace Blackthorn::Net::Transport::Channels {
@@ -90,7 +90,7 @@ public:
 	 *                automatically - do not include it in `payload`.
 	 * @return SocketResult of the underlying send call.
 	 */
-	Sockets::SocketResult send(Sockets::ISocket& socket, const Core::ByteBuffer& payload);
+	Sockets::SocketResult send(Sockets::ISocket& socket, const IO::ByteBuffer& payload);
 
 	/**
 	 * @brief Reads available bytes from @p socket and assembles complete
@@ -99,7 +99,7 @@ public:
 	 * Call in a loop until the result is not @c ReceiveResult::Message:
 	 *
 	 * @code
-	 * Core::ByteBuffer msg;
+	 * IO::ByteBuffer msg;
 	 * ReceiveResult r;
 	 * while ((r = channel.receive(socket, msg)) == ReceiveResult::Message) {
 	 *     processMessage(msg);
@@ -114,7 +114,7 @@ public:
 	 *                   on any other result.
 	 * @return @c Message, @c NeedMore, or @c FatalError.
 	 */
-	ReceiveResult receive(Sockets::ISocket& socket, Core::ByteBuffer& outMessage);
+	ReceiveResult receive(Sockets::ISocket& socket, IO::ByteBuffer& outMessage);
 
 	/** @brief Returns true if the channel has unconsumed buffered bytes. */
 	bool hasPendingData() const noexcept {

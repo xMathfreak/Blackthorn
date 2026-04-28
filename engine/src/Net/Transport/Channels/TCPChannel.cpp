@@ -4,7 +4,7 @@
 
 namespace Blackthorn::Net::Transport::Channels {
 
-Sockets::SocketResult TCPChannel::send(Sockets::ISocket& socket, const Core::ByteBuffer& payload) {
+Sockets::SocketResult TCPChannel::send(Sockets::ISocket& socket, const IO::ByteBuffer& payload) {
 	const Uint32 len = static_cast<Uint32>(payload.size());
 
 	sendBuffer.clear();
@@ -45,7 +45,7 @@ Sockets::SocketResult TCPChannel::send(Sockets::ISocket& socket, const Core::Byt
 	return Sockets::SocketResult::Ok;
 }
 
-ReceiveResult TCPChannel::receive(Sockets::ISocket& socket,	Core::ByteBuffer& outMessage) {
+ReceiveResult TCPChannel::receive(Sockets::ISocket& socket,	IO::ByteBuffer& outMessage) {
 	const bool havePrefix = pendingMessageSize > 0;
 	const bool haveEnough = havePrefix
 		? (available() >= pendingMessageSize)
@@ -92,7 +92,7 @@ ReceiveResult TCPChannel::receive(Sockets::ISocket& socket,	Core::ByteBuffer& ou
 	if (available() < pendingMessageSize)
 		return ReceiveResult::NeedMore;
 
-	outMessage = Core::ByteBuffer(
+	outMessage = IO::ByteBuffer(
 		recvBuffer.data() + readHead,
 		pendingMessageSize
 	);

@@ -13,7 +13,7 @@ namespace Blackthorn::Net::Transport::Channels {
 Sockets::SocketResult UDPChannel::send(
 	Sockets::ISocket& socket,
 	const Address& address,
-	const Core::ByteBuffer& payload
+	const IO::ByteBuffer& payload
 ) {
 	const size_t unfragmentedSize =
 		UDPHeader::SERIALIZED_SIZE
@@ -21,7 +21,7 @@ Sockets::SocketResult UDPChannel::send(
 		+ payload.size();
 
 	if (unfragmentedSize <= PRACTICAL_MTU) {
-		Core::ByteBuffer datagram;
+		IO::ByteBuffer datagram;
 		datagram.reserve(unfragmentedSize);
 
 		// UDPHeader
@@ -38,7 +38,7 @@ Sockets::SocketResult UDPChannel::send(
 
 		bool reliable = false;
 		if (payload.size() >= Protocol::PacketHeader::SERIALIZED_SIZE) {
-			Core::ByteBuffer tmp(payload.data(), payload.size());
+			IO::ByteBuffer tmp(payload.data(), payload.size());
 			Protocol::PacketHeader ph;
 			ph.deserialize(tmp);
 			reliable = hasFlag(ph.flags, Protocol::PacketFlags::Reliable);
@@ -49,7 +49,7 @@ Sockets::SocketResult UDPChannel::send(
 
 	bool reliable = false;
 	if (payload.size() >= Protocol::PacketHeader::SERIALIZED_SIZE) {
-		Core::ByteBuffer tmp(payload.data(), payload.size());
+		IO::ByteBuffer tmp(payload.data(), payload.size());
 		Protocol::PacketHeader ph;
 		ph.deserialize(tmp);
 		reliable = hasFlag(ph.flags, Protocol::PacketFlags::Reliable);
@@ -89,7 +89,7 @@ Sockets::SocketResult UDPChannel::send(
 			? firstChunk
 			: std::min(FRAG_N_PAYLOAD_BYTES, appSize - appOffset);
 
-		Core::ByteBuffer datagram;
+		IO::ByteBuffer datagram;
 		datagram.reserve(PRACTICAL_MTU);
 
 		// UDPHeader
@@ -128,7 +128,7 @@ Sockets::SocketResult UDPChannel::send(
 Sockets::SocketResult UDPChannel::sendDatagram(
 	Sockets::ISocket& socket,
 	const Address& address,
-	const Core::ByteBuffer& datagram,
+	const IO::ByteBuffer& datagram,
 	bool reliable
 ) {
 	if (reliable)
@@ -200,7 +200,7 @@ void UDPChannel::retransmitPending(
 
 void UDPChannel::enqueueRetransmit(
 	Uint16 seq,
-	const Core::ByteBuffer& datagram
+	const IO::ByteBuffer& datagram
 ) {
 	for (size_t i = 0; i < MAX_RETRANSMIT_ENTRIES; ++i) {
 		const size_t idx = (retransmitHead + i) % MAX_RETRANSMIT_ENTRIES;

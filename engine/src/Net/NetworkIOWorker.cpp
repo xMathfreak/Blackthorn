@@ -141,7 +141,7 @@ void NetworkIOWorker::pollUDP() {
 		if (result != Transport::Sockets::SocketResult::Ok || bytesRead == 0)
 			break;
 
-		Core::ByteBuffer datagram(recvScratch.data(), bytesRead);
+		IO::ByteBuffer datagram(recvScratch.data(), bytesRead);
 
 		if (datagram.remaining() < Transport::Channels::UDPChannel::MIN_DATAGRAM_SIZE) {
 			BT_WARN(
@@ -171,7 +171,7 @@ void NetworkIOWorker::pollUDP() {
 		bool newUDPPeer = false;
 		bool rateDropped = false;
 
-		std::optional<Core::ByteBuffer> reassembled;
+		std::optional<IO::ByteBuffer> reassembled;
 
 		{
 			std::lock_guard<std::mutex> lock(registry->mutex());
@@ -244,7 +244,7 @@ void NetworkIOWorker::pollUDP() {
 
 					if (fragHdr.isFragmented()) {
 						if (peer.fragmentAssembler) {
-							Core::ByteBuffer slice(
+							IO::ByteBuffer slice(
 								datagram.data() + datagram.readPosition(),
 								datagram.remaining()
 							);
@@ -288,7 +288,7 @@ void NetworkIOWorker::pollUDP() {
 			continue;
 		}
 
-		Core::ByteBuffer payload(
+		IO::ByteBuffer payload(
 			datagram.data() + datagram.readPosition(),
 			datagram.remaining()
 		);
@@ -365,7 +365,7 @@ void NetworkIOWorker::pollTCP() {
 				&& !peer.sentConnectRequest
 				&& peer.tcpSocket->isConnected())
 			{
-				Core::ByteBuffer reqBuf;
+				IO::ByteBuffer reqBuf;
 				Protocol::PacketHeader reqHdr;
 				reqHdr.packetType = Protocol::PacketType::ConnectRequest;
 				reqHdr.payloadLength = sizeof(Uint16);
@@ -386,7 +386,7 @@ void NetworkIOWorker::pollTCP() {
 				continue;
 			}
 
-			Core::ByteBuffer msg;
+			IO::ByteBuffer msg;
 			for (;;) {
 				const Transport::Channels::ReceiveResult rr =
 					peer.tcpChannel->receive(*peer.tcpSocket, msg);
@@ -447,7 +447,7 @@ void NetworkIOWorker::pollTCP() {
 								break;
 							}
 
-							Core::ByteBuffer ackBuf;
+							IO::ByteBuffer ackBuf;
 							Protocol::PacketHeader ackHdr;
 							ackHdr.packetType = Protocol::PacketType::ConnectAck;
 							ackHdr.payloadLength = sizeof(Uint16);
@@ -459,7 +459,7 @@ void NetworkIOWorker::pollTCP() {
 							peer.tcpConnected = true;
 							peer.negotiatedSchemaVersion = clientVersion;
 
-							Core::ByteBuffer portBuf;
+							IO::ByteBuffer portBuf;
 							Protocol::PacketHeader portHdr;
 							portHdr.packetType = Protocol::PacketType::UDPPortInfo;
 							portHdr.payloadLength = sizeof(Uint16);
@@ -489,7 +489,7 @@ void NetworkIOWorker::pollTCP() {
 							peer.state = Connection::PeerState::Connected;
 							peer.tcpConnected = true;
 
-							Core::ByteBuffer portBuf;
+							IO::ByteBuffer portBuf;
 							Protocol::PacketHeader portHdr;
 							portHdr.packetType = Protocol::PacketType::UDPPortInfo;
 							portHdr.payloadLength = sizeof(Uint16);
@@ -532,7 +532,7 @@ void NetworkIOWorker::pollTCP() {
 					}
 
 					case Protocol::PacketType::Heartbeat: {
-						Core::ByteBuffer buf;
+						IO::ByteBuffer buf;
 						Protocol::PacketHeader hdr;
 						hdr.packetType = Protocol::PacketType::HeartbeatAck;
 						hdr.serialize(buf);
@@ -594,7 +594,7 @@ void NetworkIOWorker::pollTCP() {
 
 						Transport::InboundPacket pkt;
 						pkt.source = peer.tcpAddress;
-						pkt.data = Core::ByteBuffer(msg.data(), msg.size());
+						pkt.data = IO::ByteBuffer(msg.data(), msg.size());
 						pkt.channel = Transport::InboundPacket::Channel::TCP;
 						pkt.peerId = peer.id;
 
@@ -623,7 +623,7 @@ void NetworkIOWorker::sendHeartbeats() {
 		if (!peer.needsHeartbeat(cfg.heartbeatIntervalMs))
 			continue;
 
-		Core::ByteBuffer buf;
+		IO::ByteBuffer buf;
 		Protocol::PacketHeader hdr;
 		hdr.packetType = Protocol::PacketType::Heartbeat;
 		hdr.serialize(buf);

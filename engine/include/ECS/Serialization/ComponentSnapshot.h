@@ -8,7 +8,7 @@
 #include "ECS/EntityPool.h"
 #include "ECS/NetworkEntityRegistry.h"
 #include "ECS/Serialization/ComponentSerializer.h"
-#include "Net/Core/ByteBuffer.h"
+#include "IO/ByteBuffer.h"
 
 namespace Blackthorn::ECS::Serialization {
 
@@ -50,7 +50,7 @@ struct SnapshotEntity {
  * and their bit is cleared from the written componentMask.
  *
  * @code
- * Net::Core::ByteBuffer buf;
+ * IO::ByteBuffer buf;
  * buf.reserve(4096);
  *
  * // Write packet header first (payloadLength back-patched below).
@@ -95,7 +95,7 @@ public:
 	 * @param buf Destination buffer. The packet header must already have
 	 *            been written before calling this.
 	 */
-	void write(Net::Core::ByteBuffer& buf) const {
+	void write(IO::ByteBuffer& buf) const {
 		const auto& serializerReg = SerializerRegistry::instance();
 
 		buf.writeU64(tick);
@@ -153,7 +153,7 @@ private:
 	}
 
 	void writeComponents(
-		Net::Core::ByteBuffer& buf,
+		IO::ByteBuffer& buf,
 		Entity entity,
 		Uint64 writeMask,
 		const SerializerRegistry& registry) const
@@ -197,7 +197,7 @@ public:
 	 * @brief Constructs a reader from a buffer positioned at the start of
 	 * the snapshot payload (immediately after the PacketHeader).
 	 */
-	explicit ComponentSnapshotReader(Net::Core::ByteBuffer& buf)
+	explicit ComponentSnapshotReader(IO::ByteBuffer& buf)
 		: buf(buf)
 		, snapshotTick(buf.readU64())
 		, entityCount(buf.readU32())
@@ -263,7 +263,7 @@ public:
 	{
 		const auto& registry = SerializerRegistry::instance();
 
-		Net::Core::ByteBuffer view(
+		IO::ByteBuffer view(
 			buf.data() + entry.componentDataOffset,
 			buf.size() - entry.componentDataOffset
 		);
@@ -283,7 +283,7 @@ public:
 	}
 
 private:
-	Net::Core::ByteBuffer& buf;
+	IO::ByteBuffer& buf;
 	Uint64 snapshotTick = 0;
 	Uint32 entityCount = 0;
 	Uint32 entitiesRead = 0;
@@ -317,7 +317,7 @@ private:
 				buf.skip(entry->fixedSize);
 			} else {
 				const size_t before = buf.readPosition();
-				Net::Core::ByteBuffer discard(buf.data() + before, buf.remaining());
+				IO::ByteBuffer discard(buf.data() + before, buf.remaining());
 				entry->deserialize(discardSentinel(), discard);
 				buf.skip(discard.readPosition());
 			}

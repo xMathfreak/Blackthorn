@@ -4,9 +4,9 @@
 
 namespace Blackthorn::Net::Protocol {
 
-std::optional<Core::ByteBuffer> FragmentAssembler::ingest(
+std::optional<IO::ByteBuffer> FragmentAssembler::ingest(
 	const FragmentHeader& hdr,
-	const Core::ByteBuffer& payload
+	const IO::ByteBuffer& payload
 ) {
 	if (hdr.totalFrags == 0 || hdr.fragIndex >= hdr.totalFrags) {
 		BT_WARN(
@@ -40,7 +40,7 @@ std::optional<Core::ByteBuffer> FragmentAssembler::ingest(
 	if (set->fragments[hdr.fragIndex].size() > 0)
 		return std::nullopt;
 
-	set->fragments[hdr.fragIndex] = Core::ByteBuffer(
+	set->fragments[hdr.fragIndex] = IO::ByteBuffer(
 		payload.data() + payload.readPosition(),
 		payload.remaining()
 	);
@@ -53,7 +53,7 @@ std::optional<Core::ByteBuffer> FragmentAssembler::ingest(
 	if (!set->isComplete())
 		return std::nullopt;
 
-	Core::ByteBuffer result;
+	IO::ByteBuffer result;
 	result.reserve(set->totalBytesStored);
 
 	for (Uint8 i = 0; i < set->totalFrags; ++i)
@@ -121,7 +121,7 @@ FragmentSet& FragmentAssembler::allocateSet(
 			slot->totalFrags = hdr.totalFrags;
 			slot->receivedCount = 0;
 			slot->firstFragmentMs = SDL_GetTicks();
-			slot->fragments.assign(hdr.totalFrags, Core::ByteBuffer{});
+			slot->fragments.assign(hdr.totalFrags, IO::ByteBuffer{});
 			slot->totalBytesStored = 0;
 			return slot.value();
 		}
