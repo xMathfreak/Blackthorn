@@ -3,9 +3,9 @@
 #include <mutex>
 #include <vector>
 
-#include <SDL3/SDL.h>
 
 #include "Core/Export.h"
+#include "Core/Types/Types.h"
 #include "Net/Connection/NetworkPeer.h"
 #include "Net/Transport/Address.h"
 
@@ -14,7 +14,7 @@ namespace Blackthorn::Net {
 /**
  * @brief Type of a connection lifecycle event.
  */
-enum class ConnectionEventType : Uint8 {
+enum class ConnectionEventType : U8 {
 	Connect, ///< A peer completed its handshake and is now Connected.
 	Disconnect, ///< A peer timed out, was rate-kicked, or explicitly disconnected.
 };

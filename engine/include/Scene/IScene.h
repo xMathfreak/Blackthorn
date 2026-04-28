@@ -1,8 +1,7 @@
 #pragma once
 
-#include <SDL3/SDL.h>
-
 #include "Core/Export.h"
+#include "Core/Types/Types.h"
 #include "ECS/World.h"
 #include "Scene/ISimContext.h"
 
@@ -35,7 +34,7 @@ public:
 	virtual bool blocksUpdate() const { return true; }
 	virtual bool blocksRender() const { return true; }
 
-	virtual void fixedUpdate(float dt, Uint64 tick) {
+	virtual void fixedUpdate(float dt, U64 tick) {
 		if (world)
 			world->fixedUpdate(dt, tick);
 	}

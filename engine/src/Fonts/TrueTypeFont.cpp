@@ -179,8 +179,8 @@ void TrueTypeFont::initBuffers() {
 	std::vector<GLuint> indices;
 	indices.reserve(MAX_INDICES);
 
-	Uint32 offset = 0;
-	for (Uint32 i = 0; i < MAX_INDICES; i += 6) {
+	U32 offset = 0;
+	for (U32 i = 0; i < MAX_INDICES; i += 6) {
 		indices.push_back(offset + 0);
 		indices.push_back(offset + 1);
 		indices.push_back(offset + 2);
@@ -211,7 +211,7 @@ const TrueTypeFont::Glyph& TrueTypeFont::getGlyph(char32_t codePoint) {
 	if (!surface) {
 		BT_WARN(
 			"TrueTypeFont: Failed to render glyph U+{:#x}: {}",
-			static_cast<Uint32>(codePoint), SDL_GetError()
+			static_cast<U32>(codePoint), SDL_GetError()
 		);
 
 		static Glyph defaultGlyph;
@@ -237,11 +237,11 @@ const TrueTypeFont::Glyph& TrueTypeFont::getGlyph(char32_t codePoint) {
 	const int pixelCount = surface->w * surface->h;
 	reuseBuffer.resize(pixelCount);
 
-	const Uint8* src = static_cast<Uint8*>(surface->pixels);
+	const U8* src = static_cast<U8*>(surface->pixels);
 	const int pitch = surface->pitch;
 
 	for (int row = 0; row < surface->h; ++row) {
-		const Uint32* rowPixels = reinterpret_cast<const Uint32*>(src + row * pitch);
+		const U32* rowPixels = reinterpret_cast<const U32*>(src + row * pitch);
 		for (int col = 0; col < surface->w; ++col)
 			reuseBuffer[row * surface->w + col] = (rowPixels[col] >> 24) & 0xFF;
 	}

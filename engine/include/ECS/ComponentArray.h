@@ -9,8 +9,8 @@ template <typename T>
 class ComponentArray : public IComponentArray {
 private:
 	struct SparseEntry {
-		Uint32 pos;
-		Uint8 generation;
+		U32 pos;
+		U8 generation;
 	};
 
 private:
@@ -27,10 +27,10 @@ public:
 
 	template <typename... Args>
 	T& insert(Entity entity, Args&&... args) {
-		Uint32 idx = Detail::entityIndex(entity);
-		Uint32 gen = Detail::entityGeneration(entity);
+		U32 idx = Detail::entityIndex(entity);
+		U32 gen = Detail::entityGeneration(entity);
 
-		if (idx >= static_cast<Uint32>(sparse.size())) {
+		if (idx >= static_cast<U32>(sparse.size())) {
 			#ifdef BLACKTHORN_DEBUG
 				assert(false && "ComponentArray::insert: entity index out of range");
 			#endif
@@ -45,7 +45,7 @@ public:
 			return components[entry.pos];
 		}
 
-		entry.pos = static_cast<Uint32>(components.size());
+		entry.pos = static_cast<U32>(components.size());
 		entry.generation = gen;
 
 		components.emplace_back(std::forward<Args>(args)...);
@@ -55,10 +55,10 @@ public:
 	}
 
 	void remove(Entity entity) override {
-		Uint32 idx = Detail::entityIndex(entity);
-		Uint32 gen = Detail::entityGeneration(entity);
+		U32 idx = Detail::entityIndex(entity);
+		U32 gen = Detail::entityGeneration(entity);
 
-		if (idx >= static_cast<Uint32>(sparse.size()))
+		if (idx >= static_cast<U32>(sparse.size()))
 			return;
 
 		auto& entry = sparse[idx];
@@ -66,8 +66,8 @@ public:
 		if (entry.pos == INVALID_ENTITY || entry.generation != gen)
 			return;
 
-		Uint32 pos = entry.pos;
-		Uint32 lastPos = static_cast<Uint32>(components.size() - 1);
+		U32 pos = entry.pos;
+		U32 lastPos = static_cast<U32>(components.size() - 1);
 
 		if (pos != lastPos) {
 			components[pos] = std::move(components[lastPos]);
@@ -84,10 +84,10 @@ public:
 	}
 
 	bool has(Entity entity) const override {
-		Uint32 idx = Detail::entityIndex(entity);
-		Uint32 gen = Detail::entityGeneration(entity);
+		U32 idx = Detail::entityIndex(entity);
+		U32 gen = Detail::entityGeneration(entity);
 
-		if (idx >= static_cast<Uint32>(sparse.size()))
+		if (idx >= static_cast<U32>(sparse.size()))
 			return false;
 
 		const auto& entry = sparse[idx];
@@ -96,10 +96,10 @@ public:
 	}
 
 	T* get(Entity entity) {
-		Uint32 idx = Detail::entityIndex(entity);
-		Uint32 gen = Detail::entityGeneration(entity);
+		U32 idx = Detail::entityIndex(entity);
+		U32 gen = Detail::entityGeneration(entity);
 
-		if (idx >= static_cast<Uint32>(sparse.size()))
+		if (idx >= static_cast<U32>(sparse.size()))
 			return nullptr;
 
 		auto& entry = sparse[idx];
@@ -109,10 +109,10 @@ public:
 	}
 
 	const T* get(Entity entity) const {
-		Uint32 idx = Detail::entityIndex(entity);
-		Uint32 gen = Detail::entityGeneration(entity);
+		U32 idx = Detail::entityIndex(entity);
+		U32 gen = Detail::entityGeneration(entity);
 
-		if (idx >= static_cast<Uint32>(sparse.size()))
+		if (idx >= static_cast<U32>(sparse.size()))
 			return nullptr;
 
 		const auto& entry = sparse[idx];

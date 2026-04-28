@@ -14,22 +14,21 @@
 	#include <sys/socket.h>
 #endif
 
-#include <SDL3/SDL.h>
-
 #include "Core/Export.h"
+#include "Core/Types/Types.h"
 #include "IO/ByteBuffer.h"
 
 namespace Blackthorn::Net::Transport {
 
 struct BLACKTHORN_API Endpoint {
 	std::string ip = "<invalid>";
-	Uint16 port = 0;
+	U16 port = 0;
 };
 
 /**
  * @brief IP version carried by an `Address`.
  */
-enum class IPVersion : Uint8 {
+enum class IPVersion : U8 {
 	IPv4 = 4,
 	IPv6 = 6,
 };
@@ -71,8 +70,8 @@ inline std::ostream& operator<<(std::ostream& os, IPVersion v) {
  * Serializes as:
  *
  * @code
- * [uint8  version]  (4 or 6)
- * [uint16 port]     (host byte order)
+ * [U8  version]  (4 or 6)
+ * [U16 port]     (host byte order)
  *
  * if IPv4:
  *   [4 bytes  raw IPv4 address, network byte order]
@@ -92,7 +91,7 @@ public:
 	 * @return A valid address, or an invalid (default-constructed) address
 	 *         if parsing fails.
 	 */
-	static Address fromIPv4(const std::string& ip, Uint16 port) {
+	static Address fromIPv4(const std::string& ip, U16 port) {
 		Address addr;
 		auto* sa = reinterpret_cast<sockaddr_in*>(&addr.storage);
 		sa->sin_family = AF_INET;
@@ -108,7 +107,7 @@ public:
 	/**
 	 * @brief Creates an IPv6 address from a colon-hex string and port.
 	 */
-	static Address fromIPv6(const std::string& ip, Uint16 port) {
+	static Address fromIPv6(const std::string& ip, U16 port) {
 		Address addr;
 		auto* sa = reinterpret_cast<sockaddr_in6*>(&addr.storage);
 		sa->sin6_family = AF_INET6;
@@ -132,10 +131,10 @@ public:
 	 * @param port     Port number.
 	 * @return Resolved address, or invalid address on failure.
 	 */
-	static Address fromHostname(const std::string& hostname, Uint16 port);
+	static Address fromHostname(const std::string& hostname, U16 port);
 
 	/** @brief Binds to all IPv4 interfaces on `port`. */
-	static Address anyIPv4(Uint16 port) {
+	static Address anyIPv4(U16 port) {
 		Address addr;
 		auto* sa = reinterpret_cast<sockaddr_in*>(&addr.storage);
 		sa->sin_family = AF_INET;
@@ -146,7 +145,7 @@ public:
 	}
 
 	/** @brief Binds to all IPv6 interfaces on `port` (includes IPv4-mapped). */
-	static Address anyIPv6(Uint16 port) {
+	static Address anyIPv6(U16 port) {
 		Address addr;
 		auto* sa = reinterpret_cast<sockaddr_in6*>(&addr.storage);
 		sa->sin6_family = AF_INET6;
@@ -181,7 +180,7 @@ public:
 	}
 
 	/** @brief Returns the port in host byte order. */
-	Uint16 port() const noexcept {
+	U16 port() const noexcept {
 		if (storage.ss_family == AF_INET6)
 			return ntohs(reinterpret_cast<const sockaddr_in6*>(&storage)->sin6_port);
 
@@ -224,16 +223,16 @@ public:
 	 * in the class documentation.
 	 */
 	void serialize(IO::ByteBuffer& buf) const {
-		buf.writeU8(static_cast<Uint8>(version()));
+		buf.writeU8(static_cast<U8>(version()));
 		buf.writeU16(port());
 
 		if (version() == IPVersion::IPv4) {
 			const auto* sa = reinterpret_cast<const sockaddr_in*>(&storage);
-			const Uint8* bytes = reinterpret_cast<const Uint8*>(&sa->sin_addr);
+			const U8* bytes = reinterpret_cast<const U8*>(&sa->sin_addr);
 			buf.writeBytes(bytes, 4);
 		} else {
 			const auto* sa = reinterpret_cast<const sockaddr_in6*>(&storage);
-			const Uint8* bytes = reinterpret_cast<const Uint8*>(&sa->sin6_addr);
+			const U8* bytes = reinterpret_cast<const U8*>(&sa->sin6_addr);
 			buf.writeBytes(bytes, 16);
 		}
 	}
@@ -244,11 +243,11 @@ public:
 	 */
 	static Address deserialize(IO::ByteBuffer& buf) {
 		Address addr;
-		Uint8 ver = buf.readU8();
-		Uint16 p = buf.readU16();
+		U8 ver = buf.readU8();
+		U16 p = buf.readU16();
 
 		if (ver == 4) {
-			Uint8 bytes[4];
+			U8 bytes[4];
 			buf.readBytes(bytes, 4);
 
 			auto* sa = reinterpret_cast<sockaddr_in*>(&addr.storage);
@@ -257,7 +256,7 @@ public:
 			std::memcpy(&sa->sin_addr, bytes, 4);
 			addr.valid = true;
 		} else if (ver == 6) {
-			Uint8 bytes[16];
+			U8 bytes[16];
 			buf.readBytes(bytes, 16);
 
 			auto* sa = reinterpret_cast<sockaddr_in6*>(&addr.storage);
@@ -304,14 +303,14 @@ namespace std {
 template <>
 struct hash<Blackthorn::Net::Transport::Address> {
 	size_t operator()(const Blackthorn::Net::Transport::Address& addr) const noexcept {
-		size_t h = std::hash<Uint16>{}(addr.port());
+		size_t h = std::hash<U16>{}(addr.port());
 
 		if (addr.version() == Blackthorn::Net::Transport::IPVersion::IPv4) {
 			const auto* sa = reinterpret_cast<const sockaddr_in*>(addr.raw());
-			h ^= std::hash<Uint32>{}(sa->sin_addr.s_addr) * 2654435761ULL;
+			h ^= std::hash<U32>{}(sa->sin_addr.s_addr) * 2654435761ULL;
 		} else {
 			const auto* sa = reinterpret_cast<const sockaddr_in6*>(addr.raw());
-			const Uint8* b = reinterpret_cast<const Uint8*>(&sa->sin6_addr);
+			const U8* b = reinterpret_cast<const U8*>(&sa->sin6_addr);
 			for (int i = 0; i < 16; ++i)
 				h ^= size_t(b[i]) << (i % 8);
 		}

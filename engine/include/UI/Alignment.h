@@ -1,17 +1,17 @@
 #pragma once
 
-#include <SDL3/SDL.h>
+#include "Core/Types/Types.h"
 
 namespace Blackthorn::UI {
 
 struct Alignment {
-	enum class Horizontal : Uint8 {
+	enum class Horizontal : U8 {
 		Left,
 		Center,
 		Right
 	};
 
-	enum class Vertical : Uint8 {
+	enum class Vertical : U8 {
 		Top,
 		Center,
 		Bottom

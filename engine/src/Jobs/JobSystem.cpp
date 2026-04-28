@@ -9,9 +9,9 @@
 namespace {
 	thread_local int workerIndex = -1;
 
-	thread_local Uint32 stealRNG = 0x9E3779B9u;
+	thread_local U32 stealRNG = 0x9E3779B9u;
 
-	inline Uint32 nextRand() {
+	inline U32 nextRand() {
 		stealRNG ^= stealRNG << 13;
 		stealRNG ^= stealRNG >> 17;
 		stealRNG ^= stealRNG << 5;

@@ -56,7 +56,7 @@ std::optional<IO::ByteBuffer> FragmentAssembler::ingest(
 	IO::ByteBuffer result;
 	result.reserve(set->totalBytesStored);
 
-	for (Uint8 i = 0; i < set->totalFrags; ++i)
+	for (U8 i = 0; i < set->totalFrags; ++i)
 		result.writeBytes(set->fragments[i].data(), set->fragments[i].size());
 
 	releaseSet(*set);
@@ -90,7 +90,7 @@ void FragmentAssembler::reset() {
 	localBytes = 0;
 }
 
-FragmentSet* FragmentAssembler::findSet(Uint16 fragmentId) {
+FragmentSet* FragmentAssembler::findSet(U16 fragmentId) {
 	for (auto& slot : pool) {
 		if (slot.has_value() && slot->fragmentId == fragmentId)
 			return &slot.value();
@@ -146,7 +146,7 @@ void FragmentAssembler::releaseSet(FragmentSet& set) {
 
 void FragmentAssembler::evictOldest() {
 	std::optional<FragmentSet>* oldest = nullptr;
-	Uint64 oldestTime = std::numeric_limits<Uint64>::max();
+	U64 oldestTime = std::numeric_limits<U64>::max();
 
 	for (auto& slot : pool) {
 		if (slot.has_value() && slot->firstFragmentMs < oldestTime) {

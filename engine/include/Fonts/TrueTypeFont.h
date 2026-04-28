@@ -73,9 +73,9 @@ private:
 private:
 	static std::shared_ptr<Graphics::Shader> shader;
 
-	Uint32 MAX_TEXT_GLYPHS;
-	Uint32 MAX_VERTICES;
-	Uint32 MAX_INDICES;
+	U32 MAX_TEXT_GLYPHS;
+	U32 MAX_VERTICES;
+	U32 MAX_INDICES;
 
 	std::unique_ptr<Graphics::EBO> ebo;
 	std::unique_ptr<Graphics::VAO> vao;
@@ -90,11 +90,11 @@ private:
 
 	float lineHeight = 0.0f;
 
-	Uint32 TAB_SPACES;
+	U32 TAB_SPACES;
 
 	std::unordered_map<char32_t, Glyph> glyphCache;
 
-	std::vector<Uint8> reuseBuffer;
+	std::vector<U8> reuseBuffer;
 	Containers::LRUCache<TextCacheKey, CachedText> textCache;
 
 private:

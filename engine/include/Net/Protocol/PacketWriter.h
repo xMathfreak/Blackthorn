@@ -60,7 +60,7 @@ public:
 	explicit PacketWriter(
 		IO::ByteBuffer& bf,
 		PacketType packetType,
-		Uint64 tick = 0,
+		U64 tick = 0,
 		PacketFlags flags = PacketFlags::None
 	)
 		: buf(bf)
@@ -109,14 +109,14 @@ public:
 	 * @return The number of payload bytes written (i.e. the patched
 	 *         @c payloadLength value).
 	 */
-	Uint32 finish() {
+	U32 finish() {
 		if (finished)
 			return cachedPayloadLength;
 
 		static constexpr size_t PAYLOAD_LENGTH_OFFSET = 2;
 
-		const Uint32 payloadBytes =
-			static_cast<Uint32>(buf.size() - payloadStart);
+		const U32 payloadBytes =
+			static_cast<U32>(buf.size() - payloadStart);
 
 		buf.patchU32(headerOffset + PAYLOAD_LENGTH_OFFSET, payloadBytes);
 
@@ -150,7 +150,7 @@ private:
 	bool finished = false;
 	size_t headerOffset = 0; ///< Offset of first header byte in buf.
 	size_t payloadStart = 0; ///< Offset of first payload byte in buf.
-	Uint32 cachedPayloadLength = 0;
+	U32 cachedPayloadLength = 0;
 };
 
 } // namespace Blackthorn::Net::Protocol

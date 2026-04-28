@@ -8,6 +8,7 @@
 #include <SDL3/SDL.h>
 
 #include "Core/Export.h"
+#include "Core/Types/Types.h"
 
 namespace Blackthorn::Input {
 
@@ -93,7 +94,7 @@ public:
 		return mouseWheel;
 	}
 
-	bool isMouseButtonDown(Uint8 button) const {
+	bool isMouseButtonDown(U8 button) const {
 		if (button >= mouseButtons.size())
 			return false;
 
@@ -101,14 +102,14 @@ public:
 			|| mouseButtons[button] == ButtonState::Pressed;
 	}
 
-	bool isMouseButtonPressed(Uint8 button) const {
+	bool isMouseButtonPressed(U8 button) const {
 		if (button >= mouseButtons.size())
 			return false;
 
 		return mouseButtons[button] == ButtonState::Pressed;
 	}
 
-	bool isMouseButtonReleased(Uint8 button) const {
+	bool isMouseButtonReleased(U8 button) const {
 		if (button >= mouseButtons.size())
 			return false;
 

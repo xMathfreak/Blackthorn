@@ -4,19 +4,18 @@
 #include <ranges>
 #include <vector>
 
-#include <SDL3/SDL.h>
-
 #include "Core/Export.h"
+#include "Core/Types/Types.h"
 
 namespace Blackthorn::Math {
 
 class BLACKTHORN_API Random {
 public:
-	explicit Random(Uint64 seed = std::random_device{}())
+	explicit Random(U64 seed = std::random_device{}())
 		: randomEngine(seed)
 	{}
 
-	void setSeed(Uint64 seed) {
+	void setSeed(U64 seed) {
 		randomEngine.seed(seed);
 	}
 

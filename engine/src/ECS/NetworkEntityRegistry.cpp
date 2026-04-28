@@ -7,7 +7,7 @@ namespace Blackthorn::ECS {
 void NetworkEntityRegistry::serializeSpawn(
 	IO::ByteBuffer& buf,
 	NetworkEntityId netId,
-	Uint32 tick
+	U32 tick
 ) const {
 	if (netId == INVALID_NET_ENTITY)
 		throw std::invalid_argument(
@@ -29,7 +29,7 @@ void NetworkEntityRegistry::serializeDespawn(
 	IO::ByteBuffer& buf,
 	NetworkEntityId netId,
 	DespawnReason reason,
-	Uint32 tick
+	U32 tick
 ) const {
 	if (netId == INVALID_NET_ENTITY)
 		throw std::invalid_argument(
@@ -43,7 +43,7 @@ void NetworkEntityRegistry::serializeDespawn(
 	);
 
 	pw.buffer().writeU64(netId);
-	pw.buffer().writeU8(static_cast<Uint8>(reason));
+	pw.buffer().writeU8(static_cast<U8>(reason));
 
 	pw.finish();
 }

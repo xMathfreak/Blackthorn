@@ -5,6 +5,7 @@
 #include <SDL3/SDL.h>
 
 #include "Debug/Logger.h"
+#include "Core/Types/Types.h"
 #include "Input/InputManager.h"
 #include "UI/Container.h"
 #include "UI/Widget.h"
@@ -209,7 +210,7 @@ void UIManager::handleInput(const Input::InputManager& input) {
 	Widget* widgetUnderCursor = findWidgetAt(mousePos);
 	setHoveredWidget(widgetUnderCursor);
 
-	for (Uint8 btn = 1; btn <= 3; ++btn) {
+	for (U8 btn = 1; btn <= 3; ++btn) {
 		if (input.isMouseButtonPressed(btn)) {
 			if (root->onMouseDown(mousePos, btn)) {
 				Widget* clicked = findWidgetAt(mousePos);

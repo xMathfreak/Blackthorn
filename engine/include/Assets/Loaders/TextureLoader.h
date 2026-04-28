@@ -15,7 +15,7 @@
 namespace Blackthorn::Graphics {
 
 struct BLACKTHORN_API RawTextureData : Assets::IRawAssetData {
-	std::vector<Uint8> pixels;
+	std::vector<U8> pixels;
 	int width = 0;
 	int height = 0;
 	int channels = 0;
@@ -112,7 +112,7 @@ public:
 
 		const int rowBytes = converted->w * 4;
 		const int pitch = converted->pitch;
-		const Uint8* src = static_cast<const Uint8*>(converted->pixels);
+		const U8* src = static_cast<const U8*>(converted->pixels);
 
 		raw->pixels.resize(static_cast<size_t>(converted->w) * converted->h * 4);
 

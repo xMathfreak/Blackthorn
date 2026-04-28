@@ -2,9 +2,8 @@
 
 #include <vector>
 
-#include <SDL3/SDL.h>
-
 #include "Core/Export.h"
+#include "Core/Types/Types.h"
 #include "IO/ByteBuffer.h"
 #include "Net/Transport/Sockets/ISocket.h"
 
@@ -16,7 +15,7 @@ namespace Blackthorn::Net::Transport::Channels {
  * Allows callers to distinguish between "no data yet"
  * and "fatal framing error".
  */
-enum class ReceiveResult : Uint8 {
+enum class ReceiveResult : U8 {
 	/// A complete message was assembled and written to @c outMessage.
 	Message,
 
@@ -48,7 +47,7 @@ enum class ReceiveResult : Uint8 {
  * @section Wire layout per message
  *
  * @code
- * [uint32 length]  - byte count of the following payload
+ * [U32 length]  - byte count of the following payload
  * [length bytes]   - PacketHeader + message payload
  * @endcode
  *
@@ -72,7 +71,7 @@ class BLACKTHORN_API TCPChannel {
 public:
 	/// Maximum message length accepted. Prevents runaway memory allocation
 	/// if a malformed or malicious length prefix is received.
-	static constexpr Uint32 MAX_MESSAGE_SIZE = 1 << 20u;
+	static constexpr U32 MAX_MESSAGE_SIZE = 1 << 20u;
 
 	TCPChannel() = default;
 
@@ -137,19 +136,19 @@ public:
 private:
 	/// Partial receive buffer. Bytes accumulate here until a full message
 	/// can be extracted.
-	std::vector<Uint8> recvBuffer;
+	std::vector<U8> recvBuffer;
 
 	/// index of the first unconsumed byte in @c recvBuffer.
 	size_t readHead = 0;
 
 	/// Expected payload size of the message currently being assembled,
 	/// or 0 if the length prefix has not yet been fully received.
-	Uint32 pendingMessageSize = 0;
+	U32 pendingMessageSize = 0;
 
 	/// Temporary send buffer reused across calls to avoid repeated allocation.
-	std::vector<Uint8> sendBuffer;
+	std::vector<U8> sendBuffer;
 
-	static constexpr size_t LENGTH_PREFIX_SIZE = sizeof(Uint32);
+	static constexpr size_t LENGTH_PREFIX_SIZE = sizeof(U32);
 
 	/// Number of unconsumed bytes currently in @c recvBuffer.
 	size_t available() const noexcept {

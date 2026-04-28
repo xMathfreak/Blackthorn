@@ -56,7 +56,7 @@ PeerId PeerRegistry::findOrCreate(
 }
 
 PeerId PeerRegistry::allocateSlot(const Transport::Address& address, bool tcp) {
-	for (Uint32 i = 0; i < static_cast<Uint32>(peers.size()); ++i) {
+	for (U32 i = 0; i < static_cast<U32>(peers.size()); ++i) {
 		if (peers[i].state != PeerState::Disconnected)
 			continue;
 

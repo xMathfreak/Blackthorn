@@ -42,7 +42,7 @@ bool Container::onMouseMove(const glm::vec2& pos) {
 	return Widget::onMouseMove(pos);
 }
 
-bool Container::onMouseDown(const glm::vec2& pos, Uint8 button) {
+bool Container::onMouseDown(const glm::vec2& pos, U8 button) {
 	if (!visible || !isEnabled())
 		return false;
 
@@ -54,7 +54,7 @@ bool Container::onMouseDown(const glm::vec2& pos, Uint8 button) {
 	return Widget::onMouseDown(pos, button);
 }
 
-bool Container::onMouseUp(const glm::vec2& pos, Uint8 button) {
+bool Container::onMouseUp(const glm::vec2& pos, U8 button) {
 	if (!visible)
 		return false;
 
@@ -112,7 +112,7 @@ void Container::setSpacing(float space) {
 	markLayoutDirty();
 }
 
-void Container::setGridColumns(Uint8 cols) {
+void Container::setGridColumns(U8 cols) {
 	if (cols == 0) cols = 1;
 
 	if (gridColumns == cols)

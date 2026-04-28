@@ -9,7 +9,7 @@
 
 namespace Blackthorn::Graphics {
 
-Renderer::Renderer(Uint32 maxQuads)
+Renderer::Renderer(U32 maxQuads)
 	: MAX_QUADS(maxQuads)
 	, MAX_VERTICES(maxQuads * 4)
 	, MAX_INDICES(maxQuads * 6)
@@ -60,8 +60,8 @@ void Renderer::initQuadBuffers() {
 	std::vector<GLuint> indices;
 	indices.reserve(MAX_INDICES);
 
-	Uint32 offset = 0;
-	for (Uint32 i = 0; i < MAX_INDICES; i += 6) {
+	U32 offset = 0;
+	for (U32 i = 0; i < MAX_INDICES; i += 6) {
 		indices.push_back(offset + 0);
 		indices.push_back(offset + 1);
 		indices.push_back(offset + 2);
@@ -83,7 +83,7 @@ void Renderer::initShader() {
 	shader = std::make_unique<Shader>("assets/shaders/default.vert", "assets/shaders/default.frag");
 	shader->bind();
 
-	for (Uint32 i = 0; i < MAX_TEXTURE_SLOTS; ++i) {
+	for (U32 i = 0; i < MAX_TEXTURE_SLOTS; ++i) {
 		shader->setInt("u_Textures[" + std::to_string(i) + "]", i);
 	}
 
@@ -125,11 +125,11 @@ void Renderer::flush() {
 	if (quadIndexCount == 0)
 		return;
 
-	const GLsizeiptr dataSize = reinterpret_cast<const Uint8*>(quadBufferPtr) - reinterpret_cast<const Uint8*>(quadBuffer.get());
+	const GLsizeiptr dataSize = reinterpret_cast<const U8*>(quadBufferPtr) - reinterpret_cast<const U8*>(quadBuffer.get());
 	QuadVBO->bind();
 	glBufferSubData(GL_ARRAY_BUFFER, 0, dataSize, quadBuffer.get());
 
-	for (Uint32 i = 0; i < textureSlotIndex; ++i) {
+	for (U32 i = 0; i < textureSlotIndex; ++i) {
 		if (textureSlots[i])
 			textureSlots[i]->bind(i);
 	}
@@ -423,8 +423,8 @@ inline bool Renderer::isVisible(const SDL_FRect& rect, float rotation) const {
 	);
 }
 
-Uint32 Renderer::findOrAddTexture(const Texture* texture){
-	for (Uint32 i = 1; i < textureSlotIndex; ++i) {
+U32 Renderer::findOrAddTexture(const Texture* texture){
+	for (U32 i = 1; i < textureSlotIndex; ++i) {
 		if (textureSlots[i] == texture)
 			return i;
 	}
@@ -432,7 +432,7 @@ Uint32 Renderer::findOrAddTexture(const Texture* texture){
 	if (textureSlotIndex >= MAX_TEXTURE_SLOTS)
 		nextBatch();
 
-	const Uint32 slot = textureSlotIndex;
+	const U32 slot = textureSlotIndex;
 	textureSlots[textureSlotIndex++] = texture;
 	return slot;
 }

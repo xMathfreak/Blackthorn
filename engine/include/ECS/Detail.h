@@ -6,21 +6,21 @@
 #include "ECS/Entity.h"
 
 namespace Blackthorn::ECS::Detail {
-	constexpr Uint32 MAX_ENTITIES = 8192;
-	constexpr Uint8 INDEX_BITS = 24;
-	constexpr Uint32 INDEX_MASK = (1u << INDEX_BITS) - 1;
-	constexpr Uint32 GENERATION_BITS = 32 - INDEX_BITS;
+	constexpr U32 MAX_ENTITIES = 8192;
+	constexpr U8 INDEX_BITS = 24;
+	constexpr U32 INDEX_MASK = (1u << INDEX_BITS) - 1;
+	constexpr U32 GENERATION_BITS = 32 - INDEX_BITS;
 	constexpr size_t MAX_COMPONENTS = 64;
 
-	inline Uint32 entityIndex(Entity e) noexcept {
+	inline U32 entityIndex(Entity e) noexcept {
 		return e & INDEX_MASK;
 	}
 
-	inline Uint8 entityGeneration(Entity e) noexcept {
-		return static_cast<Uint8>(e >> INDEX_BITS);
+	inline U8 entityGeneration(Entity e) noexcept {
+		return static_cast<U8>(e >> INDEX_BITS);
 	}
 
-	inline Entity makeEntity(Uint32 index, Uint8 generation) noexcept {
+	inline Entity makeEntity(U32 index, U8 generation) noexcept {
 		return (static_cast<Entity>(generation) << INDEX_BITS) | (index & INDEX_MASK);
 	}
 
@@ -41,7 +41,7 @@ namespace Blackthorn::ECS::Detail {
 	}
 
 	template <typename T>
-	inline Uint64 componentMask() noexcept {
+	inline U64 componentMask() noexcept {
 		size_t id = componentID<T>();
 		assert(id < MAX_COMPONENTS);
 		return (1ULL << id);

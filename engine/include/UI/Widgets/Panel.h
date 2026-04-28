@@ -3,6 +3,7 @@
 #include <SDL3/SDL.h>
 
 #include "Core/Export.h"
+#include "Core/Types/Types.h"
 #include "Graphics/RenderLayers.h"
 #include "Graphics/Texture.h"
 #include "Math/Color.h"
@@ -29,7 +30,7 @@ namespace Blackthorn::UI {
  */
 class BLACKTHORN_API Panel : public Container {
 public:
-	enum class RenderMode : Uint8 {
+	enum class RenderMode : U8 {
 		Solid,
 		Texture,
 		NineSlice

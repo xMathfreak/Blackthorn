@@ -56,15 +56,15 @@ struct BLACKTHORN_API FragmentHeader {
 	static constexpr size_t UNFRAGMENTED_SIZE = 1;
 
 	/// Bit flag indicating this datagram is part of a fragmented message.
-	static constexpr Uint8 FLAG_FRAGMENTED = 0x01u;
+	static constexpr U8 FLAG_FRAGMENTED = 0x01u;
 
 	/// Maximum number of fragments per message.
-	static constexpr Uint8 MAX_FRAGMENTS = 255;
+	static constexpr U8 MAX_FRAGMENTS = 255;
 
-	Uint16 fragmentId = 0; ///< Logical message ID (per-peer, wrapping).
-	Uint8 flags = 0; ///< Bitmask; bit 0 = isFragmented;
-	Uint8 totalFrags = 1; ///< Total fragments in this message.
-	Uint8 fragIndex = 0; ///< 0-based index of this fragment.
+	U16 fragmentId = 0; ///< Logical message ID (per-peer, wrapping).
+	U8 flags = 0; ///< Bitmask; bit 0 = isFragmented;
+	U8 totalFrags = 1; ///< Total fragments in this message.
+	U8 fragIndex = 0; ///< 0-based index of this fragment.
 
 	bool isFragmented() const noexcept {
 		return (flags & FLAG_FRAGMENTED) != 0;

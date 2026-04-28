@@ -18,7 +18,7 @@ namespace UI {
 
 class BLACKTHORN_API Label : public Widget {
 public:
-	enum class Mode : Uint8 {
+	enum class Mode : U8 {
 		Dynamic,
 		Static
 	};

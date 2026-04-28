@@ -1,8 +1,7 @@
 #pragma once
 
-#include <SDL3/SDL.h>
-
 #include "Core/Export.h"
+#include "Core/Types/Types.h"
 #include "IO/ByteBuffer.h"
 
 namespace Blackthorn::Net::Protocol {
@@ -13,7 +12,7 @@ namespace Blackthorn::Net::Protocol {
  * Both the engine and server must agree on these values. Adding new types
  * is additive - existing values must never be renumbered.
  */
-enum class PacketType : Uint8 {
+enum class PacketType : U8 {
 	ConnectRequest = 0x0, ///< Connection request (carries local schema version).
 	ConnectAck = 0x01, ///< Connection acknowledgement (carries accepted schema version).
 	Disconnect = 0x02, ///< Graceful disconnect notification.
@@ -58,7 +57,7 @@ enum class PacketType : Uint8 {
  * compression or encryption itself - that responsibility belongs to the
  * transport layer wrapping the raw ByteBuffer.
  */
-enum class PacketFlags : Uint8 {
+enum class PacketFlags : U8 {
 	None = 0x00,
 	Compressed = 0x01, ///< Payload is compressed
 	Encrypted = 0x02, ///< Payload is encrypted
@@ -68,19 +67,19 @@ enum class PacketFlags : Uint8 {
 
 inline PacketFlags operator|(PacketFlags a, PacketFlags b) {
 	return static_cast<PacketFlags>(
-		static_cast<Uint8>(a) | static_cast<Uint8>(b)
+		static_cast<U8>(a) | static_cast<U8>(b)
 	);
 }
 
 inline PacketFlags operator&(PacketFlags a, PacketFlags b) {
 	return static_cast<PacketFlags>(
-		static_cast<Uint8>(a) & static_cast<Uint8>(b)
+		static_cast<U8>(a) & static_cast<U8>(b)
 	);
 }
 
 inline PacketFlags operator~(PacketFlags a) {
 	return static_cast<PacketFlags>(
-		static_cast<Uint8>(~static_cast<Uint8>(a))
+		static_cast<U8>(~static_cast<U8>(a))
 	);
 }
 
@@ -95,13 +94,13 @@ inline PacketFlags& operator&=(PacketFlags& a, PacketFlags b) {
 }
 /** @brief Returns true if `flags` contains `flag`. */
 inline bool hasFlag(PacketFlags flags, PacketFlags flag) {
-	return (static_cast<Uint8>(flags) & static_cast<Uint8>(flag)) != 0;
+	return (static_cast<U8>(flags) & static_cast<U8>(flag)) != 0;
 }
 
 /** @brief Returns `flags` with `flag` cleared. */
 inline PacketFlags clearFlag(PacketFlags flags, PacketFlags flag) {
 	return static_cast<PacketFlags>(
-		static_cast<Uint8>(flags) & ~static_cast<Uint8>(flag)
+		static_cast<U8>(flags) & ~static_cast<U8>(flag)
 	);
 }
 
@@ -111,7 +110,7 @@ inline PacketFlags clearFlag(PacketFlags flags, PacketFlags flag) {
  * Carried in the @c ConnectRequest and @c ConnectAck payloads,
  * then stored per-peer in @c NetworkPeer::negotiatedSchemaVersion.
  */
-static constexpr Uint16 CURRENT_SCHEMA_VERSION = 1;
+static constexpr U16 CURRENT_SCHEMA_VERSION = 1;
 
 /**
  * @brief Fixed 12-byte header written at the start of every packet.
@@ -137,12 +136,12 @@ static constexpr Uint16 CURRENT_SCHEMA_VERSION = 1;
  * @c tickisNewer().
  */
 struct BLACKTHORN_API PacketHeader {
-	static constexpr Uint16 MAGIC = 0x4254u; // "BT"
+	static constexpr U16 MAGIC = 0x4254u; // "BT"
 	static constexpr size_t SERIALIZED_SIZE = 12;
 
-	Uint32 payloadLength = 0;
-	Uint32 tick = 0;
-	Uint16 magic = MAGIC;
+	U32 payloadLength = 0;
+	U32 tick = 0;
+	U16 magic = MAGIC;
 	PacketType packetType = PacketType::Heartbeat;
 	PacketFlags flags = PacketFlags::None;
 
@@ -154,8 +153,8 @@ struct BLACKTHORN_API PacketHeader {
 		buf.writeU16(magic);
 		buf.writeU16(payloadLength);
 		buf.writeU32(tick);
-		buf.writeU8(static_cast<Uint8>(packetType));
-		buf.writeU8(static_cast<Uint8>(flags));
+		buf.writeU8(static_cast<U8>(packetType));
+		buf.writeU8(static_cast<U8>(flags));
 	}
 
 	/**
@@ -183,15 +182,15 @@ struct BLACKTHORN_API PacketHeader {
 };
 
 static_assert(
-	sizeof(Uint32) * 2 +
-	sizeof(Uint16) +
-	sizeof(Uint8) * 2
+	sizeof(U32) * 2 +
+	sizeof(U16) +
+	sizeof(U8) * 2
 	== PacketHeader::SERIALIZED_SIZE,
 	"PacketHeader: Serialized field sizes do not sum to SERIALIZED_SIZE"
 );
 
-inline bool tickIsNewer(Uint32 a, Uint32 b) noexcept {
-	return static_cast<Sint32>(a - b) > 0;
+inline bool tickIsNewer(U32 a, U32 b) noexcept {
+	return static_cast<I32>(a - b) > 0;
 }
 
 } // namespace Blackthorn::Net::Protocol

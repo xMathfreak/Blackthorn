@@ -4,6 +4,8 @@
 #include <optional>
 #include <vector>
 
+#include <SDL3/SDL.h>
+
 #include "Core/Export.h"
 #include "IO/ByteBuffer.h"
 #include "Net/Protocol/FragmentHeader.h"
@@ -15,16 +17,16 @@ namespace Blackthorn::Net::Protocol {
  */
 struct BLACKTHORN_API FragmentSet {
 	/// Unique ID for this message, matching @c FragmentHeader::fragmentId.
-	Uint16 fragmentId = 0;
+	U16 fragmentId = 0;
 
 	/// Expected total number of fragments.
-	Uint8 totalFrags = 0;
+	U8 totalFrags = 0;
 
 	/// Number of fragments received so far.
-	Uint8 receivedCount = 0;
+	U8 receivedCount = 0;
 
 	/// SDL_GetTicks() when the first fragment expired. Used for expiry
-	Uint64 firstFragmentMs = 0;
+	U64 firstFragmentMs = 0;
 
 	/**
 	 * @brief Per fragment payloads.
@@ -41,7 +43,7 @@ struct BLACKTHORN_API FragmentSet {
 		return receivedCount == totalFrags;
 	}
 
-	bool isExpired(Uint32 timeoutMs) const noexcept {
+	bool isExpired(U32 timeoutMs) const noexcept {
 		return (SDL_GetTicks() - firstFragmentMs) > timeoutMs;
 	}
 };
@@ -55,7 +57,7 @@ public:
 	static constexpr size_t MAX_BYTES_PER_PEER = 512u * 1024u; // 512 KB
 
 	/// Milliseconds before an incomplete set is considered stale.
-	static constexpr Uint32 EXPIRY_MS = 1500u;
+	static constexpr U32 EXPIRY_MS = 1500u;
 
 	/**
 	 * @brief Constructs an assembler that contributes to a shared
@@ -111,7 +113,7 @@ public:
 
 private:
 	/// Finds the FragmentSet for @p fragmentId or nullptr;
-	FragmentSet* findSet(Uint16 fragmentId);
+	FragmentSet* findSet(U16 fragmentId);
 
 	/// Allocates a new FragmentSet, evicting oldest if the pool
 	/// is full or memory caps would be exceeded.

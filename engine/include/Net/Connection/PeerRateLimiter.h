@@ -3,13 +3,14 @@
 #include <SDL3/SDL.h>
 
 #include "Core/Export.h"
+#include "Core/Types/Types.h"
 
 namespace Blackthorn::Net::Connection {
 
 /**
  * @brief Enforcement stage for a peer's current rate-limit status.
  */
-enum class RateLimitStage : Uint8 {
+enum class RateLimitStage : U8 {
 	/// Peer is within limits. All packets accepted.
 	Normal,
 
@@ -56,7 +57,7 @@ struct RateLimitConfig {
 
 	/// Minimum interval between Stage 2 warning log lines, in milliseconds.
 	/// Prevents log spam when a peer sits just above the Stage 2 threshold.
-	Uint32 warnIntervalMs = 5000;
+	U32 warnIntervalMs = 5000;
 };
 
 /**
@@ -106,19 +107,19 @@ struct BLACKTHORN_API PeerRateLimiter {
 	RateLimitConfig cfg;
 
 	/// Timestamp at which the current bucket started, in ms.
-	Uint64 bucketStartMs = 0;
+	U64 bucketStartMs = 0;
 
 	/// Packet count in the current 500ms bucket.
-	Uint32 currentBucketPackets = 0;
+	U32 currentBucketPackets = 0;
 
 	/// Byte count in the current 500ms bucket.
-	Uint32 currentBucketBytes = 0;
+	U32 currentBucketBytes = 0;
 
 	/// Packet count in the previous 500ms bucket.
-	Uint32 prevBucketPackets = 0;
+	U32 prevBucketPackets = 0;
 
 	/// Byte count in the previous 500ms bucket.
-	Uint32 prevBucketBytes = 0;
+	U32 prevBucketBytes = 0;
 
 	/// Accumulated Stage 2 violation score. Triggers Warn when it
 	/// exceeds @c cfg.stage2Threshold.
@@ -133,11 +134,11 @@ struct BLACKTHORN_API PeerRateLimiter {
 
 	/// Timestamp of the last Stage 2 warning log, in ms. Used to throttle
 	/// log output to at most once per @c cfg.warnIntervalMs.
-	Uint64 lastWarnMs = 0;
+	U64 lastWarnMs = 0;
 
 	/// Timestamp of the first tick in which the current stage was entered,
 	/// in ms. Included in Stage 3 diagnostic log output.
-	Uint64 stageEnteredMs = 0;
+	U64 stageEnteredMs = 0;
 
 	/// Peak packet rate observed since the last stage reset, in pkts/s.
 	float peakPacketRate = 0.0f;
@@ -168,12 +169,12 @@ struct BLACKTHORN_API PeerRateLimiter {
 	 * @return The current @c RateLimitStage after processing this packet.
 	 */
 	RateLimitStage update(size_t packetBytes) {
-		const Uint64 now = SDL_GetTicks();
+		const U64 now = SDL_GetTicks();
 
 		if (bucketStartMs == 0)
 			bucketStartMs = now;
 
-		const Uint64 elapsed = now - bucketStartMs;
+		const U64 elapsed = now - bucketStartMs;
 
 		if (elapsed >= 1000) {
 			prevBucketPackets = 0;
@@ -190,7 +191,7 @@ struct BLACKTHORN_API PeerRateLimiter {
 		}
 
 		currentBucketPackets += 1;
-		currentBucketBytes += static_cast<Uint32>(packetBytes);
+		currentBucketBytes += static_cast<U32>(packetBytes);
 
 		const float packetRate =
 			static_cast<float>(prevBucketPackets + currentBucketPackets);
@@ -260,7 +261,7 @@ struct BLACKTHORN_API PeerRateLimiter {
 	 * spam when a peer sits persistently at Stage 2.
 	 */
 	bool shouldWarn() {
-		const Uint64 now = SDL_GetTicks();
+		const U64 now = SDL_GetTicks();
 		if (now - lastWarnMs >= cfg.warnIntervalMs) {
 			lastWarnMs = now;
 			return true;
@@ -273,7 +274,7 @@ struct BLACKTHORN_API PeerRateLimiter {
 	 * @brief Returns the duration in milliseconds that the peer has been
 	 * in the current stage.
 	 */
-	Uint64 stageDurationMs() const {
+	U64 stageDurationMs() const {
 		return SDL_GetTicks() - stageEnteredMs;
 	}
 

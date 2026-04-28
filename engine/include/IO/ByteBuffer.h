@@ -6,9 +6,8 @@
 #include <string>
 #include <vector>
 
-#include <SDL3/SDL.h>
-
 #include "Core/Export.h"
+#include "Core/Types/Types.h"
 
 namespace Blackthorn::IO {
 
@@ -33,7 +32,7 @@ namespace Blackthorn::IO {
  *
  * // Reading
  * ByteBuffer in(out.data(), out.size());
- * Uint32 n   = in.readU32();
+ * U32 n   = in.readU32();
  * float  f   = in.readF32();
  * auto   str = in.readString();
  * @endcode
@@ -56,7 +55,7 @@ public:
 	 * @param data Pointer to source bytes.
 	 * @param size Number of bytes to copy.
 	 */
-	ByteBuffer(const Uint8* data, size_t size)
+	ByteBuffer(const U8* data, size_t size)
 		: buffer(data, data + size)
 		, readCursor(0)
 	{}
@@ -65,56 +64,56 @@ public:
 	 * @brief Constructs a read buffer from an existing vector, taking
 	 * ownership of its contents via move.
 	 */
-	explicit ByteBuffer(std::vector<Uint8>&& data)
+	explicit ByteBuffer(std::vector<U8>&& data)
 		: buffer(std::move(data))
 		, readCursor(0)
 	{}
 
-	void writeU8(Uint8 v) {
+	void writeU8(U8 v) {
 		buffer.push_back(v);
 	}
 
-	void writeI8(Sint8 v) {
-		writeU8(static_cast<Uint8>(v));
+	void writeI8(I8 v) {
+		writeU8(static_cast<U8>(v));
 	}
 
-	void writeU16(Uint16 v) {
-		buffer.push_back(static_cast<Uint8>(v));
-		buffer.push_back(static_cast<Uint8>(v >> 8));
+	void writeU16(U16 v) {
+		buffer.push_back(static_cast<U8>(v));
+		buffer.push_back(static_cast<U8>(v >> 8));
 	}
 
-	void writeI16(Sint16 v) {
-		writeU16(static_cast<Uint16>(v));
+	void writeI16(I16 v) {
+		writeU16(static_cast<U16>(v));
 	}
 
-	void writeU32(Uint32 v) {
-		buffer.push_back(static_cast<Uint8>(v));
-		buffer.push_back(static_cast<Uint8>(v >> 8));
-		buffer.push_back(static_cast<Uint8>(v >> 16));
-		buffer.push_back(static_cast<Uint8>(v >> 24));
+	void writeU32(U32 v) {
+		buffer.push_back(static_cast<U8>(v));
+		buffer.push_back(static_cast<U8>(v >> 8));
+		buffer.push_back(static_cast<U8>(v >> 16));
+		buffer.push_back(static_cast<U8>(v >> 24));
 	}
 
-	void writeI32(Sint32 v) {
-		writeU32(static_cast<Uint32>(v));
+	void writeI32(I32 v) {
+		writeU32(static_cast<U32>(v));
 	}
 
-	void writeU64(Uint64 v) {
-		writeU32(static_cast<Uint32>(v));
-		writeU32(static_cast<Uint32>(v >> 32));
+	void writeU64(U64 v) {
+		writeU32(static_cast<U32>(v));
+		writeU32(static_cast<U32>(v >> 32));
 	}
 
-	void writeI64(Sint64 v) {
-		writeU64(static_cast<Uint64>(v));
+	void writeI64(I64 v) {
+		writeU64(static_cast<U64>(v));
 	}
 
 	void writeF32(float v) {
-		Uint32 bits;
+		U32 bits;
 		std::memcpy(&bits, &v, sizeof(bits));
 		writeU32(bits);
 	}
 
 	void writeF64(double v) {
-		Uint64 bits;
+		U64 bits;
 		std::memcpy(&bits, &v, sizeof(bits));
 		writeU64(bits);
 	}
@@ -126,7 +125,7 @@ public:
 	/**
 	 * @brief Writes a length-prefixed UTF-8 string.
 	 *
-	 * The length is stored as a Uint16, limiting strings to 65535 bytes.
+	 * The length is stored as a U16, limiting strings to 65535 bytes.
 	 *
 	 * @param str String to write.
 	 * @throws std::length_error if the string exceeds 65535 bytes.
@@ -135,8 +134,8 @@ public:
 		if (str.size() > 65535)
 			throw std::length_error("ByteBuffer::writeString: string exceeds 65535 bytes");
 
-		writeU16(static_cast<Uint16>(str.size()));
-		writeBytes(reinterpret_cast<const Uint8*>(str.data()), str.size());
+		writeU16(static_cast<U16>(str.size()));
+		writeBytes(reinterpret_cast<const U8*>(str.data()), str.size());
 	}
 
 	/**
@@ -144,65 +143,65 @@ public:
 	 * @param data Pointer to source bytes.
 	 * @param size Number of bytes to write.
 	 */
-	void writeBytes(const Uint8* data, size_t size) {
+	void writeBytes(const U8* data, size_t size) {
 		buffer.insert(buffer.end(), data, data + size);
 	}
 
-	Uint8 readU8() {
+	U8 readU8() {
 		checkAvailable(1);
 		return buffer[readCursor++];
 	}
 
-	Sint8 readI8() {
-		return static_cast<Sint8>(readU8());
+	I8 readI8() {
+		return static_cast<I8>(readU8());
 	}
 
-	Uint16 readU16() {
+	U16 readU16() {
 		checkAvailable(2);
-		Uint16 v = static_cast<Uint16>(buffer[readCursor])
-				 | static_cast<Uint16>(buffer[readCursor + 1]) << 8;
+		U16 v = static_cast<U16>(buffer[readCursor])
+				 | static_cast<U16>(buffer[readCursor + 1]) << 8;
 		readCursor += 2;
 		return v;
 	}
 
-	Sint16 readI16() {
-		return static_cast<Sint16>(readU16());
+	I16 readI16() {
+		return static_cast<I16>(readU16());
 	}
 
-	Uint32 readU32() {
+	U32 readU32() {
 		checkAvailable(4);
-		Uint32 v = static_cast<Uint32>(buffer[readCursor])
-				 | static_cast<Uint32>(buffer[readCursor + 1]) << 8
-				 | static_cast<Uint32>(buffer[readCursor + 2]) << 16
-				 | static_cast<Uint32>(buffer[readCursor + 3]) << 24;
+		U32 v = static_cast<U32>(buffer[readCursor])
+				 | static_cast<U32>(buffer[readCursor + 1]) << 8
+				 | static_cast<U32>(buffer[readCursor + 2]) << 16
+				 | static_cast<U32>(buffer[readCursor + 3]) << 24;
 
 		readCursor += 4;
 		return v;
 	}
 
-	Sint32 readI32() {
-		return static_cast<Sint32>(readU32());
+	I32 readI32() {
+		return static_cast<I32>(readU32());
 	}
 
-	Uint64 readU64() {
-		Uint64 lo = readU32();
-		Uint64 hi = readU32();
+	U64 readU64() {
+		U64 lo = readU32();
+		U64 hi = readU32();
 		return lo | (hi << 32);
 	}
 
-	Sint64 readI64() {
-		return static_cast<Sint64>(readU64());
+	I64 readI64() {
+		return static_cast<I64>(readU64());
 	}
 
 	float readF32() {
-		Uint32 bits = readU32();
+		U32 bits = readU32();
 		float v;
 		std::memcpy(&v, &bits, sizeof(v));
 		return v;
 	}
 
 	double readF64() {
-		Uint64 bits = readU64();
+		U64 bits = readU64();
 		double v;
 		std::memcpy(&v, &bits, sizeof(v));
 		return v;
@@ -216,7 +215,7 @@ public:
 	 * @brief Reads a length-prefixed UTF-8 string written by writeString().
 	 */
 	std::string readString() {
-		Uint16 len = readU16();
+		U16 len = readU16();
 		checkAvailable(len);
 		std::string str(reinterpret_cast<const char*>(&buffer[readCursor]), len);
 		readCursor += len;
@@ -228,7 +227,7 @@ public:
 	 * @param dest Destination buffer. Must be at least `size` bytes.
 	 * @param size Number of bytes to read.
 	 */
-	void readBytes(Uint8* dest, size_t size) {
+	void readBytes(U8* dest, size_t size) {
 		checkAvailable(size);
 		std::memcpy(dest, &buffer[readCursor], size);
 		readCursor += size;
@@ -243,12 +242,12 @@ public:
 	 * @param offset Byte offset of the field to overwrite.
 	 * @param v      Value to write.
 	 */
-	void patchU32(size_t offset, Uint32 v) {
+	void patchU32(size_t offset, U32 v) {
 		assert(offset + 4 <= buffer.size());
-		buffer[offset] = static_cast<Uint8>(v);
-		buffer[offset + 1] = static_cast<Uint8>(v >> 8);
-		buffer[offset + 2] = static_cast<Uint8>(v >> 16);
-		buffer[offset + 3] = static_cast<Uint8>(v >> 24);
+		buffer[offset] = static_cast<U8>(v);
+		buffer[offset + 1] = static_cast<U8>(v >> 8);
+		buffer[offset + 2] = static_cast<U8>(v >> 16);
+		buffer[offset + 3] = static_cast<U8>(v >> 24);
 	}
 
 	/**
@@ -260,14 +259,14 @@ public:
 	 * @param offset Byte offset of the field to overwrite.
 	 * @param v      Value to write.
 	 */
-	void patchU16(size_t offset, Uint16 v) {
+	void patchU16(size_t offset, U16 v) {
 		assert(offset + 2 <= buffer.size());
-		buffer[offset] = static_cast<Uint8>(v);
-		buffer[offset + 1] = static_cast<Uint8>(v >> 8);
+		buffer[offset] = static_cast<U8>(v);
+		buffer[offset + 1] = static_cast<U8>(v >> 8);
 	}
 
 	/** @brief Returns a pointer to the raw buffer contents. */
-	const Uint8* data() const { return buffer.data(); }
+	const U8* data() const { return buffer.data(); }
 
 	/** @brief Returns the total number of bytes written. */
 	size_t size() const { return buffer.size(); }
@@ -326,7 +325,7 @@ public:
 	}
 
 private:
-	std::vector<Uint8> buffer;
+	std::vector<U8> buffer;
 	size_t readCursor = 0;
 
 	void checkAvailable(size_t needed) const {

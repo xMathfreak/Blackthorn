@@ -1,6 +1,7 @@
 #pragma once
 
 #include <glm/glm.hpp>
+#include <SDL3/SDL.h>
 
 #include "Core/Export.h"
 #include "Math/Edges.h"
@@ -21,7 +22,7 @@ using Padding = Math::Edges<float>;
 class UIManager;
 class Container;
 
-enum class SizeMode : Uint8 {
+enum class SizeMode : U8 {
 	Fixed,
 	Content,
 	Percent
@@ -120,8 +121,8 @@ public:
 	bool isFocused() const { return hasState(state, WidgetState::Focused); }
 
 	virtual bool onMouseMove(const glm::vec2& pos);
-	virtual bool onMouseDown(const glm::vec2& pos, Uint8 button);
-	virtual bool onMouseUp(const glm::vec2& pos, Uint8 button);
+	virtual bool onMouseDown(const glm::vec2& pos, U8 button);
+	virtual bool onMouseUp(const glm::vec2& pos, U8 button);
 	virtual bool onKeyDown(SDL_Keycode key) { return false; }
 	virtual bool onKeyUp(SDL_Keycode key) { return false; }
 

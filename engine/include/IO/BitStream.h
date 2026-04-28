@@ -2,21 +2,20 @@
 
 #include <cassert>
 
-#include <SDL3/SDL.h>
-
 #include "Core/Export.h"
+#include "Core/Types/Types.h"
 #include "IO/ByteBuffer.h"
 
 namespace Blackthorn::IO {
 
 namespace BitCodec {
 
-constexpr Uint32 zigzagEncode(Sint32 v) {
-	return static_cast<Uint32>((v << 1) ^ (v >> 31));
+constexpr U32 zigzagEncode(I32 v) {
+	return static_cast<U32>((v << 1) ^ (v >> 31));
 }
 
-constexpr Sint32 zigzagDecode(Uint32 v) {
-	return static_cast<Sint32>((v >> 1) ^ (-(v & 1u)));
+constexpr I32 zigzagDecode(U32 v) {
+	return static_cast<I32>((v >> 1) ^ (-(v & 1u)));
 }
 
 } // namespace BitCodec
@@ -81,7 +80,7 @@ public:
 	 * @param value Unsigned integer value to write.
 	 * @param bits  Number of bits to write. Must be in [1, 32].
 	 */
-	void writeBits(Uint32 value, int bits) {
+	void writeBits(U32 value, int bits) {
 		assert(bits >= 1 && bits <= 32);
 
 		// Mask off any stray high bits to keep the accumulator clean.
@@ -92,7 +91,7 @@ public:
 		bitCount += bits;
 
 		while (bitCount >= 8) {
-			buf.writeU8(static_cast<Uint8>(accumulator & 0xFF));
+			buf.writeU8(static_cast<U8>(accumulator & 0xFF));
 			accumulator >>= 8;
 			bitCount -= 8;
 		}
@@ -109,9 +108,9 @@ public:
 	 *              in [1, 32]. The representable signed range is
 	 *              [-(2^(bits-1)), 2^(bits-1) - 1].
 	 */
-	void writeSignedBits(Sint32 value, int bits) {
+	void writeSignedBits(I32 value, int bits) {
 		assert(bits >= 1 && bits <= 32);
-		Uint32 encoded = BitCodec::zigzagEncode(value);
+		U32 encoded = BitCodec::zigzagEncode(value);
 		writeBits(encoded, bits);
 	}
 
@@ -124,7 +123,7 @@ public:
 	 */
 	void flush() {
 		if (bitCount > 0) {
-			buf.writeU8(static_cast<Uint8>(accumulator & 0xFF));
+			buf.writeU8(static_cast<U8>(accumulator & 0xFF));
 			accumulator = 0;
 			bitCount = 0;
 		}
@@ -135,7 +134,7 @@ public:
 
 private:
 	ByteBuffer& buf;
-	Uint32 accumulator = 0;
+	U32 accumulator = 0;
 	int bitCount = 0;
 };
 
@@ -148,8 +147,8 @@ private:
  * @code
  * BitReader reader(buf);
  * bool flag    = reader.readBool();
- * Uint32 val   = reader.readBits(3);
- * Sint32 delta = reader.readSignedBits(4);
+ * U32 val   = reader.readBits(3);
+ * I32 delta = reader.readSignedBits(4);
  * @endcode
  */
 class BLACKTHORN_API BitReader {
@@ -177,17 +176,17 @@ public:
 	 * @param bits Number of bits to read. Must be in [1, 32].
 	 */
 	[[nodiscard]]
-	Uint32 readBits(int bits) {
+	U32 readBits(int bits) {
 		assert(bits >= 1 && bits <= 32);
 
 		while (bitCount < bits) {
-			Uint32 byte = buf.readU8();
+			U32 byte = buf.readU8();
 			accumulator |= (byte << bitCount);
 			bitCount += 8;
 		}
 
-		Uint32 mask = (bits == 32) ? 0xFFFFFFFFu : ((1u << bits) - 1u);
-		Uint32 value = accumulator & mask;
+		U32 mask = (bits == 32) ? 0xFFFFFFFFu : ((1u << bits) - 1u);
+		U32 value = accumulator & mask;
 		accumulator >>= bits;
 		bitCount -= bits;
 		return value;
@@ -200,13 +199,13 @@ public:
 	 * @param bits Number of bits the value was encoded into.
 	 */
 	[[nodiscard]]
-	Sint32 readSignedBits(int bits) {
+	I32 readSignedBits(int bits) {
 		return BitCodec::zigzagDecode(readBits(bits));
 	}
 
 private:
 	ByteBuffer& buf;
-	Uint32 accumulator = 0;
+	U32 accumulator = 0;
 	int bitCount = 0;
 };
 

@@ -1,10 +1,11 @@
 #pragma once
 
+#include <functional>
+#include <span>
 #include <string>
 
-#include <SDL3/SDL.h>
-
 #include "Core/Export.h"
+#include "Core/Types/Types.h"
 #include "Debug/Logger.h"
 #include "Net/Connection/PeerRateLimiter.h"
 
@@ -26,9 +27,9 @@ struct BLACKTHORN_API RenderConfig {
 	/// Maximum number of quads per batch.
 	/// Drives MAX_VERTICES `(maxQuads * 4)` and
 	/// MAX_INDICES `(maxQuads * 6)` inside the Renderer.
-	Uint32 maxQuads = 4096;
+	U32 maxQuads = 4096;
 
-	static constexpr Uint32 maxTextureSlots = 16;
+	static constexpr U32 maxTextureSlots = 16;
 };
 
 struct BLACKTHORN_API ThreadingConfig {
@@ -56,10 +57,10 @@ struct BLACKTHORN_API DebugConfig {
 };
 
 struct BLACKTHORN_API FontConfig {
-	Uint32 maxCachedText = 256;
-	Uint32 maxTextGlyphs = 2048;
+	U32 maxCachedText = 256;
+	U32 maxTextGlyphs = 2048;
 	int atlasSize = 1024;
-	Uint32 tabSpaces = 4;
+	U32 tabSpaces = 4;
 
 	static void setCurrent(const FontConfig& cfg);
 	static const FontConfig& getCurrent();
@@ -71,6 +72,22 @@ private:
 struct BLACKTHORN_API AssetConfig {
 	/// Maximum number of async asset uploads per frame.
 	size_t uploadBudget = 4;
+};
+
+struct BLACKTHORN_API SaveConfig {
+	/// Root directory for LocalaveFileStorage.
+	/// Relative paths are resolved from the working directory.
+	std::string directory = "saves";
+
+	/// zstd compression level [1-22]. 0 disables compression.
+	int compressionLevel = 3;
+
+	/// Whether to encrypt save files. Defaults to true.
+	/// A warning is logged in debug builds when false.
+	bool encryptionEnabled = true;
+
+	///ABC
+	std::function<void(std::span<U8, 32>, const void*, U16)> keyDeriveFn;
 };
 
 /**
@@ -87,17 +104,17 @@ struct BLACKTHORN_API ConnectionConfig {
 	size_t queueCapacity = 256;
 
 	/// I/O thread poll interval in microseconds. Default: 500µs.
-	Uint32 pollIntervalMicros = 500;
+	U32 pollIntervalMicros = 500;
 
 	/// Idle time before a TCP peer is probed with a Heartbeat, in ms.
 	/// Set to 0 to disable. Default: 5000ms (half the default timeout).
-	Uint32 heartbeatIntervalMs = 5000;
+	U32 heartbeatIntervalMs = 5000;
 
 	/// UDP port to bind on (server and client). 0 = OS-assigned ephemeral.
-	Uint16 udpPort = 7777;
+	U16 udpPort = 7777;
 
 	/// TCP port to listen on (server only). 0 = disabled.
-	Uint16 tcpPort = 7778;
+	U16 tcpPort = 7778;
 
 	/// When false, UDP datagrams from unknown addresses are silently dropped.
 	bool allowUDPImplicitPeers = true;

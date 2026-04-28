@@ -4,8 +4,6 @@
 #include <csignal>
 #include <memory>
 
-#include <SDL3/SDL.h>
-
 #include "Assets/AssetManager.h"
 #include "Core/EngineConfig.h"
 #include "Core/Export.h"

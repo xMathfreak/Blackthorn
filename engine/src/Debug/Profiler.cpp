@@ -1,9 +1,11 @@
 #include "Debug/Profiler.h"
 
-#include "Debug/Logger.h"
-
 #include <algorithm>
 #include <numeric>
+
+#include <SDL3/SDL_timer.h>
+
+#include "Debug/Logger.h"
 
 namespace Blackthorn::Debug {
 
@@ -35,7 +37,7 @@ void Profiler::endFrame() {
 	if (!enabled)
 		return;
 
-	const Uint64 frameEnd = SDL_GetPerformanceCounter();
+	const U64 frameEnd = SDL_GetPerformanceCounter();
 	lastFrameTime = static_cast<float>(frameEnd - frameStartTime) / frequency * 1000.0f;
 
 	std::lock_guard<std::mutex> lock(historyMutex);
@@ -61,7 +63,7 @@ void Profiler::endScope(const char* name) {
 	if (!enabled)
 		return;
 
-	const Uint64 endTime = SDL_GetPerformanceCounter();
+	const U64 endTime = SDL_GetPerformanceCounter();
 
 	auto& stack = threadScopeStack();
 	if (stack.empty()) {

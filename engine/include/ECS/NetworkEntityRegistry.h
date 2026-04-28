@@ -6,9 +6,8 @@
 #include <unordered_map>
 #include <vector>
 
-#include <SDL3/SDL.h>
-
 #include "Core/Export.h"
+#include "Core/Types/Types.h"
 #include "ECS/Entity.h"
 #include "IO/ByteBuffer.h"
 
@@ -22,10 +21,10 @@ namespace Blackthorn::ECS {
  * Distinct from the local ECS `Entity` handle, which is a
  * machine-local index + generation value.
  */
-using NetworkEntityId = Uint64;
+using NetworkEntityId = U64;
 
 static constexpr NetworkEntityId INVALID_NET_ENTITY =
-	std::numeric_limits<Uint64>::max();
+	std::numeric_limits<U64>::max();
 
 /**
  * @brief Reason codes carried in @c DespawnPacket payloads.
@@ -37,7 +36,7 @@ static constexpr NetworkEntityId INVALID_NET_ENTITY =
  *
  * Values are stable on the wire. Never renumber existing entries.
  */
-enum DespawnReason : Uint8 {
+enum DespawnReason : U8 {
 	Unknown = 0x00, ///< Unspecified reason.
 	Disconnect = 0x01, ///< The owning peer disconnected.
 	Death = 0x02, ///< The entity was destroyed by game logic.
@@ -298,14 +297,14 @@ public:
 	void serializeSpawn(
 		IO::ByteBuffer& buf,
 		NetworkEntityId netId,
-		Uint32 tick = 0
+		U32 tick = 0
 	) const;
 
 	void serializeDespawn(
 		IO::ByteBuffer& buf,
 		NetworkEntityId netId,
 		DespawnReason reason = DespawnReason::Unknown,
-		Uint32 tick = 0
+		U32 tick = 0
 	) const;
 
 private:

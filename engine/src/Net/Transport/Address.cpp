@@ -4,7 +4,7 @@
 
 namespace Blackthorn::Net::Transport {
 
-Address Address::fromHostname(const std::string& hostname, Uint16 port) {
+Address Address::fromHostname(const std::string& hostname, U16 port) {
 	addrinfo hints{};
 	hints.ai_family = AF_UNSPEC;
 	hints.ai_socktype = SOCK_DGRAM;

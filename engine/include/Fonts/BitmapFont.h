@@ -19,9 +19,9 @@ class BLACKTHORN_API BitmapFont : public Font {
 private:
 	struct Glyph {
 		SDL_FRect rect;
-		Sint16 xOffset;
-		Sint16 yOffset;
-		Sint16 xAdvance;
+		I16 xOffset;
+		I16 yOffset;
+		I16 xAdvance;
 	};
 
 	struct Vertex {
@@ -45,8 +45,8 @@ private:
 private:
 	static std::shared_ptr<Graphics::Shader> shader;
 
-	Uint32 MAX_TEXT_GLYPHS;
-	Uint32 MAX_VERTICES;
+	U32 MAX_TEXT_GLYPHS;
+	U32 MAX_VERTICES;
 
 	std::unique_ptr<Graphics::VAO> vao;
 	std::unique_ptr<Graphics::VBO> vbo;
@@ -54,7 +54,7 @@ private:
 	void initBuffers();
 
 	std::unique_ptr<Graphics::Texture> texture;
-	std::unordered_map<Uint32, Glyph> glyphs;
+	std::unordered_map<U32, Glyph> glyphs;
 
 	float baseline = 0.0f;
 	float lineHeight = 0.0f;

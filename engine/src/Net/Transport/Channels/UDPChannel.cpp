@@ -1,5 +1,7 @@
 #include "Net/Transport/Channels/UDPChannel.h"
 
+#include <SDL3/SDL.h>
+
 #include "Debug/Logger.h"
 #include "Net/Protocol/PacketHeader.h"
 
@@ -56,8 +58,8 @@ Sockets::SocketResult UDPChannel::send(
 	}
 
 	const size_t packetHeaderSize = Protocol::PacketHeader::SERIALIZED_SIZE;
-	const Uint8* pktHdrBytes = payload.data();
-	const Uint8* appBytes = payload.data() + packetHeaderSize;
+	const U8* pktHdrBytes = payload.data();
+	const U8* appBytes = payload.data() + packetHeaderSize;
 	const size_t appSize = payload.size() - packetHeaderSize;
 
 	const size_t firstChunk = (appSize <= FRAG_0_PAYLOAD_BYTES)
@@ -79,7 +81,7 @@ Sockets::SocketResult UDPChannel::send(
 		return Sockets::SocketResult::Error;
 	}
 
-	const Uint16 msgId = nextFragmentId++;
+	const U16 msgId = nextFragmentId++;
 
 	size_t appOffset = 0;
 
@@ -103,8 +105,8 @@ Sockets::SocketResult UDPChannel::send(
 		Protocol::FragmentHeader fragHdr;
 		fragHdr.flags = Protocol::FragmentHeader::FLAG_FRAGMENTED;
 		fragHdr.fragmentId = msgId;
-		fragHdr.totalFrags = static_cast<Uint8>(totalFrags);
-		fragHdr.fragIndex = static_cast<Uint8>(fragIdx);
+		fragHdr.totalFrags = static_cast<U8>(totalFrags);
+		fragHdr.fragIndex = static_cast<U8>(fragIdx);
 		fragHdr.serialize(datagram);
 
 		// Fragment 0 (full PacketHeader)
@@ -149,7 +151,7 @@ Sockets::SocketResult UDPChannel::sendDatagram(
 
 void UDPChannel::processInboundHeader(const UDPHeader& header) {
 	if (seqGreaterThan(header.seq, remoteSeq)) {
-		const Uint16 diff = seqDiff(header.seq, remoteSeq);
+		const U16 diff = seqDiff(header.seq, remoteSeq);
 
 		if (diff < 32) {
 			ackBits = (ackBits << diff) | (1u << (diff - 1));
@@ -159,7 +161,7 @@ void UDPChannel::processInboundHeader(const UDPHeader& header) {
 
 		remoteSeq = header.seq;
 	} else if (header.seq != remoteSeq) {
-		const Uint16 diff = seqDiff(remoteSeq, header.seq);
+		const U16 diff = seqDiff(remoteSeq, header.seq);
 
 		if (diff > 0 && diff <= 32)
 			ackBits |= (1u << (diff - 1));
@@ -169,7 +171,7 @@ void UDPChannel::processInboundHeader(const UDPHeader& header) {
 
 	for (int i = 0; i < 32; ++i) {
 		if (header.ackBits & (1u << i)) {
-			const Uint16 ackedSeq = static_cast<Uint16>(header.ack - 1 - i);
+			const U16 ackedSeq = static_cast<U16>(header.ack - 1 - i);
 			acknowledgeSeq(ackedSeq);
 		}
 	}
@@ -179,7 +181,7 @@ void UDPChannel::retransmitPending(
 	Sockets::ISocket& socket,
 	const Address& address
 ) {
-	const Uint64 now = SDL_GetTicks();
+	const U64 now = SDL_GetTicks();
 
 	for (auto& entry : retransmitQueue) {
 		if (!entry.occupied || entry.acknowledged)
@@ -199,7 +201,7 @@ void UDPChannel::retransmitPending(
 }
 
 void UDPChannel::enqueueRetransmit(
-	Uint16 seq,
+	U16 seq,
 	const IO::ByteBuffer& datagram
 ) {
 	for (size_t i = 0; i < MAX_RETRANSMIT_ENTRIES; ++i) {
@@ -226,7 +228,7 @@ void UDPChannel::enqueueRetransmit(
 	);
 }
 
-void UDPChannel::acknowledgeSeq(Uint16 seq) {
+void UDPChannel::acknowledgeSeq(U16 seq) {
 	for (auto& entry : retransmitQueue) {
 		if (entry.occupied && !entry.acknowledged && entry.seq == seq) {
 			entry.acknowledged = true;

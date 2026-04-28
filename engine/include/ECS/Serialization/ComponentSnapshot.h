@@ -2,9 +2,8 @@
 
 #include <cstddef>
 
-#include <SDL3/SDL.h>
-
 #include "Core/Export.h"
+#include "Core/Types/Types.h"
 #include "ECS/EntityPool.h"
 #include "ECS/NetworkEntityRegistry.h"
 #include "ECS/Serialization/ComponentSerializer.h"
@@ -21,7 +20,7 @@ namespace Blackthorn::ECS::Serialization {
  */
 struct SnapshotEntity {
 	NetworkEntityId netId = INVALID_NET_ENTITY;
-	Uint64 componentMask = 0;
+	U64 componentMask = 0;
 
 	/// Byte offset into the source ByteBuffer at which this entity's
 	/// component data begins. Valid only for the lifetime of that buffer.
@@ -33,11 +32,11 @@ struct SnapshotEntity {
  *
  * Snapshot wire layout (raw binary, no field tags):
  * @code
- * [uint64  tick]
- * [uint32  entityCount]
+ * [U64  tick]
+ * [U32  entityCount]
  * per entity:
- *   [uint32  networkId]
- *   [uint64  componentMask]
+ *   [U32  networkId]
+ *   [U64  componentMask]
  *   per set bit i in componentMask (low to high):
  *     [N bytes - fixed layout per ComponentSerializer<T> specialization]
  * @endcode
@@ -66,7 +65,7 @@ struct SnapshotEntity {
  * writer.write(buf);
  *
  * // Back-patch the payload length field in the header.
- * Uint32 payloadLen = static_cast<Uint32>(buf.size() - payloadStart);
+ * U32 payloadLen = static_cast<U32>(buf.size() - payloadStart);
  * buf.patchU32(headerStart + 16, payloadLen);
  * @endcode
  */
@@ -83,7 +82,7 @@ public:
 	ComponentSnapshotWriter(
 		EntityPool& pool,
 		const NetworkEntityRegistry& registry,
-		Uint64 tick
+		U64 tick
 	)
 		: pool(pool)
 		, netRegistry(registry)
@@ -103,10 +102,10 @@ public:
 		const size_t countOffset = buf.size();
 		buf.writeU32(0);
 
-		Uint32 entityCount = 0;
+		U32 entityCount = 0;
 
 		const auto& entityData = pool.getEntities();
-		for (Uint32 idx = 0; idx < static_cast<Uint32>(entityData.size()); ++idx) {
+		for (U32 idx = 0; idx < static_cast<U32>(entityData.size()); ++idx) {
 			const auto& ed = entityData[idx];
 
 			if (ed.componentMask == 0)
@@ -121,7 +120,7 @@ public:
 			if (netId == INVALID_NET_ENTITY)
 				continue;
 
-			Uint64 writeMask = buildWriteMask(ed.componentMask, serializerReg);
+			U64 writeMask = buildWriteMask(ed.componentMask, serializerReg);
 			if (writeMask == 0)
 				continue;
 
@@ -138,13 +137,13 @@ public:
 private:
 	EntityPool& pool;
 	const NetworkEntityRegistry& netRegistry;
-	Uint64 tick;
+	U64 tick;
 
-	static Uint64 buildWriteMask(
-		Uint64 componentMask,
+	static U64 buildWriteMask(
+		U64 componentMask,
 		const SerializerRegistry& registry)
 	{
-		Uint64 writeMask = 0;
+		U64 writeMask = 0;
 		for (size_t i = 0; i < Detail::MAX_COMPONENTS; ++i) {
 			if ((componentMask & (1ULL << i)) && registry.isRegistered(i))
 				writeMask |= (1ULL << i);
@@ -155,7 +154,7 @@ private:
 	void writeComponents(
 		IO::ByteBuffer& buf,
 		Entity entity,
-		Uint64 writeMask,
+		U64 writeMask,
 		const SerializerRegistry& registry) const
 	{
 		for (size_t i = 0; i < Detail::MAX_COMPONENTS; ++i) {
@@ -182,7 +181,7 @@ private:
  *
  * @code
  * ComponentSnapshotReader reader(buf);
- * Uint64 tick = reader.tick();
+ * U64 tick = reader.tick();
  *
  * SnapshotEntity entry;
  * while (reader.readNext(entry)) {
@@ -207,10 +206,10 @@ public:
 	ComponentSnapshotReader& operator=(const ComponentSnapshotReader&) = delete;
 
 	/** @brief Returns the simulation tick this snapshot was captured at. */
-	Uint64 tick() const { return snapshotTick; }
+	U64 tick() const { return snapshotTick; }
 
 	/** @brief Returns the total number of entity entries in this snapshot. */
-	Uint32 count() const { return entityCount; }
+	U32 count() const { return entityCount; }
 
 	/**
 	 * @brief Reads the next entity header into `out` and advances past its
@@ -284,9 +283,9 @@ public:
 
 private:
 	IO::ByteBuffer& buf;
-	Uint64 snapshotTick = 0;
-	Uint32 entityCount = 0;
-	Uint32 entitiesRead = 0;
+	U64 snapshotTick = 0;
+	U32 entityCount = 0;
+	U32 entitiesRead = 0;
 
 	/**
 	 * @brief Advances the buffer cursor past all component data for `mask`.
@@ -302,7 +301,7 @@ private:
 	 * Both paths leave the live cursor positioned immediately after the
 	 * component's wire data, ready for the next component or entity.
 	 */
-	void skipComponents(Uint64 mask) {
+	void skipComponents(U64 mask) {
 		const auto& registry = SerializerRegistry::instance();
 
 		for (size_t i = 0; i < Detail::MAX_COMPONENTS; ++i) {

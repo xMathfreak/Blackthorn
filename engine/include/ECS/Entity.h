@@ -1,10 +1,10 @@
 #pragma once
 
-#include <SDL3/SDL.h>
+#include "Core/Types/Types.h"
 
 namespace Blackthorn::ECS {
 
-using Entity = Uint32;
-constexpr Uint32 INVALID_ENTITY = UINT32_MAX;
+using Entity = U32;
+constexpr U32 INVALID_ENTITY = U32_MAX;
 
 } // namespace Blackthorn::ECS

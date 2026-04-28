@@ -10,14 +10,14 @@ namespace Blackthorn::UI {
 
 class BLACKTHORN_API Container : public Widget {
 public:
-	enum class LayoutType : Uint8 {
+	enum class LayoutType : U8 {
 		None,
 		Vertical,
 		Horizontal,
 		Grid
 	};
 
-	enum class SizingMode : Uint8 {
+	enum class SizingMode : U8 {
 		Fixed,
 		FitContent,
 		FillParent
@@ -30,7 +30,7 @@ protected:
 	SizingMode sizingMode = SizingMode::Fixed;
 
 	float spacing = 0.0f;
-	Uint8 gridColumns = 1;
+	U8 gridColumns = 1;
 
 	void applyNoLayout();
 	void applyVerticalLayout();
@@ -53,8 +53,8 @@ public:
 	void render(Graphics::Renderer& renderer) override;
 
 	bool onMouseMove(const glm::vec2& pos) override;
-	bool onMouseDown(const glm::vec2& pos, Uint8 button) override;
-	bool onMouseUp(const glm::vec2& pos, Uint8 button) override;
+	bool onMouseDown(const glm::vec2& pos, U8 button) override;
+	bool onMouseUp(const glm::vec2& pos, U8 button) override;
 
 	void addWidget(std::unique_ptr<Widget> widget);
 	void removeWidget(Widget* widget);
@@ -69,8 +69,8 @@ public:
 	void setSpacing(float space);
 	float getSpacing() const { return spacing; }
 
-	void setGridColumns(Uint8 cols);
-	Uint8 getGridColumns() const { return gridColumns; }
+	void setGridColumns(U8 cols);
+	U8 getGridColumns() const { return gridColumns; }
 
 	void setSizingMode(SizingMode mode);
 	SizingMode getSizingMode() const { return sizingMode; }

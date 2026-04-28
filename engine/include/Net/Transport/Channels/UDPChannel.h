@@ -2,9 +2,8 @@
 
 #include <array>
 
-#include <SDL3/SDL.h>
-
 #include "Core/Export.h"
+#include "Core/Types/Types.h"
 #include "IO/ByteBuffer.h"
 #include "Net/Transport/Address.h"
 #include "Net/Transport/Sockets/ISocket.h"
@@ -19,9 +18,9 @@ namespace Blackthorn::Net::Transport::Channels {
  * @details Wire layout (8 bytes, little-endian):
  *
  * @code
- * uint16 seq     - outbound sequence number of this packet
- * uint16 ack     - last inbound sequence number received from the remote peer
- * uint32 ackBits - bitmask: bit i set means (ack - 1 - i) was also received
+ * U16 seq     - outbound sequence number of this packet
+ * U16 ack     - last inbound sequence number received from the remote peer
+ * U32 ackBits - bitmask: bit i set means (ack - 1 - i) was also received
  * @endcode
  *
  * Total UDP overhead per datagram:
@@ -30,9 +29,9 @@ namespace Blackthorn::Net::Transport::Channels {
 struct BLACKTHORN_API UDPHeader {
 	static constexpr size_t SERIALIZED_SIZE = 8;
 
-	Uint16 seq = 0;
-	Uint16 ack = 0;
-	Uint32 ackBits = 0;
+	U16 seq = 0;
+	U16 ack = 0;
+	U32 ackBits = 0;
 
 	void serialize(IO::ByteBuffer& buf) const {
 		buf.writeU16(seq);
@@ -48,7 +47,7 @@ struct BLACKTHORN_API UDPHeader {
 };
 
 static_assert(
-	(2 * sizeof(Uint16) + sizeof(Uint32)) == UDPHeader::SERIALIZED_SIZE,
+	(2 * sizeof(U16) + sizeof(U32)) == UDPHeader::SERIALIZED_SIZE,
 	"UDPHeader wire field sizes do not sum to SERIALIZED_SIZE"
 );
 
@@ -86,7 +85,7 @@ static_assert(
 class BLACKTHORN_API UDPChannel {
 public:
 	static constexpr size_t MAX_RETRANSMIT_ENTRIES = 64;
-	static constexpr Uint32 RETRANSMIT_TIMEOUT_MS = 100;
+	static constexpr U32 RETRANSMIT_TIMEOUT_MS = 100;
 
 	UDPChannel() = default;
 
@@ -170,9 +169,9 @@ public:
 	 */
 	void retransmitPending(Sockets::ISocket& socket, const Address& address);
 
-	Uint16 getLocalSeq() const noexcept { return localSeq; }
-	Uint16 getRemoteSeq() const noexcept { return remoteSeq; }
-	Uint32 getAckBits() const noexcept { return ackBits; }
+	U16 getLocalSeq() const noexcept { return localSeq; }
+	U16 getRemoteSeq() const noexcept { return remoteSeq; }
+	U32 getAckBits() const noexcept { return ackBits; }
 
 	size_t getPendingRetransmitCount() const noexcept {
 		size_t count = 0;
@@ -194,28 +193,28 @@ private:
 		bool reliable
 	);
 
-	static bool seqGreaterThan(Uint16 a, Uint16 b) noexcept {
-		constexpr Uint16 val = 0x8000u;
+	static bool seqGreaterThan(U16 a, U16 b) noexcept {
+		constexpr U16 val = 0x8000u;
 		return ((a > b) && (a - b <= val))
 			|| ((a < b) && (b - a > val));
 	}
 
-	static Uint16 seqDiff(Uint16 newer, Uint16 older) noexcept {
-		return static_cast<Uint16>(newer - older);
+	static U16 seqDiff(U16 newer, U16 older) noexcept {
+		return static_cast<U16>(newer - older);
 	}
 
-	Uint16 localSeq = 0; ///< Next outbound sequence number.
-	Uint16 remoteSeq = 0; ///< Latest inbound sequence number received.
-	Uint32 ackBits = 0; ///< ACK bitmask for the 32 packets before remoteSeq.
+	U16 localSeq = 0; ///< Next outbound sequence number.
+	U16 remoteSeq = 0; ///< Latest inbound sequence number received.
+	U32 ackBits = 0; ///< ACK bitmask for the 32 packets before remoteSeq.
 
 	/// Per-peer fragment message Id counter.
 	/// Used by send() to tag all datagrams belonging to the same logical message.
-	Uint16 nextFragmentId = 0;
+	U16 nextFragmentId = 0;
 
 	struct RetransmitEntry {
 		IO::ByteBuffer payload; ///< Full datagram bytes (UDPHeader + PacketHeader + data).
-		Uint64 sentAtMs = 0; ///< SDL_GetTicks() at time of send.
-		Uint16 seq = 0; ///< Sequence number of this packet.
+		U64 sentAtMs = 0; ///< SDL_GetTicks() at time of send.
+		U16 seq = 0; ///< Sequence number of this packet.
 		bool occupied = false;
 		bool acknowledged = false;
 	};
@@ -223,8 +222,8 @@ private:
 	std::array<RetransmitEntry, MAX_RETRANSMIT_ENTRIES> retransmitQueue{};
 	size_t retransmitHead = 0; ///< Next slot to write into (circular).
 
-	void enqueueRetransmit(Uint16 seq, const IO::ByteBuffer& payload);
-	void acknowledgeSeq(Uint16 seq);
+	void enqueueRetransmit(U16 seq, const IO::ByteBuffer& payload);
+	void acknowledgeSeq(U16 seq);
 };
 
 } // namespace Blackthorn::Net::Transport::Channels

@@ -8,7 +8,7 @@ namespace Blackthorn::ECS::Systems {
 
 class KinematicsSystem : public ISystem {
 public:
-	void fixedUpdate(EntityPool* pool, float dt, Jobs::JobSystem* js, Uint64 tick = 0) override {
+	void fixedUpdate(EntityPool* pool, float dt, Jobs::JobSystem* js, U64 tick = 0) override {
 		auto view = pool->view<Components::Kinematics, Components::Transform>();
 		float dt2 = dt * dt;
 		view.eachJobs(js, [dt2](Entity, Components::Kinematics& k, Components::Transform& t) {

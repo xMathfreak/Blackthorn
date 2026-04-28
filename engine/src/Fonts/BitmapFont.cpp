@@ -182,7 +182,7 @@ bool BitmapFont::loadFromFile(const std::string& texturePath, const std::string&
 				baseline = parseFloatValue(line, "base");
 
 		} else if (command == "char") {
-			Uint32 id = parseIntValue(line, "id");
+			U32 id = parseIntValue(line, "id");
 
 			if (id == 0) {
 				BT_WARN("BitmapFont: Skipping glyph with missing/invalid id in {}", metricsPath);
@@ -269,7 +269,7 @@ bool BitmapFont::loadFromBMFont(const std::string& bmfPath) {
 		return false;
 	}
 
-	Uint16 version;
+	U16 version;
 	file.read(reinterpret_cast<char*>(&version), sizeof(version));
 
 	if (version != 1) {
@@ -281,10 +281,10 @@ bool BitmapFont::loadFromBMFont(const std::string& bmfPath) {
 	file.read(reinterpret_cast<char*>(&baseline), sizeof(float));
 	file.read(reinterpret_cast<char*>(&spaceWidth), sizeof(float));
 
-	Uint32 imageSize;
+	U32 imageSize;
 	file.read(reinterpret_cast<char*>(&imageSize), sizeof(imageSize));
 
-	std::vector<Uint8> imageData(imageSize);
+	std::vector<U8> imageData(imageSize);
 	file.read(reinterpret_cast<char*>(imageData.data()), imageSize);
 
 	SDL_IOStream* rw = SDL_IOFromConstMem(imageData.data(), imageSize);
@@ -308,13 +308,13 @@ bool BitmapFont::loadFromBMFont(const std::string& bmfPath) {
 		return false;
 	}
 
-	Uint32 glyphCount;
+	U32 glyphCount;
 	file.read(reinterpret_cast<char*>(&glyphCount), sizeof(glyphCount));
 
 	glyphs.clear();
 
-	for (Uint32 i = 0; i < glyphCount; ++i) {
-		Uint32 codePoint;
+	for (U32 i = 0; i < glyphCount; ++i) {
+		U32 codePoint;
 
 		Glyph glyph;
 
@@ -471,7 +471,7 @@ BitmapFont::Layout BitmapFont::buildLayout(std::string_view text, float scale, f
 			} else if (c == '\t') {
 				charWidth = tabWidth * scale;
 			} else {
-				auto it = glyphs.find(static_cast<Uint32>(c));
+				auto it = glyphs.find(static_cast<U32>(c));
 				if (it != glyphs.end())
 					charWidth = it->second.xAdvance * scale;
 			}
@@ -504,7 +504,7 @@ BitmapFont::Layout BitmapFont::buildLayout(std::string_view text, float scale, f
 			} else if (c == '\t') {
 				w += tabWidth   * scale;
 			} else {
-				auto it = glyphs.find(static_cast<Uint32>(c));
+				auto it = glyphs.find(static_cast<U32>(c));
 				if (it != glyphs.end())
 					w += it->second.xAdvance * scale;
 			}
@@ -552,7 +552,7 @@ void BitmapFont::generateVertices(const Layout& layout, float scale, Text::Align
 				continue;
 			}
 
-			auto it = glyphs.find(static_cast<Uint32>(c));
+			auto it = glyphs.find(static_cast<U32>(c));
 			if (it == glyphs.end())
 				continue;
 

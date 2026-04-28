@@ -4,9 +4,8 @@
 #include <stdexcept>
 #include <string>
 
-#include <SDL3/SDL.h>
-
 #include "Core/Export.h"
+#include "Core/Types/Types.h"
 #include "IO/ByteBuffer.h"
 
 namespace Blackthorn::Net::Protocol {
@@ -14,17 +13,17 @@ namespace Blackthorn::Net::Protocol {
 /**
  * @brief Writes a tagged message payload into a ByteBuffer.
  *
- * Each field is prefixed with a Uint16 tag and a Uint16 byte length,
- * allowing readers to skip unknown fields safely. A Uint32 message
+ * Each field is prefixed with a U16 tag and a U16 byte length,
+ * allowing readers to skip unknown fields safely. A U32 message
  * schema version is written first so consumers can gate on it before
  * reading any fields.
  *
  * Wire layout of the payload written by this class:
  * @code
- * [uint32 messageVersion]
+ * [U32 messageVersion]
  * repeated:
- *   [uint16 tag]
- *   [uint16 fieldLength]
+ *   [U16 tag]
+ *   [U16 fieldLength]
  *   [fieldLength bytes of field data]
  * @endcode
  *
@@ -46,7 +45,7 @@ public:
 	 * @param buf            Destination buffer.
 	 * @param messageVersion Schema version of this specific message type.
 	 */
-	explicit MessageWriter(IO::ByteBuffer& buf, Uint32 messageVersion)
+	explicit MessageWriter(IO::ByteBuffer& buf, U32 messageVersion)
 		: buf(buf)
 	{
 		buf.writeU32(messageVersion);
@@ -55,37 +54,37 @@ public:
 	MessageWriter(const MessageWriter&) = delete;
 	MessageWriter& operator=(const MessageWriter&) = delete;
 
-	void writeU8(Uint16 tag, Uint8 v) {
-		writeFieldHeader(tag, sizeof(Uint8));
+	void writeU8(U16 tag, U8 v) {
+		writeFieldHeader(tag, sizeof(U8));
 		buf.writeU8(v);
 	}
 
-	void writeU16(Uint16 tag, Uint16 v) {
-		writeFieldHeader(tag, sizeof(Uint16));
+	void writeU16(U16 tag, U16 v) {
+		writeFieldHeader(tag, sizeof(U16));
 		buf.writeU16(v);
 	}
 
-	void writeU32(Uint16 tag, Uint32 v) {
-		writeFieldHeader(tag, sizeof(Uint32));
+	void writeU32(U16 tag, U32 v) {
+		writeFieldHeader(tag, sizeof(U32));
 		buf.writeU32(v);
 	}
 
-	void writeU64(Uint16 tag, Uint64 v) {
-		writeFieldHeader(tag, sizeof(Uint64));
+	void writeU64(U16 tag, U64 v) {
+		writeFieldHeader(tag, sizeof(U64));
 		buf.writeU64(v);
 	}
 
-	void writeI32(Uint16 tag, Sint32 v) {
-		writeFieldHeader(tag, sizeof(Sint32));
+	void writeI32(U16 tag, I32 v) {
+		writeFieldHeader(tag, sizeof(I32));
 		buf.writeI32(v);
 	}
 
-	void writeF32(Uint16 tag, float v) {
+	void writeF32(U16 tag, float v) {
 		writeFieldHeader(tag, sizeof(float));
 		buf.writeF32(v);
 	}
 
-	void writeBool(Uint16 tag, bool v) {
+	void writeBool(U16 tag, bool v) {
 		writeFieldHeader(tag, 1);
 		buf.writeBool(v);
 	}
@@ -95,11 +94,11 @@ public:
 	 * by the inner writeString call; the outer field length covers the
 	 * 2-byte length prefix plus the string data.
 	 */
-	void writeString(Uint16 tag, const std::string& v) {
+	void writeString(U16 tag, const std::string& v) {
 		if (v.size() > 65533)
 			throw std::length_error("MessageWriter::writeString: string too long");
 
-		writeFieldHeader(tag, static_cast<Uint16>(2 + v.size()));
+		writeFieldHeader(tag, static_cast<U16>(2 + v.size()));
 		buf.writeString(v);
 	}
 
@@ -107,9 +106,9 @@ public:
 	 * @brief Writes an arbitrary byte blob as a field.
 	 * @param tag  Field identifier.
 	 * @param data Pointer to byte data.
-	 * @param size Number of bytes. Must fit in a Uint16.
+	 * @param size Number of bytes. Must fit in a U16.
 	 */
-	void writeBlob(Uint16 tag, const Uint8* data, Uint16 size) {
+	void writeBlob(U16 tag, const U8* data, U16 size) {
 		writeFieldHeader(tag, size);
 		buf.writeBytes(data, size);
 	}
@@ -117,7 +116,7 @@ public:
 private:
 	IO::ByteBuffer& buf;
 
-	void writeFieldHeader(Uint16 tag, Uint16 fieldLength) {
+	void writeFieldHeader(U16 tag, U16 fieldLength) {
 		buf.writeU16(tag);
 		buf.writeU16(fieldLength);
 	}
@@ -135,7 +134,7 @@ private:
  * if (reader.messageVersion() != EXPECTED_VERSION)
  *     return; // reject old/new format
  *
- * reader.read([&](Uint16 tag, ByteBuffer& field) {
+ * reader.read([&](U16 tag, ByteBuffer& field) {
  *     switch (tag) {
  *         case Tags::EntityId:   entityId = field.readU32(); break;
  *         case Tags::PositionX:  x        = field.readF32(); break;
@@ -159,7 +158,7 @@ public:
 	MessageReader& operator=(const MessageReader&) = delete;
 
 	/** @brief Returns the message schema version written by the sender. */
-	Uint32 messageVersion() const { return version; }
+	U32 messageVersion() const { return version; }
 
 	/**
 	 * @brief Iterates all fields, invoking `callback` for each.
@@ -169,16 +168,16 @@ public:
 	 * are skipped before moving to the next field. This means partial
 	 * reads of a field are safe - the reader will still advance correctly.
 	 *
-	 * @param callback Invocable as `void(Uint16 tag, ByteBuffer& field)`.
+	 * @param callback Invocable as `void(U16 tag, ByteBuffer& field)`.
 	 */
-	void read(const std::function<void(Uint16, IO::ByteBuffer&)>& callback) {
+	void read(const std::function<void(U16, IO::ByteBuffer&)>& callback) {
 		while (!buf.exhausted()) {
 			// At minimum we need 4 bytes for tag + length.
 			if (buf.remaining() < 4)
 				break;
 
-			Uint16 tag = buf.readU16();
-			Uint16 fieldLength = buf.readU16();
+			U16 tag = buf.readU16();
+			U16 fieldLength = buf.readU16();
 
 			if (buf.remaining() < fieldLength)
 				break;
@@ -192,10 +191,10 @@ public:
 
 private:
 	IO::ByteBuffer& buf;
-	Uint32 version;
+	U32 version;
 
-	void skipBytes(Uint16 count) {
-		for (Uint16 i = 0; i < count; ++i)
+	void skipBytes(U16 count) {
+		for (U16 i = 0; i < count; ++i)
 			buf.readU8();
 	}
 };

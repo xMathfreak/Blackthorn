@@ -126,7 +126,7 @@ void EngineCore::run() {
 
 	installSignalHandlers();
 
-	Uint64 lastTime = SDL_GetPerformanceCounter();
+	U64 lastTime = SDL_GetPerformanceCounter();
 	float accumulated = 0.0f;
 	const float freq = static_cast<float>(SDL_GetPerformanceFrequency());
 
@@ -143,7 +143,7 @@ void EngineCore::run() {
 			PROFILE_SCOPE("Frame");
 		#endif
 
-		const Uint64 now = SDL_GetPerformanceCounter();
+		const U64 now = SDL_GetPerformanceCounter();
 		float frameTime = static_cast<float>(now - lastTime) / freq;
 		lastTime = now;
 
@@ -207,12 +207,12 @@ void EngineCore::run() {
 		 !settings.get<bool>("window", "vsync"))
 		{
 			const float target = 1.0f / settings.get<int>("graphics", "target_fps");
-			const Uint64 end = SDL_GetPerformanceCounter();
+			const U64 end = SDL_GetPerformanceCounter();
 			const float elapsed = static_cast<float>(end - now) / freq;
 			const float sleepMs = (target - elapsed - 0.002f) * 1000.0f;
 
 			if (sleepMs > 0.0f)
-				SDL_Delay(static_cast<Uint32>(sleepMs));
+				SDL_Delay(static_cast<U32>(sleepMs));
 
 			while (static_cast<float>(
 				SDL_GetPerformanceCounter() - now) / freq < target) {}
@@ -251,7 +251,7 @@ void EngineCore::lateUpdate(float dt) {
 }
 
 void EngineCore::registerDefaultSettings(Core::Settings& s) {
-	s.setDefault<Uint64>("simulation", "tick", static_cast<Uint64>(0));
+	s.setDefault<U64>("simulation", "tick", static_cast<U64>(0));
 
 	#ifdef BLACKTHORN_DEBUG
 		s.setDefault("developer", "log_level", 3);

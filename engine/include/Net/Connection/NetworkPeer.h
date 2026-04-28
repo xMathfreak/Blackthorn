@@ -6,6 +6,7 @@
 #include <SDL3/SDL.h>
 
 #include "Core/Export.h"
+#include "Core/Types/Types.h"
 #include "Net/Connection/PeerRateLimiter.h"
 #include "Net/Connection/PeerRateLimiter.h"
 #include "Net/Protocol/FragmentAssembler.h"
@@ -17,14 +18,14 @@
 namespace Blackthorn::Net::Connection {
 
 /** @brief Numeric identifier for a peer, assigned by ConnectionManager. */
-using PeerId = Uint32;
+using PeerId = U32;
 
 static constexpr PeerId INVALID_PEER_ID = 0xFFFFFFFFu;
 
 /**
  * @brief Connection state of a peer.
  */
-enum class PeerState : Uint8 {
+enum class PeerState : U8 {
 	Disconnected, ///< No active connection.
 	Connecting, ///< Handshake in progress (TCP connect or UDP hello).
 	Connected, ///< Fully established - simulation traffic may flow.
@@ -78,14 +79,14 @@ struct BLACKTHORN_API NetworkPeer {
 
 	/// Timestamp of the last received packet (either channel), in ms.
 	/// Used for timeout detection.
-	Uint64 lastReceivedMs = 0;
+	U64 lastReceivedMs = 0;
 
 	/// Timestamp of the last outbound Heartbeat sent to this peer.
-	Uint64 lastHeartbeatSentMs = 0;
+	U64 lastHeartbeatSentMs = 0;
 
 	/// Timeout threshold in milliseconds. A peer is considered timed out
 	/// when `SDL_GetTicks() - lastReceivedMs > timeoutMs`.
-	Uint64 timeoutMs = 10000;
+	U64 timeoutMs = 10000;
 
 	/// Set to true once the client has sent its ConnectRequest over the
 	/// established TCP socket.  Prevents pollTCP() from re-sending it on
@@ -102,7 +103,7 @@ struct BLACKTHORN_API NetworkPeer {
 
 	/// Schema version agreed during the TCP handshake.
 	/// 0 = not yet negotiated (peer is still Connecting).
-	Uint16 negotiatedSchemaVersion = 0;
+	U16 negotiatedSchemaVersion = 0;
 
 	/// Per-peer UDP fragment reassembler.
 	/// Initialised by PeerRegistry::allocateSlot() with a reference to
@@ -135,11 +136,11 @@ struct BLACKTHORN_API NetworkPeer {
 	 *   - We have not already sent a heartbeat within the same interval
 	 *     (prevents flooding if the remote side stops responding entirely).
 	 */
-	bool needsHeartbeat(Uint32 intervalMs) const noexcept {
+	bool needsHeartbeat(U32 intervalMs) const noexcept {
 		if (intervalMs == 0 || !tcpConnected || tcpSocket == nullptr)
 			return false;
 
-		const Uint64 now = SDL_GetTicks();
+		const U64 now = SDL_GetTicks();
 		const bool silent = (now - lastReceivedMs) >= intervalMs;
 		const bool notSent = (now - lastHeartbeatSentMs) >= intervalMs;
 

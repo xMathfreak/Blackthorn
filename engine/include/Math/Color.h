@@ -6,6 +6,7 @@
 #include <glm/glm.hpp>
 #include <SDL3/SDL.h>
 
+#include "Core/Types/Types.h"
 #include "Math/Interpolation.h"
 
 namespace Blackthorn {
@@ -31,38 +32,38 @@ namespace Colors {
 } // namespace Colors
 
 [[nodiscard]]
-constexpr Color fromRGBA8(Uint8 r, Uint8 g, Uint8 b, Uint8 a = 255) {
+constexpr Color fromRGBA8(U8 r, U8 g, U8 b, U8 a = 255) {
 	constexpr float inv = 1.0f / 255.0f;
 	return Color{ r * inv, g * inv, b * inv, a * inv };
 }
 
 [[nodiscard]]
-constexpr Color fromRGBA32(Uint32 rgba) {
+constexpr Color fromRGBA32(U32 rgba) {
 	return fromRGBA8(
-		static_cast<Uint8>((rgba >> 24) & 0xFF),
-		static_cast<Uint8>((rgba >> 16) & 0xFF),
-		static_cast<Uint8>((rgba >>	 8)	& 0xFF),
-		static_cast<Uint8>(rgba 		& 0xFF)
+		static_cast<U8>((rgba >> 24) & 0xFF),
+		static_cast<U8>((rgba >> 16) & 0xFF),
+		static_cast<U8>((rgba >>	 8)	& 0xFF),
+		static_cast<U8>(rgba 		& 0xFF)
 	);
 }
 
 [[nodiscard]]
-constexpr Uint32 toRGBA32(const Color& c) {
+constexpr U32 toRGBA32(const Color& c) {
 	return (
-		  static_cast<Uint32>(c.r * 255.0f + 0.5f) << 24
-		| static_cast<Uint32>(c.g * 255.0f + 0.5f) << 16
-		| static_cast<Uint32>(c.b * 255.0f + 0.5f) << 8
-		| static_cast<Uint32>(c.a * 255.0f + 0.5f)
+		  static_cast<U32>(c.r * 255.0f + 0.5f) << 24
+		| static_cast<U32>(c.g * 255.0f + 0.5f) << 16
+		| static_cast<U32>(c.b * 255.0f + 0.5f) << 8
+		| static_cast<U32>(c.a * 255.0f + 0.5f)
 	);
 }
 
 [[nodiscard]]
 constexpr SDL_Color toSDLColor(const Color& c) {
 	return SDL_Color{
-		static_cast<Uint8>(c.r * 255),
-		static_cast<Uint8>(c.g * 255),
-		static_cast<Uint8>(c.b * 255),
-		static_cast<Uint8>(c.a * 255)
+		static_cast<U8>(c.r * 255),
+		static_cast<U8>(c.g * 255),
+		static_cast<U8>(c.b * 255),
+		static_cast<U8>(c.a * 255)
 	};
 }
 
@@ -76,15 +77,15 @@ constexpr Color fromHex(std::string_view hex) {
 	if (!hex.empty() && hex.front() == '#')
 		hex.remove_prefix(1);
 
-	const auto hexToNibble = [](char c) constexpr -> Uint8 {
+	const auto hexToNibble = [](char c) constexpr -> U8 {
 		if (c >= '0' && c <= '9')
-			return static_cast<Uint8>(c - '0');
+			return static_cast<U8>(c - '0');
 
 		if (c >= 'a' && c <= 'f')
-			return static_cast<Uint8>(c - 'a' + 10);
+			return static_cast<U8>(c - 'a' + 10);
 
 		if (c >= 'A' && c <= 'F')
-			return static_cast<Uint8>(c - 'A' + 10);
+			return static_cast<U8>(c - 'A' + 10);
 
 		if (std::is_constant_evaluated()) {
 			throw "Invalid hex character";
@@ -93,24 +94,24 @@ constexpr Color fromHex(std::string_view hex) {
 		}
 	};
 
-	const auto parseByte = [&](char high, char low) constexpr -> Uint8 {
-		return static_cast<Uint8>((hexToNibble(high) << 4) | hexToNibble(low));
+	const auto parseByte = [&](char high, char low) constexpr -> U8 {
+		return static_cast<U8>((hexToNibble(high) << 4) | hexToNibble(low));
 	};
 
-	Uint8 r, g, b, a = 255;
+	U8 r, g, b, a = 255;
 
 	switch (hex.size()) {
 		case 3:
-			r = static_cast<Uint8>(hexToNibble(hex[0]) * 17);
-			g = static_cast<Uint8>(hexToNibble(hex[1]) * 17);
-			b = static_cast<Uint8>(hexToNibble(hex[2]) * 17);
+			r = static_cast<U8>(hexToNibble(hex[0]) * 17);
+			g = static_cast<U8>(hexToNibble(hex[1]) * 17);
+			b = static_cast<U8>(hexToNibble(hex[2]) * 17);
 			break;
 
 		case 4:
-			r = static_cast<Uint8>(hexToNibble(hex[0]) * 17);
-			g = static_cast<Uint8>(hexToNibble(hex[1]) * 17);
-			b = static_cast<Uint8>(hexToNibble(hex[2]) * 17);
-			a = static_cast<Uint8>(hexToNibble(hex[3]) * 17);
+			r = static_cast<U8>(hexToNibble(hex[0]) * 17);
+			g = static_cast<U8>(hexToNibble(hex[1]) * 17);
+			b = static_cast<U8>(hexToNibble(hex[2]) * 17);
+			a = static_cast<U8>(hexToNibble(hex[3]) * 17);
 			break;
 
 		case 6:

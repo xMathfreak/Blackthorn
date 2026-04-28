@@ -6,19 +6,19 @@
 #include <random>
 
 #include <glm/glm.hpp>
-#include <SDL3/SDL.h>
 
 #include "Core/Export.h"
+#include "Core/Types/Types.h"
 
 namespace Blackthorn::Math::Noise {
 
 class BLACKTHORN_API Perlin {
 public:
-	explicit Perlin(Uint64 seed = std::random_device{}()) {
+	explicit Perlin(U64 seed = std::random_device{}()) {
 		initPermutations(seed);
 	}
 
-	void setSeed(Uint64 seed) {
+	void setSeed(U64 seed) {
 		initPermutations(seed);
 	}
 
@@ -159,7 +159,7 @@ private:
 		return ((h & 1) ? -u : u) + ((h & 2) ? -v : v);
 	}
 
-	void initPermutations(Uint64 seed) {
+	void initPermutations(U64 seed) {
 		std::iota(perm.begin(), perm.begin() + 256, 0);
 		std::shuffle(perm.begin(), perm.begin() + 256, std::mt19937_64(seed));
 

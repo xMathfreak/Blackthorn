@@ -59,7 +59,7 @@ void PacketDispatcher::poll(Jobs::JobSystem* jobs) {
 			}
 		}
 
-		const Uint32 actualBytes = static_cast<Uint32>(packet.data.remaining());
+		const U32 actualBytes = static_cast<U32>(packet.data.remaining());
 		if (header.payloadLength != actualBytes) {
 			BT_WARN(
 				"PacketDispatcher: Dropped packet from peer {} - "

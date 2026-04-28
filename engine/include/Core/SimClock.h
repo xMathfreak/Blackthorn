@@ -1,8 +1,7 @@
 #pragma once
 
-#include <SDL3/SDL.h>
-
 #include "Core/Export.h"
+#include "Core/Types/Types.h"
 
 namespace Blackthorn::Core {
 
@@ -74,7 +73,7 @@ public:
 	void load();
 
 	/** @brief Returns the number of ticks elapsed since the clock epoch. */
-	Uint64 getCurrentTick() const { return currentTick; }
+	U64 getCurrentTick() const { return currentTick; }
 
 	/** @brief Returns the number of seconds each tick represents. */
 	float getTickDuration() const { return tickDuration; }
@@ -91,7 +90,7 @@ public:
 	double getTotalSimulatedTime() const { return totalSimulatedTime; }
 
 private:
-	Uint64 currentTick = 0;
+	U64 currentTick = 0;
 
 	float tickDuration = 1.0f / 60.0f;
 	float tickRate = 60.0f;

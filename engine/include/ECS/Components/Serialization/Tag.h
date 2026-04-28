@@ -10,8 +10,8 @@ namespace Blackthorn::ECS::Serialization {
  *
  * Wire layout (variable length):
  * @code
- * uint16  nameLength   (number of UTF-8 bytes in the name string)
- * uint8[] nameBytes    (UTF-8 encoded string, no null terminator)
+ * U16  nameLength   (number of UTF-8 bytes in the name string)
+ * U8[] nameBytes    (UTF-8 encoded string, no null terminator)
  * @endcode
  *
  * @note Tag is the only built-in component with a variable-length wire

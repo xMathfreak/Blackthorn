@@ -6,9 +6,8 @@
 #include <unordered_map>
 #include <vector>
 
-#include <SDL3/SDL.h>
-
 #include "Core/Export.h"
+#include "Core/Types/Types.h"
 
 namespace Blackthorn::Debug {
 
@@ -32,8 +31,8 @@ public:
 		std::string name;
 		float duration; // seconds
 		int depth;
-		Uint64 startTime;
-		Uint64 endTime;
+		U64 startTime;
+		U64 endTime;
 	};
 
 	struct ScopeStats {
@@ -88,7 +87,7 @@ private:
 	/// Per-thread scope stack.
 	struct ScopeEntry {
 		const char* name;
-		Uint64 startTime;
+		U64 startTime;
 		int depth;
 	};
 
@@ -102,7 +101,7 @@ private:
 	std::vector<Sample> lastFrameSamples;
 
 	/// Main-thread frame tracking
-	Uint64 frameStartTime = 0;
+	U64 frameStartTime = 0;
 	float lastFrameTime = 0.0f;
 
 	bool enabled = true;

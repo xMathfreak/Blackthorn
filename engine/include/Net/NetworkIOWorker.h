@@ -5,10 +5,9 @@
 #include <thread>
 #include <vector>
 
-#include <SDL3/SDL.h>
-
 #include "Core/Export.h"
 #include "Core/EngineConfig.h"
+#include "Core/Types/Types.h"
 #include "Net/ConnectionEventBus.h"
 #include "Net/Transport/PacketQueue.h"
 #include "Net/Transport/Sockets/TCPSocket.h"
@@ -111,7 +110,7 @@ private:
 	size_t globalFragmentBytes = 0;
 
 	static constexpr size_t RECV_BUFFER_SIZE = 65536;
-	std::vector<Uint8> recvScratch;
+	std::vector<U8> recvScratch;
 };
 
 } // namespace Blackthorn::Net

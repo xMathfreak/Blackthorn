@@ -12,7 +12,7 @@ public:
 	virtual ~ISystem() = default;
 	virtual void init(EntityPool*) {}
 	virtual void update(EntityPool*, float dt, Jobs::JobSystem*) {}
-	virtual void fixedUpdate(EntityPool*, float dt, Jobs::JobSystem*, Uint64 tick = 0) {}
+	virtual void fixedUpdate(EntityPool*, float dt, Jobs::JobSystem*, U64 tick = 0) {}
 	virtual void render(EntityPool*, float alpha) {}
 	virtual void lateUpdate(EntityPool*, float dt, Jobs::JobSystem*) {}
 };

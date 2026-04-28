@@ -13,7 +13,7 @@ void Widget::setState(WidgetState flag) {
 
 void Widget::clearState(WidgetState flag) {
 	state = static_cast<WidgetState>(
-		static_cast<Uint8>(state) & ~static_cast<Uint8>(flag)
+		static_cast<U8>(state) & ~static_cast<U8>(flag)
 	);
 	markRenderDirty();
 }
@@ -189,7 +189,7 @@ bool Widget::onMouseMove(const glm::vec2& pos) {
 	return contains;
 }
 
-bool Widget::onMouseDown(const glm::vec2& pos, Uint8 button) {
+bool Widget::onMouseDown(const glm::vec2& pos, U8 button) {
 	if (!isEnabled() || !isVisible())
 		return false;
 
@@ -201,7 +201,7 @@ bool Widget::onMouseDown(const glm::vec2& pos, Uint8 button) {
 	return false;
 }
 
-bool Widget::onMouseUp(const glm::vec2& pos, Uint8 button) {
+bool Widget::onMouseUp(const glm::vec2& pos, U8 button) {
 	if (hasState(state, WidgetState::Pressed)) {
 		clearState(WidgetState::Pressed);
 		return true;

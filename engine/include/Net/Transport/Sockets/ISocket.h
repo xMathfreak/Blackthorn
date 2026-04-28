@@ -3,9 +3,8 @@
 #include <cstddef>
 #include <memory>
 
-#include <SDL3/SDL.h>
-
 #include "Core/Export.h"
+#include "Core/Types/Types.h"
 #include "Net/Transport/Address.h"
 
 namespace Blackthorn::Net::Transport::Sockets {
@@ -13,7 +12,7 @@ namespace Blackthorn::Net::Transport::Sockets {
 /**
  * @brief Result of a non-blocking socket operation.
  */
-enum class SocketResult : Uint8 {
+enum class SocketResult : U8 {
 	Ok, ///< Operation succeeded.
 	WouldBlock, ///< No data available (non-blocking recv) or send buffer full.
 	Disconnected,  //< Remote peer closed the connection (TCP only).

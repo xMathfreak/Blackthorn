@@ -3,7 +3,6 @@
 #include <string_view>
 
 #include <glm/glm.hpp>
-#include <SDL3/SDL.h>
 
 #include "Fonts/TextTypes.h"
 #include "Math/Color.h"

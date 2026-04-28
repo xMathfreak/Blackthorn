@@ -113,7 +113,7 @@ void NetworkIOWorker::ioThreadLoop() {
 			}
 		}
 
-		SDL_DelayNS(static_cast<Uint64>(cfg.pollIntervalMicros) * 1000ULL);
+		SDL_DelayNS(static_cast<U64>(cfg.pollIntervalMicros) * 1000ULL);
 	}
 
 	Threads::ThreadRegistry::instance().unregisterCurrent();
@@ -368,7 +368,7 @@ void NetworkIOWorker::pollTCP() {
 				IO::ByteBuffer reqBuf;
 				Protocol::PacketHeader reqHdr;
 				reqHdr.packetType = Protocol::PacketType::ConnectRequest;
-				reqHdr.payloadLength = sizeof(Uint16);
+				reqHdr.payloadLength = sizeof(U16);
 				reqHdr.serialize(reqBuf);
 				reqBuf.writeU16(Protocol::CURRENT_SCHEMA_VERSION);
 				peer.tcpChannel->send(*peer.tcpSocket, reqBuf);
@@ -423,7 +423,7 @@ void NetworkIOWorker::pollTCP() {
 
 					case Protocol::PacketType::ConnectRequest: {
 						if (peer.state == Connection::PeerState::Connecting) {
-							const Uint16 clientVersion = msg.readU16();
+							const U16 clientVersion = msg.readU16();
 
 							if (clientVersion != Protocol::CURRENT_SCHEMA_VERSION) {
 								BT_WARN(
@@ -450,7 +450,7 @@ void NetworkIOWorker::pollTCP() {
 							IO::ByteBuffer ackBuf;
 							Protocol::PacketHeader ackHdr;
 							ackHdr.packetType = Protocol::PacketType::ConnectAck;
-							ackHdr.payloadLength = sizeof(Uint16);
+							ackHdr.payloadLength = sizeof(U16);
 							ackHdr.serialize(ackBuf);
 							ackBuf.writeU16(Protocol::CURRENT_SCHEMA_VERSION);
 							peer.tcpChannel->send(*peer.tcpSocket, ackBuf);
@@ -462,7 +462,7 @@ void NetworkIOWorker::pollTCP() {
 							IO::ByteBuffer portBuf;
 							Protocol::PacketHeader portHdr;
 							portHdr.packetType = Protocol::PacketType::UDPPortInfo;
-							portHdr.payloadLength = sizeof(Uint16);
+							portHdr.payloadLength = sizeof(U16);
 							portHdr.serialize(portBuf);
 							portBuf.writeU16(udpSocket->getLocalAddress().port());
 							peer.tcpChannel->send(*peer.tcpSocket, portBuf);
@@ -484,7 +484,7 @@ void NetworkIOWorker::pollTCP() {
 
 					case Protocol::PacketType::ConnectAck: {
 						if (peer.state == Connection::PeerState::Connecting) {
-							const Uint16 acceptedVersion = msg.readU16();
+							const U16 acceptedVersion = msg.readU16();
 							peer.negotiatedSchemaVersion = acceptedVersion;
 							peer.state = Connection::PeerState::Connected;
 							peer.tcpConnected = true;
@@ -492,7 +492,7 @@ void NetworkIOWorker::pollTCP() {
 							IO::ByteBuffer portBuf;
 							Protocol::PacketHeader portHdr;
 							portHdr.packetType = Protocol::PacketType::UDPPortInfo;
-							portHdr.payloadLength = sizeof(Uint16);
+							portHdr.payloadLength = sizeof(U16);
 							portHdr.serialize(portBuf);
 							portBuf.writeU16(udpSocket->getLocalAddress().port());
 							peer.tcpChannel->send(*peer.tcpSocket, portBuf);
@@ -513,7 +513,7 @@ void NetworkIOWorker::pollTCP() {
 					}
 
 					case Protocol::PacketType::UDPPortInfo: {
-						const Uint16 remoteUDPPort = msg.readU16();
+						const U16 remoteUDPPort = msg.readU16();
 						const Transport::Address remoteUDP =
 							Transport::Address::fromIPv4(
 								peer.tcpAddress.ip(), remoteUDPPort);

@@ -5,15 +5,15 @@
 namespace Blackthorn::Net::Transport::Channels {
 
 Sockets::SocketResult TCPChannel::send(Sockets::ISocket& socket, const IO::ByteBuffer& payload) {
-	const Uint32 len = static_cast<Uint32>(payload.size());
+	const U32 len = static_cast<U32>(payload.size());
 
 	sendBuffer.clear();
 	sendBuffer.reserve(LENGTH_PREFIX_SIZE + payload.size());
 
-	sendBuffer.push_back(static_cast<Uint8>(len));
-	sendBuffer.push_back(static_cast<Uint8>(len >> 8));
-	sendBuffer.push_back(static_cast<Uint8>(len >> 16));
-	sendBuffer.push_back(static_cast<Uint8>(len >> 24));
+	sendBuffer.push_back(static_cast<U8>(len));
+	sendBuffer.push_back(static_cast<U8>(len >> 8));
+	sendBuffer.push_back(static_cast<U8>(len >> 16));
+	sendBuffer.push_back(static_cast<U8>(len >> 24));
 
 	sendBuffer.insert(
 		sendBuffer.end(),
@@ -52,7 +52,7 @@ ReceiveResult TCPChannel::receive(Sockets::ISocket& socket,	IO::ByteBuffer& outM
 		: (available() >= LENGTH_PREFIX_SIZE);
 
 	if (!haveEnough) {
-		Uint8 chunk[4096];
+		U8 chunk[4096];
 		size_t bytesRead = 0;
 
 		Sockets::SocketResult result =
@@ -69,11 +69,11 @@ ReceiveResult TCPChannel::receive(Sockets::ISocket& socket,	IO::ByteBuffer& outM
 		if (available() < LENGTH_PREFIX_SIZE)
 			return ReceiveResult::NeedMore;
 
-		const Uint8* p = recvBuffer.data() + readHead;
-		const Uint32 len = static_cast<Uint32>(p[0])
-						| (static_cast<Uint32>(p[1]) << 8)
-						| (static_cast<Uint32>(p[2]) << 16)
-						| (static_cast<Uint32>(p[3]) << 24);
+		const U8* p = recvBuffer.data() + readHead;
+		const U32 len = static_cast<U32>(p[0])
+						| (static_cast<U32>(p[1]) << 8)
+						| (static_cast<U32>(p[2]) << 16)
+						| (static_cast<U32>(p[3]) << 24);
 
 		if (len == 0 || len > MAX_MESSAGE_SIZE) {
 			BT_WARN(

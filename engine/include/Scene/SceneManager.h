@@ -4,9 +4,8 @@
 #include <memory>
 #include <vector>
 
-#include <SDL3/SDL.h>
-
 #include "Core/Export.h"
+#include "Core/Types/Types.h"
 #include "Scene/IScene.h"
 
 namespace Blackthorn::Scene {
@@ -115,7 +114,7 @@ public:
 		transitionPhase = TransitionPhase::FadeOut;
 	}
 
-	void fixedUpdate(float dt, Uint64 tick) {
+	void fixedUpdate(float dt, U64 tick) {
 		if (inTransition)
 			return;
 

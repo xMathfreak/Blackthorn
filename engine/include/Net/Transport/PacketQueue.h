@@ -4,9 +4,8 @@
 #include <atomic>
 #include <cstddef>
 
-#include <SDL3/SDL.h>
-
 #include "Core/Export.h"
+#include "Core/Types/Types.h"
 #include "IO/ByteBuffer.h"
 #include "Net/Connection/NetworkPeer.h"
 #include "Net/Transport/Address.h"
@@ -25,7 +24,7 @@ struct BLACKTHORN_API InboundPacket {
 	IO::ByteBuffer data;
 
 	/// Identifies which channel this packet arrived on.
-	enum class Channel : Uint8 { UDP, TCP } channel = Channel::UDP;
+	enum class Channel : U8 { UDP, TCP } channel = Channel::UDP;
 
 	/// The peer that sent this packet, or INVALID_PEER_ID if unknown.
 	Connection::PeerId peerId = Connection::INVALID_PEER_ID;

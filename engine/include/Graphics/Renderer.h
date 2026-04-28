@@ -7,6 +7,7 @@
 #include <SDL3/SDL.h>
 
 #include "Core/Export.h"
+#include "Core/Types/Types.h"
 #include "Graphics/EBO.h"
 #include "Graphics/FBO.h"
 #include "Graphics/Shader.h"
@@ -60,15 +61,15 @@ private:
 
 private:
 	/// Default number of quads per batch - overridable at construction
-	static constexpr Uint32 DEFAULT_MAX_QUADS = 1 << 12;
+	static constexpr U32 DEFAULT_MAX_QUADS = 1 << 12;
 
 	/// Maximum number of texture slots per batch
-	static constexpr Uint32 MAX_TEXTURE_SLOTS = 2 << 3;
+	static constexpr U32 MAX_TEXTURE_SLOTS = 2 << 3;
 
 	/// Runtime batch limits (set from maxQuads passed to constructor)
-	Uint32 MAX_QUADS = DEFAULT_MAX_QUADS;
-	Uint32 MAX_VERTICES = DEFAULT_MAX_QUADS * 4;
-	Uint32 MAX_INDICES = DEFAULT_MAX_QUADS * 6;
+	U32 MAX_QUADS = DEFAULT_MAX_QUADS;
+	U32 MAX_VERTICES = DEFAULT_MAX_QUADS * 4;
+	U32 MAX_INDICES = DEFAULT_MAX_QUADS * 6;
 
 	/// Index buffer for quad rendering
 	std::unique_ptr<EBO> QuadEBO;
@@ -119,13 +120,13 @@ private:
 	Vertex* quadBufferPtr = nullptr;
 
 	/// Number of indices currently queued in the batch
-	Uint32 quadIndexCount = 0;
+	U32 quadIndexCount = 0;
 
 	/// Active texture slots for the current batch
 	std::array<const Texture*, MAX_TEXTURE_SLOTS> textureSlots;
 
 	/// Next available texture slot index
-	Uint32 textureSlotIndex = 1;
+	U32 textureSlotIndex = 1;
 
 	/// Projection matrix
 	glm::mat4 projectionMatrix;
@@ -172,7 +173,7 @@ private:
 	 */
 	inline bool isVisible(const SDL_FRect& rect, float rotation = 0.0f) const;
 
-	Uint32 findOrAddTexture(const Texture* texture);
+	U32 findOrAddTexture(const Texture* texture);
 
 	/**
 	 * @brief Internal quad draw implementation.
@@ -189,7 +190,7 @@ public:
 	 * @brief Constructs the renderer and initializes GPU resources.
 	 * @param maxQuads Maximum quads per batch. Defaults to 4096.
 	 */
-	explicit Renderer(Uint32 maxQuads = DEFAULT_MAX_QUADS);
+	explicit Renderer(U32 maxQuads = DEFAULT_MAX_QUADS);
 
 	/**
 	 * @brief Destroys the renderer and releases GPU resources.

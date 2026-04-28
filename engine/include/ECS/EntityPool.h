@@ -21,16 +21,16 @@ class View;
 class BLACKTHORN_API EntityPool {
 private:
 	struct EntityData {
-		Uint8 generation = 0;
-		Uint64 componentMask = 0;
+		U8 generation = 0;
+		U64 componentMask = 0;
 	};
 
 	std::vector<EntityData> entities;
-	std::vector<Uint32> freeList;
+	std::vector<U32> freeList;
 	std::array<std::unique_ptr<IComponentArray>, Detail::MAX_COMPONENTS> componentArrays;
 	size_t entityCount = 0;
 
-	std::atomic<Uint64> structuralEpoch{0};
+	std::atomic<U64> structuralEpoch{0};
 
 	void bumpEpoch() noexcept {
 		structuralEpoch.fetch_add(1, std::memory_order::release);
@@ -41,15 +41,15 @@ public:
 		entities.resize(maxEntities);
 		freeList.reserve(maxEntities);
 
-		for (Sint32 i = static_cast<Sint32>(maxEntities) - 1; i >= 0; --i)
-			freeList.push_back(static_cast<Uint32>(i));
+		for (I32 i = static_cast<I32>(maxEntities) - 1; i >= 0; --i)
+			freeList.push_back(static_cast<U32>(i));
 	}
 
 	Entity create() {
 		if (freeList.empty())
 			throw std::runtime_error("EntityPool: Out of entity slots");
 
-		Uint32 index = freeList.back();
+		U32 index = freeList.back();
 		freeList.pop_back();
 
 		#ifdef BLACKTHORN_DEBUG
@@ -64,12 +64,12 @@ public:
 	}
 
 	void destroy(Entity entity) {
-		Uint32 index = Detail::entityIndex(entity);
+		U32 index = Detail::entityIndex(entity);
 
 		if (!isValid(entity))
 			return;
 
-		Uint64 mask = entities[index].componentMask;
+		U64 mask = entities[index].componentMask;
 		for (size_t i = 0; mask && i < Detail::MAX_COMPONENTS; ++i) {
 			if (mask & (1ULL << i)) {
 				if (componentArrays[i])
@@ -90,7 +90,7 @@ public:
 		if (entity == INVALID_ENTITY)
 			return false;
 
-		Uint32 index = Detail::entityIndex(entity);
+		U32 index = Detail::entityIndex(entity);
 
 		if (index >= entities.size())
 			return false;
@@ -108,9 +108,9 @@ public:
 
 		freeList.clear();
 
-		for (Sint32 i = static_cast<Sint32>(entities.size()) - 1; i >= 0; --i) {
+		for (I32 i = static_cast<I32>(entities.size()) - 1; i >= 0; --i) {
 			entities[i] = EntityData{};
-			freeList.push_back(static_cast<Uint32>(i));
+			freeList.push_back(static_cast<U32>(i));
 		}
 
 		entityCount = 0;
@@ -120,7 +120,7 @@ public:
 	const std::vector<EntityData>& getEntities() const { return entities; }
 	std::vector<EntityData>& getEntities() { return entities; }
 
-	Uint64 getEpoch() const noexcept {
+	U64 getEpoch() const noexcept {
 		return structuralEpoch.load(std::memory_order::acquire);
 	}
 
@@ -137,7 +137,7 @@ public:
 		auto* array = static_cast<ComponentArray<Component>*>(componentArrays[id].get());
 		Component& component = array->insert(entity, std::forward<Args>(args)...);
 
-		Uint32 index = Detail::entityIndex(entity);
+		U32 index = Detail::entityIndex(entity);
 		entities[index].componentMask |= Detail::componentMask<Component>();
 
 		bumpEpoch();
@@ -155,7 +155,7 @@ public:
 
 		componentArrays[id]->remove(entity);
 
-		Uint32 index = Detail::entityIndex(entity);
+		U32 index = Detail::entityIndex(entity);
 		entities[index].componentMask &= ~Detail::componentMask<Component>();
 
 		bumpEpoch();
@@ -226,7 +226,7 @@ public:
 			return Detail::View<Components...>(this, 0, &empty);
 		}
 
-		Uint64 requiredMask = 0;
+		U64 requiredMask = 0;
 		const std::vector<Entity>* smallestList = nullptr;
 		size_t smallestSize = SIZE_MAX;
 
@@ -264,15 +264,15 @@ template <typename... Components>
 class View {
 private:
 	EntityPool* pool;
-	Uint64 requiredMask;
+	U64 requiredMask;
 	const std::vector<Entity>* entityList;
 
 	mutable std::shared_mutex cacheMutex;
 	mutable std::vector<Entity> cachedMatching;
-	mutable Uint64 cachedEpoch = UINT64_MAX;
+	mutable U64 cachedEpoch = U64_MAX;
 
 public:
-	View(EntityPool* p, Uint64 mask, const std::vector<Entity>* entities)
+	View(EntityPool* p, U64 mask, const std::vector<Entity>* entities)
 		: pool(p)
 		, requiredMask(mask)
 		, entityList(entities)
@@ -288,7 +288,7 @@ public:
 		, cachedMatching(std::move(other.cachedMatching))
 		, cachedEpoch(other.cachedEpoch)
 	{
-		other.cachedEpoch = UINT64_MAX;
+		other.cachedEpoch = U64_MAX;
 	}
 
 	View& operator=(View&&) = delete;
@@ -374,7 +374,7 @@ public:
 
 private:
 	void rebuildCache() const {
-		Uint64 currentEpoch = pool->getEpoch();
+		U64 currentEpoch = pool->getEpoch();
 
 		if (cachedEpoch == currentEpoch)
 			return;
@@ -397,7 +397,7 @@ private:
 	}
 
 	bool matchesMask(Entity e) const {
-		Uint32 idx = Detail::entityIndex(e);
+		U32 idx = Detail::entityIndex(e);
 		return (pool->getEntities()[idx].componentMask & requiredMask) == requiredMask;
 	}
 

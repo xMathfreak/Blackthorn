@@ -32,13 +32,13 @@ void SimClock::setTickRate(float fixedDeltaTime) {
 
 void SimClock::save() const {
 	auto& s = Settings::instance();
-	s.set<Uint64>("simulation", "tick", currentTick);
+	s.set<U64>("simulation", "tick", currentTick);
 	BT_DEBUG("SimClock: saved tick {}", currentTick);
 }
 
 void SimClock::load() {
 	auto& s = Settings::instance();
-	Uint64 saved = s.get<Uint64>("simulation", "tick", static_cast<Uint64>(0));
+	U64 saved = s.get<U64>("simulation", "tick", static_cast<U64>(0));
 	currentTick = saved;
 	totalSimulatedTime = static_cast<double>(currentTick) * static_cast<double>(tickDuration);
 

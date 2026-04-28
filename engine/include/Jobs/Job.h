@@ -4,14 +4,13 @@
 #include <functional>
 #include <type_traits>
 
-#include <SDL3/SDL.h>
-
 #include "Core/Export.h"
+#include "Core/Types/Types.h"
 #include "Jobs/JobHandle.h"
 
 namespace Blackthorn::Jobs {
 
-enum class ThreadAffinity : Uint8 {
+enum class ThreadAffinity : U8 {
 	Any,        ///< May run on any worker thread or the main thread.
 	MainThread  ///< Must only run on the main thread.
 };
