@@ -86,7 +86,20 @@ struct BLACKTHORN_API SaveConfig {
 	/// A warning is logged in debug builds when false.
 	bool encryptionEnabled = true;
 
-	///ABC
+	/**
+	 * @brief Game-provided key derivation function.
+	 *
+	 * Required when encryptionEnabled is true. If null and encryption is enabled,
+	 * SaveManager will log an error and skip encryption rather than crashing.
+	 *
+	 * The intended signature is:
+	 * `std::function<void(std::span<U8, 32>, const Saves::SaveId&, U16)>`
+	 *
+	 * However, it is stored as `void*` here to avoid pulling Saves headers into
+	 * EngineConfig. SaveManager casts it back to the correct type on construction.
+	 *
+	 * For type safety, prefer using SaveManager::setKeyDeriveFn() directly.
+	 */
 	std::function<void(std::span<U8, 32>, const void*, U16)> keyDeriveFn;
 };
 
@@ -122,6 +135,7 @@ struct BLACKTHORN_API ConnectionConfig {
 
 struct BLACKTHORN_API EngineConfig {
 	DebugConfig debug;
+	SaveConfig save;
 	ConnectionConfig net;
 	WindowConfig window;
 	RenderConfig render;
