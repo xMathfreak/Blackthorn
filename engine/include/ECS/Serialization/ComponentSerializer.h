@@ -69,6 +69,29 @@ struct ComponentSerializer {
 };
 
 /**
+ * @brief Bitmask controlling which pipelines a component participates in.
+ *
+ * Components default to @c Network only to preserve existing behaviour.
+ * Opt a component into save serialization by passing @c Save or @c Both
+ * to @c SerializerRegistry::registerComponent().
+ */
+enum class SerializationContext : U8 {
+	Network = 1 << 0, ///< Component is serialized for network snapshots.
+	Save = 1 << 1, ///< Component is serialized for save documents.
+	Both = Network | Save,
+};
+
+inline SerializationContext operator|(SerializationContext a, SerializationContext b) {
+	return static_cast<SerializationContext>(
+		static_cast<U8>(a) | static_cast<U8>(b)
+	);
+}
+
+inline bool hasContext(SerializationContext flags, SerializationContext flag) {
+	return (static_cast<U8>(flags) & static_cast<U8>(flag)) != 0;
+}
+
+/**
  * @brief Registry for type-erased ECS component serializers.
  *
  * Maps a component's `Detail::componentID` to a pair of type-erased
@@ -115,6 +138,8 @@ public:
 		 * otherwise defaults to 0.
 		 */
 		size_t fixedSize = 0;
+
+		SerializationContext context = SerializationContext::Network;
 	};
 
 	static SerializerRegistry& instance() {
@@ -135,7 +160,7 @@ public:
 	 * @tparam T Component type with a ComponentSerializer specialization.
 	 */
 	template <typename T>
-	void registerComponent() {
+	void registerComponent(SerializationContext context = SerializationContext::Network) {
 		const size_t id = Detail::componentID<T>();
 
 		if (entries.count(id))
@@ -157,6 +182,7 @@ public:
 			entry.fixedSize = 0;
 		}
 
+		entry.context = context;
 		entries[id] = std::move(entry);
 	}
 
@@ -175,6 +201,17 @@ public:
 	 */
 	bool isRegistered(size_t componentId) const {
 		return entries.count(componentId) > 0;
+	}
+
+	/**
+	 * @brief Returns true if the component is registered for the given context.
+	 */
+	bool isRegisteredFor(size_t componentId, SerializationContext ctx) const {
+		auto it = entries.find(componentId);
+		if (it == entries.end())
+			return false;
+
+		return hasContext(it->second.context, ctx);
 	}
 
 private:
