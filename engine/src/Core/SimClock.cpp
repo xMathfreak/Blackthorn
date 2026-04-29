@@ -11,7 +11,7 @@ SimClock::SimClock(float fixedDeltaTime) {
 
 void SimClock::tick() {
 	++currentTick;
-	totalSimulatedTime = static_cast<double>(tickDuration);
+	totalSimulatedTime += static_cast<double>(tickDuration);
 }
 
 void SimClock::reset() {
@@ -43,6 +43,13 @@ void SimClock::load() {
 	totalSimulatedTime = static_cast<double>(currentTick) * static_cast<double>(tickDuration);
 
 	BT_DEBUG("SimClock: loaded tick {} ({:.3f}s simulated)", currentTick, totalSimulatedTime);
+}
+
+void SimClock::resetTo(U64 tick) {
+	currentTick = tick;
+	totalSimulatedTime = static_cast<double>(currentTick) * static_cast<double>(tickDuration);
+
+	BT_DEBUG("SimClock: reset to tick {} ({:.3f}s simulated)", currentTick, totalSimulatedTime);
 }
 
 } // namespace Blackthorn
