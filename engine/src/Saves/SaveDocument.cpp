@@ -60,6 +60,38 @@ void SectionTableEntry::deserialize(IO::ByteBuffer& buf) {
 	flags = buf.readU32();
 }
 
+void SaveIdBlock::fromSaveId(const SaveId& id) {
+	displayName = id.displayName;
+	worldId = id.worldId;
+	playerId = id.playerId;
+	slot = id.slot;
+	flags = static_cast<U32>(id.flags);
+}
+
+void SaveIdBlock::applyToSaveId(SaveId& id) const {
+	id.displayName = displayName;
+	id.worldId = worldId;
+	id.playerId = playerId;
+	id.slot = slot;
+	id.flags = static_cast<SaveFlags>(flags);
+}
+
+void SaveIdBlock::serialize(IO::ByteBuffer& buf) const {
+	buf.writeString(displayName);
+	buf.writeString(worldId);
+	buf.writeString(playerId);
+	buf.writeU32(slot);
+	buf.writeU32(flags);
+}
+
+void SaveIdBlock::deserialize(IO::ByteBuffer& buf) {
+	displayName = buf.readString();
+	worldId = buf.readString();
+	playerId = buf.readString();
+	slot = buf.readU32();
+	flags = buf.readU32();
+}
+
 U64 SaveDocument::computeChecksum(const U8* data, size_t size) noexcept {
 	U64 hash = 14695981039346656037ULL;
 	for (size_t i = 0; i < size; ++i) {
@@ -76,13 +108,14 @@ void SaveDocument::beginWrite(const SaveId& saveId) {
 	sectionTable.clear();
 	plaintextPayload.clear();
 
-
 	header.saveIdHash = computeChecksum(
 		saveId.id.bytes.data(), saveId.id.bytes.size()
 	);
 
 	header.createdAt = saveId.createdAt;
 	header.updatedAt = saveId.updatedAt;
+
+	saveIdBlock.fromSaveId(saveId);
 }
 
 void SaveDocument::addSection(
@@ -158,6 +191,13 @@ IO::ByteBuffer SaveDocument::finalise(
 	for (const auto& entry : sectionTable)
 		entry.serialize(out);
 
+	{
+		IO::ByteBuffer blockBuf;
+		saveIdBlock.serialize(blockBuf);
+		out.writeU32(static_cast<U32>(blockBuf.size()));
+		out.writeBytes(blockBuf.data(), blockBuf.size());
+	}
+
 	out.writeBytes(payload.data(), payload.size());
 
 	return out;
@@ -212,6 +252,21 @@ bool SaveDocument::parse(const IO::ByteBuffer& raw) {
 		sectionTable.push_back(entry);
 	}
 
+	if (rawBytes.remaining() >= sizeof(U32)) {
+		const U32 blockSize = rawBytes.readU32();
+		if (blockSize > 0 && rawBytes.remaining() >= blockSize) {
+			const size_t blockStart = rawBytes.readPosition();
+			saveIdBlock.deserialize(rawBytes);
+			const size_t consumed = rawBytes.readPosition() - blockStart;
+
+			if (consumed < blockSize)
+				rawBytes.skip(blockSize - consumed);
+		} else if (blockSize > 0) {
+			BT_WARN("SaveDocument: SaveIdBlock truncated in file");
+			return false;
+		}
+	}
+
 	const size_t payloadOffset = rawBytes.readPosition();
 	if (rawBytes.remaining() < header.payloadSize) {
 		BT_WARN("SaveDocument: file truncated in payload");
@@ -253,6 +308,13 @@ IO::ByteBuffer SaveDocument::decryptAndDecompress(
 	tmp.skip(payloadStart);
 	const U32 sectionCount = tmp.readU32();
 	payloadStart += sizeof(U32) + sectionCount * SectionTableEntry::SERIALIZED_SIZE;
+
+	tmp.skip(sectionCount * SectionTableEntry::SERIALIZED_SIZE);
+	if (tmp.remaining() >= sizeof(U32)) {
+		const U32 blockSize = tmp.readU32();
+		payloadStart += sizeof(U32) + blockSize;
+		tmp.skip(blockSize);
+	}
 
 	IO::ByteBuffer payload(
 		rawBytes.data() + payloadStart,

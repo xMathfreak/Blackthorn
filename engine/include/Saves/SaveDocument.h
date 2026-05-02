@@ -113,6 +113,43 @@ struct BLACKTHORN_API EncryptionHeader {
 };
 
 /**
+ * @brief Unencrypted metadata block written immediately after the section
+ * table, before the encrypted payload.
+ *
+ * Stores the @c SaveId fields that are absent from @c FileHeader —
+ * specifically the variable-length strings and flag/slot values that
+ * @c ISaveStorage::list() needs to filter saves without decrypting payloads.
+ *
+ * A @c U32 byte-length prefix is written before the block so that future
+ * format versions can extend or replace it while older readers skip it safely.
+ *
+ * Wire layout (after the U32 length prefix):
+ * @code
+ *  [U16 + N bytes]  displayName   (ByteBuffer::writeString)
+ *  [U16 + N bytes]  worldId
+ *  [U16 + N bytes]  playerId
+ *  [U32]            slot
+ *  [U32]            flags         (SaveFlags bitmask)
+ * @endcode
+ */
+struct BLACKTHORN_API SaveIdBlock {
+	std::string displayName;
+	std::string worldId;
+	std::string playerId;
+	U32 slot  = 0;
+	U32 flags = 0;
+
+	void serialize(IO::ByteBuffer& buf) const;
+	void deserialize(IO::ByteBuffer& buf);
+
+	/** @brief Populates this block from a @c SaveId. */
+	void fromSaveId(const SaveId& id);
+
+	/** @brief Applies all fields into @p id, leaving id.id/createdAt/updatedAt untouched. */
+	void applyToSaveId(SaveId& id) const;
+};
+
+/**
  * @brief One entry in the section table.
  *
  * The section table is stored after the file header (and optional encryption
@@ -246,6 +283,9 @@ public:
 
 	const FileHeader& getHeader() const { return header; }
 
+	/** @brief Returns the save identity block parsed by @c parse(). */
+	const SaveIdBlock& getSaveIdBlock() const { return saveIdBlock; }
+
 	/** @brief Returns all section table entries parsed by @c parse(). */
 	const std::vector<SectionTableEntry>& getSectionTable() const { return sectionTable; }
 
@@ -262,6 +302,9 @@ private:
 
 	// Cached raw bytes from the last parse(), needed for decryptAndDecompress().
 	IO::ByteBuffer rawBytes;
+
+	// Save identity metadata read during parse(), used by list().
+	SaveIdBlock saveIdBlock;
 
 	static U64 computeChecksum(const U8* data, size_t size) noexcept;
 };

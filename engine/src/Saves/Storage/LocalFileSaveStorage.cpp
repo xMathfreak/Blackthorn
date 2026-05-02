@@ -182,6 +182,8 @@ std::vector<SaveMetadata> LocalFileSaveStorage::list(const SaveFilter& filter) {
 		sid.createdAt = doc.getHeader().createdAt;
 		sid.updatedAt = doc.getHeader().updatedAt;
 
+		doc.getSaveIdBlock().applyToSaveId(sid);
+
 		const std::string stem = entry.path().stem().string();
 		sid.id = UUID::fromString(stem);
 

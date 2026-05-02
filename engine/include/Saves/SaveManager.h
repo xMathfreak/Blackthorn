@@ -113,6 +113,9 @@ public:
 	SaveManager(const SaveManager&) = delete;
 	SaveManager& operator=(const SaveManager&) = delete;
 
+	SaveManager(SaveManager&&) = default;
+	SaveManager& operator=(SaveManager&&) = default;
+
 	/** @brief Sets the storage backend. Must be called before any save/load. */
 	void setStorage(std::unique_ptr<ISaveStorage> storage);
 
