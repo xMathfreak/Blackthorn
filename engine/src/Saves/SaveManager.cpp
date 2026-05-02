@@ -1,6 +1,7 @@
 #include "Saves/SaveManager.h"
 
 #include <chrono>
+#include <unordered_set>
 
 #include <sodium.h>
 
@@ -129,14 +130,14 @@ SaveResult SaveManager::load(const SaveId& saveId) {
 }
 
 SaveResult SaveManager::loadSections(
-	const SaveId&                saveId,
+	const SaveId& saveId,
 	const std::vector<U64>& sectionIds
 ) {
 	return loadImpl(saveId, &sectionIds);
 }
 
 SaveResult SaveManager::loadImpl(
-	const SaveId&                saveId,
+	const SaveId& saveId,
 	const std::vector<U64>* filter
 ) {
 	if (!storage)
@@ -188,19 +189,14 @@ SaveResult SaveManager::loadImpl(
 
 	size_t sectionsLoaded = 0;
 
-	for (const auto& tableEntry : doc.getSectionTable()) {
-		if (filter) {
-			bool wanted = false;
-			for (U64 id : *filter) {
-				if (id == tableEntry.sectionId) {
-					wanted = true;
-					break;
-				}
-			}
+	std::unordered_set<U64> filterSet(
+		filter ? filter->begin() : std::vector<U64>::const_iterator{},
+		filter ? filter->end() : std::vector<U64>::const_iterator{}
+	);
 
-			if (!wanted)
-				continue;
-		}
+	for (const auto& tableEntry : doc.getSectionTable()) {
+		if (filter && !filterSet.count(tableEntry.sectionId))
+			continue;
 
 		ISaveSection* section = getSection(tableEntry.sectionId);
 
@@ -216,15 +212,6 @@ SaveResult SaveManager::loadImpl(
 		U32 savedVersion = 0;
 		IO::ByteBuffer sectionData = doc.getSectionData(
 			tableEntry.sectionId, payload, savedVersion);
-
-		if (sectionData.size() == 0 && tableEntry.size > 0) {
-			BT_WARN(
-				"SaveManager: section '{}' has zero bytes in payload, skipping",
-				section->getName()
-			);
-
-			continue;
-		}
 
 		SectionReadContext ctx{ sectionData, savedVersion };
 
