@@ -6,6 +6,11 @@
 
 namespace Blackthorn::Saves::Sections {
 
+void WorldSaveSection::registerTypes() {
+	ECS::Serialization::SerializerRegistry::instance()
+		.pinType<ECS::Components::Persistent>();
+}
+
 void WorldSaveSection::write(SectionWriteContext& ctx) {
 	const auto& reg = ECS::Serialization::SerializerRegistry::instance();
 
@@ -112,26 +117,36 @@ void WorldSaveSection::readEntity(
 
 		const auto* entry = reg.getEntry(i);
 		if (!entry) {
-			BT_WARN("WorldSaveSection: unknown component bit {} during load, skipping", i);
+			BT_WARN(
+				"WorldSaveSection: component bit {} has no registered entry "
+				", written by a newer build? Cannot advance stream safely, "
+				"aborting component load for this entity",
+				i
+			);
 			break;
 		}
 
 		void* comp = pool.getComponentRaw(entity, i);
 
 		if (!comp) {
-			if (entry->fixedSize > 0) {
-				buf.skip(entry->fixedSize);
-			} else {
-				BT_WARN(
-					"WorldSaveSection: component bit {} present in save but not on entity, "
-					"and has no fixed size — stream state is unknown, aborting entity load",
-					i
-				);
+			if (entry->construct)
+				comp = entry->construct(pool, entity);
 
-				break;
+			if (!comp) {
+				if (entry->fixedSize > 0) {
+					buf.skip(entry->fixedSize);
+				} else {
+					BT_WARN(
+						"WorldSaveSection: component bit {} present in save but "
+						"construct fn returned null and component has no fixed "
+						"size. Stream position unknown, aborting entity load",
+						i
+					);
+
+					break;
+				}
+				continue;
 			}
-
-			continue;
 		}
 
 		entry->deserialize(comp, buf);
