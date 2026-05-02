@@ -150,7 +150,7 @@ public:
 		 */
 		size_t fixedSize = 0;
 
-		SerializationContext context = SerializationContext::Network;
+		SerializationContext context = SerializationContext::Both;
 	};
 
 	/**
@@ -162,15 +162,14 @@ public:
 	SerializerRegistry& operator=(const SerializerRegistry&) = delete;
 
 	/**
-	 * @brief Registers full serialize/deserialize functions for component type @c T.
+	 * @brief Registers serialize, deserialize, and construct functions for @c T.
 	 *
-	 * Requires a @c ComponentSerializer<T> specialization to be visible at the
-	 * call site. Idempotent — registering the same type twice has no effect.
+	 * Requires a @c ComponentSerializer<T> specialization to be visible at
+	 * the call site. Idempotent — registering the same type twice is a no-op.
 	 *
-	 * Use this for components that carry serialized payload (network snapshots,
-	 * save documents, or both). For components that must participate in the ECS
-	 * pool but carry no payload — such as @c Persistent — use @c pinType<T>()
-	 * instead to avoid a compile error from the unspecialized base template.
+	 * For components with no serialized payload (e.g. @c Persistent), use
+	 * @c pinType<T>() instead to avoid a compile error from the unspecialized
+	 * base template.
 	 *
 	 * @tparam T Component type with a @c ComponentSerializer specialization.
 	 */
@@ -178,10 +177,11 @@ public:
 	void registerComponent(SerializationContext context = SerializationContext::Network) {
 		const size_t id = Detail::componentID<T>();
 
-		if (entries.count(id))
+		auto [it, inserted] = entries.try_emplace(id);
+		if (!inserted)
 			return;
 
-		Entry entry;
+		Entry& entry = it->second;
 
 		entry.serialize = [](const void* comp, IO::ByteBuffer& buf) {
 			ComponentSerializer<T>::serialize(*static_cast<const T*>(comp), buf);
@@ -195,14 +195,13 @@ public:
 			return &pool.addComponent<T>(entity);
 		};
 
-		if constexpr (requires { { ComponentSerializer<T>::fixedSize() } -> std::convertible_to<size_t>; }) {
+		if constexpr (requires {
+			{ ComponentSerializer<T>::fixedSize() } -> std::convertible_to<size_t>;
+		}) {
 			entry.fixedSize = ComponentSerializer<T>::fixedSize();
-		} else {
-			entry.fixedSize = 0;
 		}
 
 		entry.context = context;
-		entries[id] = std::move(entry);
 	}
 
 	/**
@@ -228,16 +227,7 @@ public:
 	template <typename T>
 	void pinType() {
 		const size_t id = Detail::componentID<T>();
-
-		if (entries.count(id))
-			return;
-
-		Entry entry;
-		entry.serialize = nullptr;
-		entry.deserialize = nullptr;
-		entry.fixedSize = 0;
-		entry.context = SerializationContext::Network;
-		entries[id] = std::move(entry);
+		entries.try_emplace(id);
 	}
 
 	/**
@@ -262,10 +252,7 @@ public:
 	 */
 	bool isRegisteredFor(size_t componentId, SerializationContext ctx) const {
 		auto it = entries.find(componentId);
-		if (it == entries.end())
-			return false;
-
-		return hasContext(it->second.context, ctx);
+		return it != entries.end() && hasContext(it->second.context, ctx);
 	}
 
 private:
