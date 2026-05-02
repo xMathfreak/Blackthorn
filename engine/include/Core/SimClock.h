@@ -57,6 +57,16 @@ public:
 	void setTickRate(float fixedDeltaTime);
 
 	/**
+	 * @brief Reset the clock to a specific tick.
+	 *
+	 * Sets `currentTick` to the given value and recomputes
+	 * `totalSimulatedTime` accordingly.
+	 *
+	 * @param tick The tick to reset to.
+	 */
+	void resetTo(U64 tick);
+
+	/**
 	 * @brief Persist the current tick to the Settings INI store.
 	 *
 	 * Writes `currentTick` to `[simulation] tick`.

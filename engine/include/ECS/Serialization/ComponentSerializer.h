@@ -6,6 +6,7 @@
 
 #include "Core/Export.h"
 #include "ECS/Detail.h"
+#include "ECS/EntityPool.h"
 #include "IO/ByteBuffer.h"
 
 namespace Blackthorn::ECS::Serialization {
@@ -57,16 +58,47 @@ namespace Blackthorn::ECS::Serialization {
  */
 template <typename T>
 struct ComponentSerializer {
-	static void serialize(const T&, IO::ByteBuffer&) {
-		static_assert(
-			sizeof(T) == 0,
-			"No ComponentSerializer specialization exists for this component type. "
-			"Add one in ECS/Components/Serialization/<ComponentName>.h."
-		);
-	}
-
-	static void deserialize(T&, IO::ByteBuffer&) {}
+	static void serialize(const T&, IO::ByteBuffer&);
+	static void deserialize(T&, IO::ByteBuffer&);
 };
+
+/**
+ * @brief Satisfied only when @c ComponentSerializer<T> has been fully
+ * specialized with concrete @c serialize and @c deserialize implementations.
+ *
+ * Used by @c SerializerRegistry::registerComponent<T>() to select between
+ * storing real serializer lambdas (specialized types) and a pure ID-pin
+ * entry (unspecialized types such as @c Persistent that participate in the
+ * ECS pool but carry no serialized payload of their own).
+ */
+template <typename T>
+concept HasSerializerSpecialization = requires(const T& ct, T& t, IO::ByteBuffer& buf) {
+	{ ComponentSerializer<T>::serialize(ct, buf) };
+	{ ComponentSerializer<T>::deserialize(t, buf) };
+};
+
+/**
+ * @brief Bitmask controlling which pipelines a component participates in.
+ *
+ * Components default to @c Network only to preserve existing behaviour.
+ * Opt a component into save serialization by passing @c Save or @c Both
+ * to @c SerializerRegistry::registerComponent().
+ */
+enum class SerializationContext : U8 {
+	Network = 1 << 0, ///< Component is serialized for network snapshots.
+	Save = 1 << 1, ///< Component is serialized for save documents.
+	Both = Network | Save,
+};
+
+inline SerializationContext operator|(SerializationContext a, SerializationContext b) {
+	return static_cast<SerializationContext>(
+		static_cast<U8>(a) | static_cast<U8>(b)
+	);
+}
+
+inline bool hasContext(SerializationContext flags, SerializationContext flag) {
+	return (static_cast<U8>(flags) & static_cast<U8>(flag)) != 0;
+}
 
 /**
  * @brief Registry for type-erased ECS component serializers.
@@ -94,12 +126,14 @@ struct ComponentSerializer {
  */
 class BLACKTHORN_API SerializerRegistry {
 public:
-	using SerializeFn   = std::function<void(const void*, IO::ByteBuffer&)>;
+	using SerializeFn = std::function<void(const void*, IO::ByteBuffer&)>;
 	using DeserializeFn = std::function<void(void*, IO::ByteBuffer&)>;
+	using ConstructFn = std::function<void*(EntityPool&, Entity)>;
 
 	struct Entry {
 		SerializeFn serialize;
 		DeserializeFn deserialize;
+		ConstructFn construct;
 
 		/**
 		 * @brief Fixed wire size in bytes, or 0 for variable-length components.
@@ -115,33 +149,39 @@ public:
 		 * otherwise defaults to 0.
 		 */
 		size_t fixedSize = 0;
+
+		SerializationContext context = SerializationContext::Both;
 	};
 
-	static SerializerRegistry& instance() {
-		static SerializerRegistry reg;
-		return reg;
-	}
+	/**
+	 * @brief Single-definition singleton accessor for @c SerializerRegistry.
+	 */
+	static BLACKTHORN_API SerializerRegistry& instance();
 
 	SerializerRegistry(const SerializerRegistry&) = delete;
 	SerializerRegistry& operator=(const SerializerRegistry&) = delete;
 
 	/**
-	 * @brief Registers serialize/deserialize functions for component type T.
+	 * @brief Registers serialize, deserialize, and construct functions for @c T.
 	 *
-	 * Idempotent - registering the same type twice has no effect.
-	 * A `ComponentSerializer<T>` specialization must be visible at the
-	 * call site (i.e. its header must be included before calling this).
+	 * Requires a @c ComponentSerializer<T> specialization to be visible at
+	 * the call site. Idempotent — registering the same type twice is a no-op.
 	 *
-	 * @tparam T Component type with a ComponentSerializer specialization.
+	 * For components with no serialized payload (e.g. @c Persistent), use
+	 * @c pinType<T>() instead to avoid a compile error from the unspecialized
+	 * base template.
+	 *
+	 * @tparam T Component type with a @c ComponentSerializer specialization.
 	 */
-	template <typename T>
-	void registerComponent() {
+	template <HasSerializerSpecialization T>
+	void registerComponent(SerializationContext context = SerializationContext::Network) {
 		const size_t id = Detail::componentID<T>();
 
-		if (entries.count(id))
+		auto [it, inserted] = entries.try_emplace(id);
+		if (!inserted)
 			return;
 
-		Entry entry;
+		Entry& entry = it->second;
 
 		entry.serialize = [](const void* comp, IO::ByteBuffer& buf) {
 			ComponentSerializer<T>::serialize(*static_cast<const T*>(comp), buf);
@@ -151,13 +191,43 @@ public:
 			ComponentSerializer<T>::deserialize(*static_cast<T*>(comp), buf);
 		};
 
-		if constexpr (requires { { ComponentSerializer<T>::fixedSize() } -> std::convertible_to<size_t>; }) {
+		entry.construct = [](EntityPool& pool, Entity entity) -> void* {
+			return &pool.addComponent<T>(entity);
+		};
+
+		if constexpr (requires {
+			{ ComponentSerializer<T>::fixedSize() } -> std::convertible_to<size_t>;
+		}) {
 			entry.fixedSize = ComponentSerializer<T>::fixedSize();
-		} else {
-			entry.fixedSize = 0;
 		}
 
-		entries[id] = std::move(entry);
+		entry.context = context;
+	}
+
+	/**
+	 * @brief Pins the component ID for type @c T without storing serializer
+	 * functions.
+	 *
+	 * Calling this ensures @c Detail::componentID<T>() is evaluated from a
+	 * controlled startup path — via the single exported @c nextComponentID()
+	 * counter — before any @c EntityPool operation touches the type. This
+	 * prevents the DLL-boundary hazard where @c addComponent and
+	 * @c getComponent independently trigger ID assignment and receive
+	 * different values.
+	 *
+	 * Use this for components like @c Persistent that must be pool-addressable
+	 * but whose payload is handled explicitly by the calling code rather than
+	 * through the @c SerializerRegistry component mask.
+	 *
+	 * Idempotent — safe to call multiple times.
+	 *
+	 * @tparam T Any component type. No @c ComponentSerializer specialization
+	 *           required.
+	 */
+	template <typename T>
+	void pinType() {
+		const size_t id = Detail::componentID<T>();
+		entries.try_emplace(id);
 	}
 
 	/**
@@ -175,6 +245,14 @@ public:
 	 */
 	bool isRegistered(size_t componentId) const {
 		return entries.count(componentId) > 0;
+	}
+
+	/**
+	 * @brief Returns true if the component is registered for the given context.
+	 */
+	bool isRegisteredFor(size_t componentId, SerializationContext ctx) const {
+		auto it = entries.find(componentId);
+		return it != entries.end() && hasContext(it->second.context, ctx);
 	}
 
 private:
