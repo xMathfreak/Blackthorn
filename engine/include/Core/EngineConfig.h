@@ -79,6 +79,12 @@ struct BLACKTHORN_API SaveConfig {
 	/// Relative paths are resolved from the working directory.
 	std::string directory = "saves";
 
+	/// File extension for save files, including the leading dot.
+	/// Must be non-empty and start with '.'.
+	/// SaveManger logs an error and falls back to ".sav" if an invalid value is
+	/// provided.
+	std::string extension = ".sav";
+
 	/// zstd compression level [1-22]. 0 disables compression.
 	int compressionLevel = 3;
 

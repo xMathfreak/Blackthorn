@@ -6,6 +6,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "Core/EngineConfig.h"
 #include "Core/Export.h"
 #include "Saves/SaveDocument.h"
 #include "Saves/SaveHash.h"
@@ -53,11 +54,26 @@ using SaveKeyDeriveFn = std::function<void(
  * registry, and a reference to the active storage backend. Game code
  * interacts only with this class for all save and load operations.
  *
- * @par Typical setup
+ * @par Typical setup — config-driven
  * @code
- * auto storage   = std::make_unique<LocalFileSaveStorage>("saves/");
- * auto compress  = std::make_unique<ZstdCompressor>(3);
- * auto encrypt   = std::make_unique<XChaCha20Encryptor>();
+ * SaveConfig cfg;
+ * cfg.directory        = "saves";
+ * cfg.extension        = ".sav";
+ * cfg.compressionLevel = 3;
+ * cfg.encryptionEnabled = true;
+ * cfg.keyDeriveFn = [](std::span<U8,32> key, const void* id, U16 ver) { ... };
+ *
+ * SaveManager saves(cfg);
+ * saves.registerSection(std::make_unique<WorldSaveSection>(pool, registry));
+ * saves.registerSection(std::make_unique<ClockSaveSection>(simClock));
+ * saves.registerSection(std::make_unique<MetaSaveSection>("MyGame 1.0"));
+ * @endcode
+ *
+ * @par Typical setup — manual
+ * @code
+ * auto storage  = std::make_unique<LocalFileSaveStorage>("saves", ".sav");
+ * auto compress = std::make_unique<ZstdCompressor>(3);
+ * auto encrypt  = std::make_unique<XChaCha20Encryptor>();
  *
  * SaveManager saves;
  * saves.setStorage(std::move(storage));
@@ -65,13 +81,9 @@ using SaveKeyDeriveFn = std::function<void(
  * saves.setEncryptor(std::move(encrypt));
  * saves.setKeyDeriveFn(myKeyFn);
  *
- * // Register built-in sections
  * saves.registerSection(std::make_unique<WorldSaveSection>(pool, registry));
  * saves.registerSection(std::make_unique<ClockSaveSection>(simClock));
  * saves.registerSection(std::make_unique<MetaSaveSection>("MyGame 1.0"));
- *
- * // Register a custom game section
- * saves.registerSection(std::make_unique<InventorySection>(inventory));
  * @endcode
  *
  * @par Saving
@@ -107,7 +119,26 @@ using SaveKeyDeriveFn = std::function<void(
  */
 class BLACKTHORN_API SaveManager {
 public:
+	/**
+	 * @brief Default constructor. Subsystems must be configured manually via
+	 * @c setStorage(), @c setCompressor(), @c setEncryptor(), and
+	 * @c setKeyDeriveFn() before performing any save or load operation.
+	 */
 	SaveManager() = default;
+
+	/**
+	 * @brief Constructs and fully configures the save system from @p cfg.
+	 *
+	 * Creates a @c LocalFileSaveStorage rooted at @c cfg.directory using
+	 * @c cfg.extension, sets up the compressor and encryptor according to
+	 * the config, and wraps @c cfg.keyDeriveFn into the typed
+	 * @c SaveKeyDeriveFn if one is provided.
+	 *
+	 * @param cfg Engine save configuration. All fields have sensible defaults
+	 *            so @c SaveManager(SaveConfig{}) is a valid minimal setup.
+	 */
+	explicit SaveManager(const SaveConfig& cfg);
+
 	~SaveManager() = default;
 
 	SaveManager(const SaveManager&) = delete;

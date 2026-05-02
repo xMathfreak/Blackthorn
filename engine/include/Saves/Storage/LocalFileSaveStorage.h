@@ -45,11 +45,16 @@ public:
 	 *
 	 * @param root Root directory under which save files are written. Created
 	 *             automatically on first write if absent.
+	 * @param extension File extension for save files, including the leading
+	 *                  dot (e.g. @c ".sav"). Used by the default path resolver
+	 *                  and by @c list() when scanning for files. Ignored when
+	 *                  a custom resolver is active.
 	 * @param res Optional custom path resolver. If null the default layout is
 	 *            used.
 	 */
 	explicit LocalFileSaveStorage(
 		std::filesystem::path root,
+		const std::string& ext = ".sav",
 		PathResolver res = nullptr
 	);
 
@@ -71,8 +76,11 @@ public:
 
 	const std::filesystem::path& getRootDir() const noexcept { return rootDir; }
 
+	const std::string& getExtension() const noexcept { return extension; }
+
 private:
 	std::filesystem::path rootDir;
+	std::string extension;
 	PathResolver resolver;
 
 	/**
@@ -84,7 +92,7 @@ private:
 	/**
 	 * @brief Default path resolver. Returns:
 	 * @code
-	 * {rootDir}/{worldId}/{playerId}/{uuid}.sav
+	 * {rootDir}/{worldId}/{playerId}/{uuid}.{extension}
 	 * @endcode
 	 * with empty worldId/playerId segments omitted.
 	 */

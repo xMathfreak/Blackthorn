@@ -6,8 +6,49 @@
 #include <sodium.h>
 
 #include "Debug/Logger.h"
+#include "Saves/Compression/ZstdCompressor.h"
+#include "Saves/Encryption/XChaCha20Encryptor.h"
+#include "Saves/Storage/LocalFileSaveStorage.h"
 
 namespace Blackthorn::Saves {
+
+SaveManager::SaveManager(const SaveConfig& cfg) {
+	const std::string& ext = cfg.extension;
+
+	if (ext.empty() || ext[0] != '.') {
+		BT_ERROR(
+			"SaveManager: invalid extension '{}' in SaveConfig, "
+			"must be non-empty and start with '.'. Falling back to '.sav'.",
+			ext
+		);
+
+		setStorage(std::make_unique<LocalFileSaveStorage>(cfg.directory, ".sav"));
+	} else {
+		setStorage(std::make_unique<LocalFileSaveStorage>(cfg.directory, ext));
+	}
+
+	if (cfg.compressionLevel > 0) {
+		setCompressor(std::make_unique<ZstdCompressor>(cfg.compressionLevel));
+	}
+
+	if (cfg.encryptionEnabled) {
+		setEncryptor(std::make_unique<XChaCha20Encryptor>());
+
+		if (cfg.keyDeriveFn) {
+			auto opaqueFn = cfg.keyDeriveFn;
+			setKeyDeriveFn(
+				[opaqueFn](std::span<U8, 32> key, const SaveId& id, U16 ver) {
+					opaqueFn(key, &id, ver);
+				}
+			);
+		} else {
+			BT_WARN(
+				"SaveManager: encryption is enabled in SaveConfig but no "
+				"keyDeriveFn was provided. Call setKeyDeriveFn() before saving."
+			);
+		}
+	}
+}
 
 void SaveManager::setStorage(std::unique_ptr<ISaveStorage> s) {
 	storage = std::move(s);
@@ -189,7 +230,7 @@ SaveResult SaveManager::loadImpl(
 
 	size_t sectionsLoaded = 0;
 
-	std::unordered_set<U64> filterSet(
+	const std::unordered_set<U64> filterSet(
 		filter ? filter->begin() : std::vector<U64>::const_iterator{},
 		filter ? filter->end() : std::vector<U64>::const_iterator{}
 	);

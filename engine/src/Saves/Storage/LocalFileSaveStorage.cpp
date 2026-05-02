@@ -9,9 +9,11 @@ namespace Blackthorn::Saves {
 
 LocalFileSaveStorage::LocalFileSaveStorage(
 	std::filesystem::path root,
+	const std::string& ext,
 	PathResolver res
 )
 	: rootDir(std::move(root))
+	, extension(ext)
 	, resolver(std::move(res))
 {}
 
@@ -34,7 +36,7 @@ std::filesystem::path LocalFileSaveStorage::defaultPath(const SaveId& saveId) co
 	if (!saveId.playerId.empty())
 		path /= saveId.playerId;
 
-	path /= (saveId.id.toString() + ".sav");
+	path /= (saveId.id.toString() + extension);
 	return path;
 }
 
@@ -145,7 +147,7 @@ std::vector<SaveMetadata> LocalFileSaveStorage::list(const SaveFilter& filter) {
 		if (!entry.is_regular_file())
 			continue;
 
-		if (entry.path().extension() != ".sav")
+		if (entry.path().extension() != extension)
 			continue;
 
 		std::ifstream file(entry.path(), std::ios::in | std::ios::binary);
