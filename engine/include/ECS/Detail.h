@@ -11,7 +11,6 @@ namespace Blackthorn::ECS::Detail {
 constexpr U32 MAX_ENTITIES = 8192;
 constexpr U8 INDEX_BITS = 24;
 constexpr U32 INDEX_MASK = (1u << INDEX_BITS) - 1;
-constexpr U32 GENERATION_BITS = 32 - INDEX_BITS;
 constexpr size_t MAX_COMPONENTS = 64;
 
 inline U32 entityIndex(Entity e) noexcept {
@@ -50,7 +49,11 @@ inline size_t componentID() noexcept {
 template <typename T>
 inline U64 componentMask() noexcept {
 	const size_t id = componentID<T>();
-	assert(id < MAX_COMPONENTS);
+
+	#ifdef BLACKTHORN_DEBUG
+		assert(id < MAX_COMPONENTS);
+	#endif
+
 	return (1ULL << id);
 }
 
