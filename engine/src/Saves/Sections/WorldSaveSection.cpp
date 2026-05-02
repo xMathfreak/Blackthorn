@@ -13,6 +13,7 @@ void WorldSaveSection::registerTypes() {
 
 void WorldSaveSection::write(SectionWriteContext& ctx) {
 	const auto& reg = ECS::Serialization::SerializerRegistry::instance();
+	const auto& entityData = pool.getEntities();
 
 	ctx.buffer.writeU64(registry.nextAssignedId());
 
@@ -21,24 +22,19 @@ void WorldSaveSection::write(SectionWriteContext& ctx) {
 
 	U32 entityCount = 0;
 
-	const auto& entityData = pool.getEntities();
-
 	for (U32 idx = 0; idx < static_cast<U32>(entityData.size()); ++idx) {
 		const auto& ed = entityData[idx];
 
 		if (ed.componentMask == 0)
 			continue;
 
-		ECS::Entity entity = ECS::Detail::makeEntity(idx, ed.generation);
-
-		if (!pool.isValid(entity))
-			continue;
+		const ECS::Entity entity = ECS::Detail::makeEntity(idx, ed.generation);
 
 		const auto* persistent = pool.getComponent<ECS::Components::Persistent>(entity);
 		if (!persistent)
 			continue;
 
-		writeEntity(ctx.buffer, entity, reg);
+		writeEntity(ctx.buffer, entity, *persistent, reg);
 		++entityCount;
 	}
 
@@ -48,23 +44,21 @@ void WorldSaveSection::write(SectionWriteContext& ctx) {
 void WorldSaveSection::writeEntity(
 	IO::ByteBuffer& buf,
 	ECS::Entity entity,
+	const ECS::Components::Persistent& persistent,
 	const ECS::Serialization::SerializerRegistry& reg
 ) const {
-	const auto* persistent = pool.getComponent<ECS::Components::Persistent>(entity);
+	buf.writeU64(persistent.saveId);
+	buf.writeU64(persistent.nameHash);
 
-	buf.writeU64(persistent->saveId);
-	buf.writeU64(persistent->nameHash);
-
-	const U32 idx = ECS::Detail::entityIndex(entity);
-	const U64 fullMask = pool.getEntities()[idx].componentMask;
+	const U64 fullMask = pool.getEntities()[ECS::Detail::entityIndex(entity)].componentMask;
 	U64 saveMask = 0;
 
 	for (size_t i = 0; i < ECS::Detail::MAX_COMPONENTS; ++i) {
-		if ((fullMask & (1ULL << i)) == 0)
-			continue;
-
-		if (reg.isRegisteredFor(i, ECS::Serialization::SerializationContext::Save))
+		if ((fullMask & (1ULL << i)) != 0
+			&& reg.isRegisteredFor(i, ECS::Serialization::SerializationContext::Save)
+		) {
 			saveMask |= (1ULL << i);
+		}
 	}
 
 	buf.writeU64(saveMask);
@@ -74,10 +68,8 @@ void WorldSaveSection::writeEntity(
 			continue;
 
 		const auto* entry = reg.getEntry(i);
-		if (!entry)
-			continue;
-
 		const void* comp = pool.getComponentRaw(entity, i);
+
 		if (comp)
 			entry->serialize(comp, buf);
 	}
@@ -119,11 +111,14 @@ void WorldSaveSection::readEntity(
 		if (!entry) {
 			BT_WARN(
 				"WorldSaveSection: component bit {} has no registered entry "
-				", written by a newer build? Cannot advance stream safely, "
+				", save written by a newer build? Cannot advance stream safely, "
 				"aborting component load for this entity",
 				i
 			);
-			break;
+
+			registry.remove(entity);
+			pool.destroy(entity);
+			return;
 		}
 
 		void* comp = pool.getComponentRaw(entity, i);
@@ -135,17 +130,18 @@ void WorldSaveSection::readEntity(
 			if (!comp) {
 				if (entry->fixedSize > 0) {
 					buf.skip(entry->fixedSize);
-				} else {
-					BT_WARN(
-						"WorldSaveSection: component bit {} present in save but "
-						"construct fn returned null and component has no fixed "
-						"size. Stream position unknown, aborting entity load",
-						i
-					);
-
-					break;
+					continue;
 				}
-				continue;
+
+				BT_WARN(
+					"WorldSaveSection: component bit {} construct returned null "
+					"and has no fixed size destroying partially-loaded entity.",
+					i
+				);
+
+				registry.remove(entity);
+				pool.destroy(entity);
+				return;
 			}
 		}
 

@@ -3,6 +3,7 @@
 #include <string_view>
 
 #include "Core/Export.h"
+#include "ECS/Components/Persistent.h"
 #include "ECS/EntityPool.h"
 #include "ECS/Serialization/ComponentSerializer.h"
 #include "Saves/SaveEntityRegistry.h"
@@ -48,26 +49,6 @@ public:
 	static constexpr U32 CURRENT_VERSION = 1;
 
 	/**
-	 * @brief Registers built-in component types required by this section.
-	 *
-	 * Must be called once during engine startup — before any @c EntityPool
-	 * operation touches these types — so that @c `Detail::componentID<T>()`
-	 * assigns IDs from the single exported counter while all modules are
-	 * still in the same call stack. This prevents the DLL boundary hazard
-	 * where @c addComponent and @c getComponent resolve to different IDs
-	 * for the same type.
-	 *
-	 * Registers:
-	 * - @c ECS::Components::Persistent — required for the save filter in
-	 *   @c write() and for @c addComponent in @c readEntity(). It carries
-	 *   no serialized payload of its own; registration here is purely to
-	 *   pin its component ID before the pool is used.
-	 *
-	 * Calling this more than once is safe — subsequent calls are no-ops.
-	 */
-	static void registerTypes();
-
-	/**
 	 * @brief Constructs a world section operating on @p pool and @p registry.
 	 *
 	 * Both references must outlive this section instance.
@@ -87,6 +68,26 @@ public:
 	void write(SectionWriteContext& ctx) override;
 	void read(SectionReadContext& ctx) override;
 
+	/**
+	 * @brief Registers built-in component types required by this section.
+	 *
+	 * Must be called once during engine startup — before any @c EntityPool
+	 * operation touches these types — so that @c `Detail::componentID<T>()`
+	 * assigns IDs from the single exported counter while all modules are
+	 * still in the same call stack. This prevents the DLL boundary hazard
+	 * where @c addComponent and @c getComponent resolve to different IDs
+	 * for the same type.
+	 *
+	 * Registers:
+	 * - @c ECS::Components::Persistent — required for the save filter in
+	 *   @c write() and for @c addComponent in @c readEntity(). It carries
+	 *   no serialized payload of its own; registration here is purely to
+	 *   pin its component ID before the pool is used.
+	 *
+	 * Calling this more than once is safe — subsequent calls are no-ops.
+	 */
+	static void registerTypes();
+
 private:
 	ECS::EntityPool& pool;
 	SaveEntityRegistry& registry;
@@ -94,6 +95,7 @@ private:
 	void writeEntity(
 		IO::ByteBuffer& buf,
 		ECS::Entity entity,
+		const ECS::Components::Persistent& persistent,
 		const ECS::Serialization::SerializerRegistry& reg
 	) const;
 
