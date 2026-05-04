@@ -85,12 +85,17 @@ struct BLACKTHORN_API SaveConfig {
 	/// provided.
 	std::string extension = ".sav";
 
+	std::string backupExtension = ".bak";
+
 	/// zstd compression level [1-22]. 0 disables compression.
 	int compressionLevel = 3;
 
 	/// Whether to encrypt save files. Defaults to true.
 	/// A warning is logged in debug builds when false.
-	bool encryptionEnabled = true;
+	bool encryptionEnabled = false;
+
+	/// Whether to save when EngineCore::shutdown is called.
+	bool saveOnShutdown = true;
 
 	/**
 	 * @brief Game-provided key derivation function.

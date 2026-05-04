@@ -73,6 +73,12 @@ target_link_libraries(BlackthornCore
 		sodium
 )
 
+target_compile_definitions(BlackthornCore PUBLIC
+	BLACKTHORN_VERSION_MAJOR=${PROJECT_VERSION_MAJOR}
+	BLACKTHORN_VERSION_MINOR=${PROJECT_VERSION_MINOR}
+	BLACKTHORN_VERSION_PATCH=${PROJECT_VERSION_PATCH}
+)
+
 # Transport layer requires WinSock2 on Windows.
 if(WIN32)
 	target_link_libraries(BlackthornCore PUBLIC ws2_32)

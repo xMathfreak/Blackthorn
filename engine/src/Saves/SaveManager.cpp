@@ -27,9 +27,20 @@ SaveManager::SaveManager(const SaveConfig& cfg) {
 		setStorage(std::make_unique<LocalFileSaveStorage>(cfg.directory, ext));
 	}
 
-	if (cfg.compressionLevel > 0) {
-		setCompressor(std::make_unique<ZstdCompressor>(cfg.compressionLevel));
+	const std::string& bakExt = cfg.backupExtension;
+	if (!bakExt.empty() && bakExt[0] == '.') {
+		backupStorage = std::make_unique<LocalFileSaveStorage>(
+			cfg.directory, bakExt
+		);
+	} else {
+		BT_WARN(
+			"SaveManager: invalid backupExtension '{}', backups disabled.",
+			bakExt
+		);
 	}
+
+	if (cfg.compressionLevel > 0)
+		setCompressor(std::make_unique<ZstdCompressor>(cfg.compressionLevel));
 
 	if (cfg.encryptionEnabled) {
 		setEncryptor(std::make_unique<XChaCha20Encryptor>());
@@ -98,14 +109,14 @@ ISaveSection* SaveManager::getSection(U64 sectionId) const {
 	return it != sectionMap.end() ? it->second : nullptr;
 }
 
-SaveResult SaveManager::save(SaveId& saveId) {
+SaveResult SaveManager::save(SaveId& saveId, bool makeBackup) {
 	if (!storage)
 		return SaveResult::failure("No storage backend configured");
 
-#ifdef BLACKTHORN_DEBUG
-	if (!encryptor)
-		BT_WARN("SaveManager: encryption is disabled, save data will not be encrypted");
-#endif
+	#ifdef BLACKTHORN_DEBUG
+		if (!encryptor)
+			BT_WARN("SaveManager: encryption is disabled, save data will not be encrypted");
+	#endif
 
 	saveId.updatedAt = static_cast<U64>(
 		std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -133,8 +144,10 @@ SaveResult SaveManager::save(SaveId& saveId) {
 
 		doc.addSection(section->getId(), section->getVersion(), sectionBuf);
 
-		BT_DEBUG("SaveManager: serialized section '{}' ({} bytes)",
-			section->getName(), sectionBuf.size());
+		BT_DEBUG(
+			"SaveManager: serialized section '{}' ({} bytes)",
+			section->getName(), sectionBuf.size()
+		);
 	}
 
 	U8 key[32]{};
@@ -142,7 +155,9 @@ SaveResult SaveManager::save(SaveId& saveId) {
 
 	if (useEncryption) {
 		if (!deriveKey(key, saveId))
-			return SaveResult::failure("Encryption is enabled but no key derivation function is set");
+			return SaveResult::failure(
+				"Encryption is enabled but no key derivation function is set"
+			);
 	}
 
 	IO::ByteBuffer bytes = doc.finalise(
@@ -155,15 +170,20 @@ SaveResult SaveManager::save(SaveId& saveId) {
 
 	SaveResult result = storage->write(saveId, bytes);
 
-	if (result) {
-		BT_LOG("SaveManager: saved '{}' ({} bytes, {} sections)",
-			saveId.displayName.empty() ? saveId.id.toString() : saveId.displayName,
-			bytes.size(),
-			sectionOrder.size()
-		);
-	}
+	if (!result)
+		return result;
 
-	return result;
+	BT_LOG(
+		"SaveManager: saved '{}' ({} bytes, {} sections)",
+		saveId.displayName.empty() ? saveId.id.toString() : saveId.displayName,
+		bytes.size(),
+		sectionOrder.size()
+	);
+
+	if (makeBackup && backupsEnabled && backupStorage)
+		writeBackup(saveId, bytes);
+
+	return SaveResult::success();
 }
 
 SaveResult SaveManager::load(const SaveId& saveId) {
@@ -318,6 +338,34 @@ bool SaveManager::deriveKey(U8 outKey[32], const SaveId& saveId) const {
 	);
 
 	return true;
+}
+
+void SaveManager::writeBackup(
+	const SaveId& saveId,
+	const IO::ByteBuffer& primaryBytes
+) {
+	if (!storage) {
+		BT_WARN("SaveManager: backup skipped, no storage backend");
+		return;
+	}
+
+	SaveId backupId = saveId;
+	backupId.flags = saveId.flags | SaveFlags::Backup;
+
+	const auto result = backupStorage->write(backupId, primaryBytes);
+
+	if (result) {
+		BT_DEBUG(
+			"SaveManager: backup written for '{}'",
+			saveId.displayName.empty() ? saveId.id.toString() : saveId.displayName
+		);
+	} else {
+		BT_WARN(
+			"SaveManager: backup write failed for '{}': {}",
+			saveId.displayName.empty() ? saveId.id.toString() : saveId.displayName,
+			result.error
+		);
+	}
 }
 
 } // namespace Blackthorn::Saves

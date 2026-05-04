@@ -61,7 +61,8 @@ bool Engine::init(const EngineConfig& cfg) {
 		*jobSystem,
 		*sceneManager,
 		*simClock,
-		*renderer
+		*renderer,
+		*saveManager
 	);
 
 	applyPostProcessing();

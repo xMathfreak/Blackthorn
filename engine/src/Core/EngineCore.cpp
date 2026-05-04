@@ -5,6 +5,9 @@
 #include "Debug/Logger.h"
 #include "Debug/Profiler.h"
 #include "Net/Transport/Sockets/SocketFactory.h"
+#include "Saves/Sections/ClockSaveSection.h"
+#include "Saves/Sections/MetaSaveSection.h"
+#include "Saves/Sections/WorldSaveSection.h"
 #include "Scene/SimContext.h"
 #include "Threads/ThreadRegistry.h"
 
@@ -74,6 +77,8 @@ bool EngineCore::init(const EngineConfig& cfg) {
 	connectionManager = std::make_unique<Net::ConnectionManager>();
 	connectionManager->start(cfg.net);
 
+	initSaveManager();
+
 	applyCoreSettings();
 
 	sceneManager = std::make_unique<Scene::SceneManager>();
@@ -83,7 +88,8 @@ bool EngineCore::init(const EngineConfig& cfg) {
 		*connectionManager,
 		*jobSystem,
 		*sceneManager,
-		*simClock
+		*simClock,
+		*saveManager
 	);
 
 	initialized = true;
@@ -100,6 +106,41 @@ void EngineCore::shutdown() {
 
 	if (simClock)
 		simClock->save();
+
+	if (saveManager && config.save.saveOnShutdown) {
+		const bool canSave = !config.save.encryptionEnabled
+			|| config.save.keyDeriveFn != nullptr;
+
+		if (canSave) {
+			Saves::SaveId shutdownId = getShutdownSaveId();
+			const U64 now = static_cast<U64>(
+				std::chrono::duration_cast<std::chrono::milliseconds>(
+					std::chrono::system_clock::now().time_since_epoch()
+				).count()
+			);
+
+			shutdownId.createdAt = now;
+			shutdownId.updatedAt = now;
+
+			const auto result = saveManager->save(shutdownId, false);
+
+			if (result) {
+				BT_LOG("EngineCore: Shutdown autosave written: ('{}')", shutdownId.id.toString());
+			} else {
+				BT_WARN("EngineCore: Shutdown autosave failed: {}", result.error);
+			}
+		} else {
+			BT_WARN(
+				"EngineCore: Shutdown autosave skipped: encryption is enabled "
+				"but no keyDeriveFn is set. Call SaveManager::setKeyDeriveFn() "
+				"before shutdown if you want encrypted autosaves"
+			);
+		}
+	}
+
+	sceneManager.reset();
+	simContext.reset();
+	saveManager.reset();
 
 	if (s.isDirty())
 		s.saveToFile(config.settingsFilePath);
@@ -258,6 +299,7 @@ void EngineCore::registerDefaultSettings(Core::Settings& s) {
 	#endif
 
 	s.setDefault("developer", "worker_threads", 0);
+	s.setDefault("saves", "make_backups", true);
 }
 
 void EngineCore::registerEngineCallbacks(Core::Settings& s) {
@@ -269,6 +311,19 @@ void EngineCore::registerEngineCallbacks(Core::Settings& s) {
 			} catch (...) {}
 		});
 	#endif
+
+	s.onChange("saves", "make_backups", [this](const std::string& val) {
+		if (saveManager)
+			saveManager->setBackupsEnabled(val == "true" || val == "1");
+	});
+}
+
+Saves::SaveId EngineCore::getShutdownSaveId() const {
+	Saves::SaveId sid;
+	sid.id = Saves::UUID::makeStable("blackthorn.autosave.shutdown");
+	sid.displayName = "autosave_shutdown";
+	sid.flags = Saves::SaveFlags::Autosave;
+	return sid;
 }
 
 void EngineCore::applyCoreSettings() {
@@ -283,6 +338,45 @@ void EngineCore::applyCoreSettings() {
 
 void EngineCore::cleanupInitialization() {
 	SDL_Quit();
+}
+
+void EngineCore::initSaveManager() {
+	saveManager = std::make_unique<Saves::SaveManager>(config.save);
+
+	Saves::Sections::WorldSaveSection::registerTypes();
+
+	saveManager->registerSection(
+		std::make_unique<Saves::Sections::ClockSaveSection>(*simClock)
+	);
+
+	saveManager->registerSection(
+		std::make_unique<Saves::Sections::MetaSaveSection>(
+			"Blackthorn " +
+			std::to_string(BLACKTHORN_VERSION_MAJOR) + "." +
+			std::to_string(BLACKTHORN_VERSION_MINOR) + "." +
+			std::to_string(BLACKTHORN_VERSION_PATCH)
+		)
+	);
+
+	const bool makeBackups = Core::Settings::instance().get<bool>(
+		"saves", "make_backups", true
+	);
+
+	saveManager->setBackupsEnabled(makeBackups);
+
+	onRegisterSaveSections(*saveManager);
+
+	BT_LOG(
+		"SaveManager: Initialized (dir: '{}', ext: '{}', backup ext: '{}', "
+		"compression: {}, encryption: {}, backups: {})",
+		config.save.directory,
+		config.save.extension,
+		config.save.backupExtension,
+		config.save.compressionLevel > 0
+			? std::to_string(config.save.compressionLevel) : "off",
+		config.save.encryptionEnabled ? "on" : "off",
+		makeBackups ? "on" : "off"
+	);
 }
 
 #ifdef BLACKTHORN_DEBUG

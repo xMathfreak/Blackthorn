@@ -60,6 +60,11 @@ struct BLACKTHORN_API UUID {
 	 * @brief Parses a hyphenated UUID string. Returns a null UUID on failure.
 	 */
 	static UUID fromString(std::string_view str);
+
+	/**
+	 * @brief Makes a stable UUID from a compile time string.
+	 */
+	static UUID makeStable(std::string_view seed);
 };
 
 /**

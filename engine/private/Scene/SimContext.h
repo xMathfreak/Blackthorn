@@ -17,6 +17,7 @@ class SimContextImpl : public ISimContext {
 	Jobs::JobSystem& jobs;
 	SceneManager& scene;
 	Core::SimClock& simClock;
+	Saves::SaveManager& saves;
 
 public:
 	SimContextImpl(
@@ -24,13 +25,15 @@ public:
 		Net::ConnectionManager& cm,
 		Jobs::JobSystem& js,
 		SceneManager& sm,
-		Core::SimClock& clock
+		Core::SimClock& clock,
+		Saves::SaveManager& sv
 	)
 		: assets(am)
 		, connection(cm)
 		, jobs(js)
 		, scene(sm)
 		, simClock(clock)
+		, saves(sv)
 	{}
 
 	Assets::AssetManager& getAssetManager() override { return assets; }
@@ -38,6 +41,7 @@ public:
 	Jobs::JobSystem& getJobSystem() override { return jobs; }
 	SceneManager& getSceneManager() override { return scene; }
 	Core::SimClock& getSimClock() override { return simClock; }
+	Saves::SaveManager& getSaveManager() override { return saves; }
 };
 
 } // namespace Blackthorn::Scene

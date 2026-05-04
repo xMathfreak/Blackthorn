@@ -190,17 +190,23 @@ public:
 	}
 
 	/**
-	 * @brief Writes a complete save document by invoking all registered sections.
+	 * @brief Writes a complete save document by invoking all registered
+	 *        sections.
 	 *
-	 * Calls @c ISaveSection::write() on every registered section in
-	 * registration order, assembles the document, compresses and encrypts
-	 * the payload, and passes the result to the storage backend.
+	 * @param saveId Identity of the save. @c SaveId::updatedAt is set to the
+	 *               current time before writing.
+	 * @param makeBackup When true and backups are enabled in the active config,
+	 *                   a duplicate is written alongside the primary save using
+	 *                   the backup extension and @c SaveFlags::Backup. Pass
+	 *                   false to suppress the backup for this call (the engine
+	 *                   uses this for the shutdown autosave).
 	 *
-	 * @param saveId  Identity of the save. @c SaveId::updatedAt is set to
-	 *                the current time before writing.
-	 * @return @c SaveResult::success() on success.
+	 * @return @c SaveResult::success() on success. If the primary save succeeds
+	 *         but the backup fails, a warning is logged and success is still
+	 *         returned — a failed backup must not prevent the primary save from
+	 *         being reported as successful.
 	 */
-	SaveResult save(SaveId& saveId);
+	SaveResult save(SaveId& saveId, bool makeBackup = true);
 
 	/**
 	 * @brief Reads a save document and dispatches to all registered sections
@@ -238,11 +244,17 @@ public:
 	/** @brief Lists saves in storage matching the given filter. */
 	std::vector<SaveMetadata> list(const SaveFilter& filter = SaveFilter::all());
 
+	void setBackupsEnabled(bool enabled) { backupsEnabled = enabled; }
+
+	bool isBackupsEnabled() const { return backupsEnabled; }
+
 private:
 	std::unique_ptr<ISaveStorage> storage;
+	std::unique_ptr<ISaveStorage> backupStorage;
 	std::unique_ptr<ICompressor> compressor;
 	std::unique_ptr<IEncryptor> encryptor;
 	SaveKeyDeriveFn keyDeriveFn;
+	bool backupsEnabled = false;
 
 	// Ordered for deterministic write order
 	std::vector<std::unique_ptr<ISaveSection>> sectionOrder;
@@ -262,6 +274,22 @@ private:
 		const SaveId& saveId,
 		const std::vector<U64>* filter
 	);
+
+	/**
+	 * @brief Writes a backup copy of @p primaryBytes alongside the primary
+	 *        save, using the backup extension and @c SaveFlags::Backup.
+	 *
+	 *        The backup @c SaveId is derived from @p saveId with @c
+	 *        SaveFlags::Backup OR'd in. Its UUID is identical to the primary so
+	 *        the storage backend resolves it to a sibling file — same
+	 *        directory, different extension.
+	 *
+	 * @param saveId The primary save's identity.
+	 * @param primaryBytes The already-serialised document bytes to duplicate.
+	 *                     Re-using the primary bytes avoids a second
+	 *                     compress+encrypt cycle.
+	 */
+	void writeBackup(const SaveId& saveId, const IO::ByteBuffer& primaryBytes);
 };
 
 } // namespace Blackthorn::Saves

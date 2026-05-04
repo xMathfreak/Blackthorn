@@ -20,6 +20,7 @@ class SceneContextImpl : public ISceneContext {
 	SceneManager& scene;
 	Core::SimClock& simClock;
 	Graphics::Renderer& renderer;
+	Saves::SaveManager& saves;
 
 public:
 	SceneContextImpl(
@@ -29,7 +30,8 @@ public:
 		Jobs::JobSystem& js,
 		SceneManager& sm,
 		Core::SimClock& clock,
-		Graphics::Renderer& ren
+		Graphics::Renderer& ren,
+		Saves::SaveManager& sv
 	)
 		: assets(am)
 		, connection(cm)
@@ -38,6 +40,7 @@ public:
 		, scene(sm)
 		, simClock(clock)
 		, renderer(ren)
+		, saves(sv)
 	{}
 
 	Assets::AssetManager& getAssetManager() override { return assets; }
@@ -47,6 +50,7 @@ public:
 	SceneManager& getSceneManager() override { return scene; }
 	Core::SimClock& getSimClock() override { return simClock; }
 	Graphics::Renderer& getRenderer() override { return renderer; }
+	Saves::SaveManager& getSaveManager() override { return saves; }
 };
 
 } // namespace Blackthorn::Scene

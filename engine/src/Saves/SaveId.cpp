@@ -72,6 +72,34 @@ UUID UUID::fromString(std::string_view str) {
 	return uuid;
 }
 
+UUID UUID::makeStable(std::string_view seed) {
+	constexpr U64 FNV_PRIME = 1099511628211ULL;;
+	const U64 BASIS_HI = 14695981039346656037ULL;
+	const U64 BASIS_LO = 2166136261ULL;
+
+	U64 hi = BASIS_HI;
+	U64 lo = BASIS_LO;
+
+	for (unsigned char c : seed) {
+		hi ^= static_cast<U64>(c);
+		hi *= FNV_PRIME;
+		lo ^= static_cast<U64>(c);
+		lo *= FNV_PRIME;
+	}
+
+	UUID uuid;
+
+	for (int i = 0; i < 8; ++i) {
+		uuid.bytes[i] = static_cast<U8>(hi >> (i * 8));;
+		uuid.bytes[i + 8] = static_cast<U8>(lo >> (i * 8));
+	}
+
+	uuid.bytes[6] = (uuid.bytes[6] & 0x0F) | 0x40;
+	uuid.bytes[8] = (uuid.bytes[8] & 0x3F) | 0x80;
+
+	return uuid;
+}
+
 SaveId SaveId::generate() {
 	SaveId id;
 

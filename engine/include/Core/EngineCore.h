@@ -11,6 +11,7 @@
 #include "Core/SimClock.h"
 #include "Jobs/JobSystem.h"
 #include "Net/ConnectionManager.h"
+#include "Saves/SaveManager.h"
 #include "Scene/ISimContext.h"
 #include "Scene/SceneManager.h"
 
@@ -120,6 +121,7 @@ public:
 	Core::SimClock& getSimClock() { return *simClock; }
 	const Core::SimClock& getSimClock() const { return *simClock; }
 	Net::ConnectionManager& getConnectionManager() { return *connectionManager; }
+	Saves::SaveManager& getSaveManager() { return *saveManager; }
 
 	/**
 	 * @brief Called during `init()` after engine defaults are registered
@@ -130,6 +132,43 @@ public:
 	 */
 	virtual void onRegisterSettings(Core::Settings&) {}
 
+	/**
+	 * @brief Called during @c init after built in save sections have been
+	 * registered but before the manager is exposed to scenes.
+	 *
+	 * Override to register game-specific @c ISaveSection implementations.
+	 * At this point, @c ClockSaveSection and @c MetaSaveSection are already
+	 * registered. @c WorldSaveSection must be registered here or by scene code
+	 * because it requires an @c EntityPool and @c SaveEntityRegistry.
+	 *
+	 * @param saves Reference to the engine-owned @c SaveManager.
+	 */
+	virtual void onRegisterSaveSections(Saves::SaveManager& saves) {}
+
+	/**
+	 * @brief Returns the @c SaveId used for the automatic shutdown save.
+	 *
+	 * The default implementation derives a stable, deterministic @c UUID from
+	 * the fixed string @c "blackthorn.autosave.shutdown" using FNV-1a, ensuring
+	 * the storage backend always resolves to the same file path and overwrites
+	 * the previous shutdown save rather than accumulating new files.
+	 *
+	 * Override to scope the save per-world or per-player:
+	 * @code
+	 * Saves::SaveId MyGame::getShutdownSaveId() const override {
+	 *     Saves::SaveId id = EngineCore::getShutdownSaveId();
+	 *     id.worldId  = currentWorldId;
+	 *     id.playerId = currentPlayerId;
+	 *     return id;
+	 * }
+	 * @endcode
+	 *
+	 * @note The returned @c SaveId::id (UUID) determines the file path via the
+	 * storage backend's path resolver. Changing it means a different file.
+	 * Override the UUID only if you intentionally want separate files.
+	 */
+	virtual Saves::SaveId getShutdownSaveId() const;
+
 protected:
 	bool initialized = false;
 	bool running = false;
@@ -139,6 +178,7 @@ protected:
 	std::unique_ptr<Assets::AssetManager> assetManager;
 	std::unique_ptr<Net::ConnectionManager> connectionManager;
 	std::unique_ptr<Jobs::JobSystem> jobSystem;
+	std::unique_ptr<Saves::SaveManager> saveManager;
 	std::unique_ptr<Core::SimClock> simClock;
 	std::unique_ptr<Scene::ISimContext> simContext;
 	std::unique_ptr<Scene::SceneManager> sceneManager;
@@ -167,6 +207,13 @@ protected:
 	#ifdef BLACKTHORN_DEBUG
 		void logProfilingInfo();
 	#endif
+
+private:
+	/**
+	 * @brief Constructs the SaveManager from config, registers built-in
+	 * sections, then calls @c onRegisterSaveSections for the game layer.
+	 */
+	void initSaveManager();
 };
 
 } // namespace Blackthorn
