@@ -97,6 +97,42 @@ private:
 	 * with empty worldId/playerId segments omitted.
 	 */
 	std::filesystem::path defaultPath(const SaveId& saveId) const;
+
+	/**
+	 * @brief Writes @p data atomically to @p destination.
+	 *
+	 * Procedure:
+	 *   1. Write to a sibling temp file in the same directory as @p destination
+	 *      (guarantees same filesystem, so rename is atomic).
+	 *   2. fsync the temp file so data reaches the storage medium.
+	 *   3. Rename the temp file over @p destination (atomic on POSIX; uses
+	 *      ReplaceFileW on Windows for equivalent semantics).
+	 *   4. fsync the parent directory (POSIX only) so the directory entry is
+	 *      durable.
+	 *
+	 *        The temp file is named @c "<destination>.tmp.<pid>" to avoid
+	 *        collisions when multiple processes write the same save
+	 *        simultaneously (e.g. a game instance and an editor).
+	 *
+	 * @param destination Final target path.
+	 * @param data  Bytes to write.
+	 *
+	 * @return @c SaveResult::success() or a descriptive failure.
+	 */
+	static SaveResult atomicWrite(
+		const std::filesystem::path& destination,
+		const IO::ByteBuffer& data
+	);
+
+	/**
+	 * @brief Returns the number of bytes available on the filesystem that
+	 *        contains @p path.
+	 *
+	 *        Returns 0 on any error (treat as insufficient space).
+	 *
+	 * @param path Any path on the target filesystem
+	 */
+	static UMAX availableBytes(const std::filesystem::path& path);
 };
 
 } // namespace Blackthorn::Saves

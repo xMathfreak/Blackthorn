@@ -168,6 +168,36 @@ SaveResult SaveManager::save(SaveId& saveId, bool makeBackup) {
 
 	sodium_memzero(key, sizeof(key));
 
+	const UMAX primarySize = static_cast<UMAX>(bytes.size());
+	const UMAX backupSize  = (makeBackup && backupsEnabled && backupStorage)
+		? primarySize : 0;
+	const UMAX totalNeeded = primarySize + backupSize;
+
+	{
+		const std::filesystem::path probePath = [&]() -> std::filesystem::path {
+			if (auto* local = dynamic_cast<LocalFileSaveStorage*>(storage.get()))
+				return local->getRootDir();
+
+			return std::filesystem::current_path();
+		}();
+
+		std::error_code ec;
+		const auto si = std::filesystem::space(probePath, ec);
+
+		if (!ec && si.available < totalNeeded) {
+			return SaveResult::failure(
+				"Insufficient disk space for save"
+				+ std::string(backupSize > 0 ? " + backup" : "")
+				+ ": need "
+				+ std::to_string(totalNeeded)
+				+ " bytes, only "
+				+ std::to_string(si.available)
+				+ " available"
+			);
+		}
+	}
+
+
 	SaveResult result = storage->write(saveId, bytes);
 
 	if (!result)
