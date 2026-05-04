@@ -14,10 +14,11 @@ using I32 = int32_t;
 using U64 = uint64_t;
 using I64 = int64_t;
 
+using UMAX = uintmax_t;
+using IMAX = intmax_t;
+
 using F32 = float;
 using F64 = double;
-
-using B8 = bool;
 
 constexpr U8  U8_MAX  = UINT8_MAX;
 constexpr I8  I8_MAX  = INT8_MAX;
@@ -34,3 +35,7 @@ constexpr I32 I32_MIN = INT32_MIN;
 constexpr U64 U64_MAX = UINT64_MAX;
 constexpr I64 I64_MAX = INT64_MAX;
 constexpr I64 I64_MIN = INT64_MIN;
+
+constexpr UMAX UMAX_MAX = UINTMAX_MAX;
+constexpr IMAX IMAX_MAX = INTMAX_MAX;
+constexpr IMAX IMAX_MIN = INTMAX_MIN;
