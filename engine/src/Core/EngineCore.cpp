@@ -320,7 +320,7 @@ void EngineCore::registerEngineCallbacks(Core::Settings& s) {
 
 Saves::SaveId EngineCore::getShutdownSaveId() const {
 	Saves::SaveId sid;
-	sid.id = Saves::UUID::makeStable("blackthorn.autosave.shutdown");
+	sid.id = Core::UUID::makeStable("blackthorn.autosave.shutdown");
 	sid.displayName = "autosave_shutdown";
 	sid.flags = Saves::SaveFlags::Autosave;
 	return sid;

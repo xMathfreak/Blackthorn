@@ -3,7 +3,7 @@
 #include <SDL3/SDL.h>
 
 #include "Core/Export.h"
-#include "Core/Types/Types.h"
+#include "Core/Types/Numeric.h"
 #include "Graphics/RenderLayers.h"
 #include "Graphics/Texture.h"
 #include "Math/Color.h"

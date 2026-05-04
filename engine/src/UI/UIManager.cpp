@@ -5,7 +5,7 @@
 #include <SDL3/SDL.h>
 
 #include "Debug/Logger.h"
-#include "Core/Types/Types.h"
+#include "Core/Types/Numeric.h"
 #include "Input/InputManager.h"
 #include "UI/Container.h"
 #include "UI/Widget.h"

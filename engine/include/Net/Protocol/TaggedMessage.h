@@ -5,7 +5,7 @@
 #include <string>
 
 #include "Core/Export.h"
-#include "Core/Types/Types.h"
+#include "Core/Types/Numeric.h"
 #include "IO/ByteBuffer.h"
 
 namespace Blackthorn::Net::Protocol {

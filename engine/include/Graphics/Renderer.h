@@ -7,7 +7,7 @@
 #include <SDL3/SDL.h>
 
 #include "Core/Export.h"
-#include "Core/Types/Types.h"
+#include "Core/Types/Numeric.h"
 #include "Graphics/EBO.h"
 #include "Graphics/FBO.h"
 #include "Graphics/Shader.h"

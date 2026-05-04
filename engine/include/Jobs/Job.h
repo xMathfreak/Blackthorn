@@ -5,7 +5,7 @@
 #include <type_traits>
 
 #include "Core/Export.h"
-#include "Core/Types/Types.h"
+#include "Core/Types/Numeric.h"
 #include "Jobs/JobHandle.h"
 
 namespace Blackthorn::Jobs {

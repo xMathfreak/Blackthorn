@@ -3,7 +3,7 @@
 #include <array>
 
 #include "Core/Export.h"
-#include "Core/Types/Types.h"
+#include "Core/Types/Numeric.h"
 #include "IO/ByteBuffer.h"
 #include "Net/Transport/Address.h"
 #include "Net/Transport/Sockets/ISocket.h"

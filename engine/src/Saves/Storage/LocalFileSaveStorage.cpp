@@ -187,7 +187,7 @@ std::vector<SaveMetadata> LocalFileSaveStorage::list(const SaveFilter& filter) {
 		doc.getSaveIdBlock().applyToSaveId(sid);
 
 		const std::string stem = entry.path().stem().string();
-		sid.id = UUID::fromString(stem);
+		sid.id = Core::UUID::fromString(stem);
 
 		if (sid.id.isNull()) {
 			BT_DEBUG(

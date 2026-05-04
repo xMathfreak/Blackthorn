@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Core/Export.h"
-#include "Core/Types/Types.h"
+#include "Core/Types/Numeric.h"
 
 namespace Blackthorn::Core {
 

@@ -4,7 +4,7 @@
 #include <memory>
 
 #include "Core/Export.h"
-#include "Core/Types/Types.h"
+#include "Core/Types/Numeric.h"
 #include "Net/Transport/Address.h"
 
 namespace Blackthorn::Net::Transport::Sockets {

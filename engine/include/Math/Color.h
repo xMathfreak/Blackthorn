@@ -6,7 +6,7 @@
 #include <glm/glm.hpp>
 #include <SDL3/SDL.h>
 
-#include "Core/Types/Types.h"
+#include "Core/Types/Numeric.h"
 #include "Math/Interpolation.h"
 
 namespace Blackthorn {
