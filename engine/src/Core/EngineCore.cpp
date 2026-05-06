@@ -53,8 +53,14 @@ bool EngineCore::init(const EngineConfig& cfg) {
 
 	registerEngineCallbacks(settings);
 
-	simClock = std::make_unique<Core::SimClock>(cfg.timing.fixedDeltaTime);
-	simClock->load();
+	simClock = std::make_unique<Core::SimClock>(
+		cfg.timing.fixedDeltaTime,
+		cfg.timing.initialTick
+	);
+
+	#ifdef BLACKTHORN_HEADLESS
+		simClock->load();
+	#endif
 
 	if (!SDL_Init(SDL_INIT_EVENTS)) {
 		BT_ERROR("SDL: Failed to initialize - {}", SDL_GetError());
@@ -104,8 +110,10 @@ void EngineCore::shutdown() {
 
 	auto& s = Core::Settings::instance();
 
-	if (simClock)
-		simClock->save();
+	#ifdef BLACKTHORN_HEADLESS
+		if (simClock)
+			simClock->save();
+	#endif
 
 	if (saveManager && config.save.saveOnShutdown) {
 		const bool canSave = !config.save.encryptionEnabled
@@ -292,7 +300,9 @@ void EngineCore::lateUpdate(float dt) {
 }
 
 void EngineCore::registerDefaultSettings(Core::Settings& s) {
-	s.setDefault<U64>("simulation", "tick", static_cast<U64>(0));
+	#ifdef BLACKTHORN_HEADLESS
+		s.setDefault<U64>("simulation", "tick", static_cast<U64>(0));
+	#endif
 
 	#ifdef BLACKTHORN_DEBUG
 		s.setDefault("developer", "log_level", 3);

@@ -9,15 +9,22 @@ namespace Blackthorn::Core {
  * @brief Authoritative simulation clock for the engine.
  *
  * Tracks the current tick, tick rate, and tick duration. Owned by
- * `Engine` and exposed read-only through `ISceneContext` so scenes and
- * systems can observe the current tick without coupling to `Engine`.
+ * `EngineCore` and exposed read-only through `ISimContext`.
  *
- * The tick counter is persisted to the INI settings file under
- * `[simulation] tick` so sessions can resume from their last known tick.
- * Call `save()` at shutdown and `load()` after `Settings::loadFromFile()`.
+ * @section persistence Persistence
+ * Two persistence paths are supported:
  *
- * @note A "tick" corresponds to one `fixedUpdate` execution. Rendering
- * and variable-rate updates do not advance the tick counter.
+ * - @b SaveManager path (default for client builds):
+ *   The tick counter is saved and loaded via @c ClockSaveSection as part
+ *   of the engine shutdown autosave. @c save() and @c load() are not
+ *   called by @c EngineCore when a @c SaveManager is present.
+ *   @c initialTick is used as the starting value on first launch before
+ *   any shutdown save exists.
+ *
+ * - @b INI fallback path (headless / dedicated server builds):
+ *   @c save() writes @c currentTick to @c [simulation] tick in the INI
+ *   settings file. @c load() restores it. @c EngineCore calls both when
+ *   @c BLACKTHORN_HEADLESS is defined and no @c SaveManager is active.
  *
  * @note This class is not thread-safe. All mutation must occur on the
  * main thread inside the fixed-update loop.
@@ -26,9 +33,11 @@ class BLACKTHORN_API SimClock {
 public:
 	/**
 	 * @brief Constructs a SimClock with the given fixed timestep.
+	 *
 	 * @param fixedDeltaTime Seconds per tick (e.g. 1.0f / 60.0f).
+	 * @param initialTick Starting tick used when no saved state exists.
 	 */
-	explicit SimClock(float fixedDeltaTime);
+	explicit SimClock(float fixedDeltaTime, U64 initialTick = 0);
 
 	/**
 	 * @brief Advance the clock by one tick.
@@ -82,6 +91,9 @@ public:
 	 */
 	void load();
 
+	/** @brief Returns the tick the clock was constructed with as its default. */
+	U64 getInitialTick() const { return initialTick; }
+
 	/** @brief Returns the number of ticks elapsed since the clock epoch. */
 	U64 getCurrentTick() const { return currentTick; }
 
@@ -101,6 +113,7 @@ public:
 
 private:
 	U64 currentTick = 0;
+	U64 initialTick = 0;
 
 	float tickDuration = 1.0f / 60.0f;
 	float tickRate = 60.0f;

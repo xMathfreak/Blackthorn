@@ -49,6 +49,7 @@ struct BLACKTHORN_API TimingConfig {
 	int maxFixedUpdates = 10;
 	float maxDeltaTime = 0.25f;
 	int unfocusedFPS = 10;
+	U64 initialTick = 0;
 };
 
 struct BLACKTHORN_API DebugConfig {
