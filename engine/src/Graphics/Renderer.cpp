@@ -211,7 +211,7 @@ void Renderer::draw(const SDL_FRect& rect, float z, float rotation, const Math::
 		texIndex = static_cast<float>(findOrAddTexture(texture));
 
 	glm::vec2 textureCoords[4];
-	constexpr glm::vec2 defaultTexCoords[4] = {
+	static const glm::vec2 defaultTexCoords[4] = {
 		{ 0.0f, 0.0f },
 		{ 1.0f, 0.0f },
 		{ 1.0f, 1.0f },

@@ -17,6 +17,61 @@
 
 namespace Blackthorn {
 
+namespace {
+
+inline std::string getSIMDInfo() {
+	std::string simd = "scalar"; // default
+
+#if defined(GLM_FORCE_INTRINSICS)
+	// GCC / Clang
+	#if defined(__AVX512F__)
+		simd = "AVX-512";
+	#elif defined(__AVX2__)
+		simd = "AVX2";
+	#elif defined(__AVX__)
+		simd = "AVX";
+	#elif defined(__SSE4_2__)
+		simd = "SSE4.2";
+	#elif defined(__SSE4_1__)
+		simd = "SSE4.1";
+	#elif defined(__SSSE3__)
+		simd = "SSSE3";
+	#elif defined(__SSE3__)
+		simd = "SSE3";
+	#elif defined(__SSE2__)
+		simd = "SSE2";
+	#else
+		simd = "unknown SIMD";
+	#endif
+
+	// MSVC
+	#ifdef _MSC_VER
+		#if defined(__AVX512F__)
+			simd = "AVX-512";
+		#elif defined(__AVX2__)
+			simd = "AVX2";
+		#elif defined(__AVX__)
+			simd = "AVX";
+		#elif defined(__SSE4_2__)
+			simd = "SSE4.2";
+		#elif defined(__SSE4_1__)
+			simd = "SSE4.1";
+		#elif defined(__SSSE3__)
+			simd = "SSSE3";
+		#elif defined(__SSE3__)
+			simd = "SSE3";
+		#elif defined(__SSE2__) || defined(_M_IX86_FP) && _M_IX86_FP >= 2
+			simd = "SSE2";
+		#endif
+	#endif
+
+#endif // GLM_FORCE_INTRINSICS
+
+	return simd;
+}
+
+}
+
 Engine::~Engine() {
 	shutdown();
 }
@@ -535,17 +590,6 @@ void Engine::logEngineInfo() {
 	SDL_GL_GetAttribute(SDL_GL_STENCIL_SIZE, &stencilBits);
 	SDL_GL_GetAttribute(SDL_GL_MULTISAMPLESAMPLES, &msaaSamples);
 
-	std::string simd;
-	#if defined(GLM_FORCE_SIMD_AVX2)
-		simd = "AVX2";
-	#elif defined(GLM_FORCE_SIMD_AVX)
-		simd = "AVX";
-	#elif defined(GLM_FORCE_SIMD_SSE2)
-		simd = "SSE2";
-	#else
-		simd = "scalar";
-	#endif
-
 	BT_LOG(
 		"Engine: Graphics Info\n"
 		"    OpenGL: {}\n"
@@ -553,7 +597,7 @@ void Engine::logEngineInfo() {
 		"    Max Texture Size: {}\n"
 		"    Max Vertex Attributes: {}\n"
 		"    Depth: {} bits | Stencil: {} bits | MSAA: {}x\n"
-		"    GLM SIMD: {}",
+		"    SIMD: {}",
 		glVersion,
 		rd,
 		maxTex,
@@ -561,7 +605,7 @@ void Engine::logEngineInfo() {
 		depthBits,
 		stencilBits,
 		msaaSamples,
-		simd
+		getSIMDInfo()
 	);
 }
 

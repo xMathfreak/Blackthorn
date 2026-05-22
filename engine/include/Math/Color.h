@@ -18,27 +18,27 @@ using Color = glm::vec4;
 using Colour = Color;
 
 namespace Colors {
-	inline constexpr Color Clear	{ 0.0f };
-	inline constexpr Color White	{ 1.0f };
-	inline constexpr Color Black	{ 0.0f, 0.0f, 0.0f, 1.0f };
-	inline constexpr Color Gray		{ 0.5f, 0.5f, 0.5f, 1.0f };
-	inline constexpr Color Red		{ 1.0f, 0.0f, 0.0f, 1.0f };
-	inline constexpr Color Green	{ 0.0f, 1.0f, 0.0f, 1.0f };
-	inline constexpr Color Blue		{ 0.0f, 0.0f, 1.0f, 1.0f };
-	inline constexpr Color Cyan		{ 0.0f, 1.0f, 1.0f, 1.0f };
-	inline constexpr Color Magenta	{ 1.0f, 0.0f, 1.0f, 1.0f };
-	inline constexpr Color Yellow	{ 1.0f, 1.0f, 0.0f, 1.0f };
-	inline constexpr Color Orange	{ 1.0f, 0.65f, 0.0f, 1.0f };
+	inline const Color Clear	{ 0.0f };
+	inline const Color White	{ 1.0f };
+	inline const Color Black	{ 0.0f, 0.0f, 0.0f, 1.0f };
+	inline const Color Gray		{ 0.5f, 0.5f, 0.5f, 1.0f };
+	inline const Color Red		{ 1.0f, 0.0f, 0.0f, 1.0f };
+	inline const Color Green	{ 0.0f, 1.0f, 0.0f, 1.0f };
+	inline const Color Blue		{ 0.0f, 0.0f, 1.0f, 1.0f };
+	inline const Color Cyan		{ 0.0f, 1.0f, 1.0f, 1.0f };
+	inline const Color Magenta	{ 1.0f, 0.0f, 1.0f, 1.0f };
+	inline const Color Yellow	{ 1.0f, 1.0f, 0.0f, 1.0f };
+	inline const Color Orange	{ 1.0f, 0.65f, 0.0f, 1.0f };
 } // namespace Colors
 
 [[nodiscard]]
-constexpr Color fromRGBA8(U8 r, U8 g, U8 b, U8 a = 255) {
+inline Color fromRGBA8(U8 r, U8 g, U8 b, U8 a = 255) {
 	constexpr float inv = 1.0f / 255.0f;
 	return Color{ r * inv, g * inv, b * inv, a * inv };
 }
 
 [[nodiscard]]
-constexpr Color fromRGBA32(U32 rgba) {
+inline Color fromRGBA32(U32 rgba) {
 	return fromRGBA8(
 		static_cast<U8>((rgba >> 24) & 0xFF),
 		static_cast<U8>((rgba >> 16) & 0xFF),
@@ -48,7 +48,7 @@ constexpr Color fromRGBA32(U32 rgba) {
 }
 
 [[nodiscard]]
-constexpr U32 toRGBA32(const Color& c) {
+inline U32 toRGBA32(const Color& c) {
 	return (
 		  static_cast<U32>(c.r * 255.0f + 0.5f) << 24
 		| static_cast<U32>(c.g * 255.0f + 0.5f) << 16
@@ -58,7 +58,7 @@ constexpr U32 toRGBA32(const Color& c) {
 }
 
 [[nodiscard]]
-constexpr SDL_Color toSDLColor(const Color& c) {
+inline SDL_Color toSDLColor(const Color& c) {
 	return SDL_Color{
 		static_cast<U8>(c.r * 255),
 		static_cast<U8>(c.g * 255),
@@ -68,12 +68,12 @@ constexpr SDL_Color toSDLColor(const Color& c) {
 }
 
 [[nodiscard]]
-constexpr Color fromSDLColor(const SDL_Color& c) {
+inline Color fromSDLColor(const SDL_Color& c) {
 	return fromRGBA8(c.r, c.g, c.b, c.a);
 }
 
 [[nodiscard]]
-constexpr Color fromHex(std::string_view hex) {
+inline Color fromHex(std::string_view hex) {
 	if (!hex.empty() && hex.front() == '#')
 		hex.remove_prefix(1);
 
@@ -87,11 +87,7 @@ constexpr Color fromHex(std::string_view hex) {
 		if (c >= 'A' && c <= 'F')
 			return static_cast<U8>(c - 'A' + 10);
 
-		if (std::is_constant_evaluated()) {
-			throw "Invalid hex character";
-		} else {
-			throw std::invalid_argument("Invalid hex character");
-		}
+		throw std::invalid_argument("Invalid hex character");
 	};
 
 	const auto parseByte = [&](char high, char low) constexpr -> U8 {
@@ -128,19 +124,14 @@ constexpr Color fromHex(std::string_view hex) {
 			break;
 
 		default:
-			if (std::is_constant_evaluated()) {
-				throw "Hex color must be RGB, RGBA, RRGGBB or RRGGBBAA";
-			} else {
-				throw std::invalid_argument("Hex color must be RGB, RGBA, RRGGBB or RRGGBBAA");
-			}
-
+			throw std::invalid_argument("Hex color must be RGB, RGBA, RRGGBB or RRGGBBAA");
 	}
 
 	return fromRGBA8(r, g, b, a);
 }
 
 [[nodiscard]]
-constexpr Color fromHSV(float h, float s, float v, float a = 1.0f) {
+inline Color fromHSV(float h, float s, float v, float a = 1.0f) {
 	while (h >= 360.0f)
 		h -= 360.0f;
 
@@ -182,7 +173,7 @@ constexpr Color fromHSV(float h, float s, float v, float a = 1.0f) {
 }
 
 [[nodiscard]]
-constexpr glm::vec3 toHSV(const Color& c) {
+inline glm::vec3 toHSV(const Color& c) {
 	const float max = (c.r > c.g ?
 		(c.r > c.b ? c.r : c.b)
 	:	(c.g > c.b ? c.g : c.b));
@@ -216,7 +207,7 @@ constexpr glm::vec3 toHSV(const Color& c) {
 }
 
 [[nodiscard]]
-constexpr Color lerp(const Color& a, const Color& b, float t) {
+inline Color lerp(const Color& a, const Color& b, float t) {
 	return Color{
 		Math::lerp(a.r, b.r, t),
 		Math::lerp(a.g, b.g, t),
@@ -226,12 +217,12 @@ constexpr Color lerp(const Color& a, const Color& b, float t) {
 }
 
 [[nodiscard]]
-constexpr Color withAlpha(const Color& c, float alpha) {
+inline Color withAlpha(const Color& c, float alpha) {
 	return Color{ c.r, c.g, c.b, alpha };
 }
 
 [[nodiscard]]
-constexpr Color darken(const Color& c, float amount) {
+inline Color darken(const Color& c, float amount) {
 	return Color{
 		std::max(c.r - amount, 0.0f),
 		std::max(c.g - amount, 0.0f),
@@ -241,7 +232,7 @@ constexpr Color darken(const Color& c, float amount) {
 }
 
 [[nodiscard]]
-constexpr Color lighten(const Color& c, float amount) {
+inline Color lighten(const Color& c, float amount) {
 	return Color{
 		std::min(c.r + amount, 1.0f),
 		std::min(c.g + amount, 1.0f),
@@ -251,7 +242,7 @@ constexpr Color lighten(const Color& c, float amount) {
 }
 
 [[nodiscard]]
-constexpr Color shiftHue(const Color& c, float degrees) {
+inline Color shiftHue(const Color& c, float degrees) {
 	glm::vec3 hsv = toHSV(c);
 	return fromHSV(hsv.x + degrees, hsv.y, hsv.z, c.a);
 }
@@ -259,7 +250,7 @@ constexpr Color shiftHue(const Color& c, float degrees) {
 } // namespace Math
 
 [[nodiscard]]
-constexpr Math::Color operator"" _hex(const char* hex, size_t len) {
+inline Math::Color operator"" _hex(const char* hex, size_t len) {
 	return Math::fromHex(std::string_view(hex, len));
 }
 

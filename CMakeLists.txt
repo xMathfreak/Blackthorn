@@ -24,14 +24,6 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
 endif()
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
-# C++ Standard
-set(CMAKE_CXX_STANDARD 20)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
-# Compiler flags
-set(CMAKE_CXX_FLAGS_DEBUG "-DDEBUG -ggdb -Og -Wall -Wextra -Werror -fstack-protector-all -fopenmp")
-set(CMAKE_CXX_FLAGS_RELEASE "-DNDEBUG -O3 -march=native -funroll-loops -fomit-frame-pointer -ftree-vectorize -fopenmp -flax-vector-conversions")
-
 # Hide console in Release mode (Windows only)
 function(enable_windows_gui target)
 	if(WIN32)
