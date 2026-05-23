@@ -106,6 +106,10 @@ target_link_libraries(BlackthornEngine
 		SDL3_ttf::SDL3_ttf
 		glad
 		glfw
+		dr_libs
+		vorbis
+		ogg
+		OpenAL::OpenAL
 
 	PRIVATE
 		OpenGL::GL

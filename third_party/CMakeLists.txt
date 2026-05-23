@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.16.0)
 
+
 # glm
 set(GLM_BUILD_LIBRARY OFF CACHE BOOL "" FORCE)
 add_subdirectory(glm)
@@ -9,6 +10,7 @@ set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(GLFW_INSTALL OFF CACHE BOOL "" FORCE)
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
 add_subdirectory(glfw)
 
 # glad
@@ -38,3 +40,22 @@ add_subdirectory(zstd)
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
 set(SODIUM_DISABLE_TESTS ON CACHE BOOL "" FORCE)
 add_subdirectory(libsodium)
+
+add_library(dr_libs STATIC
+	dr_libs/dr_libs_impl.cpp
+)
+
+add_subdirectory(ogg)
+
+add_subdirectory(vorbis)
+
+target_include_directories(dr_libs SYSTEM PUBLIC
+	dr_libs
+)
+
+set(ALSOFT_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(ALSOFT_TESTS OFF CACHE BOOL "" FORCE)
+set(ALSOFT_UTILS OFF CACHE BOOL "" FORCE)
+set(ALSOFT_INSTALL OFF CACHE BOOL "" FORCE)
+
+add_subdirectory(openal-soft)
