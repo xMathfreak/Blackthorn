@@ -1,5 +1,13 @@
 cmake_minimum_required(VERSION 3.16.0)
 
+function(suppress_third_party_warnings target)
+	get_target_property(_inc ${target} INTERFACE_INCLUDE_DIRECTORIES)
+	if(_inc)
+		set_target_properties(${target} PROPERTIES
+			INTERFACE_SYSTEM_INCLUDE_DIRECTORIES "${_inc}"
+		)
+	endif()
+endfunction()
 
 # glm
 set(GLM_BUILD_LIBRARY OFF CACHE BOOL "" FORCE)
@@ -46,8 +54,11 @@ add_library(dr_libs STATIC
 )
 
 add_subdirectory(ogg)
+suppress_third_party_warnings(ogg)
 
 add_subdirectory(vorbis)
+suppress_third_party_warnings(vorbis)
+suppress_third_party_warnings(vorbisfile)
 
 target_include_directories(dr_libs SYSTEM PUBLIC
 	dr_libs

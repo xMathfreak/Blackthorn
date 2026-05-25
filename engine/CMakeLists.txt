@@ -10,6 +10,7 @@ file(GLOB_RECURSE ALL_ENGINE_SOURCES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_D
 file(GLOB_RECURSE ALL_ENGINE_HEADERS "${CMAKE_CURRENT_SOURCE_DIR}/include/*.h")
 file(GLOB_RECURSE ALL_ENGINE_PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/private/*.h")
 
+file(GLOB_RECURSE AUDIO_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/Audio/*.cpp")
 file(GLOB_RECURSE GRAPHICS_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/Graphics/*.cpp")
 file(GLOB_RECURSE FONT_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/Fonts/*.cpp")
 file(GLOB_RECURSE UI_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/UI/*.cpp")
@@ -19,6 +20,7 @@ set(CLIENT_ONLY_SOURCES
 	# Engine graphics entry point
 	"${CMAKE_CURRENT_SOURCE_DIR}/src/Core/Engine.cpp"
 
+	${AUDIO_SOURCES}
 	${GRAPHICS_SOURCES}
 	${FONT_SOURCES}
 	${UI_SOURCES}
@@ -108,6 +110,7 @@ target_link_libraries(BlackthornEngine
 		glfw
 		dr_libs
 		vorbis
+		vorbisfile
 		ogg
 		OpenAL::OpenAL
 
