@@ -53,9 +53,11 @@ add_library(dr_libs STATIC
 	dr_libs/dr_libs_impl.cpp
 )
 
+set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
 add_subdirectory(ogg)
 suppress_third_party_warnings(ogg)
 
+set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
 add_subdirectory(vorbis)
 suppress_third_party_warnings(vorbis)
 suppress_third_party_warnings(vorbisfile)
