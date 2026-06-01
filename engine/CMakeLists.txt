@@ -72,7 +72,7 @@ target_link_libraries(BlackthornCore
 
 # Transport layer requires WinSock2 on Windows.
 if(WIN32)
-	target_link_libraries(BlackthornCore PUBLIC ws2_32)
+	target_link_libraries(BlackthornCore PUBLIC ws2_32 Avrt)
 endif()
 
 # Full client build
