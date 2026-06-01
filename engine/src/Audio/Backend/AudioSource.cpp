@@ -8,18 +8,34 @@
 
 namespace Blackthorn::Audio {
 
-AudioSource::AudioSource(bool useDirect) {
-	alGenSources(1, &source);
-
-	useDirectChannel(useDirect);
+AudioSource::AudioSource() {
+	create();
 }
 
 AudioSource::~AudioSource() {
-	if (source) {
+	destroy();
+}
+
+bool AudioSource::create() {
+	alGenSources(1, &source);
+	return (source != 0);
+}
+
+void AudioSource::destroy() {
+	if (source != 0) {
 		stop();
 		unqueueAllBuffers();
 		alDeleteSources(1, &source);
+		source = 0;
 	}
+}
+
+bool AudioSource::valid() const noexcept {
+	return (source != 0);
+}
+
+void AudioSource::invalidate() noexcept {
+	source = 0;
 }
 
 AudioSource::AudioSource(AudioSource&& other) noexcept

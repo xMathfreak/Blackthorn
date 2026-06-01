@@ -13,7 +13,7 @@ class AudioBuffer;
 
 class BLACKTHORN_API AudioSource {
 public:
-	AudioSource(bool useDirect = true);
+	AudioSource();
 	~AudioSource();
 
 	AudioSource(const AudioSource&) = delete;
@@ -21,6 +21,9 @@ public:
 
 	AudioSource(AudioSource&& other) noexcept;
 	AudioSource& operator=(AudioSource&& other) noexcept;
+
+	bool create();
+	void destroy();
 
 	void play();
 	void pause();
@@ -49,6 +52,16 @@ public:
 	[[nodiscard]] bool isStopped() const;
 	[[nodiscard]] int processedBuffers() const;
 	[[nodiscard]] int queuedBuffers() const;
+
+	[[nodiscard]] bool valid() const noexcept;
+
+	/**
+	 * Marks the source handle as no longer valid without issuing AL calls.
+	 *
+	 * Used during device/context loss where the underlying OpenAL source
+	 * has already been implicitly destroyed by the backend.
+	 */
+	void invalidate() noexcept;
 
 private:
 	ALuint source = 0;
