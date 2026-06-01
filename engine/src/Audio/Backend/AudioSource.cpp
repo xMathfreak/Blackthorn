@@ -180,4 +180,8 @@ void AudioSource::useDirectChannel(bool enabled) {
 	}
 }
 
+bool AudioSource::streaming() const noexcept {
+	return streamingMode == true;
+}
+
 } // namespace Blackthorn::Audio

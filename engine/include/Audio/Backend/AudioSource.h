@@ -54,6 +54,7 @@ public:
 	[[nodiscard]] int queuedBuffers() const;
 
 	[[nodiscard]] bool valid() const noexcept;
+	[[nodiscard]] bool streaming() const noexcept;
 
 	/**
 	 * Marks the source handle as no longer valid without issuing AL calls.
