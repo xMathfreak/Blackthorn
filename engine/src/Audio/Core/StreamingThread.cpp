@@ -20,8 +20,13 @@ bool StreamingThread::start(
 	this->audioWakeCv = &audioCv;
 	this->audioWakeMutex = &audioWakeMtx;
 
+	readyPromise = std::promise<void>();
+	std::future<void> ready = readyPromise.get_future();
+
 	running.store(true, std::memory_order::release);
 	thread = std::thread([this] { threadLoop(); });
+
+	ready.wait();
 
 	BT_LOG("StreamingThread: started");
 	return true;
@@ -52,6 +57,8 @@ void StreamingThread::submitJob(StreamingJob&& job) {
 void StreamingThread::threadLoop() {
 	Threads::ThreadRegistry::instance().registerCurrent("AudioStreaming");
 	BT_LOG("StreamingThread: decode thread started");
+
+	readyPromise.set_value();
 
 	while (running.load(std::memory_order::relaxed)) {
 		{

@@ -81,11 +81,17 @@ void AudioThread::threadLoop() {
 	BT_LOG("AudioThread: started");
 
 	while (state.load(std::memory_order::relaxed) != AudioThreadState::Stopped) {
+		const AudioThreadState currentState = state.load(std::memory_order::relaxed);
+
+		const auto sleepDuration = (currentState == AudioThreadState::DeviceLost)
+			? std::chrono::milliseconds(50)
+			: std::chrono::milliseconds(5);
+
 		{
 			std::unique_lock lock(wakeMutex);
 			wakeCv.wait_for(
 				lock,
-				std::chrono::milliseconds(5),
+				sleepDuration,
 				[this] {
 					return !commandQueue.empty()
 						|| !streamResultQueue.empty()
@@ -95,21 +101,27 @@ void AudioThread::threadLoop() {
 			);
 		}
 
-		drainStreamResults();
+		tickDeviceHealth();
 
-		{
-			AudioCommand cmd;
-			while (commandQueue.pop(cmd))
-				processCommand(cmd);
+		if (state.load(std::memory_order::relaxed) == AudioThreadState::Running) {
+			drainStreamResults();
+
+			{
+				AudioCommand cmd;
+				while (commandQueue.pop(cmd))
+					processCommand(cmd);
+			}
+
+			tickStreaming();
+			voicePool->update();
+			updatePlaybackTimes();
 		}
 
-		tickStreaming();
-		voicePool->update();
 		tick.fetch_add(1, std::memory_order::relaxed);
 	}
 
-	drainStreamResults();
-	{
+	if (state.load(std::memory_order::relaxed) == AudioThreadState::Running) {
+		drainStreamResults();
 		AudioCommand cmd;
 		while (commandQueue.pop(cmd))
 			processCommand(cmd);
@@ -169,6 +181,266 @@ void AudioThread::tickStreaming() {
 	}
 }
 
+void AudioThread::updatePlaybackTimes() {
+	for (Voice& voice : voicePool->voices()) {
+		if (!voice.active())
+			continue;
+
+		if (voice.streaming()) {
+			const StreamingVoiceState* sstate = voice.streamState();
+			if (!sstate || sstate->sampleRate == 0)
+				continue;
+
+			const float t =
+				static_cast<float>(voice.elapsedFrames()) /
+				static_cast<float>(sstate->sampleRate);
+
+			voice.setPlaybackTime(t);
+		} else {
+			ALfloat seconds = 0.0f;
+			alGetSourcef(
+				voice.source().get(),
+				AL_SEC_OFFSET,
+				&seconds
+			);
+			voice.setPlaybackTime(seconds);
+		}
+	}
+}
+
+void AudioThread::tickDeviceHealth() {
+	const AudioThreadState currentState =
+		state.load(std::memory_order::relaxed);
+
+	if (currentState == AudioThreadState::Running) {
+		if (!device || !device->connected()) {
+			BT_WARN("AudioThread: device lost, entering recovery");
+			enterDeviceLost();
+		}
+
+		return;
+	}
+
+	if (currentState == AudioThreadState::DeviceLost) {
+		const auto now = std::chrono::steady_clock::now();
+		if (now < nextRetryTime)
+			return;
+
+		state.store(AudioThreadState::Reconnecting,
+			std::memory_order::relaxed);
+		attemptReconnect();
+		return;
+	}
+}
+
+void AudioThread::enterDeviceLost() {
+	lossTime = std::chrono::steady_clock::now();
+	nextRetryTime = lossTime + std::chrono::milliseconds(kBackoffMs[0]);
+	backoffIndex = 0;
+
+	voiceSnapshots.clear();
+
+	for (Voice& voice : voicePool->voices()) {
+		if (!voice.active())
+			continue;
+
+		if (!shouldRestoreVoice(voice))
+			continue;
+
+		VoiceSnapshot snap;
+		snap.originalHandle = voice.handle();
+		snap.clip = voice.clip();
+		snap.volume = voice.volume();
+		snap.pitch = voice.pitch();
+		snap.playbackTime = voice.getPlaybackTime();
+		snap.duration = voice.duration();
+
+		if (voice.spatialized()) {
+			ALfloat px = 0.0f, py = 0.0f, pz = 0.0f;
+			alGetSource3f(
+				voice.source().get(),
+				AL_POSITION, &px, &py, &pz
+			);
+			snap.position = { px, py, pz };
+		}
+
+		ALfloat refDist = 1.0f, maxDist = 50.0f;
+		alGetSourcef(
+			voice.source().get(), AL_REFERENCE_DISTANCE, &refDist
+		);
+		alGetSourcef(
+			voice.source().get(), AL_MAX_DISTANCE, &maxDist
+		);
+		snap.minDistance = refDist;
+		snap.maxDistance = maxDist;
+		snap.category = voice.category();
+		snap.priority = voice.priority();
+		snap.loop = voice.looping();
+		snap.spatial = voice.spatialized();
+		snap.stream = voice.streaming();
+
+		voiceSnapshots.push_back(std::move(snap));
+	}
+
+	BT_LOG(
+		"AudioThread: snapshotted {} voice(s) for restore",
+		voiceSnapshots.size()
+	);
+
+	streamingThread.stop();
+
+	for (Voice& voice : voicePool->voices()) {
+		if (voice.active())
+			voice.source().invalidate();
+	}
+
+	voicePool->stopAll();
+
+	context.reset();
+	device.reset();
+
+	state.store(AudioThreadState::DeviceLost, std::memory_order::relaxed);
+}
+
+void AudioThread::attemptReconnect() {
+	BT_LOG("AudioThread: attempting reconnect (backoff index {})",
+		backoffIndex);
+
+	try {
+		device.emplace();
+		context.emplace(device.value());
+		context->makeCurrent();
+	} catch (const AudioException& e) {
+		BT_WARN("AudioThread: reconnect failed: {}", e.what());
+
+		context.reset();
+		device.reset();
+
+		backoffIndex = std::min(
+			backoffIndex + 1,
+			kBackoffMs.size() - 1
+		);
+
+		nextRetryTime = std::chrono::steady_clock::now() +
+			std::chrono::milliseconds(kBackoffMs[backoffIndex]);
+
+		state.store(AudioThreadState::DeviceLost,
+			std::memory_order::relaxed);
+		return;
+	}
+
+	BT_LOG("AudioThread: device reconnected, restoring voices");
+
+	backoffIndex = 0;
+
+	for (Voice& voice : voicePool->voices()) {
+		voice.recreateSource();
+	}
+
+	streamingThread.start(streamResultQueue, wakeCv, wakeMutex);
+
+	restoreVoices();
+	voiceSnapshots.clear();
+
+	state.store(AudioThreadState::Running, std::memory_order::relaxed);
+	BT_LOG("AudioThread: reconnect successful");
+}
+
+void AudioThread::restoreVoices() {
+	const auto now = std::chrono::steady_clock::now();
+	const float outageDuration =
+		std::chrono::duration<float>(now - lossTime).count();
+
+	for (const VoiceSnapshot& snap : voiceSnapshots) {
+		if (!snap.clip || !snap.clip->isLoaded())
+			continue;
+
+		float effectiveTime = snap.playbackTime + outageDuration;
+
+		if (snap.loop && snap.duration > 0.0f) {
+			effectiveTime = std::fmod(effectiveTime, snap.duration);
+		} else {
+			effectiveTime = std::min(effectiveTime, snap.duration);
+		}
+
+		if (!snap.loop && snap.duration > 0.0f) {
+			const float remaining = snap.duration - effectiveTime;
+			if (remaining < kMinRemainingTime)
+				continue;
+		}
+
+		Voice* voice = voicePool->acquire(snap.priority);
+		if (!voice) {
+			BT_WARN(
+				"AudioThread: restoreVoices — pool exhausted, "
+				"dropping snapshot for handle {}",
+				snap.originalHandle.id
+			);
+			continue;
+		}
+
+		voice->activate(
+			snap.originalHandle,
+			snap.category,
+			snap.priority,
+			tick.load(std::memory_order::relaxed),
+			snap.duration
+		);
+
+		voice->setVolume(snap.volume);
+		voice->setPitch(snap.pitch);
+		voice->source().setStreamingMode(snap.stream);
+		voice->setLooping(snap.loop);
+
+		if (snap.spatial) {
+			voice->setPosition(snap.position);
+			voice->source().setRelative(false);
+		} else {
+			voice->source().setRelative(true);
+		}
+
+		voice->source().setDistances(snap.minDistance, snap.maxDistance);
+		voice->setClip(const_cast<AudioClip*>(snap.clip));
+
+		if (snap.stream) {
+			const U64 startFrame = static_cast<U64>(
+				effectiveTime *
+				static_cast<float>(snap.clip->sampleRate())
+			);
+			processStreamingPlayback(*voice, *snap.clip, startFrame);
+		} else {
+			processResidentPlayback(*voice, *snap.clip, effectiveTime);
+		}
+
+		BT_LOG(
+			"AudioThread: restored voice {} at {:.2f}s "
+			"(was {:.2f}s, outage {:.2f}s)",
+			snap.originalHandle.id,
+			effectiveTime,
+			snap.playbackTime,
+			outageDuration
+		);
+	}
+}
+
+bool AudioThread::shouldRestoreVoice(const Voice& voice) const noexcept {
+	if (voice.category() == AudioCategory::SFX ||
+		voice.category() == AudioCategory::UI)
+	{
+		return false;
+	}
+
+	if (voice.looping())
+		return true;
+
+	const float duration = voice.duration();
+	const float elapsed = voice.getPlaybackTime();
+	const float remaining = duration - elapsed;
+
+	return duration  > kMinRestoreDuration
+		&& remaining > kMinRemainingTime;
+}
+
 void AudioThread::submitStreamingJob(
 	Voice& voice,
 	StreamingVoiceState& sstate,
@@ -196,7 +468,8 @@ void AudioThread::submitStreamingJob(
 
 void AudioThread::processResidentPlayback(
 	Voice& voice,
-	const AudioClip& clip
+	const AudioClip& clip,
+	float seekSeconds
 ) {
 	AudioData data;
 	if (!Decoding::AudioDecoder::decode(clip.sourcePath(), data)) {
@@ -222,6 +495,14 @@ void AudioThread::processResidentPlayback(
 
 	voice.attachBuffer(buffer);
 	voice.play();
+
+	if (seekSeconds > 0.0f) {
+		alSourcef(
+			voice.source().get(),
+			AL_SEC_OFFSET,
+			seekSeconds
+		);
+	}
 }
 
 void AudioThread::processStreamingPlayback(

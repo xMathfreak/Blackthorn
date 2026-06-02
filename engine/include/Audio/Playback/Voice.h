@@ -118,6 +118,12 @@ public:
 		playbackTime = seconds;
 	}
 
+	void recreateSource() {
+		audioSource.destroy();
+		audioSource.create();
+		audioSource.useDirectChannel(true);
+	}
+
 	[[nodiscard]]
 	bool active() const noexcept {
 		return audioHandle.isValid();

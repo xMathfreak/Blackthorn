@@ -2,6 +2,7 @@
 
 #include <atomic>
 #include <condition_variable>
+#include <future>
 #include <thread>
 
 #include "Audio/Commands/AudioCommandQueue.h"
@@ -122,6 +123,8 @@ private:
 
 	std::mutex wakeMutex;
 	std::condition_variable wakeCv;
+
+	std::promise<void> readyPromise;
 };
 
 } // namespace Blackthorn::Audio

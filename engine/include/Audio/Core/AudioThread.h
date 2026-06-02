@@ -14,6 +14,7 @@
 #include "Audio/Core/StreamingThread.h"
 #include "Audio/Device/IDeviceNotifier.h"
 #include "Audio/Playback/VoicePool.h"
+#include "Audio/Playback/VoiceSnapshot.h"
 #include "Core/Export.h"
 #include "Core/Types/Numeric.h"
 
@@ -21,7 +22,9 @@ namespace Blackthorn::Audio {
 
 enum class AudioThreadState : U8 {
 	Running,
-	Stopped
+	Stopped,
+	Reconnecting,
+	DeviceLost
 };
 
 class BLACKTHORN_API AudioThread {
@@ -48,7 +51,8 @@ private:
 
 	void processResidentPlayback(
 		Voice& voice,
-		const AudioClip& clip
+		const AudioClip& clip,
+		float seekSeconds = 0.0f
 	);
 
 	void processStreamingPlayback(
@@ -72,6 +76,15 @@ private:
 	void processCommand(const AudioCommand& cmd);
 	void drainStreamResults();
 
+	[[nodiscard]]
+	bool shouldRestoreVoice(const Voice& voice) const noexcept;
+
+	void restoreVoices();
+	void attemptReconnect();
+	void enterDeviceLost();
+	void tickDeviceHealth();
+	void updatePlaybackTimes();
+
 private:
 	AudioCommandQueue commandQueue;
 
@@ -94,6 +107,8 @@ private:
 	std::condition_variable wakeCv;
 	std::mutex wakeMutex;
 
+	U64 nextHandleId {1};
+
 private:
 	void process(const PlayCommand& cmd);
 	void process(const StopCommand& cmd);
@@ -106,6 +121,20 @@ private:
 	void process(const ListenerTransformCommand& cmd);
 	void process(const StopAllCommand& cmd);
 	void process(const StreamBufferReadyCommand& cmd);
+
+private:
+	std::vector<VoiceSnapshot> voiceSnapshots;
+
+	std::chrono::steady_clock::time_point lossTime;
+	std::chrono::steady_clock::time_point nextRetryTime;
+	size_t backoffIndex = 0;
+
+	static constexpr std::array<int, 6> kBackoffMs {
+		250, 500, 100, 1500, 3000
+	};
+
+	static constexpr float kMinRestoreDuration = 2.0f;
+	static constexpr float kMinRemainingTime = 0.5f;
 };
 
 } // namespace Blackthorn::Audio
