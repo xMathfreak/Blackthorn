@@ -3,8 +3,8 @@
 #include <AL/al.h>
 
 #include "Audio/AudioCategory.h"
-#include "Audio/Resources/AudioClip.h"
 #include "Audio/Playback/StreamingVoiceState.h"
+#include "Audio/Resources/AudioClip.h"
 #include "Debug/Logger.h"
 
 namespace Blackthorn::Audio {
@@ -16,19 +16,16 @@ float computeGain(
 	AudioCategory category,
 	const std::array<float, AUDIO_CATEGORY_COUNT>& categoryVolumes
 ) {
-	const float catVol = categoryVolumes[
-		static_cast<size_t>(category)
-	];
-	const float masterVol = categoryVolumes[
-		static_cast<size_t>(AudioCategory::Master)
-	];
+	const float catVol = categoryVolumes[static_cast<size_t>(category)];
+	const float masterVol =
+		categoryVolumes[static_cast<size_t>(AudioCategory::Master)];
 	return baseVolume * catVol * masterVol;
 }
 
 void uploadAndQueue(
-	AudioSource& source,
-	StreamingVoiceState& state,
-	ALuint alBuf,
+	AudioSource&          source,
+	StreamingVoiceState&  state,
+	ALuint                alBuf,
 	const std::vector<I16>& samples
 ) {
 	alBufferData(
@@ -44,7 +41,12 @@ void uploadAndQueue(
 } // namespace
 
 void AudioThread::process(const PlayCommand& cmd) {
-	Voice* voice = voicePool.acquire(cmd.priority);
+	if (!cmd.clipSource) {
+		BT_WARN("AudioThread: PlayCommand has null clip, dropping");
+		return;
+	}
+
+	Voice* voice = voicePool->acquire(cmd.priority);
 
 	if (!voice) {
 		BT_WARN("AudioThread: voice pool exhausted, dropping PlayCommand");
@@ -56,7 +58,7 @@ void AudioThread::process(const PlayCommand& cmd) {
 		cmd.category,
 		cmd.priority,
 		tick.load(std::memory_order::relaxed),
-		cmd.clipSource->durationSeconds()
+		static_cast<float>(cmd.clipSource->durationSeconds())
 	);
 
 	voice->setVolume(
@@ -73,74 +75,37 @@ void AudioThread::process(const PlayCommand& cmd) {
 	}
 
 	voice->source().setDistances(cmd.minDistance, cmd.maxDistance);
-
-	// Force as resident for now
-	if (!cmd.clipSource) {
-		BT_WARN("PlayCommand has null or unloaded clip");
-		voicePool.release(*voice);
-		return;
-	}
-
-	processResidentPlayback(*voice, *cmd.clipSource);
 	voice->setClip(cmd.clipSource);
 
-	// std::visit(
-	// 	[this, &voice](auto&& src) {
-	// 		using T = std::decay_t<decltype(src)>;
-
-	// 		if constexpr (std::is_same_v<T, ResidentClipSource>) {
-	// 			if (!src.clip || !src.clip->isLoaded()) {
-	// 				BT_WARN(
-	// 					"AudioThread: PlayCommand has null or "
-	// 					"unloaded resident clip"
-	// 				);
-	// 				voicePool.release(*voice);
-	// 				return;
-	// 			}
-	// 			processResidentPlayback(*voice, *src.clip);
-	// 			voice->setClipRef(src.clip);
-
-	// 		} else if constexpr (std::is_same_v<T, StreamingClipSource>) {
-	// 			if (!src.clip || !src.clip->isLoaded()) {
-	// 				BT_WARN(
-	// 					"AudioThread: PlayCommand has null or "
-	// 					"unloaded streaming clip"
-	// 				);
-	// 				voicePool.release(*voice);
-	// 				return;
-	// 			}
-	// 			processStreamingPlayback(*voice, *src.clip);
-	// 			if (voice->streaming())
-	// 				voice->setClipRef(src.clip);
-	// 		}
-	// 	},
-	// 	cmd.clipSource
-	// );
+	if (cmd.stream)
+		processStreamingPlayback(*voice, *cmd.clipSource, 0);
+	else
+		processResidentPlayback(*voice, *cmd.clipSource);
 }
 
 void AudioThread::process(const StopCommand& cmd) {
-	Voice* voice = voicePool.find(cmd.handle);
+	Voice* voice = voicePool->find(cmd.handle);
 
 	if (voice)
-		voicePool.release(*voice);
+		voicePool->release(*voice);
 }
 
 void AudioThread::process(const PauseCommand& cmd) {
-	Voice* voice = voicePool.find(cmd.handle);
+	Voice* voice = voicePool->find(cmd.handle);
 
 	if (voice)
 		voice->pause();
 }
 
 void AudioThread::process(const ResumeCommand& cmd) {
-	Voice* voice = voicePool.find(cmd.handle);
+	Voice* voice = voicePool->find(cmd.handle);
 
 	if (voice)
 		voice->resume();
 }
 
 void AudioThread::process(const SetVolumeCommand& cmd) {
-	Voice* voice = voicePool.find(cmd.handle);
+	Voice* voice = voicePool->find(cmd.handle);
 
 	if (!voice)
 		return;
@@ -151,14 +116,14 @@ void AudioThread::process(const SetVolumeCommand& cmd) {
 }
 
 void AudioThread::process(const SetPitchCommand& cmd) {
-	Voice* voice = voicePool.find(cmd.handle);
+	Voice* voice = voicePool->find(cmd.handle);
 
 	if (voice)
 		voice->setPitch(cmd.pitch);
 }
 
 void AudioThread::process(const SetPositionCommand& cmd) {
-	Voice* voice = voicePool.find(cmd.handle);
+	Voice* voice = voicePool->find(cmd.handle);
 
 	if (voice)
 		voice->setPosition(cmd.position);
@@ -174,11 +139,10 @@ void AudioThread::process(const SetCategoryVolumeCommand& cmd) {
 
 	categoryVolumes[idx] = cmd.volume;
 
-	const float masterVol = categoryVolumes[
-		static_cast<size_t>(AudioCategory::Master)
-	];
+	const float masterVol =
+		categoryVolumes[static_cast<size_t>(AudioCategory::Master)];
 
-	for (Voice& voice : voicePool.voices()) {
+	for (Voice& voice : voicePool->voices()) {
 		if (!voice.active())
 			continue;
 
@@ -186,9 +150,8 @@ void AudioThread::process(const SetCategoryVolumeCommand& cmd) {
 			cmd.category != AudioCategory::Master)
 			continue;
 
-		const float catVol = categoryVolumes[
-			static_cast<size_t>(voice.category())
-		];
+		const float catVol =
+			categoryVolumes[static_cast<size_t>(voice.category())];
 
 		voice.source().setGain(voice.volume() * catVol * masterVol);
 	}
@@ -202,17 +165,17 @@ void AudioThread::process(const ListenerTransformCommand& cmd) {
 
 	const ALfloat orientation[6] = {
 		cmd.forward.x, cmd.forward.y, cmd.forward.z,
-		cmd.up.x, cmd.up.y, cmd.up.z
+		cmd.up.x,      cmd.up.y,      cmd.up.z
 	};
 	alListenerfv(AL_ORIENTATION, orientation);
 }
 
 void AudioThread::process(const StopAllCommand&) {
-	voicePool.stopAll();
+	voicePool->stopAll();
 }
 
 void AudioThread::process(const StreamBufferReadyCommand& cmd) {
-	Voice* voice = voicePool.find(cmd.handle);
+	Voice* voice = voicePool->find(cmd.handle);
 
 	if (!voice || !voice->streaming())
 		return;
@@ -220,7 +183,7 @@ void AudioThread::process(const StreamBufferReadyCommand& cmd) {
 	StreamingVoiceState* sstate = voice->streamState();
 
 	const U32 channels =
-		(sstate->format == AL_FORMAT_STEREO16) ? 2 : 1;
+		(sstate->format == AL_FORMAT_STEREO16) ? 2u : 1u;
 
 	voice->source().unqueueProcessedBuffers(sstate->freeBuffers);
 
@@ -247,22 +210,15 @@ void AudioThread::process(const StreamBufferReadyCommand& cmd) {
 		return;
 	}
 
-	// const size_t fullChunkSamples =
-	// 	StreamingThread::DECODE_FRAMES_PER_CHUNK *
-	// 	static_cast<size_t>(channels);
+	const size_t fullChunkSamples =
+		StreamingThread::DECODE_FRAMES_PER_CHUNK *
+		static_cast<size_t>(channels);
 
-	// if (voice->looping() && cmd.samples.size() < fullChunkSamples)
-	// 	sstate->decoder->seek(0);
+	const bool shortRead =
+		!cmd.samples.empty() &&
+		cmd.samples.size() < fullChunkSamples;
 
-	// StreamingJob job;
-	// job.handle = voice->handle();
-	// job.decoder = sstate->decoder.get();
-	// job.frameCount = StreamingThread::DECODE_FRAMES_PER_CHUNK;
-	// job.channels = channels;
-	// job.sampleRate = sstate->sampleRate;
-	// job.looping = voice->looping();
-
-	// streamingThread.submitJob(std::move(job));
+	submitStreamingJob(*voice, *sstate, shortRead);
 }
 
 } // namespace Blackthorn::Audio

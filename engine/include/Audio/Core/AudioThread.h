@@ -10,9 +10,10 @@
 #include "Audio/Backend/AudioContext.h"
 #include "Audio/Backend/AudioDevice.h"
 #include "Audio/Commands/AudioCommand.h"
+#include "Audio/Commands/AudioCommandQueue.h"
+#include "Audio/Core/StreamingThread.h"
 #include "Audio/Device/IDeviceNotifier.h"
 #include "Audio/Playback/VoicePool.h"
-#include "Containers/SPSCRingQueue.h"
 #include "Core/Export.h"
 #include "Core/Types/Numeric.h"
 
@@ -62,19 +63,31 @@ private:
 		bool looping
 	);
 
+	void submitStreamingJob(
+		Voice& voice,
+		StreamingVoiceState& sstate,
+		bool previousChunkWasShort
+	);
+
 	void processCommand(const AudioCommand& cmd);
+	void drainStreamResults();
 
 private:
-	Containers::SPSCRingQueue<AudioCommand, 1024> commandQueue;
+	AudioCommandQueue commandQueue;
 
-	VoicePool voicePool {0};
+	StreamDecodedQueue streamResultQueue;
+
+	std::unique_ptr<VoicePool> voicePool = nullptr;
 
 	std::array<float, AUDIO_CATEGORY_COUNT> categoryVolumes;
-	std::optional<AudioContext> context;
-	std::optional<AudioDevice> device;
-	std::unique_ptr<IDeviceNotifier> deviceNotifier = nullptr;
-	std::atomic<U64> tick;
 
+	std::optional<AudioContext> context;
+	std::optional<AudioDevice>  device;
+	std::unique_ptr<IDeviceNotifier> deviceNotifier;
+
+	StreamingThread streamingThread;
+
+	std::atomic<U64> tick { 0 };
 	std::atomic<AudioThreadState> state { AudioThreadState::Stopped };
 
 	std::thread thread;

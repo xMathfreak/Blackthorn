@@ -11,8 +11,8 @@
 namespace Blackthorn::Audio {
 
 AudioThread::AudioThread()
-	: voicePool(0)
 {
+	categoryVolumes.fill(1.0f);
 	deviceNotifier = DeviceNotifierFactory::create();
 }
 
@@ -21,25 +21,38 @@ AudioThread::~AudioThread() {
 }
 
 bool AudioThread::start() {
-	device.emplace();
-	context.emplace(device.value());
+	if (isRunning())
+		return true;
 
-	context->makeCurrent();
-	voicePool = VoicePool();
+	try {
+		device.emplace();
+		context.emplace(device.value());
+	} catch (const AudioException& e) {
+		BT_ERROR("AudioThread::start: {}", e.what());
+		return false;
+	}
 
-	deviceNotifier->start();
-	deviceNotifier->setCallback([this](DeviceHint hint) {
+	deviceNotifier->setCallback([this](DeviceHint /*hint*/) {
 		wakeCv.notify_all();
 	});
+	deviceNotifier->start();
 
+	state.store(AudioThreadState::Running, std::memory_order::release);
 	thread = std::thread([this] { threadLoop(); });
-	state.store(AudioThreadState::Running);
+
+	streamingThread.start(streamResultQueue, wakeCv, wakeMutex);
+
 	return true;
 }
 
 void AudioThread::stop() {
-	if (state.exchange(AudioThreadState::Stopped) != AudioThreadState::Stopped)
+	if (state.exchange(AudioThreadState::Stopped, std::memory_order::acq_rel)
+		== AudioThreadState::Stopped)
+	{
 		return;
+	}
+
+	streamingThread.stop();
 
 	wakeCv.notify_all();
 
@@ -55,20 +68,34 @@ void AudioThread::enqueue(AudioCommand command) {
 }
 
 void AudioThread::threadLoop() {
-	Threads::setAudioThreadPriority();
+	context->makeCurrent();
+	voicePool = std::make_unique<VoicePool>(32);
+
+	#if defined(_WIN32)
+		Threads::MmcssScope mmcss;
+	#else
+		Threads::setAudioThreadPriority();
+	#endif
 
 	Threads::ThreadRegistry::instance().registerCurrent("Audio");
-	BT_LOG("AudioThread: Audio thread started");
+	BT_LOG("AudioThread: started");
 
-	while (state.load() != AudioThreadState::Stopped) {
+	while (state.load(std::memory_order::relaxed) != AudioThreadState::Stopped) {
 		{
 			std::unique_lock lock(wakeMutex);
 			wakeCv.wait_for(
 				lock,
 				std::chrono::milliseconds(5),
-				[this] { return state.load() != AudioThreadState::Stopped; }
+				[this] {
+					return !commandQueue.empty()
+						|| !streamResultQueue.empty()
+						|| state.load(std::memory_order::relaxed)
+							== AudioThreadState::Stopped;
+				}
 			);
 		}
+
+		drainStreamResults();
 
 		{
 			AudioCommand cmd;
@@ -77,27 +104,36 @@ void AudioThread::threadLoop() {
 		}
 
 		tickStreaming();
-		voicePool.update();
-		tick.fetch_add(1);
+		voicePool->update();
+		tick.fetch_add(1, std::memory_order::relaxed);
 	}
 
-	if (state.load() == AudioThreadState::Running) {
+	drainStreamResults();
+	{
 		AudioCommand cmd;
 		while (commandQueue.pop(cmd))
 			processCommand(cmd);
 	}
 
-	BT_LOG("AudioThread: Audio thread stopped");
+	voicePool->stopAll();
+	voicePool.reset();
+
+	BT_LOG("AudioThread: stopped");
 	Threads::ThreadRegistry::instance().unregisterCurrent();
 }
 
+void AudioThread::drainStreamResults() {
+	AudioCommand cmd;
+	while (streamResultQueue.pop(cmd))
+		processCommand(cmd);
+}
+
 void AudioThread::tickStreaming() {
-	for (Voice& voice : voicePool.voices()) {
+	for (Voice& voice : voicePool->voices()) {
 		if (!voice.active() || !voice.streaming())
 			continue;
 
-		auto sstate = voice.streamState();
-
+		StreamingVoiceState* sstate = voice.streamState();
 		if (!sstate)
 			continue;
 
@@ -107,17 +143,15 @@ void AudioThread::tickStreaming() {
 			const ALuint alBuf = sstate->freeBuffers.back();
 			sstate->freeBuffers.pop_back();
 
-			const U32 channels =
-				(sstate -> format == AL_FORMAT_STEREO16) ? 2 : 1;
-
 			alBufferData(
 				alBuf,
 				sstate->format,
 				sstate->pendingUpload.data(),
-				static_cast<ALsizei>(sstate->pendingUpload.size() * sizeof(I16)),
+				static_cast<ALsizei>(
+					sstate->pendingUpload.size() * sizeof(I16)
+				),
 				static_cast<ALsizei>(sstate->sampleRate)
 			);
-
 			voice.source().queueBufferId(alBuf);
 			sstate->pendingUpload.clear();
 
@@ -127,20 +161,37 @@ void AudioThread::tickStreaming() {
 				continue;
 			}
 
-			// Create and upload streaming job
-			(void)channels;
+			submitStreamingJob(voice, *sstate, false);
 		}
 
-		if (voice.source().isStopped() && !sstate->endOfStream)
+		if (!sstate->endOfStream && voice.source().isStopped())
 			voice.play();
 	}
 }
 
-void AudioThread::processCommand(const AudioCommand& command) {
-	std::visit(
-		[this](auto&& cmd) { process(cmd); },
-		command
-	);
+void AudioThread::submitStreamingJob(
+	Voice& voice,
+	StreamingVoiceState& sstate,
+	bool previousChunkWasShort
+) {
+	if (previousChunkWasShort && voice.looping()) {
+		if (!sstate.decoder->seek(0)) {
+			BT_WARN(
+				"AudioThread: loop seek failed for handle {}",
+				voice.handle().id
+			);
+		}
+	}
+
+	StreamingJob job;
+	job.handle = voice.handle();
+	job.decoder = sstate.decoder.get();
+	job.frameCount = StreamingThread::DECODE_FRAMES_PER_CHUNK;
+	job.channels = (sstate.format == AL_FORMAT_STEREO16) ? 2u : 1u;
+	job.sampleRate = sstate.sampleRate;
+	job.looping = voice.looping();
+
+	streamingThread.submitJob(std::move(job));
 }
 
 void AudioThread::processResidentPlayback(
@@ -149,8 +200,11 @@ void AudioThread::processResidentPlayback(
 ) {
 	AudioData data;
 	if (!Decoding::AudioDecoder::decode(clip.sourcePath(), data)) {
-		BT_ERROR("AudioThread: failed to decode {}", clip.sourcePath().string());
-		voicePool.release(voice);
+		BT_ERROR(
+			"AudioThread: failed to decode '{}'",
+			clip.sourcePath().string()
+		);
+		voicePool->release(voice);
 		return;
 	}
 
@@ -158,8 +212,11 @@ void AudioThread::processResidentPlayback(
 	try {
 		buffer.setData(data);
 	} catch (const AudioException& e) {
-		BT_ERROR("AudioThread: Failed to set audio buffer data: {}", e.what());
-		voicePool.release(voice);
+		BT_ERROR(
+			"AudioThread: failed to set buffer data: {}",
+			e.what()
+		);
+		voicePool->release(voice);
 		return;
 	}
 
@@ -178,37 +235,35 @@ void AudioThread::processStreamingPlayback(
 
 	if (!decoder) {
 		BT_ERROR(
-			"AudioThread: No decoder for '{}'",
+			"AudioThread: no decoder for '{}'",
 			clip.sourcePath().string()
 		);
-		voicePool.release(voice);
+		voicePool->release(voice);
 		return;
 	}
 
 	if (!decoder->open(clip.sourcePath())) {
 		BT_ERROR(
-			"AudioThread: Failed to open decoder for '{}'",
+			"AudioThread: failed to open decoder for '{}'",
 			clip.sourcePath().string()
 		);
-		voicePool.release(voice);
+		voicePool->release(voice);
 		return;
 	}
 
 	auto sstate = std::make_unique<StreamingVoiceState>();
-
 	sstate->format = (clip.channels() == 2)
-		? AL_FORMAT_STEREO16
-		: AL_FORMAT_MONO16;
+		? AL_FORMAT_STEREO16 : AL_FORMAT_MONO16;
+
 	sstate->sampleRate = clip.sampleRate();
 	sstate->sourceClip = &clip;
 	sstate->decoder = std::move(decoder);
-
 	sstate->init();
 
 	if (startTick > 0) {
 		if (!sstate->decoder->seek(startTick)) {
 			BT_WARN(
-				"AudioThread: failed to seek decoder to frame {} in '{}', "
+				"AudioThread: seek to frame {} failed for '{}', "
 				"resuming from start",
 				startTick, clip.sourcePath().string()
 			);
@@ -223,24 +278,24 @@ void AudioThread::processStreamingPlayback(
 		const ALuint alBuf = sstate->freeBuffers.back();
 		sstate->freeBuffers.pop_back();
 
-		const size_t framesDecoded = prefillBuffer(*sstate, alBuf, looping);
+		const size_t frames = prefillBuffer(*sstate, alBuf, looping);
 
-		if (framesDecoded == 0) {
+		if (frames == 0) {
 			sstate->freeBuffers.push_back(alBuf);
 			break;
 		}
 
 		voice.source().queueBufferId(alBuf);
-		prefillFrames += framesDecoded;
+		prefillFrames += frames;
 		++queued;
 	}
 
 	if (queued == 0) {
 		BT_ERROR(
-			"AudioThread: Pre-fill produced no frames for '{}', aborting",
+			"AudioThread: pre-fill produced no frames for '{}', aborting",
 			clip.sourcePath().string()
 		);
-		voicePool.release(voice);
+		voicePool->release(voice);
 		return;
 	}
 
@@ -248,9 +303,7 @@ void AudioThread::processStreamingPlayback(
 	voice.addDecodedFrames(prefillFrames);
 	voice.play();
 
-	StreamingVoiceState* liveState = voice.streamState();
-	// Create and upload streaming job
-	(void)liveState;
+	submitStreamingJob(voice, *voice.streamState(), false);
 }
 
 size_t AudioThread::prefillBuffer(
@@ -258,16 +311,12 @@ size_t AudioThread::prefillBuffer(
 	ALuint alBuffer,
 	bool looping
 ) {
-	// const size_t maxFrames = StreamingThread::DECODE_FRAMES_PER_CHUNK;
-	const size_t maxFrames = 4096;
-	const U32 channels = (sstate.format == AL_FORMAT_STEREO16) ? 2 : 1;
+	const size_t maxFrames = StreamingThread::DECODE_FRAMES_PER_CHUNK;
+	const U32 channels = (sstate.format == AL_FORMAT_STEREO16) ? 2u : 1u;
 
 	std::vector<I16> pcm(maxFrames * channels);
 
-	size_t framesRead = sstate.decoder->readFrames(
-		pcm.data(),
-		maxFrames
-	);
+	size_t framesRead = sstate.decoder->readFrames(pcm.data(), maxFrames);
 
 	if (framesRead == 0 && looping) {
 		sstate.decoder->seek(0);
@@ -286,6 +335,13 @@ size_t AudioThread::prefillBuffer(
 	);
 
 	return framesRead;
+}
+
+void AudioThread::processCommand(const AudioCommand& command) {
+	std::visit(
+		[this](auto&& cmd) { process(cmd); },
+		command
+	);
 }
 
 } // namespace Blackthorn::Audio

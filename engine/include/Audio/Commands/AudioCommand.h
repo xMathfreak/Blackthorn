@@ -29,6 +29,7 @@ struct PlayCommand {
 
 	bool loop = false;
 	bool spatial = false;
+	bool stream = false;
 
 	glm::vec3 position{ 0.0f };
 
@@ -78,9 +79,9 @@ struct ListenerTransformCommand {
 
 struct StopAllCommand {};
 
-
 /**
- * @brief Delivers a decoded PCM chunk from the streaming thread.
+ * @brief Delivers a decoded PCM chunk from @c StreamingThread to the audio
+ *        thread.
  */
 struct StreamBufferReadyCommand {
 	AudioHandle handle;
