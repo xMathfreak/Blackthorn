@@ -1,5 +1,7 @@
 #include "Audio/Backend/AudioContext.h"
 
+#include <AL/alext.h>
+
 #include "Audio/AudioException.h"
 #include "Audio/Backend/AudioDevice.h"
 
@@ -20,7 +22,13 @@ AudioContext::~AudioContext() {
 }
 
 bool AudioContext::create(ALCdevice* device) {
-	context = alcCreateContext(device, nullptr);
+	ALCint attribs[] = {
+		ALC_HRTF_SOFT, ALC_FALSE,
+		ALC_OUTPUT_LIMITER_SOFT, ALC_FALSE,
+		0
+	};
+
+	context = alcCreateContext(device, attribs);
 	return (context != nullptr);
 }
 
