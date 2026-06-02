@@ -216,11 +216,11 @@ private:
 	float pitchValue = 1.0f;
 	float clipDuration = 0.0f;
 	float playbackTime = 0.0f;
+	float baseVolume = 1.0f;
 
 	bool spatial = false;
 	bool looped = false;
 	bool trackVoice = false;
-	bool baseVolume = 1.0f;
 	AudioCategory audioCategory = AudioCategory::SFX;
 };
 
