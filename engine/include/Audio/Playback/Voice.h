@@ -92,9 +92,7 @@ public:
 		audioSource.setStreamingMode(false);
 	}
 
-	void attachStreamingState(
-		std::unique_ptr<StreamingVoiceState> state
-	) {
+	void attachStreamingState(std::unique_ptr<StreamingVoiceState> state) {
 		streamingState = std::move(state);
 		audioSource.setStreamingMode(true);
 	}

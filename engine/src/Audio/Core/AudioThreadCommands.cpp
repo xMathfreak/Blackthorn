@@ -65,6 +65,7 @@ void AudioThread::process(const PlayCommand& cmd) {
 		computeGain(cmd.volume, cmd.category, categoryVolumes)
 	);
 	voice->setPitch(cmd.pitch);
+	voice->source().setStreamingMode(cmd.stream);
 	voice->setLooping(cmd.loop);
 
 	if (cmd.spatial) {
@@ -193,7 +194,7 @@ void AudioThread::process(const StreamBufferReadyCommand& cmd) {
 		voice->addDecodedFrames(framesInChunk);
 	}
 
-	if (sstate->freeBuffers.empty()) {
+	if (sstate->freeBuffers.empty() && !cmd.samples.empty()) {
 		sstate->pendingUpload = cmd.samples;
 		sstate->pendingEndOfStream = cmd.endOfStream;
 		return;
@@ -215,7 +216,7 @@ void AudioThread::process(const StreamBufferReadyCommand& cmd) {
 		static_cast<size_t>(channels);
 
 	const bool shortRead =
-		!cmd.samples.empty() &&
+		cmd.samples.empty() ||
 		cmd.samples.size() < fullChunkSamples;
 
 	submitStreamingJob(*voice, *sstate, shortRead);
