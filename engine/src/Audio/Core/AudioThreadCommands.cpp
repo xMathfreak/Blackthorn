@@ -23,9 +23,9 @@ float computeGain(
 }
 
 void uploadAndQueue(
-	AudioSource&          source,
+	Voice& voice,
 	StreamingVoiceState&  state,
-	ALuint                alBuf,
+	ALuint alBuf,
 	const std::vector<I16>& samples
 ) {
 	alBufferData(
@@ -35,7 +35,13 @@ void uploadAndQueue(
 		static_cast<ALsizei>(samples.size() * sizeof(I16)),
 		static_cast<ALsizei>(state.sampleRate)
 	);
-	source.queueBufferId(alBuf);
+
+	const U64 frames =
+		static_cast<U64>(samples.size()) /
+		((state.format == AL_FORMAT_STEREO16) ? 2u : 1u);
+	state.recordBufferFrames(alBuf, frames);
+
+	voice.source().queueBufferId(alBuf);
 }
 
 } // namespace
@@ -203,7 +209,7 @@ void AudioThread::process(const StreamBufferReadyCommand& cmd) {
 	if (!cmd.samples.empty()) {
 		const ALuint alBuf = sstate->freeBuffers.back();
 		sstate->freeBuffers.pop_back();
-		uploadAndQueue(voice->source(), *sstate, alBuf, cmd.samples);
+		uploadAndQueue(*voice, *sstate, alBuf, cmd.samples);
 	}
 
 	if (cmd.endOfStream) {

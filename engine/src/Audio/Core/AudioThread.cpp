@@ -159,7 +159,14 @@ void AudioThread::tickStreaming() {
 		if (!sstate)
 			continue;
 
+		const size_t prevFreeCount = sstate->freeBuffers.size();
 		voice.source().unqueueProcessedBuffers(sstate->freeBuffers);
+
+		for (size_t i = prevFreeCount; i < sstate->freeBuffers.size(); ++i) {
+			const U64 frames =
+				sstate->lookupBufferFrames(sstate->freeBuffers[i]);
+			voice.addConsumedFrames(frames);
+		}
 
 		if (!sstate->pendingUpload.empty() && !sstate->freeBuffers.empty()) {
 			const ALuint alBuf = sstate->freeBuffers.back();
@@ -174,6 +181,12 @@ void AudioThread::tickStreaming() {
 				),
 				static_cast<ALsizei>(sstate->sampleRate)
 			);
+
+			const U64 pendingFrames =
+				static_cast<U64>(sstate->pendingUpload.size()) /
+				((sstate->format == AL_FORMAT_STEREO16) ? 2u : 1u);
+
+			sstate->recordBufferFrames(alBuf, pendingFrames);
 			voice.source().queueBufferId(alBuf);
 			sstate->pendingUpload.clear();
 
@@ -201,8 +214,19 @@ void AudioThread::updatePlaybackTimes() {
 			if (!sstate || sstate->sampleRate == 0)
 				continue;
 
+			ALint sampleOffset = 0;
+			alGetSourcei(
+				voice.source().get(),
+				AL_SAMPLE_OFFSET,
+				&sampleOffset
+			);
+
+			const U64 totalFrames =
+				voice.consumedElapsedFrames() +
+				static_cast<U64>(sampleOffset);
+
 			const float t =
-				static_cast<float>(voice.elapsedFrames()) /
+				static_cast<float>(totalFrames) /
 				static_cast<float>(sstate->sampleRate);
 
 			voice.setPlaybackTime(t);

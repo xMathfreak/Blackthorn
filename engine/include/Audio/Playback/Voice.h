@@ -114,6 +114,10 @@ public:
 		decodedFrames += frames;
 	}
 
+	void addConsumedFrames(U64 frames) noexcept {
+		consumedFrames += frames;
+	}
+
 	void setPlaybackTime(float seconds) noexcept {
 		playbackTime = seconds;
 	}
@@ -180,6 +184,11 @@ public:
 	}
 
 	[[nodiscard]]
+	U64 consumedElapsedFrames() const noexcept {
+		return consumedFrames;
+	}
+
+	[[nodiscard]]
 	float getPlaybackTime() const noexcept {
 		return playbackTime;
 	}
@@ -213,6 +222,7 @@ private:
 	AudioSource audioSource;
 	U64 activationTick = 0;
 	U64 decodedFrames = 0;
+	U64 consumedFrames = 0;
 	std::unique_ptr<StreamingVoiceState> streamingState = nullptr;
 	AudioClip* audioClip = nullptr;
 
