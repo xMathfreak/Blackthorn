@@ -32,7 +32,13 @@ bool AudioThread::start() {
 		return false;
 	}
 
-	deviceNotifier->setCallback([this](DeviceHint /*hint*/) {
+	deviceNotifier->setCallback([this](DeviceHint hint) {
+		if (hint == DeviceHint::DefaultDeviceChanged ||
+			hint == DeviceHint::DeviceArrived)
+		{
+			pendingMigrationHint.store(true, std::memory_order::release);
+		}
+
 		wakeCv.notify_all();
 	});
 	deviceNotifier->start();
@@ -83,7 +89,11 @@ void AudioThread::threadLoop() {
 	while (state.load(std::memory_order::relaxed) != AudioThreadState::Stopped) {
 		const AudioThreadState currentState = state.load(std::memory_order::relaxed);
 
-		const auto sleepDuration = (currentState == AudioThreadState::DeviceLost)
+		const bool inRecovery =
+			currentState == AudioThreadState::DeviceLost ||
+			currentState == AudioThreadState::Migrating;
+
+		const auto sleepDuration = inRecovery
 			? std::chrono::milliseconds(50)
 			: std::chrono::milliseconds(5);
 
@@ -215,28 +225,44 @@ void AudioThread::tickDeviceHealth() {
 	if (currentState == AudioThreadState::Running) {
 		if (!device || !device->connected()) {
 			BT_WARN("AudioThread: device lost, entering recovery");
-			enterDeviceLost();
+			enterRecovery(AudioThreadState::DeviceLost);
+			return;
+		}
+
+		if (pendingMigrationHint.exchange(false, std::memory_order::acq_rel)) {
+			if (defaultDeviceChanged()) {
+				BT_LOG("AudioThread: default device changed, migrating");
+				enterRecovery(AudioThreadState::Migrating);
+			}
 		}
 
 		return;
 	}
 
-	if (currentState == AudioThreadState::DeviceLost) {
+	if (currentState == AudioThreadState::DeviceLost ||
+		currentState == AudioThreadState::Migrating
+	) {
 		const auto now = std::chrono::steady_clock::now();
 		if (now < nextRetryTime)
 			return;
 
 		state.store(AudioThreadState::Reconnecting,
 			std::memory_order::relaxed);
-		attemptReconnect();
+		attemptReconnect(currentState);
 		return;
 	}
 }
 
-void AudioThread::enterDeviceLost() {
-	lossTime = std::chrono::steady_clock::now();
-	nextRetryTime = lossTime + std::chrono::milliseconds(kBackoffMs[0]);
+void AudioThread::enterRecovery(AudioThreadState reason) {
+	outageStartTime = std::chrono::steady_clock::now();
 	backoffIndex = 0;
+
+	const int firstDelay = (reason == AudioThreadState::Migrating)
+		? kMigrationBackoffMs[0]
+		: kLossBackoffMs[0];
+
+	nextRetryTime = outageStartTime +
+		std::chrono::milliseconds(firstDelay);
 
 	voiceSnapshots.clear();
 
@@ -299,43 +325,64 @@ void AudioThread::enterDeviceLost() {
 	context.reset();
 	device.reset();
 
-	state.store(AudioThreadState::DeviceLost, std::memory_order::relaxed);
+	state.store(reason, std::memory_order::relaxed);
 }
 
-void AudioThread::attemptReconnect() {
-	BT_LOG("AudioThread: attempting reconnect (backoff index {})",
-		backoffIndex);
+void AudioThread::attemptReconnect(AudioThreadState returnStateOnFailure) {
+	const bool isMigration =
+		(returnStateOnFailure == AudioThreadState::Migrating);
+
+	BT_LOG(
+		"AudioThread: attempting {} (backoff index {})",
+		isMigration ? "migration" : "reconnect",
+		backoffIndex
+	);
 
 	try {
 		device.emplace();
 		context.emplace(device.value());
 		context->makeCurrent();
 	} catch (const AudioException& e) {
-		BT_WARN("AudioThread: reconnect failed: {}", e.what());
+		BT_WARN(
+			"AudioThread: {} attempt failed: {}",
+			isMigration ? "migration" : "reconnect",
+			e.what()
+		);
 
 		context.reset();
 		device.reset();
 
-		backoffIndex = std::min(
-			backoffIndex + 1,
-			kBackoffMs.size() - 1
-		);
+		if (isMigration) {
+			backoffIndex = std::min(
+				backoffIndex + 1,
+				kMigrationBackoffMs.size() - 1
+			);
+			nextRetryTime = std::chrono::steady_clock::now() +
+				std::chrono::milliseconds(
+					kMigrationBackoffMs[backoffIndex]
+				);
+		} else {
+			backoffIndex = std::min(
+				backoffIndex + 1,
+				kLossBackoffMs.size() - 1
+			);
+			nextRetryTime = std::chrono::steady_clock::now() +
+				std::chrono::milliseconds(
+					kLossBackoffMs[backoffIndex]
+				);
+		}
 
-		nextRetryTime = std::chrono::steady_clock::now() +
-			std::chrono::milliseconds(kBackoffMs[backoffIndex]);
-
-		state.store(AudioThreadState::DeviceLost,
-			std::memory_order::relaxed);
+		state.store(returnStateOnFailure, std::memory_order::relaxed);
 		return;
 	}
 
-	BT_LOG("AudioThread: device reconnected, restoring voices");
+	BT_LOG("AudioThread: {} succeeded — restoring voices",
+		isMigration ? "migration" : "reconnect");
 
 	backoffIndex = 0;
 
-	for (Voice& voice : voicePool->voices()) {
+	for (Voice& voice : voicePool->voices())
 		voice.recreateSource();
-	}
 
 	streamingThread.start(streamResultQueue, wakeCv, wakeMutex);
 
@@ -349,13 +396,16 @@ void AudioThread::attemptReconnect() {
 void AudioThread::restoreVoices() {
 	const auto now = std::chrono::steady_clock::now();
 	const float outageDuration =
-		std::chrono::duration<float>(now - lossTime).count();
+		std::chrono::duration<float>(now - outageStartTime).count();
 
 	for (const VoiceSnapshot& snap : voiceSnapshots) {
 		if (!snap.clip || !snap.clip->isLoaded())
 			continue;
 
-		float effectiveTime = snap.playbackTime + outageDuration;
+		float effectiveTime = snap.playbackTime;
+
+		if (!snap.stream)
+			effectiveTime += outageDuration;
 
 		if (snap.loop && snap.duration > 0.0f) {
 			effectiveTime = std::fmod(effectiveTime, snap.duration);
@@ -372,7 +422,7 @@ void AudioThread::restoreVoices() {
 		Voice* voice = voicePool->acquire(snap.priority);
 		if (!voice) {
 			BT_WARN(
-				"AudioThread: restoreVoices — pool exhausted, "
+				"AudioThread: restoreVoices: pool exhausted, "
 				"dropping snapshot for handle {}",
 				snap.originalHandle.id
 			);
@@ -421,6 +471,19 @@ void AudioThread::restoreVoices() {
 			outageDuration
 		);
 	}
+}
+
+bool AudioThread::defaultDeviceChanged() const noexcept {
+	if (!device || !device->valid())
+		return false;
+
+	const ALCchar* defaultName =
+		alcGetString(nullptr, ALC_ALL_DEVICES_SPECIFIER);
+
+	if (!defaultName)
+		return false;
+
+	return device->getDeviceName() != defaultName;
 }
 
 bool AudioThread::shouldRestoreVoice(const Voice& voice) const noexcept {

@@ -19,7 +19,7 @@ void AudioBuffer::create() {
 	}
 
 	alGenBuffers(1, &buffer);
-	checkOpenALError("AudioBuffer");
+	// checkOpenALError("AudioBuffer");
 	BT_DEBUG("AudioBuffer created ({})", buffer);
 }
 

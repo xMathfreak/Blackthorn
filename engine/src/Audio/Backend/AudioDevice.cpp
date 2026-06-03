@@ -53,7 +53,7 @@ std::string AudioDevice::getDeviceName() const {
 	if (!device)
 		return {};
 
-	const ALCchar* name = alcGetString(device, ALC_DEVICE_SPECIFIER);
+	const ALCchar* name = alcGetString(device, ALC_ALL_DEVICES_SPECIFIER);
 
 	return name ? name : "";
 }

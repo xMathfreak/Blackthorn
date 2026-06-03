@@ -24,7 +24,8 @@ enum class AudioThreadState : U8 {
 	Running,
 	Stopped,
 	Reconnecting,
-	DeviceLost
+	DeviceLost,
+	Migrating
 };
 
 class BLACKTHORN_API AudioThread {
@@ -80,8 +81,9 @@ private:
 	bool shouldRestoreVoice(const Voice& voice) const noexcept;
 
 	void restoreVoices();
-	void attemptReconnect();
-	void enterDeviceLost();
+	void attemptReconnect(AudioThreadState returnStateOnFailure);
+	void enterRecovery(AudioThreadState reason);
+	bool defaultDeviceChanged() const noexcept;
 	void tickDeviceHealth();
 	void updatePlaybackTimes();
 
@@ -125,13 +127,19 @@ private:
 private:
 	std::vector<VoiceSnapshot> voiceSnapshots;
 
-	std::chrono::steady_clock::time_point lossTime;
+	std::chrono::steady_clock::time_point outageStartTime;
 	std::chrono::steady_clock::time_point nextRetryTime;
 	size_t backoffIndex = 0;
 
-	static constexpr std::array<int, 6> kBackoffMs {
+	static constexpr std::array<int, 6> kLossBackoffMs {
 		250, 500, 100, 1500, 3000
 	};
+
+	static constexpr std::array<int, 4> kMigrationBackoffMs {
+		100, 200, 500, 1000
+	};
+
+	std::atomic<bool> pendingMigrationHint { false };
 
 	static constexpr float kMinRestoreDuration = 2.0f;
 	static constexpr float kMinRemainingTime = 0.5f;
