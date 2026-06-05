@@ -2,6 +2,7 @@
 
 #include <SDL3_ttf/SDL_ttf.h>
 
+#include "Assets/Loaders/AudioLoader.h"
 #include "Assets/Loaders/BitmapFontLoader.h"
 #include "Assets/Loaders/ShaderLoader.h"
 #include "Assets/Loaders/TextureLoader.h"
@@ -237,6 +238,11 @@ void Engine::cleanupGraphics() {
 }
 
 void Engine::initAssetLoaders() {
+	assetManager->registerLoader<Audio::AudioClip>(
+		std::make_unique<Audio::AudioLoader>(),
+		std::make_unique<Audio::AsyncAudioLoader>()
+	);
+
 	assetManager->registerLoader<Graphics::Texture>(
 		std::make_unique<Graphics::TextureLoader>(),
 		std::make_unique<Graphics::AsyncTextureLoader>()
