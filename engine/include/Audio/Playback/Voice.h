@@ -24,6 +24,7 @@ public:
 		activationTick = tick;
 		clipDuration = duration;
 		decodedFrames = 0;
+		consumedFrames = 0;
 		playbackTime = 0.0f;
 		audioClip = nullptr;
 	}
@@ -48,6 +49,7 @@ public:
 		playbackTime = 0.0f;
 		activationTick = 0;
 		decodedFrames = 0;
+		consumedFrames = 0;
 		audioClip = nullptr;
 	}
 
