@@ -138,8 +138,8 @@ private:
 	std::chrono::steady_clock::time_point nextRetryTime;
 	size_t backoffIndex = 0;
 
-	static constexpr std::array<int, 5> kLossBackoffMs {
-		250, 500, 1000, 1500, 3000
+	static constexpr std::array<int, 6> kLossBackoffMs {
+		250, 500, 100, 1500, 3000
 	};
 
 	static constexpr std::array<int, 4> kMigrationBackoffMs {
