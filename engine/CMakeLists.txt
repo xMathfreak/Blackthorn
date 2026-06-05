@@ -10,6 +10,7 @@ file(GLOB_RECURSE ALL_ENGINE_SOURCES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_D
 file(GLOB_RECURSE ALL_ENGINE_HEADERS "${CMAKE_CURRENT_SOURCE_DIR}/include/*.h")
 file(GLOB_RECURSE ALL_ENGINE_PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/private/*.h")
 
+file(GLOB_RECURSE AUDIO_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/Audio/*.cpp")
 file(GLOB_RECURSE GRAPHICS_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/Graphics/*.cpp")
 file(GLOB_RECURSE FONT_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/Fonts/*.cpp")
 file(GLOB_RECURSE UI_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/UI/*.cpp")
@@ -19,6 +20,7 @@ set(CLIENT_ONLY_SOURCES
 	# Engine graphics entry point
 	"${CMAKE_CURRENT_SOURCE_DIR}/src/Core/Engine.cpp"
 
+	${AUDIO_SOURCES}
 	${GRAPHICS_SOURCES}
 	${FONT_SOURCES}
 	${UI_SOURCES}
@@ -70,7 +72,7 @@ target_link_libraries(BlackthornCore
 
 # Transport layer requires WinSock2 on Windows.
 if(WIN32)
-	target_link_libraries(BlackthornCore PUBLIC ws2_32)
+	target_link_libraries(BlackthornCore PUBLIC ws2_32 Avrt)
 endif()
 
 # Full client build
@@ -106,6 +108,11 @@ target_link_libraries(BlackthornEngine
 		SDL3_ttf::SDL3_ttf
 		glad
 		glfw
+		dr_libs
+		vorbis
+		vorbisfile
+		ogg
+		OpenAL::OpenAL
 
 	PRIVATE
 		OpenGL::GL

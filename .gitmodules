@@ -10,3 +10,12 @@
 [submodule "third_party/libsodium"]
 	path = third_party/libsodium
 	url = https://github.com/robinlinden/libsodium-cmake.git
+[submodule "third_party/ogg"]
+	path = third_party/ogg
+	url = https://github.com/xiph/ogg.git
+[submodule "third_party/vorbis"]
+	path = third_party/vorbis
+	url = https://github.com/xiph/vorbis.git
+[submodule "third_party/openal-soft"]
+	path = third_party/openal-soft
+	url = https://github.com/kcat/openal-soft.git
