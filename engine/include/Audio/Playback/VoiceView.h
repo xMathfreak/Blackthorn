@@ -84,6 +84,8 @@ struct VoiceFlags {
 
 /**
  * @brief Point-in-time snapshot of a voice's observable state.
+ * Published by the audio thread each tick via @c VoiceViewPool and
+ * consumed by the game thread after @c AudioManager::update().
  */
 struct VoiceView {
 	/// Handle of the voice this snapshot belongs to.
@@ -95,14 +97,23 @@ struct VoiceView {
 	/// Non-exclusive boolean properties.
 	VoiceFlags flags;
 
-	/// Position within the current clip loop, in seconds. 0..duration.
-	/// For resident clips: @c AL_SEC_OFFSET. For streaming: accumulated frames.
+	/**
+	 * @brief Current playback position within the clip, in seconds.
+	 *
+	 * Range is [0, duration]. For resident (non-streaming) clips this is
+	 * sourced from @c AL_SEC_OFFSET, which reflects the AL mixer's exact
+	 * consumption position. For streaming clips this is
+	 * @c (consumedFrames + AL_SAMPLE_OFFSET) / sampleRate, where
+	 * @c consumedFrames counts frames in fully-consumed AL buffers and
+	 * @c AL_SAMPLE_OFFSET gives the mixer's position within the current
+	 * buffer, accurate to the sample regardless of decode-ahead depth.
+	 */
 	float playbackPosition = 0.0f;
 
 	/// Clip duration in seconds. Zero if the voice is inactive.
 	float duration = 0.0f;
 
-	/// Current gain (post category-volume multiplication).
+	/// Current gain (post category-volume and master-volume multiplication).
 	float volume = 0.0f;
 
 	/// Current pitch multiplier.
