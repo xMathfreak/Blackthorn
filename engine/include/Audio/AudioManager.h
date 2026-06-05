@@ -10,6 +10,14 @@
 
 namespace Blackthorn::Audio {
 
+/**
+ * @brief Playback mode hint passed to @c AudioManager::play().
+ *
+ * @c Auto selects the mode based on @c AudioConfig::streamingThreshold:
+ * clips whose estimated uncompressed size exceeds the threshold are
+ * streamed; smaller clips are fully decoded into a resident AL buffer.
+ * @c PCM and @c Stream override that heuristic explicitly.
+ */
 enum class PlaybackMode : U8 {
 	Auto,
 	PCM,
@@ -17,15 +25,20 @@ enum class PlaybackMode : U8 {
 	Resident = PCM
 };
 
+/**
+ * @brief Optional spatial audio parameters for @c PlayOptions.
+ */
 struct BLACKTHORN_API SpatialOptions {
-	glm::vec3 position{0.0f};
-
+	glm::vec3 position { 0.0f };
 	float minDistance = 1.0f;
 	float maxDistance = 50.0f;
 };
 
+/**
+ * @brief Parameters for a single @c AudioManager::play() call.
+ */
 struct BLACKTHORN_API PlayOptions {
-	Math::FloatRange volume = 1.0f;
+	Math::FloatRange volume = 1.0f; ///< Randomised each call if a range is set.
 	Math::FloatRange pitch = 1.0f;
 
 	AudioCategory category = AudioCategory::SFX;
@@ -34,27 +47,51 @@ struct BLACKTHORN_API PlayOptions {
 	bool loop = false;
 	PlaybackMode mode = PlaybackMode::Auto;
 
+	/// When set, the voice is positioned in world space and subject to
+	/// distance attenuation. When absent, the voice plays at unit gain
+	/// relative to the listener (non-spatial).
 	std::optional<SpatialOptions> spatial = std::nullopt;
 };
 
 /**
- * @class AudioManager
- * @brief Brief description of AudioManager.
+ * @brief High-level audio interface for the game layer.
  *
- * Detailed description of what this class does.
+ * @c AudioManager owns the @c AudioThread and exposes a command-based API
+ * for starting, stopping, and querying voices. All commands are forwarded
+ * to the audio thread asynchronously via an SPSC queue. None of these
+ * methods block.
+ *
+ * @section querying Querying voice state
+ * Voice state (playback position, flags, gain) is read from a
+ * triple-buffered @c VoiceViewPool. Call @c update() once per frame to
+ * latch the latest published snapshot; all query calls within that frame
+ * then read a consistent, stable buffer. Querying without calling
+ * @c update() first returns data from the previous latch, which may be
+ * one or more frames stale.
+ *
+ * @section handle_lifetime Handle lifetime
+ * @c play() returns an @c AudioHandle that remains valid until the voice
+ * finishes naturally, is stolen by a higher-priority voice, or is
+ * explicitly stopped. A stale handle returns @c PlaybackState::Inactive
+ * from all query methods. It never aliases a different active voice
+ * because handle IDs are never reused.
  */
 class BLACKTHORN_API AudioManager {
 public:
-	/** @brief Default constructor. */
 	AudioManager();
-
-	/** @brief Destructor. */
 	~AudioManager();
 
 	bool init(const AudioConfig& cfg = AudioConfig{});
 	void shutdown();
 
+	/**
+	 * @brief Starts playback of @p clip and returns a handle to the voice.
+	 *
+	 * The handle is valid from the moment this returns until the voice
+	 * is released. @p clip must remain valid for the lifetime of the voice.
+	 */
 	AudioHandle play(AudioClip& clip, const PlayOptions& options = {});
+
 	void pause(AudioHandle handle);
 	void resume(AudioHandle handle);
 	void stop(AudioHandle handle);
@@ -63,25 +100,26 @@ public:
 	void setPitch(AudioHandle handle, float pitch);
 	void stopAll();
 	void setPosition(AudioHandle handle, const glm::vec3& position);
-	void setListenerTransform(const glm::vec3& position, const glm::vec3& forward, const glm::vec3& up, const glm::vec3& velocity);
+	void setListenerTransform(
+		const glm::vec3& position,
+		const glm::vec3& forward,
+		const glm::vec3& up,
+		const glm::vec3& velocity
+	);
 
 	/**
-	 * @brief Acquires the latest published snapshot buffer.
+	 * @brief Latches the latest audio thread snapshot for this frame.
 	 *
-	 * Must be called before any query method to ensure a consistent read.
-	 * Call once per frame (or per batch of queries) rather than before
-	 * each individual query.
+	 * Swaps the read buffer with the most recently published write buffer
+	 * in the triple-buffered @c VoiceViewPool. Call this once per frame
+	 * before any query method. Subsequent query calls within the same frame
+	 * read a consistent, immutable buffer.
+	 *
+	 * Thread safety: safe to call from the game thread at any time.
 	 */
 	void update();
 
-	/**
-	 * @brief Returns true if a voice is active (was issued and not released).
-	 *
-	 * A handle is valid from the moment @c play() returns it until the voice
-	 * finishes or is stopped. Note that a handle may become invalid between
-	 * the last @c refreshSnapshots() and the current query if the voice
-	 * finished in the last tick.
-	 */
+	/** @brief Returns true if the handle refers to an active (non-released) voice. */
 	[[nodiscard]] bool isValid(AudioHandle handle);
 
 	/** @brief True if the voice is currently producing audio. */
@@ -103,18 +141,16 @@ public:
 	[[nodiscard]] bool isResident(AudioHandle handle);
 
 	/**
-	 * @brief Returns the clip's total duration in seconds.
-	 *
-	 * Returns 0 if the handle is invalid or the voice is inactive.
+	 * @brief Returns the clip's total duration in seconds. 0 if inactive.
 	 */
 	[[nodiscard]] float getDuration(AudioHandle handle);
 
 	/**
 	 * @brief Returns the current playback position within the clip, in seconds.
 	 *
-	 * Wraps at the clip boundary for looping voices. For resident clips,
-	 * sourced from @c AL_SEC_OFFSET. For streaming clips, accumulated from
-	 * decoded frame counts.
+	 * For resident clips: sourced from @c AL_SEC_OFFSET (exact).
+	 * For streaming clips: @c (consumedFrames + AL_SAMPLE_OFFSET) / sampleRate,
+	 * accurate to the sample regardless of decode-ahead depth.
 	 *
 	 * Returns 0 for inactive handles.
 	 */
@@ -123,7 +159,7 @@ public:
 	/**
 	 * @brief Returns normalised playback position in [0, 1].
 	 *
-	 * Equivalent to @c getPlaybackTime() / @c getDuration(), clamped to [0,1].
+	 * Equivalent to @c getPlaybackTime() / @c getDuration(), clamped.
 	 * Returns 0 for inactive handles or zero-duration clips.
 	 */
 	[[nodiscard]] float getNormalizedTime(AudioHandle handle);
@@ -136,26 +172,21 @@ public:
 	 */
 	[[nodiscard]] float getRemainingTime(AudioHandle handle);
 
-	/**
-	 * @brief Returns the current gain of the voice.
-	 *
-	 * Reflects post-category-volume, post-fade gain. Returns 0 for inactive
-	 * handles.
-	 */
+	/** @brief Returns the current gain (post category-volume). 0 if inactive. */
 	[[nodiscard]] float getVolume(AudioHandle handle);
 
-	/** @brief Returns the current pitch multiplier. Returns 1 for inactive handles. */
+	/** @brief Returns the current pitch multiplier. 1.0 if inactive. */
 	[[nodiscard]] float getPitch(AudioHandle handle);
 
 private:
-	/** @brief Returns the snapshot for @p handle from the current read buffer. */
+	/** @brief Returns the view for @p handle from the current read buffer. */
 	[[nodiscard]]
 	const VoiceView& getView(AudioHandle handle);
 
 	AudioThread audioThread;
 	Math::Random rng;
 	AudioConfig config;
-	std::atomic<U64> nextAudioHandle {1};
+	std::atomic<U64> nextAudioHandle { 1 };
 	bool initialized = false;
 };
 
