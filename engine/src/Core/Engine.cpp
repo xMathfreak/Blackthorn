@@ -91,6 +91,13 @@ bool Engine::init(const EngineConfig& cfg) {
 	applyEngineSettings();
 	initAssetLoaders();
 
+	audioManager = std::make_unique<Audio::AudioManager>();
+
+	if (!audioManager->init(cfg.audio)) {
+		EngineCore::shutdown();
+		return false;
+	}
+
 	try {
 		BT_LOG("Renderer: Initializing");
 		renderer = std::make_unique<Graphics::Renderer>(cfg.render.maxQuads);
@@ -207,6 +214,7 @@ void Engine::shutdown() {
 	Fonts::BitmapFont::cleanupShader();
 
 	renderer.reset();
+	audioManager.reset();
 	cleanupGraphics();
 
 	EngineCore::shutdown();

@@ -4,6 +4,7 @@
 #include <span>
 #include <string>
 
+#include "Audio/AudioConfig.h"
 #include "Core/Export.h"
 #include "Core/Types/Numeric.h"
 #include "Debug/Logger.h"
@@ -153,6 +154,7 @@ struct BLACKTHORN_API EngineConfig {
 	RenderConfig render;
 	TimingConfig timing;
 	FontConfig fonts;
+	Audio::AudioConfig audio;
 	ThreadingConfig threading;
 	AssetConfig assets;
 

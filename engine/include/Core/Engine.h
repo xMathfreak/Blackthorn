@@ -2,6 +2,7 @@
 
 #include <SDL3/SDL.h>
 
+#include "Audio/AudioManager.h"
 #include "Core/EngineCore.h"
 #include "Core/Export.h"
 #include "Graphics/Renderer.h"
@@ -82,6 +83,7 @@ public:
 
 	void update(float dt) override;
 
+	Audio::AudioManager& getAudioManager() { return *audioManager; }
 	Input::InputManager& getInputManager() { return inputManager; }
 	Graphics::Renderer& getRenderer() { return *renderer; }
 
@@ -95,6 +97,7 @@ protected:
 
 private:
 	std::unique_ptr<Graphics::Renderer> renderer;
+	std::unique_ptr<Audio::AudioManager> audioManager;
 	Input::InputManager inputManager;
 	SDL_Window* window = nullptr;
 	SDL_GLContext glContext = nullptr;
