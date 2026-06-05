@@ -53,7 +53,7 @@ public:
 	const ECS::World* getWorld() const { return world.get(); }
 
 	/** @brief Human-readable scene name used for logging and debugging. */
-	virtual const char* getName() const = 0;
+	virtual const char* getName() const { return ""; }
 };
 
 } // namespace Blackthorn::Scene
