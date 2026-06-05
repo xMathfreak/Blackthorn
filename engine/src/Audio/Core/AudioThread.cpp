@@ -20,9 +20,11 @@ AudioThread::~AudioThread() {
 	stop();
 }
 
-bool AudioThread::start() {
+bool AudioThread::start(const AudioConfig& cfg) {
 	if (isRunning())
 		return true;
+
+	config = cfg;
 
 	try {
 		device.emplace();
@@ -73,9 +75,14 @@ void AudioThread::enqueue(AudioCommand command) {
 	wakeCv.notify_one();
 }
 
+VoiceViewPool& AudioThread::views() const noexcept {
+	return *viewPool;
+}
+
 void AudioThread::threadLoop() {
 	context->makeCurrent();
-	voicePool = std::make_unique<VoicePool>(32);
+	voicePool = std::make_unique<VoicePool>(config.maxVoices);
+	viewPool = std::make_unique<VoiceViewPool>(config.maxVoices);
 
 	#if defined(_WIN32)
 		Threads::MmcssScope mmcss;
@@ -123,6 +130,7 @@ void AudioThread::threadLoop() {
 			}
 
 			tickStreaming();
+			tickViews();
 			voicePool->update();
 			updatePlaybackTimes();
 		}
@@ -139,6 +147,7 @@ void AudioThread::threadLoop() {
 
 	voicePool->stopAll();
 	voicePool.reset();
+	viewPool.reset();
 
 	BT_LOG("AudioThread: stopped");
 	Threads::ThreadRegistry::instance().unregisterCurrent();
@@ -202,6 +211,49 @@ void AudioThread::tickStreaming() {
 		if (!sstate->endOfStream && voice.source().isStopped())
 			voice.play();
 	}
+}
+
+void AudioThread::tickViews() {
+	const size_t cap = viewPool->capacity();
+	const auto& voices = voicePool->voices();
+
+	for (size_t i = 0; i < cap && i < voices.size(); ++i) {
+		const Voice& voice = voices[i];
+		VoiceView& view = viewPool->writeSlot(i);
+
+		if (!voice.active()) {
+			view = VoiceView{};
+			continue;
+		}
+
+		view.handle = voice.handle();
+
+		if (voice.source().isPlaying()) {
+			view.state = PlaybackState::Playing;
+		} else if (voice.source().isStopped()) {
+			view.state = PlaybackState::Stopped;
+		} else {
+			view.state = PlaybackState::Paused;
+		}
+
+		view.flags.reset();
+
+		if (voice.looping())
+			view.flags.set(VoiceFlagBit::Looping);
+
+		if (voice.spatialized())
+			view.flags.set(VoiceFlagBit::Spatial);
+
+		if (voice.streaming())
+			view.flags.set(VoiceFlagBit::Streaming);
+
+		view.duration = voice.duration();
+		view.playbackPosition = voice.getPlaybackTime();
+		view.volume = voice.volume();
+		view.pitch = voice.pitch();
+	}
+
+	viewPool->publish();
 }
 
 void AudioThread::updatePlaybackTimes() {
@@ -293,6 +345,8 @@ void AudioThread::enterRecovery(AudioThreadState reason) {
 	for (Voice& voice : voicePool->voices()) {
 		if (!voice.active())
 			continue;
+
+		voice.source().detachBuffer();
 
 		if (!shouldRestoreVoice(voice))
 			continue;
@@ -400,9 +454,6 @@ void AudioThread::attemptReconnect(AudioThreadState returnStateOnFailure) {
 		return;
 	}
 
-	BT_LOG("AudioThread: {} succeeded — restoring voices",
-		isMigration ? "migration" : "reconnect");
-
 	backoffIndex = 0;
 
 	for (Voice& voice : voicePool->voices())
@@ -414,7 +465,7 @@ void AudioThread::attemptReconnect(AudioThreadState returnStateOnFailure) {
 	voiceSnapshots.clear();
 
 	state.store(AudioThreadState::Running, std::memory_order::relaxed);
-	BT_LOG("AudioThread: reconnect successful");
+	BT_DEBUG("AudioThread: Reconnect successful");
 }
 
 void AudioThread::restoreVoices() {
@@ -426,10 +477,7 @@ void AudioThread::restoreVoices() {
 		if (!snap.clip || !snap.clip->isLoaded())
 			continue;
 
-		float effectiveTime = snap.playbackTime;
-
-		if (!snap.stream)
-			effectiveTime += outageDuration;
+		float effectiveTime = snap.playbackTime + outageDuration;
 
 		if (snap.loop && snap.duration > 0.0f) {
 			effectiveTime = std::fmod(effectiveTime, snap.duration);
@@ -486,7 +534,7 @@ void AudioThread::restoreVoices() {
 			processResidentPlayback(*voice, *snap.clip, effectiveTime);
 		}
 
-		BT_LOG(
+		BT_DEBUG(
 			"AudioThread: restored voice {} at {:.2f}s "
 			"(was {:.2f}s, outage {:.2f}s)",
 			snap.originalHandle.id,
@@ -570,6 +618,7 @@ void AudioThread::processResidentPlayback(
 
 	AudioBuffer buffer;
 	try {
+		// buffer.create();
 		buffer.setData(data);
 	} catch (const AudioException& e) {
 		BT_ERROR(

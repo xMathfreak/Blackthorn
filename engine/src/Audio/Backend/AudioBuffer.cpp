@@ -19,7 +19,7 @@ void AudioBuffer::create() {
 	}
 
 	alGenBuffers(1, &buffer);
-	// checkOpenALError("AudioBuffer");
+	// checkOpenALError("AudioBuffer::create");
 	BT_DEBUG("AudioBuffer created ({})", buffer);
 }
 
@@ -73,7 +73,7 @@ void AudioBuffer::setData(
 		static_cast<ALsizei>(sizeInBytes),
 		static_cast<ALsizei>(sampleRate)
 	);
-	// checkOpenALError();
+	// checkOpenALError("AudioBuffer::setData");
 }
 
 void AudioBuffer::setData(const AudioData& data) {

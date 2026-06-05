@@ -125,7 +125,6 @@ public:
 	void recreateSource() {
 		audioSource.destroy();
 		audioSource.create();
-		audioSource.useDirectChannel(true);
 	}
 
 	[[nodiscard]]

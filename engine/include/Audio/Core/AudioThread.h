@@ -7,6 +7,7 @@
 #include <optional>
 #include <thread>
 
+#include "Audio/AudioConfig.h"
 #include "Audio/Backend/AudioContext.h"
 #include "Audio/Backend/AudioDevice.h"
 #include "Audio/Commands/AudioCommand.h"
@@ -14,6 +15,7 @@
 #include "Audio/Core/StreamingThread.h"
 #include "Audio/Device/IDeviceNotifier.h"
 #include "Audio/Playback/VoicePool.h"
+#include "Audio/Playback/VoiceViewPool.h"
 #include "Audio/Playback/VoiceSnapshot.h"
 #include "Core/Export.h"
 #include "Core/Types/Numeric.h"
@@ -36,7 +38,7 @@ public:
 	AudioThread(const AudioThread&) = delete;
 	AudioThread& operator=(const AudioThread&) = delete;
 
-	bool start();
+	bool start(const AudioConfig& cfg);
 	void stop();
 
 	bool isRunning() const noexcept {
@@ -45,10 +47,14 @@ public:
 
 	void enqueue(AudioCommand command);
 
+	[[nodiscard]]
+	VoiceViewPool& views() const noexcept;
+
 private:
 	void threadLoop();
 
 	void tickStreaming();
+	void tickViews();
 
 	void processResidentPlayback(
 		Voice& voice,
@@ -93,6 +99,7 @@ private:
 	StreamDecodedQueue streamResultQueue;
 
 	std::unique_ptr<VoicePool> voicePool = nullptr;
+	std::unique_ptr<VoiceViewPool> viewPool = nullptr;
 
 	std::array<float, AUDIO_CATEGORY_COUNT> categoryVolumes;
 
@@ -109,7 +116,7 @@ private:
 	std::condition_variable wakeCv;
 	std::mutex wakeMutex;
 
-	U64 nextHandleId {1};
+	AudioConfig config;
 
 private:
 	void process(const PlayCommand& cmd);

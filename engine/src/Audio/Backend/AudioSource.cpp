@@ -10,7 +10,6 @@ namespace Blackthorn::Audio {
 
 AudioSource::AudioSource() {
 	create();
-	useDirectChannel(true);
 }
 
 AudioSource::~AudioSource() {
@@ -19,6 +18,7 @@ AudioSource::~AudioSource() {
 
 bool AudioSource::create() {
 	alGenSources(1, &source);
+	useDirectChannel(true);
 	return (source != 0);
 }
 

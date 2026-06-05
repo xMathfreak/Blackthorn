@@ -83,6 +83,11 @@ public:
 		return data.channels;
 	}
 
+	[[nodiscard]]
+	size_t estimatedBytes() const noexcept {
+		return data.frameCount * data.channels * sizeof(float);
+	}
+
 private:
 	std::filesystem::path clipPath;
 	AudioMetadata data;
