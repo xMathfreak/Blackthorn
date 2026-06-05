@@ -11,25 +11,25 @@ namespace Blackthorn::Audio::Streaming {
 /**
  * @brief Stateful, seekable PCM decoder interface for streaming audio.
  *
- * One @c IStreamDecoder instance lives per active streaming @c VoiceSlot.
- * It is opened once when the voice starts, then queried repeatedly by the
- * streaming worker to fill successive ring-buffer segments. On loop the
- * audio manager calls @c seek(0) and continues reading.
+ * One @c IStreamDecoder instance lives per active streaming @c Voice,
+ * owned by its @c StreamingVoiceState. It is opened once when the voice
+ * starts and queried repeatedly by @c StreamingThread to fill successive
+ * double-buffer slots. On loop, @c AudioThread calls @c seek(0) and
+ * the decode pipeline continues from the start of the file.
  *
  * @section threading Thread safety
- * An @c IStreamDecoder is NOT thread-safe. It is owned by a
- * @c std::shared_ptr that is captured into the decode lambda and therefore
- * lives on a @c ThreadPool worker thread for the duration of one decode job.
- * The audio thread must not call any method while @c decodingInFlight is set
- * on the owning @c VoiceSlot.
+ * An @c IStreamDecoder is NOT thread-safe. While a @c StreamingJob is
+ * in flight, the streaming thread has exclusive access to the decoder.
+ * The audio thread must not call any method while a job referencing this
+ * decoder is queued or executing. All seek calls are made on the audio
+ * thread after the streaming thread has delivered its result command,
+ * guaranteeing non-concurrent access by design.
  *
  * @section ownership Ownership
- * The @c VoiceSlot holds the @c shared_ptr<IStreamDecoder>. When
- * @c releaseSlot is called the slot's pointer is moved into the pending
- * lambda, so the decoder is destroyed on the worker thread after the job
- * completes rather than on the audio thread. This avoids blocking the audio
- * thread on file-handle teardown.
+ * Owned by @c StreamingVoiceState. Destroyed when the voice is released
+ * on the audio thread after its @c StreamingVoiceState is reset.
  */
+
 class BLACKTHORN_API IStreamDecoder {
 public:
 	virtual ~IStreamDecoder() = default;
