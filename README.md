@@ -21,6 +21,9 @@ These are expected to be installed on your system and discoverable via `find_pac
 - glad
 - zstd
 - libsodium
+- openal-soft
+- ogg
+- vorbis
 
 ## Getting the Source
 Clone the repository with submodules:
