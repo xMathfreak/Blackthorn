@@ -13,6 +13,7 @@ namespace Blackthorn::Scene {
  * server uses `SimContextImpl` directly via `ISimContext`.
  */
 class SceneContextImpl : public ISceneContext {
+	Audio::AudioManager& audio;
 	Assets::AssetManager& assets;
 	Net::ConnectionManager& connection;
 	Input::InputManager& input;
@@ -24,6 +25,7 @@ class SceneContextImpl : public ISceneContext {
 
 public:
 	SceneContextImpl(
+		Audio::AudioManager& au,
 		Assets::AssetManager& am,
 		Net::ConnectionManager& cm,
 		Input::InputManager& im,
@@ -33,7 +35,8 @@ public:
 		Graphics::Renderer& ren,
 		Saves::SaveManager& sv
 	)
-		: assets(am)
+		: audio(au)
+		, assets(am)
 		, connection(cm)
 		, input(im)
 		, jobs(js)
@@ -43,6 +46,7 @@ public:
 		, saves(sv)
 	{}
 
+	Audio::AudioManager& getAudioManager() override { return audio; }
 	Assets::AssetManager& getAssetManager() override { return assets; }
 	Net::ConnectionManager& getConnectionManager() override { return connection; }
 	Input::InputManager& getInputManager() override { return input; }

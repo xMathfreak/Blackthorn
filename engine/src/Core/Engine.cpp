@@ -117,6 +117,7 @@ bool Engine::init(const EngineConfig& cfg) {
 	UI::UIManager::onWindowResize(w, h);
 
 	simContext = std::make_unique<Scene::SceneContextImpl>(
+		*audioManager,
 		*assetManager,
 		*connectionManager,
 		inputManager,

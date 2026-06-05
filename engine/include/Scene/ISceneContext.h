@@ -5,6 +5,7 @@
 
 namespace Blackthorn {
 
+namespace Audio { class AudioManager; }
 namespace Graphics { class Renderer; }
 namespace Input { class InputManager; }
 
@@ -40,6 +41,7 @@ class BLACKTHORN_API ISceneContext : public ISimContext {
 public:
 	virtual ~ISceneContext() = default;
 
+	virtual Audio::AudioManager& getAudioManager() = 0;
 	virtual Graphics::Renderer& getRenderer() = 0;
 	virtual Input::InputManager& getInputManager() = 0;
 };
