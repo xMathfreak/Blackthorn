@@ -89,10 +89,11 @@ bool Engine::init(const EngineConfig& cfg) {
 		return false;
 	}
 
-	applyEngineSettings();
+	audioManager = std::make_unique<Audio::AudioManager>();
+
 	initAssetLoaders();
 
-	audioManager = std::make_unique<Audio::AudioManager>();
+	applyEngineSettings();
 
 	if (!audioManager->init(cfg.audio)) {
 		EngineCore::shutdown();
@@ -487,10 +488,10 @@ void Engine::registerDefaultSettings(Core::Settings& s) {
 	s.setDefault("graphics", "vignette_intensity",0.5f);
 
 	s.setDefault("ui", "scale", 1.0f);
+
 	s.setDefault("audio", "master_volume", 1.0f);
 	s.setDefault("audio", "music_volume", 1.0f);
 	s.setDefault("audio", "sfx_volume", 1.0f);
-
 }
 
 void Engine::applyEngineSettings() {
@@ -546,6 +547,22 @@ void Engine::applyEngineSettings() {
 	}
 
 	SDL_GL_SetSwapInterval(s.get<bool>("window", "vsync") ? 1 : 0);
+
+	audioManager->setCategoryVolume(
+		Audio::AudioCategory::Master,
+		s.get<float>("audio", "master_volume")
+	);
+
+	audioManager->setCategoryVolume(
+		Audio::AudioCategory::Music,
+		s.get<float>("audio", "music_volume")
+	);
+
+	audioManager->setCategoryVolume(
+		Audio::AudioCategory::SFX,
+		s.get<float>("audio", "sfx_volume")
+	);
+
 	inputManager.loadBindingsFromSettings();
 }
 
@@ -578,6 +595,24 @@ void Engine::registerEngineCallbacks(Core::Settings& s) {
 
 	s.onChange("window", "vsync", [](const std::string& val) {
 		SDL_GL_SetSwapInterval(val == "true" ? 1 : 0);
+	});
+
+	s.onChange("audio", "master_volume", [this](const std::string& val) {
+		try {
+			audioManager->setCategoryVolume(Audio::AudioCategory::Master, std::stof(val));
+		} catch (...) {}
+	});
+
+	s.onChange("audio", "music_volume", [this](const std::string& val) {
+		try {
+			audioManager->setCategoryVolume(Audio::AudioCategory::Music, std::stof(val));
+		} catch (...) {}
+	});
+
+	s.onChange("audio", "sfx_volume", [this](const std::string& val) {
+		try {
+			audioManager->setCategoryVolume(Audio::AudioCategory::SFX, std::stof(val));
+		} catch (...) {}
 	});
 
 	auto applyPP = [this](const std::string&) { applyPostProcessing(); };
