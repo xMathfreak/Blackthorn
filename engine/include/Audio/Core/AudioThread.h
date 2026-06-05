@@ -65,7 +65,7 @@ private:
 	void processStreamingPlayback(
 		Voice& voice,
 		const AudioClip& clip,
-		U64 startTick
+		U64 startFrame
 	);
 
 	size_t prefillBuffer(
