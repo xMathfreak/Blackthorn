@@ -81,6 +81,8 @@ bool Engine::init(const EngineConfig& cfg) {
 	if (!EngineCore::init(cfg))
 		return false;
 
+	Fonts::FontConfig::setCurrent(cfg.fonts);
+
 	sceneManager = std::make_unique<Scene::ClientSceneManager>();
 
 	initGraphics(cfg);
@@ -392,6 +394,7 @@ void Engine::render(float alpha) {
 
 void Engine::update(float dt) {
 	EngineCore::update(dt);
+	audioManager->update();
 	inputManager.update(dt);
 }
 
