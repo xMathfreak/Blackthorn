@@ -87,7 +87,7 @@ public:
 		SDL_Surface* surface = IMG_Load(filePath.c_str());
 		if (!surface) {
 			BT_ERROR(
-				"AsyncTextureLoader: IMG_Load fialed for '{}': {}",
+				"AsyncTextureLoader: IMG_Load failed for '{}': {}",
 				filePath, SDL_GetError()
 			);
 
