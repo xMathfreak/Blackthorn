@@ -1,6 +1,6 @@
 #include "Fonts/TrueTypeFont.h"
 
-#include "Core/EngineConfig.h"
+#include "Fonts/FontConfig.h"
 #include "Debug/Logger.h"
 
 namespace Blackthorn::Fonts {

@@ -35,7 +35,6 @@ bool EngineCore::init(const EngineConfig& cfg) {
 	}
 
 	config = cfg;
-	FontConfig::setCurrent(cfg.fonts);
 
 	Threads::ThreadRegistry::instance().registerCurrent("Main");
 	Debug::Logger::instance().init(cfg.debug.logger);

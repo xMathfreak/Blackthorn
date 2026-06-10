@@ -6,8 +6,8 @@
 #include <unordered_map>
 #include <vector>
 
-#include "Core/EngineConfig.h"
 #include "Core/Export.h"
+#include "Saves/SaveConfig.h"
 #include "Saves/SaveDocument.h"
 #include "Saves/SaveHash.h"
 #include "Saves/Storage/ISaveStorage.h"

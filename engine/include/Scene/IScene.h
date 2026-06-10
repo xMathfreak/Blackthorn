@@ -10,6 +10,8 @@ namespace Blackthorn::Scene {
 class BLACKTHORN_API IScene {
 protected:
 	std::unique_ptr<ECS::World> world;
+
+	// Initialize this in constructor using std::forward + ctor args
 	ISimContext& context;
 
 public:

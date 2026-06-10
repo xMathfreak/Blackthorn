@@ -7,7 +7,7 @@
 
 #include <SDL3_image/SDL_image.h>
 
-#include "Core/EngineConfig.h"
+#include "Fonts/FontConfig.h"
 
 namespace {
 

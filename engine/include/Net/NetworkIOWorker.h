@@ -6,8 +6,8 @@
 #include <vector>
 
 #include "Core/Export.h"
-#include "Core/EngineConfig.h"
 #include "Core/Types/Numeric.h"
+#include "Net/ConnectionConfig.h"
 #include "Net/ConnectionEventBus.h"
 #include "Net/Transport/PacketQueue.h"
 #include "Net/Transport/Sockets/TCPSocket.h"

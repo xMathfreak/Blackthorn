@@ -1,6 +1,6 @@
-#include "Core/EngineConfig.h"
+#include "Fonts/FontConfig.h"
 
-namespace Blackthorn {
+namespace Blackthorn::Fonts {
 
 FontConfig FontConfig::current;
 
