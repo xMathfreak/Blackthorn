@@ -28,10 +28,6 @@ struct BLACKTHORN_API ThreadingConfig {
 	/// Values above `thread::hardware_concurrency` can lead to
 	/// performance degradation.
 	size_t jobWorkerCount = 0;
-
-	/// Number of worker threads for the asset manager.
-	/// 0 = auto `(max(1, thread::hardware_concurrency - 1))`.
-	size_t assetWorkerCount = 0;
 };
 
 struct BLACKTHORN_API TimingConfig {
