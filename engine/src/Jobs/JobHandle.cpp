@@ -34,7 +34,7 @@ void JobHandle::signal(const std::function<void(std::function<void()>, bool)>& e
 
 	{
 		std::lock_guard lock(continuationMutex);
-		continuationHead.exchange(COMPLETE_SENTINEL, std::memory_order::acq_rel);
+		list = continuationHead.exchange(COMPLETE_SENTINEL, std::memory_order::acq_rel);
 	}
 
 	while (list && list != COMPLETE_SENTINEL) {

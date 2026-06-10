@@ -10,6 +10,22 @@
 
 namespace Blackthorn::Jobs {
 
+namespace Detail {
+
+struct ICallable {
+	virtual ~ICallable() = default;
+	virtual void invoke() = 0;
+};
+
+template <typename F>
+struct CallableWrapper final : ICallable {
+	F fn;
+	explicit CallableWrapper(F&& f) : fn(std::move(f)) {}
+	void invoke() override { fn(); }
+};
+
+} // namespace Detail
+
 enum class ThreadAffinity : U8 {
 	Any,        ///< May run on any worker thread or the main thread.
 	MainThread  ///< Must only run on the main thread.
@@ -75,26 +91,25 @@ public:
 			destroyer = [](void* s) {
 				reinterpret_cast<Decayed*>(s)->~Decayed();
 			};
-		}
-		else
-		{
-			static_assert(sizeof(std::function<void()>) <= INLINE_SIZE,
-				"std::function does not fit in inline storage on this platform");
+		} else {
+			static_assert(sizeof(Detail::ICallable*) <= INLINE_SIZE);
 
-			new (inlineStorage) std::function<void()>(std::forward<F>(fn));
+			auto* wrapper = new Detail::CallableWrapper<Decayed>(std::forward<F>(fn));
+			new (inlineStorage) Detail::ICallable*(wrapper);
 
 			invoker = [](void* s) {
-				(*reinterpret_cast<std::function<void()>*>(s))();
+				(*reinterpret_cast<Detail::ICallable**>(s))->invoke();
 			};
 
 			mover = [](void* dst, void* src) {
-				auto* srcFn = reinterpret_cast<std::function<void()>*>(src);
-				new (dst) std::function<void()>(std::move(*srcFn));
-				srcFn->~function<void()>();
+				*reinterpret_cast<Detail::ICallable**>(dst) =
+					*reinterpret_cast<Detail::ICallable**>(src);
+				*reinterpret_cast<Detail::ICallable**>(src) = nullptr;
 			};
 
 			destroyer = [](void* s) {
-				reinterpret_cast<std::function<void()>*>(s)->~function<void()>();
+				delete *reinterpret_cast<Detail::ICallable**>(s);
+				*reinterpret_cast<Detail::ICallable**>(s) = nullptr;
 			};
 		}
 	}
