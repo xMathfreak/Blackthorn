@@ -86,6 +86,8 @@ public:
 	static int getWorkerIndex();
 	static void setWorkerIndex(int idx);
 
+	void shutdown();
+
 private:
 	void enqueueReady(Job&& fn);
 	bool executeOne(bool mainThreadOnly = false);
@@ -94,7 +96,8 @@ private:
 	std::vector<std::unique_ptr<JobQueue>> queues;
 	std::vector<std::thread> workers;
 
-	alignas(64) std::atomic<bool> shutdown { false };
+	alignas(64) std::atomic<bool> stopFlag { false };
+	alignas(64) std::atomic<bool> shuttingDown { false };
 	alignas(64) std::atomic<size_t> activeJobs { 0 };
 	alignas(64) std::atomic<size_t> nextWorker { 0 };
 	alignas(64) std::atomic<size_t> pendingWork {0 };

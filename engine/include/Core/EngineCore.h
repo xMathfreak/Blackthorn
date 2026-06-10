@@ -175,8 +175,8 @@ protected:
 
 	EngineConfig config;
 
-	std::unique_ptr<Assets::AssetManager> assetManager;
 	std::unique_ptr<Net::ConnectionManager> connectionManager;
+	std::unique_ptr<Assets::AssetManager> assetManager;
 	std::unique_ptr<Jobs::JobSystem> jobSystem;
 	std::unique_ptr<Saves::SaveManager> saveManager;
 	std::unique_ptr<Core::SimClock> simClock;

@@ -213,7 +213,7 @@ public:
 		auto paramsCopy = std::shared_ptr<LoadParams>(params.clone().release());
 
 		jobs.submit(Jobs::Job(
-			[this, id, loaderWrapper, paramsCopy = std::move(paramsCopy), decodeHandle]() mutable {
+			[this, id, loaderWrapper, paramsCopy, decodeHandle]() {
 				auto raw = loaderWrapper->loadRaw(*paramsCopy);
 
 				if (!raw || !raw->valid) {
@@ -356,6 +356,11 @@ public:
 
 	/// Total outstanding loads (decode jobs + upload jobs not yet complete).
 	size_t pendingCount() const;
+
+	/**
+	 * @brief Blocks until all outstanding async loads complete.
+	 */
+	void shutdown();
 
 private:
 	template <typename AssetType>

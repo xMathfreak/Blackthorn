@@ -152,10 +152,11 @@ void EngineCore::shutdown() {
 	if (s.isDirty())
 		s.saveToFile(config.settingsFilePath);
 
-	if (assetManager)
-		assetManager->clear();
-
 	connectionManager->stop();
+
+	assetManager->shutdown();
+	jobSystem->shutdown();
+
 	Net::Transport::Sockets::SocketFactory::shutdown();
 
 	SDL_Quit();

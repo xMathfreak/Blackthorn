@@ -47,16 +47,23 @@ JobSystem::JobSystem(size_t workerCount) {
 	BT_DEBUG("JobSystem: Initialized (Workers: {})", workerCount);
 }
 
-JobSystem::~JobSystem() {
-	shutdown.store(true, std::memory_order::release);
+void JobSystem::shutdown() {
+	if (shuttingDown.exchange(true))
+		return;
 
+	stopFlag.store(true, std::memory_order::release);
 	wakeCondition.notify_all();
 
 	for (auto& t : workers)
 		t.join();
 
+	workers.clear();
+}
+
+JobSystem::~JobSystem() {
+	shutdown();
 	flushMainThread();
-	delete mainSentinel;
+	delete mainTail.load(std::memory_order::relaxed);
 	mainSentinel = nullptr;
 }
 
@@ -68,21 +75,19 @@ void JobSystem::submit(Job job) {
 	JobHandlePtr dep = job.getDependencyHandle();
 
 	if (dep && !dep->isComplete()) {
-		const bool mt = job.getAffinity() == ThreadAffinity::MainThread;
 		auto sharedJob = std::make_shared<Job>(std::move(job));
-		auto completionHdl = sharedJob->getCompletionHandle();
 
 		dep->addContinuation(
-			[this, sharedJob, completionHdl] {
-				sharedJob->invoke();
-				if (completionHdl) {
-					completionHdl->signal([this](std::function<void()> fn, bool isMt) {
-						enqueueReady(Job(std::move(fn), nullptr, nullptr,
-							isMt ? ThreadAffinity::MainThread : ThreadAffinity::Any));
-					});
-				}
+			[this, sharedJob]() {
+				Jobs::Job readyJob(
+					[sharedJob]() { sharedJob->invoke(); },
+					sharedJob->getCompletionHandle(),
+					nullptr,
+					sharedJob->getAffinity()
+				);
+				enqueueReady(std::move(readyJob));
 			},
-			mt,
+			false,
 			[this](std::function<void()> fn, bool isMt) {
 				enqueueReady(Job(std::move(fn), nullptr, nullptr,
 					isMt ? ThreadAffinity::MainThread : ThreadAffinity::Any));
@@ -199,12 +204,12 @@ void JobSystem::workerLoop(size_t idx) {
 		{
 			std::unique_lock<std::mutex> lock(wakeMutex);
 			wakeCondition.wait_for(lock, std::chrono::microseconds(50), [this] {
-				return shutdown.load(std::memory_order::relaxed)
+				return stopFlag.load(std::memory_order::relaxed)
 					|| pendingWork.load(std::memory_order::relaxed) > 0;
 			});
 		}
 
-		if (shutdown.load(std::memory_order::relaxed))
+		if (stopFlag.load(std::memory_order::relaxed))
 			break;
 	}
 
