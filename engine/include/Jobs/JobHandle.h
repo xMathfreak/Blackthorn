@@ -32,6 +32,11 @@ public:
 	static std::shared_ptr<JobHandle> create();
 
 	/**
+	 * @brief Creates a completed handle.
+	 */
+	static std::shared_ptr<JobHandle> createComplete();
+
+	/**
 	 * @brief Increments the pending count.
 	 *
 	 * Call once per job that should contribute to this handle, before

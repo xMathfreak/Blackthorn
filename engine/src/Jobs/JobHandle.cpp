@@ -11,6 +11,12 @@ std::shared_ptr<JobHandle> JobHandle::create() {
 	return std::shared_ptr<JobHandle>(new JobHandle());
 }
 
+std::shared_ptr<JobHandle> JobHandle::createComplete() {
+	auto h = create();
+	h->signal([](std::function<void()>, bool) {});
+	return h;
+}
+
 void JobHandle::addPending(int count) {
 	assert(!isComplete() && "addPending called on a completed handle");
 	pendingCount.fetch_add(count, std::memory_order::relaxed);
