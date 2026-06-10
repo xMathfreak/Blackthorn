@@ -1,48 +1,24 @@
 #include "Assets/AssetManager.h"
 
-#include <thread>
-
 namespace Blackthorn::Assets {
 
-AssetManager::AssetManager(size_t workerCount)
-	: threadPool(workerCount)
+AssetManager::AssetManager(Jobs::JobSystem& js)
+	: jobs(js)
 {
-	BT_DEBUG(
-		"AssetManager: Initialised ({} worker thread{})",
-		threadPool.workerCount(),
-		threadPool.workerCount() == 1 ? "" : "s"
-	);
+	BT_DEBUG("AssetManager: Initialised");
 }
 
-bool AssetManager::processOneUpload() {
-	Threads::TaskPtr task;
-
-	{
-		std::unique_lock<std::mutex> lock(uploadMutex);
-		if (uploadQueue.empty())
-			return false;
-
-		task = std::move(uploadQueue.front());
-		uploadQueue.pop();
-	}
-
-	task->invoke();
-	return true;
-}
-
-size_t AssetManager::flushPendingUploads(size_t uploadBudget) {
-	size_t processed = 0;
-	while (processed < uploadBudget && processOneUpload())
-		++processed;
-	return processed;
+void AssetManager::flushPendingUploads() {
+	jobs.flushMainThread();
 }
 
 void AssetManager::flushAllPendingUploads() {
 	while (pendingTotal.load(std::memory_order::acquire) > 0) {
-		flushPendingUploads(64);
+		jobs.flushMainThread();
 		std::this_thread::yield();
 	}
-	while (processOneUpload()) {}
+
+	jobs.flushMainThread();
 }
 
 size_t AssetManager::pendingCount() const {

@@ -69,12 +69,12 @@ bool EngineCore::init(const EngineConfig& cfg) {
 
 	Net::Transport::Sockets::SocketFactory::init();
 
-	assetManager = std::make_unique<Assets::AssetManager>(
-		cfg.threading.assetWorkerCount
-	);
-
 	jobSystem = std::make_unique<Jobs::JobSystem>(
 		cfg.threading.jobWorkerCount
+	);
+
+	assetManager = std::make_unique<Assets::AssetManager>(
+		*jobSystem
 	);
 
 	Net::Transport::Sockets::SocketFactory::init();
@@ -289,7 +289,7 @@ void EngineCore::fixedUpdate(float dt) {
 }
 
 void EngineCore::update(float dt) {
-	assetManager->flushPendingUploads(config.assets.uploadBudget);
+	assetManager->flushPendingUploads();
 	connectionManager->poll(jobSystem.get());
 	sceneManager->update(dt);
 }

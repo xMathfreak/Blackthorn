@@ -16,8 +16,8 @@
 #include "Assets/IAssetStorage.h"
 #include "Assets/LoadParams.h"
 #include "Assets/RawAssetData.h"
-#include "Threads/ThreadPool.h"
 #include "Debug/Logger.h"
+#include "Jobs/JobSystem.h"
 
 namespace Blackthorn::Assets {
 
@@ -44,37 +44,44 @@ namespace Blackthorn::Assets {
  *
  * @section loading Loading
  * @code
- * AssetHandle<Texture> h1 = manager.load<Texture>("id", params);   // ready immediately
- * AssetHandle<Texture> h2 = manager.loadAsync<Texture>("id", p);   // ready later
+ * AssetHandle<Texture> h1 = manager.load<Texture>("id", params);      // ready immediately
+ * AssetHandle<Texture> h2 = manager.loadAsync<Texture>("id", params); // ready later
  *
  * if (h2.isReady()) { Texture* t = h2.get(); }
  * h2.wait();           // block until ready (loading screens only)
  * @endcode
  *
  * @section flushing Flushing
- * Call once per frame before beginScene, or call flushAll from a loading screen:
+ * Call once per frame to promote completed decode jobs into GPU-resident assets:
  * @code
- * manager.flushPendingUploads(4);
+ * manager.flushPendingUploads();
+ * @endcode
+ * From a loading screen or scene transition, block until all loads are done:
+ * @code
  * manager.flushAllPendingUploads();
  * @endcode
  */
 class BLACKTHORN_API AssetManager {
 public:
-	// workerCount == 0  →  max(1, hardware_concurrency - 1) worker threads.
-	explicit AssetManager(size_t workerCount = 0);
+	/**
+	 * @brief Constructs the AssetManager.
+	 *
+	 * @param js The engine's JobSystem. Must outlive this AssetManager.
+	 */
+	explicit AssetManager(Jobs::JobSystem& js);
 	~AssetManager() = default;
 
-	AssetManager(const AssetManager&)            = delete;
+	AssetManager(const AssetManager&) = delete;
 	AssetManager& operator=(const AssetManager&) = delete;
 
 	/**
 	 * @brief Register the sync loader (required) and optionally an async loader.
 	 *
-	 * @param syncLoader The synchronous loader.
+	 * @param syncLoader  The synchronous loader.
 	 * @param asyncLoader The asynchronous loader.
 	 *
 	 * @tparam AssetType The type of asset for the corresponding loader.
-	 * @note This should be called before any load() / loadAsync() for AssetType
+	 * @note Must be called before any load() / loadAsync() for AssetType.
 	 */
 	template <typename AssetType>
 	void registerLoader(
@@ -95,12 +102,13 @@ public:
 	/**
 	 * @brief Synchronous, blocking load for an asset of type AssetType.
 	 *
-	 * @param id The asset identifier.
+	 * @param id     The asset identifier.
 	 * @param params The parameters for loading the asset.
 	 *
 	 * @tparam AssetType The type of asset to be loaded.
 	 *
-	 * @return A ready AssetHandle to the loaded asset, or an invalid handle if loading fails or no loader is associated with AssetType.
+	 * @return A ready AssetHandle to the loaded asset, or an invalid handle
+	 *         if loading fails or no loader is registered for AssetType.
 	 */
 	template <typename AssetType>
 	AssetHandle<AssetType> load(const std::string& id, const LoadParams& params) {
@@ -141,21 +149,27 @@ public:
 	/**
 	 * @brief Asynchronous, non-blocking load for an asset of type AssetType.
 	 *
-	 * @param id The asset identifier.
+	 * Submits two jobs to the JobSystem: a worker-thread decode job, followed
+	 * by a main-thread upload job chained to it via a JobHandle dependency.
+	 * The upload runs automatically the next time the engine calls
+	 * JobSystem::flushMainThread() (i.e. flushPendingUploads()).
+	 *
+	 * @param id     The asset identifier.
 	 * @param params The parameters for loading the asset.
 	 *
 	 * @tparam AssetType The type of asset to be loaded.
 	 *
-	 * @return A pending AssetHandle for the asset that becomes ready when the asset is loaded.
-	 * @note If no async loader is registered for AsetType, falls back to a synchronous load.
+	 * @return A pending AssetHandle that becomes ready once the upload job
+	 *         completes. Falls back to a synchronous load if no async loader
+	 *         is registered for AssetType.
 	 */
 	template <typename AssetType>
 	AssetHandle<AssetType> loadAsync(const std::string& id, const LoadParams& params) {
 		if (has<AssetType>(id))
 			return makeReadyHandle<AssetType>(id);
 
-		auto type  = std::type_index(typeid(AssetType));
-		auto it    = loaders.find(type);
+		auto type = std::type_index(typeid(AssetType));
+		auto it = loaders.find(type);
 		if (it == loaders.end()) {
 			BT_WARN("AssetManager: no loader registered for '{}' (id '{}')",
 				typeid(AssetType).name(), id);
@@ -165,35 +179,62 @@ public:
 		auto* wrapper = static_cast<LoaderWrapper<AssetType>*>(it->second.get());
 
 		if (!wrapper->asyncLoader) {
-			BT_DEBUG(
-				"AssetManager: no async loader for '{}', falling back to sync", id);
+			BT_DEBUG("AssetManager: no async loader for '{}', falling back to sync", id);
 			return load<AssetType>(id, params);
 		}
 
 		{
 			std::unique_lock<std::mutex> lock(inFlightMutex);
-			if (inFlight.count(id)) {
+
+			auto flightIt = inFlight.find(id);
+
+			if (flightIt != inFlight.end()) {
 				BT_DEBUG("AssetManager: '{}' already in-flight", id);
-				return makePendingHandle<AssetType>(id);
+				return AssetHandle<AssetType>(id, this, flightIt->second);
 			}
 
-			inFlight.insert(id);
+			auto uploadHandle = Jobs::JobHandle::create();
+			inFlight.emplace(id, uploadHandle);
 		}
 
 		++pendingTotal;
 
-		auto readyFlag  = std::make_shared<std::atomic<bool>>(false);
-		auto paramsCopy = params.clone();
-
-		ILoaderWrapper* loaderWrapper = it->second.get();
-
 		assetParams[id] = params.clone();
 
-		threadPool.enqueue([this, id, loaderWrapper, paramsCopy = std::move(paramsCopy), readyFlag]() {
-			auto raw = loaderWrapper->loadRaw(*paramsCopy);
+		Jobs::JobHandlePtr decodeHandle = jobs.createHandle();
+		Jobs::JobHandlePtr uploadHandle;
 
-			if (!raw || !raw->valid) {
-				BT_ERROR("AssetManager: loadRaw failed for '{}'", id);
+		{
+			std::unique_lock<std::mutex> lock(inFlightMutex);
+			uploadHandle = inFlight.at(id);
+		}
+
+		ILoaderWrapper* loaderWrapper = it->second.get();
+		auto paramsCopy = std::shared_ptr<LoadParams>(params.clone().release());
+
+		jobs.submit(Jobs::Job(
+			[this, id, loaderWrapper, paramsCopy = std::move(paramsCopy), decodeHandle]() mutable {
+				auto raw = loaderWrapper->loadRaw(*paramsCopy);
+
+				if (!raw || !raw->valid) {
+					BT_ERROR("AssetManager: loadRaw failed for '{}'", id);
+					return;
+				}
+
+				raw->assetID = id;
+				decodeHandle->setOutput(raw.release());
+			},
+			decodeHandle
+		));
+
+		jobs.submit(Jobs::Job(
+			[this, id, loaderWrapper, uploadHandle, decodeHandle]() {
+				auto* raw = decodeHandle->getOutput<IRawAssetData>();
+
+				if (raw) {
+					loaderWrapper->upload(*raw, *this);
+					delete raw;
+				}
 
 				{
 					std::unique_lock<std::mutex> lk(inFlightMutex);
@@ -201,25 +242,21 @@ public:
 				}
 
 				--pendingTotal;
-				return;
-			}
 
-			raw->assetID = id;
+				uploadHandle->signal([this](std::function<void()> fn, bool isMt) {
+					jobs.submit(Jobs::Job(
+						std::move(fn),
+						nullptr, nullptr,
+						isMt ? Jobs::ThreadAffinity::MainThread : Jobs::ThreadAffinity::Any
+					));
+				});
+			},
+			nullptr,
+			decodeHandle,
+			Jobs::ThreadAffinity::MainThread
+		));
 
-			pushUpload([this, loaderWrapper, raw = std::move(raw), readyFlag]() mutable {
-				loaderWrapper->upload(*raw, *this);
-
-				{
-					std::unique_lock<std::mutex> lk(inFlightMutex);
-					inFlight.erase(raw->assetID);
-				}
-
-				readyFlag->store(true, std::memory_order::release);
-				--pendingTotal;
-			});
-		});
-
-		return AssetHandle<AssetType>(id, this, std::move(readyFlag));
+		return AssetHandle<AssetType>(id, this, std::move(uploadHandle));
 	}
 
 	template <typename AssetType>
@@ -300,21 +337,24 @@ public:
 	}
 
 	/**
-	 * @brief Processes at most `uploadBudget` uploads.
+	 * @brief Promotes all completed decode jobs into GPU-resident assets.
 	 *
-	 * Call at the start of each frame, before beginScene().
-	 *
-	 * @param[in] uploadBudget The maximum number of assets to upload.
-	 *
-	 * @return Number of processed assets.
+	 * Delegates to JobSystem::flushMainThread(), running every pending
+	 * main-thread upload job that has had its decode dependency satisfied.
+	 * Call once per frame before beginScene().
 	 */
-	size_t flushPendingUploads(size_t uploadBudget = 4);
+	void flushPendingUploads();
 
-	// Block until all worker decode jobs finish, then drain the entire upload
-	// queue. Only call this from loading screens / scene transitions.
+	/**
+	 * @brief Blocks until all outstanding async loads are complete.
+	 *
+	 * Spins on pendingTotal, flushing main-thread upload jobs each iteration.
+	 * Only call from loading screens or scene transitions — not during normal
+	 * frame execution.
+	 */
 	void flushAllPendingUploads();
 
-	/// Total outstanding loads (in thread pool + in upload queue).
+	/// Total outstanding loads (decode jobs + upload jobs not yet complete).
 	size_t pendingCount() const;
 
 private:
@@ -340,15 +380,13 @@ private:
 
 	template <typename AssetType>
 	AssetHandle<AssetType> makeReadyHandle(const std::string& id) {
-		auto flag = std::make_shared<std::atomic<bool>>(true);
-		return AssetHandle<AssetType>(id, this, std::move(flag));
+		return AssetHandle<AssetType>(id, this, Jobs::JobHandle::createComplete());
 	}
 
 	/// Returns a handle whose flag is permanently false.
 	template <typename AssetType>
 	AssetHandle<AssetType> makePendingHandle(const std::string& id) {
-		auto flag = std::make_shared<std::atomic<bool>>(false);
-		return AssetHandle<AssetType>(id, this, std::move(flag));
+		return AssetHandle<AssetType>(id, this, nullptr);
 	}
 
 	struct ILoaderWrapper {
@@ -363,8 +401,8 @@ private:
 			std::unique_ptr<IAssetLoader<AssetType>> sync,
 			std::unique_ptr<IAsyncAssetLoader<AssetType>> async)
 			: syncLoader(std::move(sync))
-			, asyncLoader(std::move(async)
-		) {}
+			, asyncLoader(std::move(async))
+		{}
 
 		std::unique_ptr<IRawAssetData> loadRaw(const LoadParams& params) override {
 			return asyncLoader ? asyncLoader->loadRaw(params) : nullptr;
@@ -379,31 +417,18 @@ private:
 		std::unique_ptr<IAsyncAssetLoader<AssetType>> asyncLoader;
 	};
 
-	template <typename Callable>
-	requires std::invocable<Callable>
-	void pushUpload(Callable&& callable) {
-		std::unique_lock<std::mutex> lock(uploadMutex);
-		uploadQueue.push(Threads::makeTask(std::forward<Callable>(callable)));
-	}
-
-	bool processOneUpload();
-
 	std::unordered_map<std::type_index, std::unique_ptr<ILoaderWrapper>> loaders;
 	std::unordered_map<std::type_index, std::unique_ptr<IAssetStorage>> storages;
 	std::unordered_map<std::string, std::unique_ptr<LoadParams>> assetParams;
 
-	Threads::ThreadPool threadPool;
+	Jobs::JobSystem& jobs;
 
-	std::unordered_set<std::string>	inFlight;
+	std::unordered_map<std::string, Jobs::JobHandlePtr> inFlight;
 	mutable std::mutex inFlightMutex;
 
-	std::queue<Threads::TaskPtr> uploadQueue;
-	mutable std::mutex uploadMutex;
-
-	std::atomic<size_t> pendingTotal{ 0 };
+	std::atomic<size_t> pendingTotal { 0 };
 };
 
 } // namespace Blackthorn::Assets
 
-// Inline AssetHandle::get<AssetType> definition
 #include "Assets/AssetHandle.inl"

@@ -1,9 +1,9 @@
 #pragma once
 
-#include <atomic>
-#include <memory>
 #include <string>
 #include <thread>
+
+#include "Jobs/JobHandle.h"
 
 namespace Blackthorn::Assets {
 
@@ -14,14 +14,14 @@ class AssetHandle {
 public:
 	AssetHandle() = default;
 
-	AssetHandle(std::string assetID, AssetManager* mgr, std::shared_ptr<std::atomic<bool>> ready)
+	AssetHandle(std::string assetID, AssetManager* mgr, Jobs::JobHandlePtr hdl)
 		: id(std::move(assetID))
 		, manager(mgr)
-		, readyFlag(std::move(ready))
+		, handle(hdl)
 	{}
 
 	bool isReady() const {
-		return readyFlag && readyFlag->load(std::memory_order::acquire);
+		return handle && handle->isComplete();
 	}
 
 	bool isValid() const {
@@ -44,7 +44,7 @@ public:
 private:
 	std::string id;
 	AssetManager* manager = nullptr;
-	std::shared_ptr<std::atomic<bool>> readyFlag;
+	Jobs::JobHandlePtr handle = nullptr;
 };
 
 } // namespace Blackthorn::Assets
