@@ -8,7 +8,13 @@ namespace Blackthorn::Audio {
 
 class BLACKTHORN_API AudioBuffer {
 public:
-	AudioBuffer();
+	/**
+	 * @brief Constructs an empty, invalid buffer.
+	 *
+	 * Does not call any OpenAL functions. Call @c create() explicitly
+	 * once an OpenAL context is current on the calling thread.
+	 */
+	AudioBuffer() = default;
 	~AudioBuffer();
 
 	AudioBuffer(const AudioBuffer&) = delete;

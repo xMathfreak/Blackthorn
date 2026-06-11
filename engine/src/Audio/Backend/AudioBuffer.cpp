@@ -4,10 +4,6 @@
 
 namespace Blackthorn::Audio {
 
-AudioBuffer::AudioBuffer() {
-	create();
-}
-
 AudioBuffer::~AudioBuffer() {
 	destroy();
 }
@@ -19,7 +15,6 @@ void AudioBuffer::create() {
 	}
 
 	alGenBuffers(1, &buffer);
-	// checkOpenALError("AudioBuffer::create");
 	BT_DEBUG("AudioBuffer created ({})", buffer);
 }
 
@@ -56,7 +51,7 @@ void AudioBuffer::setData(
 	U32 sampleRate
 ) {
 	if (!valid())
-		create();
+		throw AudioException("AudioBuffer: Attempting to call setData on an uninitialized buffer");
 
 	const ALenum format = toOpenALFormat(channels, 16);
 
@@ -73,7 +68,6 @@ void AudioBuffer::setData(
 		static_cast<ALsizei>(sizeInBytes),
 		static_cast<ALsizei>(sampleRate)
 	);
-	// checkOpenALError("AudioBuffer::setData");
 }
 
 void AudioBuffer::setData(const AudioData& data) {

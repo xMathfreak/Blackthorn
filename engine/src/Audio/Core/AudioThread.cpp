@@ -617,8 +617,9 @@ void AudioThread::processResidentPlayback(
 	}
 
 	AudioBuffer buffer;
+	buffer.create();
+
 	try {
-		// buffer.create();
 		buffer.setData(data);
 	} catch (const AudioException& e) {
 		BT_ERROR(
