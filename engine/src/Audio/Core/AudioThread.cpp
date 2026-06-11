@@ -657,6 +657,7 @@ void AudioThread::processStreamingPlayback(
 	sstate->init();
 
 	if (startTick > 0) {
+		voice.addConsumedFrames(startTick);
 		if (!sstate->decoder->seek(startTick)) {
 			BT_WARN(
 				"AudioThread: seek to frame {} failed for '{}', "
