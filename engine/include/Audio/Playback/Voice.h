@@ -51,6 +51,9 @@ public:
 		decodedFrames = 0;
 		consumedFrames = 0;
 		audioClip = nullptr;
+		sourcePosition = glm::vec3{0.0f};
+		minDist = 1.0f;
+		maxDist = 50.0f;
 	}
 
 	void play() {
@@ -86,7 +89,14 @@ public:
 
 	void setPosition(const glm::vec3& position) {
 		spatial = true;
+		sourcePosition = position;
 		audioSource.setPosition(position);
+	}
+
+	void setDistances(float min, float max) {
+		minDist = min;
+		maxDist = max;
+		audioSource.setDistances(min, max);
 	}
 
 	void attachBuffer(const AudioBuffer& buffer) {
@@ -218,7 +228,21 @@ public:
 		return streamingState.get();
 	}
 
+	[[nodiscard]] const glm::vec3& position() const noexcept {
+		return sourcePosition;
+	}
+
+	[[nodiscard]] float minDistance() const noexcept {
+		return minDist;
+	}
+
+	[[nodiscard]] float maxDistance() const noexcept {
+		return maxDist;
+	}
+
 private:
+	glm::vec3 sourcePosition{0};
+
 	AudioHandle audioHandle = AudioHandle::invalid();
 	AudioSource audioSource;
 	U64 activationTick = 0;
@@ -232,6 +256,8 @@ private:
 	float clipDuration = 0.0f;
 	float playbackTime = 0.0f;
 	float baseVolume = 1.0f;
+	float minDist = 1.0f;
+	float maxDist = 50.0f;
 
 	bool spatial = false;
 	bool looped = false;

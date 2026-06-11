@@ -346,44 +346,28 @@ void AudioThread::enterRecovery(AudioThreadState reason) {
 		if (!voice.active())
 			continue;
 
-		voice.source().detachBuffer();
+		if (shouldRestoreVoice(voice)) {
+			VoiceSnapshot snap;
 
-		if (!shouldRestoreVoice(voice))
-			continue;
+			snap.originalHandle = voice.handle();
+			snap.clip = voice.clip();
+			snap.volume = voice.volume();
+			snap.pitch = voice.pitch();
+			snap.playbackTime = voice.getPlaybackTime();
+			snap.duration = voice.duration();
+			snap.position = voice.position();
+			snap.minDistance = voice.minDistance();
+			snap.maxDistance = voice.maxDistance();
+			snap.category = voice.category();
+			snap.priority = voice.priority();
+			snap.loop = voice.looping();
+			snap.spatial = voice.spatialized();
+			snap.stream = voice.streaming();
 
-		VoiceSnapshot snap;
-		snap.originalHandle = voice.handle();
-		snap.clip = voice.clip();
-		snap.volume = voice.volume();
-		snap.pitch = voice.pitch();
-		snap.playbackTime = voice.getPlaybackTime();
-		snap.duration = voice.duration();
-
-		if (voice.spatialized()) {
-			ALfloat px = 0.0f, py = 0.0f, pz = 0.0f;
-			alGetSource3f(
-				voice.source().get(),
-				AL_POSITION, &px, &py, &pz
-			);
-			snap.position = { px, py, pz };
+			voiceSnapshots.push_back(std::move(snap));
 		}
 
-		ALfloat refDist = 1.0f, maxDist = 50.0f;
-		alGetSourcef(
-			voice.source().get(), AL_REFERENCE_DISTANCE, &refDist
-		);
-		alGetSourcef(
-			voice.source().get(), AL_MAX_DISTANCE, &maxDist
-		);
-		snap.minDistance = refDist;
-		snap.maxDistance = maxDist;
-		snap.category = voice.category();
-		snap.priority = voice.priority();
-		snap.loop = voice.looping();
-		snap.spatial = voice.spatialized();
-		snap.stream = voice.streaming();
-
-		voiceSnapshots.push_back(std::move(snap));
+		voice.source().invalidate();
 	}
 
 	BT_LOG(
@@ -392,12 +376,6 @@ void AudioThread::enterRecovery(AudioThreadState reason) {
 	);
 
 	streamingThread.stop();
-
-	for (Voice& voice : voicePool->voices()) {
-		if (voice.active())
-			voice.source().invalidate();
-	}
-
 	voicePool->stopAll();
 
 	context.reset();
@@ -521,7 +499,7 @@ void AudioThread::restoreVoices() {
 			voice->source().setRelative(true);
 		}
 
-		voice->source().setDistances(snap.minDistance, snap.maxDistance);
+		voice->setDistances(snap.minDistance, snap.maxDistance);
 		voice->setClip(const_cast<AudioClip*>(snap.clip));
 
 		if (snap.stream) {

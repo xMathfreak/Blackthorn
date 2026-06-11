@@ -81,7 +81,7 @@ void AudioThread::process(const PlayCommand& cmd) {
 		voice->source().setRelative(true);
 	}
 
-	voice->source().setDistances(cmd.minDistance, cmd.maxDistance);
+	voice->setDistances(cmd.minDistance, cmd.maxDistance);
 	voice->setClip(cmd.clipSource);
 
 	if (cmd.stream)
