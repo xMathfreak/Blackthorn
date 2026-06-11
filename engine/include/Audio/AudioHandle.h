@@ -18,7 +18,7 @@ namespace Blackthorn::Audio {
  *
  * @section thread_safety Thread safety
  * @c AudioHandle is a trivial value type. Copies and comparisons are safe
- * from any thread without synchronisation.
+ * from any thread without synchronization.
  */
 struct AudioHandle {
 	/// Unique ID. Zero means invalid; all other values are permanently

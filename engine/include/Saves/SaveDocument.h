@@ -192,7 +192,7 @@ struct BLACKTHORN_API SectionTableEntry {
  * doc.beginWrite(saveId);
  * doc.addSection(sectionId, version, payloadBytes);
  * doc.addSection(...);
- * auto bytes = doc.finalise(compressor, encryptor, keyDeriveFn, saveId);
+ * auto bytes = doc.finalize(compressor, encryptor, keyDeriveFn, saveId);
  * @endcode
  *
  * @par Reading
@@ -211,7 +211,7 @@ public:
 	SaveDocument& operator=(const SaveDocument&) = delete;
 
 	/**
-	 * @brief Initialises the document for writing with identity from @p saveId.
+	 * @brief Initializes the document for writing with identity from @p saveId.
 	 */
 	void beginWrite(const SaveId& saveId);
 
@@ -224,7 +224,7 @@ public:
 	void addSection(U64 sectionId, U32 version, const IO::ByteBuffer& data);
 
 	/**
-	 * @brief Compresses, encrypts, and serialises the document to bytes.
+	 * @brief Compresses, encrypts, and serializes the document to bytes.
 	 *
 	 * @param compressor  Compressor to apply before encryption. May be null
 	 *                    (no compression).
@@ -234,7 +234,7 @@ public:
 	 * @param outKey      32-byte encryption key. Ignored if encryptor is null.
 	 * @return Serialized document bytes ready to pass to @c ISaveStorage::write().
 	 */
-	IO::ByteBuffer finalise(
+	IO::ByteBuffer finalize(
 		ICompressor* compressor,
 		IEncryptor* encryptor,
 		const U8 outKey[32]
@@ -254,9 +254,9 @@ public:
 	/**
 	 * @brief Decrypts and decompresses the payload after a successful @c parse().
 	 *
-	 * @param encryptor  Must match what was used during @c finalise(). Null if
+	 * @param encryptor  Must match what was used during @c finalize(). Null if
 	 *                   the document was not encrypted.
-	 * @param compressor Must match what was used during @c finalise(). Null if
+	 * @param compressor Must match what was used during @c finalize(). Null if
 	 *                   the document was not compressed.
 	 * @param inKey      32-byte decryption key. Ignored if encryptor is null.
 	 * @return Decrypted and decompressed payload buffer, or empty on failure.

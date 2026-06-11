@@ -134,7 +134,7 @@ void SaveDocument::addSection(
 	plaintextPayload.writeBytes(data.data(), data.size());
 }
 
-IO::ByteBuffer SaveDocument::finalise(
+IO::ByteBuffer SaveDocument::finalize(
 	ICompressor* compressor,
 	IEncryptor* encryptor,
 	const U8 outKey[32]

@@ -11,7 +11,7 @@ void NetworkEntityRegistry::serializeSpawn(
 ) const {
 	if (netId == INVALID_NET_ENTITY)
 		throw std::invalid_argument(
-			"NetworkEntityRegistry::serializeSpawn: cannot serialise INVALID_NET_ENTITY"
+			"NetworkEntityRegistry::serializeSpawn: cannot serialize INVALID_NET_ENTITY"
 		);
 
 	Net::Protocol::PacketWriter pw(
@@ -33,7 +33,7 @@ void NetworkEntityRegistry::serializeDespawn(
 ) const {
 	if (netId == INVALID_NET_ENTITY)
 		throw std::invalid_argument(
-			"NetworkEntityRegistry::serializeDespawn: cannot serialise INVALID_NET_ENTITY"
+			"NetworkEntityRegistry::serializeDespawn: cannot serialize INVALID_NET_ENTITY"
 		);
 
 	Net::Protocol::PacketWriter pw(

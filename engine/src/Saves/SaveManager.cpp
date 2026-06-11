@@ -160,7 +160,7 @@ SaveResult SaveManager::save(SaveId& saveId, bool makeBackup) {
 			);
 	}
 
-	IO::ByteBuffer bytes = doc.finalise(
+	IO::ByteBuffer bytes = doc.finalize(
 		compressor.get(),
 		useEncryption ? encryptor.get() : nullptr,
 		useEncryption ? key : nullptr

@@ -20,8 +20,8 @@ namespace Blackthorn::Audio {
  * Windows audio engine on a dedicated COM thread whenever the user changes
  * the default output device (e.g. plugs or unplugs headphones).
  *
- * @section com COM initialisation
- * Windows requires COM to be initialised on the thread that creates the
+ * @section com COM initialization
+ * Windows requires COM to be initialized on the thread that creates the
  * @c IMMDeviceEnumerator. @c start() calls @c CoInitializeEx internally
  * and @c stop() calls @c CoUninitialize. The notifier owns its COM context.
  *

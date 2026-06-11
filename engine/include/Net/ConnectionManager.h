@@ -68,7 +68,7 @@ public:
 	ConnectionManager& operator=(const ConnectionManager&) = delete;
 
 	/**
-	 * @brief Initialises the peer registry, binds sockets, and starts the
+	 * @brief Initializes the peer registry, binds sockets, and starts the
 	 * I/O thread.
 	 *
 	 * @param cfg Configuration.

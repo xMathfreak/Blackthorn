@@ -38,7 +38,7 @@ struct BLACKTHORN_API SpatialOptions {
  * @brief Parameters for a single @c AudioManager::play() call.
  */
 struct BLACKTHORN_API PlayOptions {
-	Math::FloatRange volume = 1.0f; ///< Randomised each call if a range is set.
+	Math::FloatRange volume = 1.0f; ///< Randomized each call if a range is set.
 	Math::FloatRange pitch = 1.0f;
 
 	AudioCategory category = AudioCategory::SFX;
@@ -157,7 +157,7 @@ public:
 	[[nodiscard]] float getPlaybackTime(AudioHandle handle);
 
 	/**
-	 * @brief Returns normalised playback position in [0, 1].
+	 * @brief Returns normalized playback position in [0, 1].
 	 *
 	 * Equivalent to @c getPlaybackTime() / @c getDuration(), clamped.
 	 * Returns 0 for inactive handles or zero-duration clips.

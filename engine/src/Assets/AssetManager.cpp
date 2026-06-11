@@ -5,7 +5,7 @@ namespace Blackthorn::Assets {
 AssetManager::AssetManager(Jobs::JobSystem& js)
 	: jobs(js)
 {
-	BT_DEBUG("AssetManager: Initialised");
+	BT_DEBUG("AssetManager: Initialized");
 }
 
 void AssetManager::shutdown() {

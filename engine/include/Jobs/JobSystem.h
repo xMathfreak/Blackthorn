@@ -20,7 +20,7 @@ namespace Blackthorn::Jobs {
  * worker, and a dedicated MPSC queue for main-thread-pinned jobs.
  *
  * The main-thread queue uses a sentinel-node MPSC design (Michael & Scott
- * queue, enqueue side only) to eliminate the initialisation race that
+ * queue, enqueue side only) to eliminate the initialization race that
  * occurs when the queue transitions from empty to non-empty with two
  * independent head/tail atomics.
  *

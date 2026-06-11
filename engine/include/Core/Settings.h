@@ -88,7 +88,7 @@ public:
 	/**
 	 * @brief Returns the value of a key, creating it with a default if absent.
 	 *
-	 * Lookup is case-insensitive. Section and key names are normalised to
+	 * Lookup is case-insensitive. Section and key names are normalized to
 	 * lowercase before any map operation.
 	 *
 	 * @tparam T       Value type (bool, integral, float, double, std::string).

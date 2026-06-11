@@ -37,7 +37,7 @@ namespace Blackthorn::IO {
  * auto   str = in.readString();
  * @endcode
  *
- * @note This class is not thread-safe. External synchronisation is
+ * @note This class is not thread-safe. External synchronization is
  * required if the buffer is shared across threads.
  */
 class BLACKTHORN_API ByteBuffer {

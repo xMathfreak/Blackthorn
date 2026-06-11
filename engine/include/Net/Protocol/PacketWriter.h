@@ -46,7 +46,7 @@ namespace Blackthorn::Net::Protocol {
 class BLACKTHORN_API PacketWriter {
 public:
 	/**
-	 * @brief Begins a new packet by serialising a @c PacketHeader into
+	 * @brief Begins a new packet by serializing a @c PacketHeader into
 	 * @p buf with @c payloadLength = 0.
 	 *
 	 * The header is written at the current end of @p buf. The write
@@ -100,7 +100,7 @@ public:
 	IO::ByteBuffer& buffer() { return buf; }
 
 	/**
-	 * @brief Finalises the packet by computing and patching
+	 * @brief Finalizes the packet by computing and patching
 	 * @c payloadLength into the previously written header.
 	 *
 	 * Must be called exactly once, after all payload bytes have been

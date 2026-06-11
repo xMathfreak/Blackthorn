@@ -285,7 +285,7 @@ private:
 	 *        directory, different extension.
 	 *
 	 * @param saveId The primary save's identity.
-	 * @param primaryBytes The already-serialised document bytes to duplicate.
+	 * @param primaryBytes The already-serialized document bytes to duplicate.
 	 *                     Re-using the primary bytes avoids a second
 	 *                     compress+encrypt cycle.
 	 */

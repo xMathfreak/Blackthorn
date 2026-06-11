@@ -96,7 +96,7 @@ struct BLACKTHORN_API NetworkPeer {
 	/// Optional human-readable label (e.g. "Player 1", "Server").
 	std::string label;
 
-	/// Per-peer inbound rate limiter. Initialised with defaults from
+	/// Per-peer inbound rate limiter. initialized with defaults from
 	/// ConnectionConfig; may be overridden after connection via
 	/// ConnectionManager::setPeerRateLimit().
 	PeerRateLimiter rateLimiter;
@@ -106,7 +106,7 @@ struct BLACKTHORN_API NetworkPeer {
 	U16 negotiatedSchemaVersion = 0;
 
 	/// Per-peer UDP fragment reassembler.
-	/// Initialised by PeerRegistry::allocateSlot() with a reference to
+	/// initialized by PeerRegistry::allocateSlot() with a reference to
 	/// NetworkIOWorker::globalFragmentBytes so the assembler can enforce
 	/// the engine-wide memory cap.
 	/// nullptr until the peer slot is allocated.

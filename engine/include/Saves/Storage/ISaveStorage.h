@@ -87,7 +87,7 @@ public:
 	 * Overwrites any existing save with the same UUID.
 	 *
 	 * @param saveId  Identity of the save being written.
-	 * @param data    Fully serialized document bytes from @c SaveDocument::finalise().
+	 * @param data    Fully serialized document bytes from @c SaveDocument::finalize().
 	 * @return @c SaveResult::success() on success, or @c ::failure() with reason.
 	 */
 	virtual SaveResult write(const SaveId& saveId, const IO::ByteBuffer& data) = 0;

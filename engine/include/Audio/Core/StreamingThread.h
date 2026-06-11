@@ -40,7 +40,7 @@ namespace Blackthorn::Audio {
  * is owned by @c StreamingVoiceState, which lives inside the @c Voice, which
  * is held by @c VoicePool. The audio thread never touches the decoder while
  * a job is in flight; the streaming thread never touches it after pushing the
- * result command. No synchronisation beyond the SPSC queues is required.
+ * result command. No synchronization beyond the SPSC queues is required.
  */
 class BLACKTHORN_API StreamingThread {
 public:
