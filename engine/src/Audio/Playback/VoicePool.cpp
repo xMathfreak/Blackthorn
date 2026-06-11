@@ -6,15 +6,12 @@ namespace Blackthorn::Audio {
 
 VoicePool::VoicePool(size_t maxVoices)
 	: voiceStorage(maxVoices)
-{}
+	, handleIds(maxVoices, 0)
+{
+	freeSlots.reserve(maxVoices);
 
-Voice* VoicePool::findFreeSlot() {
-	for (Voice& voice : voiceStorage) {
-		if (!voice.active())
-			return &voice;
-	}
-
-	return nullptr;
+	for (size_t i = maxVoices; i-- > 0;)
+		freeSlots.push_back(i);
 }
 
 Voice* VoicePool::findStealCandidate(int incomingPriority) {
@@ -43,10 +40,12 @@ Voice* VoicePool::findStealCandidate(int incomingPriority) {
 	return candidate;
 }
 
-
 Voice* VoicePool::acquire(int priority) {
-	if (Voice* free = findFreeSlot())
-		return free;
+	if (!freeSlots.empty()) {
+		const size_t idx = freeSlots.back();
+		freeSlots.pop_back();
+		return &voiceStorage[idx];
+	}
 
 	Voice* stolen = findStealCandidate(priority);
 
@@ -54,29 +53,41 @@ Voice* VoicePool::acquire(int priority) {
 		return nullptr;
 
 	release(*stolen);
-	return stolen;
+
+	const size_t idx = freeSlots.back();
+	freeSlots.pop_back();
+	return &voiceStorage[idx];
 }
 
 Voice* VoicePool::find(AudioHandle handle) {
 	if (!handle.isValid())
 		return nullptr;
 
-	for (Voice& voice : voiceStorage) {
-		if (voice.active() && voice.handle().id == handle.id)
-			return &voice;
+	for (size_t i = 0; i < handleIds.size(); ++i) {
+		if (handleIds[i] == handle.id)
+			return &voiceStorage[i];
 	}
 
 	return nullptr;
 }
 
 void VoicePool::release(Voice& voice) {
+	const size_t idx = static_cast<size_t>(&voice - voiceStorage.data());
+
 	voice.reset();
+	handleIds[idx] = 0;
+	freeSlots.push_back(idx);
 }
 
 void VoicePool::stopAll() {
-	for (Voice& voice : voiceStorage) {
-		if (voice.active())
-			release(voice);
+	freeSlots.clear();
+
+	for (size_t i = 0; i < voiceStorage.size(); ++i) {
+		if (voiceStorage[i].active())
+			voiceStorage[i].reset();
+
+		handleIds[i] = 0;
+		freeSlots.push_back(i);
 	}
 }
 

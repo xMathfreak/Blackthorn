@@ -21,6 +21,20 @@ namespace Blackthorn::Audio {
  * @p incomingPriority. Equal-priority incumbents are never stolen.
  * When two steal candidates share the lowest priority, the one with the
  * smaller @c startTick() is evicted first (FIFO).
+ *
+ * @section internals Internal structure
+ * Two parallel structures are maintained alongside @c voiceStorage:
+ *
+ * - @c handleIds: a @c vector<U64> mirroring @c voice[i].handle().id
+ *   at index @c i. Elements are 8 bytes each, so the entire array fits
+ *   in two cache lines at the default pool size of 32. @c find() scans
+ *   this array instead of the @c Voice objects, avoiding touching any
+ *   @c Voice fields until a match is confirmed.
+ *
+ * - @c freeSlots: a stack of free slot indices. @c acquire() pops in
+ *   O(1); @c release() pushes in O(1). @c findStealCandidate() still
+ *   scans @c voiceStorage because it must compare priority and tick
+ *   fields but it only runs when the pool is completely full.
  */
 class VoicePool {
 public:
@@ -78,11 +92,28 @@ public:
 	std::vector<Voice>& voices() noexcept;
 
 private:
-	Voice* findFreeSlot();
 	Voice* findStealCandidate(int incomingPriority);
 
 private:
 	std::vector<Voice> voiceStorage;
+
+	/**
+	 * @brief Parallel array of active handle IDs, indexed by slot.
+	 *
+	 * @c handleIds[i] == voiceStorage[i].handle().id when slot @c i
+	 * is active, and 0 when it is free. Kept synchronized by @c acquire(),
+	 * @c release() and @c stopAll().
+	 */
+	std::vector<U64> handleIds;
+
+	/**
+	 * @brief Stack of free slot indices.
+	 *
+	 * Populated with @c {0...n-1} at construction. @c acquire() pops
+	 * the back; @c release() pushes the freed index. Never exceeds @c
+	 * maxVoices entries.
+	 */
+	std::vector<size_t> freeSlots;
 };
 
 } // namespace Blackthorn::Audio
