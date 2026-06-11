@@ -85,7 +85,7 @@ public:
 
 	[[nodiscard]]
 	size_t estimatedBytes() const noexcept {
-		return data.frameCount * data.channels * sizeof(float);
+		return data.frameCount * data.channels * sizeof(I16);
 	}
 
 private:
