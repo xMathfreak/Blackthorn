@@ -140,12 +140,6 @@ bool Engine::init(const EngineConfig& cfg) {
 }
 
 void Engine::initGraphics(const EngineConfig& cfg) {
-	#ifdef BLACKTHORN_DEBUG
-		SDL_SetLogPriority(SDL_LOG_CATEGORY_APPLICATION, SDL_LOG_PRIORITY_VERBOSE);
-	#else
-		SDL_SetLogPriority(SDL_LOG_CATEGORY_APPLICATION, SDL_LOG_PRIORITY_INFO);
-	#endif
-
 	if (!SDL_InitSubSystem(SDL_INIT_VIDEO)) {
 		BT_ERROR("SDL: Failed to initialize Video subsystem - {}", SDL_GetError());
 		return;

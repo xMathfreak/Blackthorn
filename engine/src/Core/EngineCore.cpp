@@ -34,6 +34,12 @@ bool EngineCore::init(const EngineConfig& cfg) {
 		return false;
 	}
 
+	#ifdef BLACKTHORN_DEBUG
+		SDL_SetLogPriorities(SDL_LOG_PRIORITY_DEBUG);
+	#else
+		SDL_SetLogPriorities(SDL_LOG_PRIORITY_INFO);
+	#endif
+
 	config = cfg;
 
 	Threads::ThreadRegistry::instance().registerCurrent("Main");
