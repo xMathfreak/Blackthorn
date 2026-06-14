@@ -81,7 +81,10 @@ VoiceViewPool& AudioThread::views() const noexcept {
 
 void AudioThread::threadLoop() {
 	context->makeCurrent();
+
 	voicePool = std::make_unique<VoicePool>(config.maxVoices);
+	voicePool->initSources();
+
 	viewPool = std::make_unique<VoiceViewPool>(config.maxVoices);
 
 	#if defined(_WIN32)

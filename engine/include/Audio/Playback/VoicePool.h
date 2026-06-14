@@ -64,6 +64,15 @@ public:
 	 */
 	void update();
 
+	/**
+	 * @brief Calls @c AudioSource::create() on every voice slot.
+	 *
+	 * Must be called exactly once from the audio thread after an
+	 * OpenAL context has been made current. On device reconnect, use
+	 * @c Voice::recreateSource per voice.
+	 */
+	void initSources();
+
 	[[nodiscard]] size_t size() const noexcept;
 
 	/**

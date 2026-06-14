@@ -8,9 +8,7 @@
 
 namespace Blackthorn::Audio {
 
-AudioSource::AudioSource() {
-	create();
-}
+AudioSource::AudioSource() = default;
 
 AudioSource::~AudioSource() {
 	destroy();

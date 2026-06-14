@@ -112,4 +112,9 @@ std::vector<Voice>& VoicePool::voices() noexcept {
 	return voiceStorage;
 }
 
+void VoicePool::initSources() {
+	for (Voice& voice : voiceStorage)
+		voice.source().create();
+}
+
 } // namespace Blackthorn::Audio
