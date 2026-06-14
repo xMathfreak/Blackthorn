@@ -61,7 +61,7 @@ namespace Net {
  */
 class BLACKTHORN_API ConnectionManager {
 public:
-	ConnectionManager();
+	ConnectionManager(const ConnectionConfig& cfg = ConnectionConfig());
 	~ConnectionManager();
 
 	ConnectionManager(const ConnectionManager&) = delete;
@@ -74,7 +74,7 @@ public:
 	 * @param cfg Configuration.
 	 * @return true on success.
 	 */
-	bool start(const ConnectionConfig& cfg = ConnectionConfig());
+	bool start();
 
 	/**
 	 * @brief Stops the I/O thread, closes all sockets, and resets all peers.
@@ -119,7 +119,10 @@ public:
 	 *
 	 * @param jobs Optional job system for parallel packet dispatch.
 	 */
-	void poll(Jobs::JobSystem* jobs) { dispatcher.poll(jobs); }
+	void poll(Jobs::JobSystem* jobs) {
+		if (ioWorker.isRunning())
+			dispatcher.poll(jobs);
+	}
 
 	void onPacket(PacketHandler h) { dispatcher.onPacket(std::move(h)); }
 	void onConnect(ConnectHandler h) { dispatcher.onConnect(std::move(h)); }
@@ -148,16 +151,17 @@ public:
 	/** @brief Overrides the rate-limit config for a specific peer. */
 	void setPeerRateLimit(
 		Connection::PeerId peerId,
-		const Connection::RateLimitConfig& config)
+		const Connection::RateLimitConfig& rconf)
 	{
-		registry.setRateLimit(peerId, config);
+		registry.setRateLimit(peerId, rconf);
 	}
 
 private:
-	Connection::PeerRegistry registry;
-	ConnectionEventBus eventBus;
-	NetworkIOWorker ioWorker;
 	PacketDispatcher dispatcher;
+	Connection::PeerRegistry registry;
+	NetworkIOWorker ioWorker;
+	ConnectionConfig config;
+	ConnectionEventBus eventBus;
 };
 
 } // namespace Net

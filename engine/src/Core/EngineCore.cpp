@@ -91,10 +91,7 @@ bool EngineCore::init(const EngineConfig& cfg) {
 		*jobSystem
 	);
 
-	Net::Transport::Sockets::SocketFactory::init();
-
-	connectionManager = std::make_unique<Net::ConnectionManager>();
-	connectionManager->start(cfg.net);
+	connectionManager = std::make_unique<Net::ConnectionManager>(cfg.net);
 
 	initSaveManager();
 

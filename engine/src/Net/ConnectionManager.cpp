@@ -7,24 +7,26 @@
 
 namespace Blackthorn::Net {
 
-ConnectionManager::ConnectionManager() = default;
+ConnectionManager::ConnectionManager(const ConnectionConfig& cfg)
+	: config(cfg)
+{}
 
 ConnectionManager::~ConnectionManager() {
 	stop();
 }
 
-bool ConnectionManager::start(const ConnectionConfig& cfg) {
+bool ConnectionManager::start() {
 	if (ioWorker.isRunning()) {
 		BT_WARN("ConnectionManager: Already running");
 		return false;
 	}
 
-	registry.init(cfg.maxPeers, cfg.rateLimitDefaults, ioWorker.getGlobalFragmentBytes());
+	registry.init(config.maxPeers, config.rateLimitDefaults, ioWorker.getGlobalFragmentBytes());
 
 	dispatcher.registry = &registry;
 	dispatcher.eventBus = &eventBus;
 
-	if (!ioWorker.start(cfg, registry, eventBus, dispatcher.inboundQueue)) {
+	if (!ioWorker.start(config, registry, eventBus, dispatcher.inboundQueue)) {
 		BT_ERROR("ConnectionManager: Failed to start I/O worker");
 		registry.reset();
 		return false;
