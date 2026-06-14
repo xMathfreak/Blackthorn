@@ -55,10 +55,12 @@ SaveResult LocalFileSaveStorage::write(
 	const IO::ByteBuffer& data
 ) {
 	const std::filesystem::path path = resolvePath(saveId);
+	const auto dir = path.parent_path().empty()
+		? std::filesystem::current_path()
+		: path.parent_path();
 
 	const UMAX needed = static_cast<UMAX>(data.size());
-	const UMAX available = availableBytes(path.parent_path().empty()
-		? std::filesystem::current_path() : path);
+	const UMAX available = availableBytes(dir);
 
 	if (available < needed) {
 		return SaveResult::failure(
@@ -224,10 +226,12 @@ UMAX LocalFileSaveStorage::availableBytes(
 		probe = probe.parent_path();
 
 	if (probe.empty())
+		probe = std::filesystem::current_path(ec);
+
+	if (ec)
 		return 0;
 
-	const std::filesystem::space_info si =
-		std::filesystem::space(probe, ec);
+	const auto si = std::filesystem::space(probe, ec);
 
 	if (ec)
 		return 0;
