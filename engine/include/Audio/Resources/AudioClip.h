@@ -124,6 +124,7 @@ public:
 
 		clipPath = path;
 		metaData = std::move(meta);
+
 		pcmData = std::move(pcm);
 
 		if (metaData.sampleRate > 0 && metaData.frameCount > 0) {

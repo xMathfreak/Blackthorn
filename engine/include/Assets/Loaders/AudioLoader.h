@@ -22,9 +22,9 @@ struct BLACKTHORN_API AudioParams : Assets::LoadParams {
 };
 
 struct BLACKTHORN_API RawAudioData : Assets::IRawAssetData {
-	AudioData data;
-	AudioMetadata metadata;
 	std::filesystem::path path;
+	std::optional<AudioData> data;
+	AudioMetadata metadata;
 };
 
 class BLACKTHORN_API AudioLoader final : public Assets::IAssetLoader<AudioClip> {
@@ -32,14 +32,17 @@ public:
 	std::unique_ptr<AudioClip> load(const Assets::LoadParams& params) override {
 		std::unique_ptr<AudioClip> clip = std::make_unique<AudioClip>();
 		if (const AudioParams* ap = dynamic_cast<const AudioParams*>(&params)) {
-			clip->load(ap->path);
+			if (!clip->load(ap->path))
+				return nullptr;
 
 			if (ap->isPCM)
 				clip->loadPCM();
 
 			return clip;
 		} else if (const auto* pp = dynamic_cast<const Assets::PathLoadParams*>(&params)) {
-			clip->load(pp->path);
+			if (!clip->load(pp->path))
+				return nullptr;
+
 			return clip;
 		}
 
@@ -73,9 +76,12 @@ public:
 		}
 
 		if (loadPCM) {
-			if (!Decoding::AudioDecoder::decode(raw->path, raw->data)) {
+			AudioData data;
+			if (!Decoding::AudioDecoder::decode(raw->path, data)) {
 				return nullptr;
 			}
+
+			raw->data = std::move(data);
 		}
 
 		raw->valid = true;
