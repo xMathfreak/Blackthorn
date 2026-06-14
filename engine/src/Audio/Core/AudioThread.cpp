@@ -126,7 +126,7 @@ void AudioThread::threadLoop() {
 			{
 				AudioCommand cmd;
 				while (commandQueue.pop(cmd))
-					processCommand(cmd);
+					processCommand(std::move(cmd));
 			}
 
 			tickStreaming();
@@ -142,7 +142,7 @@ void AudioThread::threadLoop() {
 		drainStreamResults();
 		AudioCommand cmd;
 		while (commandQueue.pop(cmd))
-			processCommand(cmd);
+			processCommand(std::move(cmd));
 	}
 
 	voicePool->stopAll();
@@ -743,10 +743,10 @@ size_t AudioThread::prefillBuffer(
 	return framesRead;
 }
 
-void AudioThread::processCommand(const AudioCommand& command) {
+void AudioThread::processCommand(AudioCommand command) {
 	std::visit(
-		[this](auto&& cmd) { process(cmd); },
-		command
+		[this](auto&& c) { process(std::forward<decltype(c)>(c)); },
+		std::move(command)
 	);
 }
 

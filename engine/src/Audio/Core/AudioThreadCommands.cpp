@@ -46,7 +46,7 @@ void uploadAndQueue(
 
 } // namespace
 
-void AudioThread::process(const PlayCommand& cmd) {
+void AudioThread::process(PlayCommand&& cmd) {
 	if (!cmd.clipSource) {
 		BT_WARN("AudioThread: PlayCommand has null clip, dropping");
 		return;
@@ -90,28 +90,28 @@ void AudioThread::process(const PlayCommand& cmd) {
 		processResidentPlayback(*voice, *cmd.clipSource);
 }
 
-void AudioThread::process(const StopCommand& cmd) {
+void AudioThread::process(StopCommand cmd) {
 	Voice* voice = voicePool->find(cmd.handle);
 
 	if (voice)
 		voicePool->release(*voice);
 }
 
-void AudioThread::process(const PauseCommand& cmd) {
+void AudioThread::process(PauseCommand cmd) {
 	Voice* voice = voicePool->find(cmd.handle);
 
 	if (voice)
 		voice->pause();
 }
 
-void AudioThread::process(const ResumeCommand& cmd) {
+void AudioThread::process(ResumeCommand cmd) {
 	Voice* voice = voicePool->find(cmd.handle);
 
 	if (voice)
 		voice->resume();
 }
 
-void AudioThread::process(const SetVolumeCommand& cmd) {
+void AudioThread::process(SetVolumeCommand cmd) {
 	Voice* voice = voicePool->find(cmd.handle);
 
 	if (!voice)
@@ -122,21 +122,21 @@ void AudioThread::process(const SetVolumeCommand& cmd) {
 	);
 }
 
-void AudioThread::process(const SetPitchCommand& cmd) {
+void AudioThread::process(SetPitchCommand cmd) {
 	Voice* voice = voicePool->find(cmd.handle);
 
 	if (voice)
 		voice->setPitch(cmd.pitch);
 }
 
-void AudioThread::process(const SetPositionCommand& cmd) {
+void AudioThread::process(SetPositionCommand cmd) {
 	Voice* voice = voicePool->find(cmd.handle);
 
 	if (voice)
 		voice->setPosition(cmd.position);
 }
 
-void AudioThread::process(const SetCategoryVolumeCommand& cmd) {
+void AudioThread::process(SetCategoryVolumeCommand cmd) {
 	const size_t idx = static_cast<size_t>(cmd.category);
 
 	if (idx >= AUDIO_CATEGORY_COUNT) {
@@ -164,7 +164,7 @@ void AudioThread::process(const SetCategoryVolumeCommand& cmd) {
 	}
 }
 
-void AudioThread::process(const ListenerTransformCommand& cmd) {
+void AudioThread::process(ListenerTransformCommand cmd) {
 	alListener3f(AL_POSITION,
 		cmd.position.x, cmd.position.y, cmd.position.z);
 	alListener3f(AL_VELOCITY,
@@ -177,11 +177,11 @@ void AudioThread::process(const ListenerTransformCommand& cmd) {
 	alListenerfv(AL_ORIENTATION, orientation);
 }
 
-void AudioThread::process(const StopAllCommand&) {
+void AudioThread::process(StopAllCommand) {
 	voicePool->stopAll();
 }
 
-void AudioThread::process(const StreamBufferReadyCommand& cmd) {
+void AudioThread::process(StreamBufferReadyCommand&& cmd) {
 	Voice* voice = voicePool->find(cmd.handle);
 
 	if (!voice || !voice->streaming())
@@ -201,7 +201,7 @@ void AudioThread::process(const StreamBufferReadyCommand& cmd) {
 	}
 
 	if (sstate->freeBuffers.empty() && !cmd.samples.empty()) {
-		sstate->pendingUpload = cmd.samples;
+		sstate->pendingUpload = std::move(cmd.samples);
 		sstate->pendingEndOfStream = cmd.endOfStream;
 		return;
 	}

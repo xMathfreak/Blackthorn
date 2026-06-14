@@ -80,7 +80,7 @@ private:
 		bool previousChunkWasShort
 	);
 
-	void processCommand(const AudioCommand& cmd);
+	void processCommand(AudioCommand cmd);
 	void drainStreamResults();
 
 	[[nodiscard]]
@@ -119,17 +119,17 @@ private:
 	AudioConfig config;
 
 private:
-	void process(const PlayCommand& cmd);
-	void process(const StopCommand& cmd);
-	void process(const PauseCommand& cmd);
-	void process(const ResumeCommand& cmd);
-	void process(const SetVolumeCommand& cmd);
-	void process(const SetPitchCommand& cmd);
-	void process(const SetPositionCommand& cmd);
-	void process(const SetCategoryVolumeCommand& cmd);
-	void process(const ListenerTransformCommand& cmd);
-	void process(const StopAllCommand& cmd);
-	void process(const StreamBufferReadyCommand& cmd);
+	void process(PlayCommand&& cmd);
+	void process(StopCommand cmd);
+	void process(PauseCommand cmd);
+	void process(ResumeCommand cmd);
+	void process(SetVolumeCommand cmd);
+	void process(SetPitchCommand cmd);
+	void process(SetPositionCommand cmd);
+	void process(SetCategoryVolumeCommand cmd);
+	void process(ListenerTransformCommand cmd);
+	void process(StopAllCommand cmd);
+	void process(StreamBufferReadyCommand&& cmd);
 
 private:
 	std::vector<VoiceSnapshot> voiceSnapshots;

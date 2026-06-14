@@ -112,6 +112,8 @@ private:
 private:
 	StreamingJobQueue jobQueue;
 
+	std::vector<I16> scratchBuffer;
+
 	/// Pointers to the audio thread's CV and queue — set by start(), valid
 	/// for the lifetime of the thread.
 	std::condition_variable* audioWakeCv = nullptr;

@@ -89,25 +89,27 @@ void StreamingThread::processJob(const StreamingJob& job) {
 		return;
 	}
 
-	const size_t sampleBufSize = job.frameCount * job.channels;
-	std::vector<I16> samples(sampleBufSize);
+	const size_t maxSamples = job.frameCount * job.channels;
+
+	if (scratchBuffer.size() < maxSamples)
+		scratchBuffer.resize(maxSamples);
 
 	const size_t framesRead =
-		job.decoder->readFrames(samples.data(), job.frameCount);
+		job.decoder->readFrames(scratchBuffer.data(), job.frameCount);
 
-	samples.resize(framesRead * job.channels);
-
+	const size_t samplesRead = framesRead * job.channels;
 	const bool shortRead = (framesRead < job.frameCount);
 	const bool endOfStream = shortRead && !job.looping;
 
 	StreamBufferReadyCommand cmd;
 	cmd.handle = job.handle;
-	cmd.samples = std::move(samples);
 	cmd.channels = job.channels;
 	cmd.sampleRate = job.sampleRate;
 	cmd.endOfStream = endOfStream;
 
-	if (!resultQueue->push(AudioCommand { std::move(cmd) })) {
+	cmd.samples.assign(scratchBuffer.data(), scratchBuffer.data() + samplesRead);
+
+	if (!resultQueue->push(AudioCommand{ std::move(cmd) })) {
 		BT_WARN(
 			"StreamingThread: result queue full, decoded chunk for "
 			"handle {} dropped", job.handle.id
