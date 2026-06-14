@@ -281,7 +281,13 @@ void AudioThread::updatePlaybackTimes() {
 				static_cast<float>(totalFrames) /
 				static_cast<float>(sstate->sampleRate);
 
-			voice.setPlaybackTime(t);
+			const float duration = voice.duration();
+			const float position =
+				(voice.looping() && duration > 0.0f)
+					? std::fmod(t, duration)
+					: t;
+
+			voice.setPlaybackTime(position);
 		} else {
 			ALfloat seconds = 0.0f;
 			alGetSourcef(
