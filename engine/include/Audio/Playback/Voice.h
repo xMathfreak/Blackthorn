@@ -51,6 +51,8 @@ public:
 		decodedFrames = 0;
 		consumedFrames = 0;
 		audioClip = nullptr;
+		jobInFlight = false;
+		pendingStop = false;
 		sourcePosition = glm::vec3{0.0f};
 		minDist = 1.0f;
 		maxDist = 50.0f;
@@ -263,6 +265,28 @@ public:
 		return maxDist;
 	}
 
+	void markJobInFlight() noexcept {
+		jobInFlight = true;
+	}
+
+	void clearJobInFlight() noexcept {
+		jobInFlight = false;
+	}
+
+	void markPendingStop() noexcept {
+		pendingStop = true;
+	}
+
+	[[nodiscard]]
+	bool hasJobInFlight() const noexcept {
+		return jobInFlight;
+	}
+
+	[[nodiscard]]
+	bool isPendingStop() const noexcept {
+		return pendingStop;
+	}
+
 private:
 	glm::vec3 sourcePosition{0};
 
@@ -285,6 +309,8 @@ private:
 
 	bool spatial = false;
 	bool looped = false;
+	bool jobInFlight = false;
+	bool pendingStop = false;
 	AudioCategory audioCategory = AudioCategory::SFX;
 };
 

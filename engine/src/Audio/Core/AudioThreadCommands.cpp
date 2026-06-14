@@ -83,8 +83,15 @@ void AudioThread::process(PlayCommand&& cmd) {
 void AudioThread::process(StopCommand cmd) {
 	Voice* voice = voicePool->find(cmd.handle);
 
-	if (voice)
-		voicePool->release(*voice);
+	if (!voice)
+		return;
+
+	if (voice->streaming() && voice->hasJobInFlight()) {
+		voice->markPendingStop();
+		return;
+	}
+
+	voicePool->release(*voice);
 }
 
 void AudioThread::process(PauseCommand cmd) {
@@ -174,6 +181,13 @@ void AudioThread::process(StreamBufferReadyCommand&& cmd) {
 
 	if (!voice || !voice->streaming())
 		return;
+
+	voice->clearJobInFlight();
+
+	if (voice->isPendingStop()) {
+		voicePool->release(*voice);
+		return;
+	}
 
 	StreamingVoiceState* sstate = voice->streamState();
 

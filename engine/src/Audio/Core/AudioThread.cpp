@@ -585,6 +585,8 @@ void AudioThread::submitStreamingJob(
 	job.sampleRate = sstate.sampleRate;
 	job.looping = voice.looping();
 
+	voice.markJobInFlight();
+
 	streamingThread.submitJob(std::move(job));
 }
 
