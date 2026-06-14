@@ -78,7 +78,7 @@ bool OggDecoder::getInfo(
 
 	data.channels = static_cast<U32>(info->channels);
 	data.sampleRate = static_cast<U32>(info->rate);
-	data.frameCount = static_cast<U32>(ov_pcm_total(&vf, -1));
+	data.frameCount = static_cast<U64>(ov_pcm_total(&vf, -1));
 
 	ov_clear(&vf);
 	return true;

@@ -643,7 +643,7 @@ void AudioThread::processResidentPlayback(
 void AudioThread::processStreamingPlayback(
 	Voice& voice,
 	const AudioClip& clip,
-	U64 startTick
+	U64 startFrame
 ) {
 	auto decoder = Streaming::StreamDecoderFactory::create(
 		clip.sourcePath().string()
@@ -676,13 +676,13 @@ void AudioThread::processStreamingPlayback(
 	sstate->decoder = std::move(decoder);
 	sstate->init();
 
-	if (startTick > 0) {
-		voice.addConsumedFrames(startTick);
-		if (!sstate->decoder->seek(startTick)) {
+	if (startFrame > 0) {
+		voice.addConsumedFrames(startFrame);
+		if (!sstate->decoder->seek(startFrame)) {
 			BT_WARN(
 				"AudioThread: seek to frame {} failed for '{}', "
 				"resuming from start",
-				startTick, clip.sourcePath().string()
+				startFrame, clip.sourcePath().string()
 			);
 		}
 	}
