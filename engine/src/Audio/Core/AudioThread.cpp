@@ -559,12 +559,8 @@ bool AudioThread::shouldRestoreVoice(const Voice& voice) const noexcept {
 	if (voice.looping())
 		return true;
 
-	const float duration = voice.duration();
-	const float elapsed = voice.getPlaybackTime();
-	const float remaining = duration - elapsed;
-
-	return duration  > kMinRestoreDuration
-		&& remaining > kMinRemainingTime;
+	const float remaining = voice.duration() - voice.getPlaybackTime();
+	return remaining > kMinRemainingTime;
 }
 
 void AudioThread::submitStreamingJob(

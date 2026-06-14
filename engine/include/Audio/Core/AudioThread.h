@@ -159,7 +159,6 @@ private:
 
 	std::atomic<bool> pendingMigrationHint { false };
 
-	static constexpr float kMinRestoreDuration = 2.0f;
 	static constexpr float kMinRemainingTime = 0.5f;
 };
 
