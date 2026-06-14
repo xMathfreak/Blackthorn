@@ -12,17 +12,20 @@ VoiceView& VoiceViewPool::writeSlot(size_t slotIndex) {
 }
 
 void VoiceViewPool::publish() {
-	const int newSpare =
-		spareIndex.exchange(writeIndex, std::memory_order::acq_rel);
+	const int word = (writeIndex << 1) | 1;
+	const int old = spareWord.exchange(word, std::memory_order::release);
 
-	writeIndex = newSpare;
+	writeIndex = old >> 1;
 }
 
 void VoiceViewPool::acquire() {
-	const int newSpare =
-		spareIndex.exchange(readIndex, std::memory_order::acq_rel);
+	const int word = spareWord.load(std::memory_order::relaxed);
 
-	readIndex = newSpare;
+	if ((word & 1) == 0)
+		return;
+
+	const int old = spareWord.exchange(readIndex << 1, std::memory_order::acquire);
+	readIndex = old >> 1;
 }
 
 const VoiceView& VoiceViewPool::query(

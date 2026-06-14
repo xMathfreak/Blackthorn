@@ -37,7 +37,13 @@ private:
 	int writeIndex = 0;
 	int readIndex = 1;
 
-	std::atomic<int> spareIndex {2};
+	/**
+	 * @brief Packed spare index and dirty flag.
+	 *
+	 * Encoding: @c (bufferIndex << 1) | dirty.
+	 * Initialized to buffer 2 with dirty = 0.
+	 */
+	std::atomic<int> spareWord {2 << 1};
 
 	/// Returned when query() finds no matching voice. Always Inactive.
 	static constexpr VoiceView inactiveDefault{};
