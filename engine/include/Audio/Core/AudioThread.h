@@ -22,6 +22,17 @@
 
 namespace Blackthorn::Audio {
 
+inline float computeGain(
+	float baseVolume,
+	AudioCategory category,
+	const std::array<float, AUDIO_CATEGORY_COUNT>& categoryVolumes
+) {
+	const float catVol = categoryVolumes[static_cast<size_t>(category)];
+	const float masterVol =
+		categoryVolumes[static_cast<size_t>(AudioCategory::Master)];
+	return baseVolume * catVol * masterVol;
+}
+
 enum class AudioThreadState : U8 {
 	Running,
 	Stopped,

@@ -357,7 +357,7 @@ void AudioThread::enterRecovery(AudioThreadState reason) {
 
 			snap.originalHandle = voice.handle();
 			snap.clip = voice.clip();
-			snap.volume = voice.volume();
+			snap.volume = voice.rawVolume();
 			snap.pitch = voice.pitch();
 			snap.playbackTime = voice.getPlaybackTime();
 			snap.duration = voice.duration();
@@ -493,7 +493,11 @@ void AudioThread::restoreVoices() {
 			snap.duration
 		);
 
-		voice->setVolume(snap.volume);
+		voice->setVolume(
+			snap.volume,
+			computeGain(snap.volume, snap.category, categoryVolumes)
+		);
+
 		voice->setPitch(snap.pitch);
 		voice->source().setStreamingMode(snap.stream);
 		voice->setLooping(snap.loop);

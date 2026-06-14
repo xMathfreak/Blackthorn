@@ -11,17 +11,6 @@ namespace Blackthorn::Audio {
 
 namespace {
 
-float computeGain(
-	float baseVolume,
-	AudioCategory category,
-	const std::array<float, AUDIO_CATEGORY_COUNT>& categoryVolumes
-) {
-	const float catVol = categoryVolumes[static_cast<size_t>(category)];
-	const float masterVol =
-		categoryVolumes[static_cast<size_t>(AudioCategory::Master)];
-	return baseVolume * catVol * masterVol;
-}
-
 void uploadAndQueue(
 	Voice& voice,
 	StreamingVoiceState&  state,
@@ -68,6 +57,7 @@ void AudioThread::process(PlayCommand&& cmd) {
 	);
 
 	voice->setVolume(
+		cmd.volume,
 		computeGain(cmd.volume, cmd.category, categoryVolumes)
 	);
 	voice->setPitch(cmd.pitch);
@@ -118,6 +108,7 @@ void AudioThread::process(SetVolumeCommand cmd) {
 		return;
 
 	voice->setVolume(
+		cmd.volume,
 		computeGain(cmd.volume, voice->category(), categoryVolumes)
 	);
 }
@@ -146,9 +137,6 @@ void AudioThread::process(SetCategoryVolumeCommand cmd) {
 
 	categoryVolumes[idx] = cmd.volume;
 
-	const float masterVol =
-		categoryVolumes[static_cast<size_t>(AudioCategory::Master)];
-
 	for (Voice& voice : voicePool->voices()) {
 		if (!voice.active())
 			continue;
@@ -157,10 +145,10 @@ void AudioThread::process(SetCategoryVolumeCommand cmd) {
 			cmd.category != AudioCategory::Master)
 			continue;
 
-		const float catVol =
-			categoryVolumes[static_cast<size_t>(voice.category())];
-
-		voice.source().setGain(voice.volume() * catVol * masterVol);
+		voice.setVolume(
+			voice.rawVolume(),
+			computeGain(voice.rawVolume(), voice.category(), categoryVolumes)
+		);
 	}
 }
 

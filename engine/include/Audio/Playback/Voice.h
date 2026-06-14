@@ -42,7 +42,8 @@ public:
 		voicePriority = 0;
 		spatial = false;
 		looped = false;
-		baseVolume = 1.0f;
+		userVolume = 1.0f;
+		finalGain = 1.0f;
 		pitchValue = 1.0f;
 		clipDuration = 0.0f;
 		playbackTime = 0.0f;
@@ -71,9 +72,20 @@ public:
 		audioSource.play();
 	}
 
-	void setVolume(float volume) {
-		baseVolume = volume;
-		audioSource.setGain(volume);
+	/**
+	 * @brief Sets the voice volume.
+	 *
+	 * @param raw  User-supplied scalar in [0, 1]. Stored as @c userVolume
+	 *             and used as the base for future gain recomputation when
+	 *             category volumes change.
+	 * @param gain Final gain applied to the AL source: raw * catVol * masterVol.
+	 *             Stored as @c finalGain and published via @c volume() to
+	 *             the @c VoiceView.
+	 */
+	void setVolume(float raw, float gain) {
+		userVolume = raw;
+		finalGain = gain;
+		audioSource.setGain(gain);
 	}
 
 	void setPitch(float pitch) {
@@ -168,9 +180,26 @@ public:
 		return activationTick;
 	}
 
+	/**
+	 * @brief Returns the final audible gain (raw * category * master).
+	 *
+	 * This is what the AL source is set to. Published via @c VoiceView::volume
+	 * so @c AudioManager::getVolume() returns the actual audible level.
+	 */
 	[[nodiscard]]
 	float volume() const noexcept {
-		return baseVolume;
+		return finalGain;
+	}
+
+	/**
+	 * @brief Returns the user-supplied raw volume scalar.
+	 *
+	 * Used by @c SetCategoryVolumeCommand recomputation and voice snapshots
+	 * to avoid compounding multipliers across gain changes.
+	 */
+	[[nodiscard]]
+	float rawVolume() const noexcept {
+		return userVolume;
 	}
 
 	[[nodiscard]]
@@ -249,7 +278,8 @@ private:
 	float pitchValue = 1.0f;
 	float clipDuration = 0.0f;
 	float playbackTime = 0.0f;
-	float baseVolume = 1.0f;
+	float userVolume = 1.0f; ///< Raw user scalar. Input to gain computation.
+	float finalGain = 1.0f; ///< Computed AL gain: userVolume * catVol * master.
 	float minDist = 1.0f;
 	float maxDist = 50.0f;
 
