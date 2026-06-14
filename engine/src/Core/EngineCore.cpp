@@ -125,37 +125,6 @@ void EngineCore::shutdown() {
 			simClock->save();
 	#endif
 
-	if (saveManager && config.save.saveOnShutdown) {
-		const bool canSave = !config.save.encryptionEnabled
-			|| config.save.keyDeriveFn != nullptr;
-
-		if (canSave) {
-			Saves::SaveId shutdownId = getShutdownSaveId();
-			const U64 now = static_cast<U64>(
-				std::chrono::duration_cast<std::chrono::milliseconds>(
-					std::chrono::system_clock::now().time_since_epoch()
-				).count()
-			);
-
-			shutdownId.createdAt = now;
-			shutdownId.updatedAt = now;
-
-			const auto result = saveManager->save(shutdownId, false);
-
-			if (result) {
-				BT_LOG("EngineCore: Shutdown autosave written: ('{}')", shutdownId.id.toString());
-			} else {
-				BT_WARN("EngineCore: Shutdown autosave failed: {}", result.error);
-			}
-		} else {
-			BT_WARN(
-				"EngineCore: Shutdown autosave skipped: encryption is enabled "
-				"but no keyDeriveFn is set. Call SaveManager::setKeyDeriveFn() "
-				"before shutdown if you want encrypted autosaves"
-			);
-		}
-	}
-
 	sceneManager.reset();
 	simContext.reset();
 	saveManager.reset();
