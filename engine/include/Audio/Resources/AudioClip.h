@@ -1,5 +1,6 @@
 #pragma once
 
+#include <optional>
 #include <filesystem>
 
 #include "Audio/Decoding/AudioDecoder.h"
@@ -30,21 +31,41 @@ public:
 			return false;
 		}
 
-		data = info;
+		metaData = info;
 		clipPath = path;
 
-		if (data.sampleRate > 0 && data.frameCount > 0) {
-			duration = static_cast<double>(data.frameCount) /
-						static_cast<double>(data.sampleRate);
+		if (metaData.sampleRate > 0 && metaData.frameCount > 0) {
+			duration = static_cast<double>(metaData.frameCount) /
+						static_cast<double>(metaData.sampleRate);
 		}
 
 		loaded = true;
 		return true;
 	}
 
+	bool loadPCM() {
+		if (!loaded) {
+			BT_WARN("AudioClip: loadPCM() called before load()");
+			return false;
+		}
+
+		AudioData decoded;
+		if (!Decoding::AudioDecoder::decode(clipPath, decoded)) {
+			BT_ERROR(
+				"AudioClip: loadPCM() failed to decode clip '{}'",
+				clipPath.string()
+			);
+			return false;
+		}
+
+		pcmData = std::move(decoded);
+		return true;
+	}
+
 	void unload() noexcept {
 		clipPath = std::filesystem::path("");
-		data = {};
+		metaData = {};
+		pcmData.reset();
 		duration = 0.0;
 		loaded = false;
 	}
@@ -55,7 +76,7 @@ public:
 
 	[[nodiscard]]
 	const AudioMetadata& metadata() const noexcept {
-		return data;
+		return metaData;
 	}
 
 	[[nodiscard]]
@@ -70,27 +91,53 @@ public:
 
 	[[nodiscard]]
 	U64 frameCount() const noexcept {
-		return data.frameCount;
+		return metaData.frameCount;
 	}
 
 	[[nodiscard]]
 	U32 sampleRate() const noexcept {
-		return data.sampleRate;
+		return metaData.sampleRate;
 	}
 
 	[[nodiscard]]
 	U32 channels() const noexcept {
-		return data.channels;
+		return metaData.channels;
 	}
 
 	[[nodiscard]]
 	size_t estimatedBytes() const noexcept {
-		return data.frameCount * data.channels * sizeof(I16);
+		return metaData.frameCount * metaData.channels * sizeof(I16);
+	}
+
+	[[nodiscard]]
+	bool hasPCM() const noexcept {
+		return pcmData.has_value();
+	}
+
+	[[nodiscard]]
+	const AudioData& data() const noexcept {
+		return *pcmData;
+	}
+
+	void loadFromMemory(std::filesystem::path path, AudioMetadata& meta, std::optional<AudioData> pcm) {
+		unload();
+
+		clipPath = path;
+		metaData = std::move(meta);
+		pcmData = std::move(pcm);
+
+		if (metaData.sampleRate > 0 && metaData.frameCount > 0) {
+			duration = static_cast<double>(metaData.frameCount) /
+						static_cast<double>(metaData.sampleRate);
+		}
+
+		loaded = true;
 	}
 
 private:
 	std::filesystem::path clipPath;
-	AudioMetadata data;
+	AudioMetadata metaData;
+	std::optional<AudioData> pcmData;
 	double duration = 0.0;
 	bool loaded = false;
 };

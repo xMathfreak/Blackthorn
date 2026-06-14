@@ -17,27 +17,23 @@ bool WavDecoder::decode(
 		return false;
 	}
 
-	data.info.channels = static_cast<U32>(wav.channels);
-	data.info.sampleRate = wav.sampleRate;
-	data.info.frameCount = wav.totalPCMFrameCount;
-
 	const size_t sampleCount =
-		static_cast<size_t>(data.info.frameCount) * wav.channels;
+		static_cast<size_t>(wav.totalPCMFrameCount) * wav.channels;
 
 	data.samples.resize(sampleCount);
 
 	const drwav_uint64 framesRead = drwav_read_pcm_frames_s16(
 		&wav,
-		data.info.frameCount,
+		wav.totalPCMFrameCount,
 		data.samples.data()
 	);
 
 	drwav_uninit(&wav);
 
-	if (framesRead != data.info.frameCount) {
+	if (framesRead != wav.totalPCMFrameCount) {
 		BT_WARN(
 			"WavDecoder: WAV read only {}/{} frames from '{}'",
-			framesRead, data.info.frameCount, pathStr
+			framesRead, wav.totalPCMFrameCount, pathStr
 		);
 	}
 

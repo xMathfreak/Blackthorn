@@ -25,12 +25,8 @@ bool OggDecoder::decode(
 		return false;
 	}
 
-	data.info.channels = static_cast<U32>(info->channels);
-	data.info.sampleRate = static_cast<U32>(info->rate);
-	data.info.frameCount = static_cast<U64>(ov_pcm_total(&vf, -1));
-
 	const size_t sampleCount =
-		static_cast<size_t>(data.info.frameCount * info->channels);
+		static_cast<size_t>(ov_pcm_total(&vf, -1) * info->channels);
 
 	data.samples.resize(sampleCount);
 

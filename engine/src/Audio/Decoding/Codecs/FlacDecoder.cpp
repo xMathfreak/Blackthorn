@@ -24,10 +24,6 @@ bool FlacDecoder::decode(
 		return false;
 	}
 
-	data.info.frameCount = totalFrames;
-	data.info.channels = static_cast<U32>(channels);
-	data.info.sampleRate = static_cast<U32>(sampleRate);
-
 	const size_t sampleCount =
 		static_cast<size_t>(totalFrames) * channels;
 

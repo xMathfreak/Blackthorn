@@ -1,25 +1,50 @@
 #pragma once
 
 #include "Assets/AssetManager.h"
-#include "Audio/Resources/AudioClip.h"
 #include "Assets/IAssetLoader.h"
+#include "Audio/Resources/AudioClip.h"
+#include "Audio/Resources/AudioData.h"
 
 namespace Blackthorn::Audio {
 
-struct BLACKTHORN_API RawAudio : Assets::IRawAssetData {
+struct BLACKTHORN_API AudioParams : Assets::LoadParams {
 	std::string path;
+	bool isPCM = false;
 
-	RawAudio(const std::string& p)
-		: path(p)
+	AudioParams(const std::string& filePath, bool loadPCM = false)
+		: path(filePath)
+		, isPCM(loadPCM)
 	{}
+
+	std::unique_ptr<LoadParams> clone() const override {
+		return std::make_unique<AudioParams>(*this);
+	}
+};
+
+struct BLACKTHORN_API RawAudioData : Assets::IRawAssetData {
+	AudioData data;
+	AudioMetadata metadata;
+	std::filesystem::path path;
 };
 
 class BLACKTHORN_API AudioLoader final : public Assets::IAssetLoader<AudioClip> {
 public:
 	std::unique_ptr<AudioClip> load(const Assets::LoadParams& params) override {
-		const auto path = static_cast<const Assets::PathLoadParams*>(&params)->path;
-		std::unique_ptr<AudioClip> clip = std::make_unique<AudioClip>(path);
-		return clip;
+		std::unique_ptr<AudioClip> clip = std::make_unique<AudioClip>();
+		if (const AudioParams* ap = dynamic_cast<const AudioParams*>(&params)) {
+			clip->load(ap->path);
+
+			if (ap->isPCM)
+				clip->loadPCM();
+
+			return clip;
+		} else if (const auto* pp = dynamic_cast<const Assets::PathLoadParams*>(&params)) {
+			clip->load(pp->path);
+			return clip;
+		}
+
+		clip.reset();
+		return nullptr;
 	}
 
 	std::vector<std::string> getSupportedExtensions() const override {
@@ -29,18 +54,40 @@ public:
 
 class BLACKTHORN_API AsyncAudioLoader final : public Assets::IAsyncAssetLoader<AudioClip> {
 public:
-	std::unique_ptr<Assets::IRawAssetData> loadRaw(const Assets::LoadParams& params) {
-		const auto path = static_cast<const Assets::PathLoadParams*>(&params)->path;
+	std::unique_ptr<Assets::IRawAssetData> loadRaw(const Assets::LoadParams& params) override {
+		std::filesystem::path filePath;
+		bool loadPCM = false;
 
-		std::unique_ptr<RawAudio> raw = std::make_unique<RawAudio>(path);
+		if (const auto* ap = dynamic_cast<const AudioParams*>(&params)) {
+			filePath = ap->path;
+			loadPCM = ap->isPCM;
+		} else if (const auto* pp = dynamic_cast<const Assets::PathLoadParams*>(&params)) {
+			filePath = pp->path;
+		}
+
+		auto raw = std::make_unique<RawAudioData>();
+		raw->path = filePath;
+
+		if (!Decoding::AudioDecoder::getInfo(raw->path, raw->metadata)) {
+			return nullptr;
+		}
+
+		if (loadPCM) {
+			if (!Decoding::AudioDecoder::decode(raw->path, raw->data)) {
+				return nullptr;
+			}
+		}
+
 		raw->valid = true;
-
 		return raw;
 	}
 
-	void upload(Assets::IRawAssetData& rawBase, Assets::AssetManager& manager) {
-		auto& raw = static_cast<RawAudio&>(rawBase);
-		manager.add<AudioClip>(rawBase.assetID, std::make_unique<AudioClip>(raw.path));
+	void upload(Assets::IRawAssetData& rawBase, Assets::AssetManager& manager) override {
+		auto raw = static_cast<RawAudioData&>(rawBase);
+		auto clip = std::make_unique<AudioClip>();
+		clip->loadFromMemory(raw.path, raw.metadata, raw.data);
+
+		manager.add<AudioClip>(raw.assetID, std::move(clip));
 	}
 
 	std::vector<std::string> getSupportedExtensions() const override {

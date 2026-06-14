@@ -24,10 +24,6 @@ bool Mp3Decoder::decode(
 		return false;
 	}
 
-	data.info.frameCount = totalFrames;
-	data.info.channels = config.channels;
-	data.info.sampleRate = config.sampleRate;
-
 	const size_t sampleCount =
 		static_cast<size_t>(totalFrames) * config.channels;
 

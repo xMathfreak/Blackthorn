@@ -70,12 +70,12 @@ void AudioBuffer::setData(
 	);
 }
 
-void AudioBuffer::setData(const AudioData& data) {
+void AudioBuffer::setData(const AudioData& data, const AudioMetadata& metadata) {
 	setData(
 		data.samples.data(),
 		data.samples.size() * sizeof(I16),
-		static_cast<U16>(data.info.channels),
-		data.info.sampleRate
+		static_cast<U16>(metadata.channels),
+		metadata.sampleRate
 	);
 }
 

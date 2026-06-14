@@ -584,21 +584,30 @@ void AudioThread::processResidentPlayback(
 	const AudioClip& clip,
 	float seekSeconds
 ) {
-	AudioData data;
-	if (!Decoding::AudioDecoder::decode(clip.sourcePath(), data)) {
-		BT_ERROR(
-			"AudioThread: failed to decode '{}'",
-			clip.sourcePath().string()
-		);
-		voicePool->release(voice);
-		return;
-	}
-
 	AudioBuffer buffer;
 	buffer.create();
 
 	try {
-		buffer.setData(data);
+		if (clip.hasPCM()) {
+			buffer.setData(clip.data(), clip.metadata());
+		} else {
+			BT_WARN(
+				"AudioThread: decoding '{}' on audio thread, call loadPCM() before play() to avoid this",
+				clip.sourcePath().string()
+			);
+
+			AudioData data;
+			if (!Decoding::AudioDecoder::decode(clip.sourcePath(), data)) {
+				BT_ERROR(
+					"AudioThread: Failed to decode '{}'",
+					clip.sourcePath().string()
+				);
+				voicePool->release(voice);
+				return;
+			}
+
+			buffer.setData(data, clip.metadata());
+		}
 	} catch (const AudioException& e) {
 		BT_ERROR(
 			"AudioThread: failed to set buffer data: {}",

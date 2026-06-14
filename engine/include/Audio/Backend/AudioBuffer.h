@@ -33,7 +33,7 @@ public:
 		U32 sampleRate
 	);
 
-	void setData(const AudioData& data);
+	void setData(const AudioData& data, const AudioMetadata& metadata);
 
 	[[nodiscard]]
 	ALuint get() const noexcept;

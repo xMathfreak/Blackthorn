@@ -52,7 +52,9 @@ AudioHandle AudioManager::play(
 
 	switch (options.mode) {
 		case PlaybackMode::Auto:
-			cmd.stream = clip.estimatedBytes() > config.streamingThreshold;
+			cmd.stream = clip.hasPCM()
+				? false
+				: clip.estimatedBytes() > config.streamingThreshold;
 			break;
 		case PlaybackMode::PCM:
 			cmd.stream = false;

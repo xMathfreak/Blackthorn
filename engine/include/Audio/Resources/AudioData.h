@@ -43,7 +43,6 @@ struct BLACKTHORN_API AudioMetadata {
 
 struct BLACKTHORN_API AudioData {
 	std::vector<I16> samples;
-	AudioMetadata info;
 
 	[[nodiscard]]
 	bool empty() const noexcept {
