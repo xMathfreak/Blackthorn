@@ -40,7 +40,6 @@ public:
 		audioHandle = AudioHandle::invalid();
 		audioCategory = AudioCategory::SFX;
 		voicePriority = 0;
-		trackVoice = false;
 		spatial = false;
 		looped = false;
 		baseVolume = 1.0f;
@@ -155,11 +154,6 @@ public:
 	}
 
 	[[nodiscard]]
-	bool tracked() const noexcept {
-		return trackVoice;
-	}
-
-	[[nodiscard]]
 	bool looping() const noexcept {
 		return looped;
 	}
@@ -261,7 +255,6 @@ private:
 
 	bool spatial = false;
 	bool looped = false;
-	bool trackVoice = false;
 	AudioCategory audioCategory = AudioCategory::SFX;
 };
 
