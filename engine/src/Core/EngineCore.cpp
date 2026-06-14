@@ -34,6 +34,14 @@ bool EngineCore::init(const EngineConfig& cfg) {
 		return false;
 	}
 
+	SDL_SetAppMetadataProperty(SDL_PROP_APP_METADATA_NAME_STRING, cfg.metadata.name.c_str());
+	SDL_SetAppMetadataProperty(SDL_PROP_APP_METADATA_VERSION_STRING, cfg.metadata.version.c_str());
+	SDL_SetAppMetadataProperty(SDL_PROP_APP_METADATA_IDENTIFIER_STRING, cfg.metadata.identifier.c_str());
+	SDL_SetAppMetadataProperty(SDL_PROP_APP_METADATA_CREATOR_STRING, cfg.metadata.author.c_str());
+	SDL_SetAppMetadataProperty(SDL_PROP_APP_METADATA_COPYRIGHT_STRING, cfg.metadata.copyright.c_str());
+	SDL_SetAppMetadataProperty(SDL_PROP_APP_METADATA_URL_STRING, cfg.metadata.url.c_str());
+	SDL_SetAppMetadataProperty(SDL_PROP_APP_METADATA_TYPE_STRING, cfg.metadata.type.c_str());
+
 	#ifdef BLACKTHORN_DEBUG
 		SDL_SetLogPriorities(SDL_LOG_PRIORITY_DEBUG);
 	#else
