@@ -373,26 +373,24 @@ public:
 
 private:
 	void rebuildCache() const {
-		U64 currentEpoch = pool->getEpoch();
-
-		if (cachedEpoch == currentEpoch)
+		if (cachedEpoch == pool->getEpoch())
 			return;
 
 		std::unique_lock lock(cacheMutex);
 
-		currentEpoch = pool->getEpoch();
-		if (cachedEpoch == currentEpoch)
+		if (cachedEpoch == pool->getEpoch())
 			return;
 
 		cachedMatching.clear();
-		cachedMatching.reserve(entityList->size());
+		if (cachedMatching.capacity() < entityList->size())
+			cachedMatching.reserve(entityList->size());
 
 		for (Entity e : *entityList) {
 			if (matchesMask(e))
 				cachedMatching.push_back(e);
 		}
 
-		cachedEpoch = currentEpoch;
+		cachedEpoch = pool->getEpoch();
 	}
 
 	bool matchesMask(Entity e) const {
