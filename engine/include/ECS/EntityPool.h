@@ -332,37 +332,31 @@ public:
 	void eachJobs(Jobs::JobSystem* js, Callable&& callback, size_t threshold = 64) {
 		rebuildCache();
 
-		std::shared_ptr<std::vector<Entity>> snapshot;
-		{
-			std::shared_lock lock(cacheMutex);
-			snapshot = std::make_shared<std::vector<Entity>>(cachedMatching);
-		}
+		std::shared_lock lock(cacheMutex);
+		const std::vector<Entity>& entities = cachedMatching;
+		const size_t count = entities.size();
 
-		const size_t count = snapshot->size();
 		if (count == 0)
 			return;
 
 		if (!js || count < threshold) {
-			for (Entity e : *snapshot)
+			for (Entity e : entities)
 				callback(e, getComponentForView<Components>(e)...);
 
 			return;
 		}
 
-		const size_t batchSize = threshold;
-		const size_t batchCount = (count + batchSize - 1) / batchSize;
-
 		auto handle = js->createHandle();
-		handle->addPending(static_cast<int>(batchCount) - 1);
+		handle->addPending(static_cast<int>((count + threshold - 1) / threshold) - 1);
 
-		for (size_t b = 0; b < batchCount; ++b) {
-			const size_t begin = b * batchSize;
-			const size_t end   = std::min(begin + batchSize, count);
+		for (size_t b = 0; b * threshold < count; ++b) {
+			const size_t begin = b * threshold;
+			const size_t end = std::min(begin + threshold, count);
 
 			js->submit(Jobs::Job(
-				[this, snapshot, begin, end, &callback] {
+				[&entities, &callback, begin, end, this]() {
 					for (size_t i = begin; i < end; ++i)
-						callback((*snapshot)[i], getComponentForView<Components>((*snapshot)[i])...);
+						callback(entities[i], getComponentForView<Components>(entities[i])...);
 				},
 				handle
 			));
