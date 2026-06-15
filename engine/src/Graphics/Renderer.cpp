@@ -114,6 +114,8 @@ void Renderer::startBatch() {
 	quadBufferPtr = quadBuffer.get();
 	quadIndexCount = 0;
 	textureSlotIndex = 1;
+
+	textureSlotLookup.fill(0);
 }
 
 void Renderer::nextBatch() {
@@ -424,17 +426,35 @@ inline bool Renderer::isVisible(const SDL_FRect& rect, float rotation) const {
 }
 
 U32 Renderer::findOrAddTexture(const Texture* texture){
-	for (U32 i = 1; i < textureSlotIndex; ++i) {
-		if (textureSlots[i] == texture)
-			return i;
+	if (!texture)
+		return 0;
+
+	const U32 startBucket = static_cast<U32>(
+		(reinterpret_cast<uintptr_t>(texture) >> 6) & (MAX_TEXTURE_SLOTS - 1)
+	) + 1;
+
+	for (U32 i = 0; i < MAX_TEXTURE_SLOTS - 1; ++i) {
+		const U32 bucket = (startBucket + i - 1) % (MAX_TEXTURE_SLOTS - 1) + 1;
+		const U8 slot = textureSlotLookup[bucket];
+
+		if (slot == 0) {
+			if (textureSlotIndex >= MAX_TEXTURE_SLOTS) {
+				nextBatch();
+				return findOrAddTexture(texture);
+			}
+
+			const U32 newSlot = textureSlotIndex++;
+			textureSlots[newSlot] = texture;
+			textureSlotLookup[bucket] = static_cast<U8>(newSlot);
+			return newSlot;
+		}
+
+		if (textureSlots[slot] == texture)
+			return slot;
 	}
 
-	if (textureSlotIndex >= MAX_TEXTURE_SLOTS)
-		nextBatch();
-
-	const U32 slot = textureSlotIndex;
-	textureSlots[textureSlotIndex++] = texture;
-	return slot;
+	nextBatch();
+	return findOrAddTexture(texture);
 }
 
 } // namespace Blackthorn::Graphics

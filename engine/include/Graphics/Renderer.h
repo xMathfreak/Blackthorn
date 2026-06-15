@@ -125,6 +125,8 @@ private:
 	/// Active texture slots for the current batch
 	std::array<const Texture*, MAX_TEXTURE_SLOTS> textureSlots;
 
+	std::array<U8, MAX_TEXTURE_SLOTS> textureSlotLookup;
+
 	/// Next available texture slot index
 	U32 textureSlotIndex = 1;
 
