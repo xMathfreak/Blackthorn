@@ -402,7 +402,7 @@ inline bool Renderer::isVisible(const SDL_FRect& rect, float rotation) const {
 	if (!cullingEnabled)
 		return true;
 
-	if (rotation == 0.0f)
+	if (std::abs(rotation) < 0.001f)
 		return SDL_HasRectIntersectionFloat(&rect, &viewBounds);
 
 	float halfW = rect.w * 0.5f;
