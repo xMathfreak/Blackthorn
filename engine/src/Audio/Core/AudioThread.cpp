@@ -173,6 +173,9 @@ void AudioThread::tickStreaming() {
 		if (!sstate)
 			continue;
 
+		if (!voice.hasJobInFlight() && sstate->pendingUpload.empty())
+			continue;
+
 		const size_t prevFreeCount = sstate->freeBuffers.size();
 		voice.source().unqueueProcessedBuffers(sstate->freeBuffers);
 
