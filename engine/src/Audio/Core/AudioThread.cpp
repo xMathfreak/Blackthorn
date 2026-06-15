@@ -26,6 +26,8 @@ bool AudioThread::start(const AudioConfig& cfg) {
 
 	config = cfg;
 
+	voiceSnapshots.resize(cfg.maxVoices);
+
 	try {
 		device.emplace();
 		context.emplace(device.value());
