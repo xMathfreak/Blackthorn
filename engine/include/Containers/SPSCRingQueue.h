@@ -173,7 +173,7 @@ private:
 	alignas(64) std::atomic<size_t> head{ 0 };
 	alignas(64) std::atomic<size_t> tail{ 0 };
 
-	std::array<Storage, Capacity> storage;
+	alignas(64) std::array<Storage, Capacity> storage;
 };
 
 } // namespace Blackthorn::Containers
