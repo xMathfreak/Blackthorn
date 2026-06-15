@@ -166,16 +166,31 @@ bool JobSystem::executeOne(bool mainThreadOnly) {
 		MainThreadNode* tail = mainTail.load(std::memory_order::acquire);
 		MainThreadNode* next = tail->next.load(std::memory_order::acquire);
 
-		if (next) {
-			mainTail.store(next, std::memory_order::release);
-			runJob(next->job);
-			delete tail;
-			return true;
+		while (!next && mainHead.load(std::memory_order::acquire) != tail) {
+			std::this_thread::yield();
+			next = tail->next.load(std::memory_order::acquire);
 		}
 
-		if (mainThreadOnly)
-			return false;
+		if (!next) {
+			if (mainHead.load(std::memory_order::acquire) != tail) {
+				do {
+					Threads::relax();
+					next = tail->next.load(std::memory_order::acquire);
+				} while (!next);
+			} else {
+				if (mainThreadOnly)
+					return false;
+				goto steal;
+			}
+		}
+
+		mainTail.store(next, std::memory_order::release);
+		runJob(next->job);
+		delete tail;
+		return true;
 	}
+
+	steal:
 
 	if (getWorkerIndex() >= 0) {
 		if (auto job = queues[getWorkerIndex()]->pop()) {
