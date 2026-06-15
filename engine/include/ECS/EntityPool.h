@@ -70,13 +70,12 @@ public:
 			return;
 
 		U64 mask = entities[index].componentMask;
-		for (size_t i = 0; mask && i < Detail::MAX_COMPONENTS; ++i) {
-			if (mask & (1ULL << i)) {
-				if (componentArrays[i])
-					componentArrays[i]->remove(entity);
+		while (mask) {
+			const size_t i = static_cast<size_t>(std::countr_zero(mask));
+			if (componentArrays[i])
+				componentArrays[i]->remove(entity);
 
-				mask &= ~(1ULL << i);
-			}
+			mask &= mask - 1;
 		}
 
 		entities[index].componentMask = 0;
