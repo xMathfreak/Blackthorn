@@ -48,7 +48,8 @@ void AudioThread::process(PlayCommand&& cmd) {
 		return;
 	}
 
-	voice->activate(
+	voicePool->activate(
+		*voice,
 		cmd.handle,
 		cmd.category,
 		cmd.priority,

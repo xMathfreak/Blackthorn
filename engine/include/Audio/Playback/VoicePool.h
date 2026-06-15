@@ -26,6 +26,8 @@ class VoicePool {
 public:
 	explicit VoicePool(size_t maxVoices = 32);
 
+	void activate(Voice& voice, AudioHandle handle, AudioCategory category, int priority, U64 tick, float duration);
+
 	/**
 	 * @brief Acquires a free or stealable slot.
 	 *
@@ -92,6 +94,7 @@ private:
 
 private:
 	std::vector<Voice> voiceStorage;
+	std::unordered_map<U64, Voice*> handleIndex;
 };
 
 } // namespace Blackthorn::Audio

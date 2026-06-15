@@ -488,7 +488,8 @@ void AudioThread::restoreVoices() {
 			continue;
 		}
 
-		voice->activate(
+		voicePool->activate(
+			*voice,
 			snap.originalHandle,
 			snap.category,
 			snap.priority,

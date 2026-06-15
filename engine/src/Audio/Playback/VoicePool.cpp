@@ -43,7 +43,6 @@ Voice* VoicePool::findStealCandidate(int incomingPriority) {
 	return candidate;
 }
 
-
 Voice* VoicePool::acquire(int priority) {
 	if (Voice* free = findFreeSlot())
 		return free;
@@ -61,15 +60,12 @@ Voice* VoicePool::find(AudioHandle handle) {
 	if (!handle.isValid())
 		return nullptr;
 
-	for (Voice& voice : voiceStorage) {
-		if (voice.active() && voice.handle().id == handle.id)
-			return &voice;
-	}
-
-	return nullptr;
+	auto it = handleIndex.find(handle.id);
+	return (it != handleIndex.end()) ? it->second : nullptr;
 }
 
 void VoicePool::release(Voice& voice) {
+	handleIndex.erase(voice.handle().id);
 	voice.reset();
 }
 
@@ -115,6 +111,11 @@ std::vector<Voice>& VoicePool::voices() noexcept {
 void VoicePool::initSources() {
 	for (Voice& voice : voiceStorage)
 		voice.source().create();
+}
+
+void VoicePool::activate(Voice& voice, AudioHandle handle, AudioCategory category, int priority, U64 tick, float duration) {
+	voice.activate(handle, category, priority, tick, duration);
+	handleIndex[handle.id] = &voice;
 }
 
 } // namespace Blackthorn::Audio
