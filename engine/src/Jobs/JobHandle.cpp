@@ -30,12 +30,9 @@ void JobHandle::signal(const std::function<void(std::function<void()>, bool)>& e
 	if (pendingCount.fetch_sub(1, std::memory_order::acq_rel) != 1)
 		return;
 
-	Continuation* list = nullptr;
-
-	{
-		std::lock_guard lock(continuationMutex);
-		list = continuationHead.exchange(COMPLETE_SENTINEL, std::memory_order::acq_rel);
-	}
+	Continuation* list = continuationHead.exchange(
+		COMPLETE_SENTINEL, std::memory_order::acq_rel
+	);
 
 	while (list && list != COMPLETE_SENTINEL) {
 		Continuation* next = list->next;
