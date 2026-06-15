@@ -5,6 +5,7 @@
 
 #include "Debug/Logger.h"
 #include "Threads/ThreadRegistry.h"
+#include "Threads/Relax.h"
 
 namespace {
 	thread_local int workerIndex = -1;
@@ -104,9 +105,19 @@ void JobSystem::flushMainThread() {
 }
 
 void JobSystem::wait(const JobHandlePtr& handle) {
+	int spin = 0;
 	while (!handle->isComplete()) {
-		if (!executeOne(false))
+		if (executeOne(false)) {
+			spin = 0;
+			continue;
+		}
+
+		if (++spin < 64) {
+			Threads::relax();
+		} else {
+			spin = 0;
 			std::this_thread::yield();
+		}
 	}
 }
 
