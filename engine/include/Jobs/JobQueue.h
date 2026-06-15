@@ -28,8 +28,13 @@ public:
     }
 
     std::unique_ptr<Job> steal() {
+        if (queue.empty())
+            return nullptr;
+
         std::lock_guard<std::mutex> lock(mtx);
-        if (queue.empty()) return nullptr;
+        if (queue.empty())
+            return nullptr;
+
         auto job = std::move(queue.back());
         queue.pop_back();
         return job;
