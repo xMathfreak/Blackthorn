@@ -36,6 +36,7 @@ public:
 	SPSCRingQueue() = default;
 
 	~SPSCRingQueue() {
+		atomic_thread_fence(std::memory_order::seq_cst);
 		clear();
 	}
 
