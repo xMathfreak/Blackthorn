@@ -41,7 +41,7 @@ public:
 		auto& entry = sparse[idx];
 
 		if (entry.pos != INVALID_ENTITY && entry.generation == gen) {
-			components[entry.pos] = T{ std::forward<Args>(args)... };
+			std::construct_at(&components[entry.pos], std::forward<Args>(args)...);
 			return components[entry.pos];
 		}
 
