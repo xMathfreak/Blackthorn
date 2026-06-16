@@ -58,7 +58,6 @@ target_compile_options(${PROJECT_NAME} PRIVATE
 		-Wextra
 		-Wpedantic
 		-Wshadow
-		-Wduplicated-cond
 		-Wnull-dereference
 		-Wno-unused-parameter
 		-Wimplicit-fallthrough

@@ -72,3 +72,4 @@ set(ALSOFT_UTILS OFF CACHE BOOL "" FORCE)
 set(ALSOFT_INSTALL OFF CACHE BOOL "" FORCE)
 
 add_subdirectory(openal-soft)
+target_compile_options(OpenAL PRIVATE -fno-modules-ts)

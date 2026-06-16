@@ -1,4 +1,4 @@
-#include "engine/include/Core/Engine.h"
+#include "Core/Engine.h"
 
 int main(int argc, char const *argv[]) {
 	Blackthorn::Engine engine;
@@ -7,6 +7,6 @@ int main(int argc, char const *argv[]) {
 		return -1;
 
 	engine.run();
-	
+
 	return 0;
 }

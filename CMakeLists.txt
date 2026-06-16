@@ -1,23 +1,6 @@
 cmake_minimum_required(VERSION 3.16.0)
 project(Blackthorn VERSION 0.1.0 LANGUAGES C CXX)
 
-# Use CCache if compile is unset
-find_program(CCACHE_PROGRAM ccache)
-
-if(CCACHE_PROGRAM)
-	message(STATUS "Using ccache from: ${CCACHE_PROGRAM}")
-
-	if(NOT DEFINED CMAKE_C_COMPILER_LAUNCHER)
-		set(CMAKE_C_COMPILER_LAUNCHER "$<$<CONFIG:Debug>:${CCACHE_PROGRAM}>")
-	endif()
-
-	if(NOT DEFINED CMAKE_CXX_COMPILER_LAUNCHER)
-		set(CMAKE_CXX_COMPILER_LAUNCHER "$<$<CONFIG:Debug>:${CCACHE_PROGRAM}>")
-	endif()
-else()
-	message(STATUS "ccache not found")
-endif()
-
 # Build type
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
 	set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)

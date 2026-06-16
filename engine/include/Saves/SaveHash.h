@@ -50,6 +50,6 @@ constexpr U64 saveHash(std::string_view str) noexcept {
  * @endcode
  */
 [[nodiscard]]
-constexpr U64 operator"" _saveid(const char* str, size_t len) noexcept {
+constexpr U64 operator""_saveid(const char* str, size_t len) noexcept {
 	return Blackthorn::Saves::saveHash(std::string_view(str, len));
 }

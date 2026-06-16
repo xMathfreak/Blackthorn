@@ -250,7 +250,7 @@ inline Color shiftHue(const Color& c, float degrees) {
 } // namespace Math
 
 [[nodiscard]]
-inline Math::Color operator"" _hex(const char* hex, size_t len) {
+inline Math::Color operator""_hex(const char* hex, size_t len) {
 	return Math::fromHex(std::string_view(hex, len));
 }
 
