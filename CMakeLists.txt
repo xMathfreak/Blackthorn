@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.16.0)
 project(Blackthorn VERSION 0.1.0 LANGUAGES C CXX)
 
+set(CMAKE_CXX_SCAN_FOR_MODULES OFF)
+
 # Build type
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
 	set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
