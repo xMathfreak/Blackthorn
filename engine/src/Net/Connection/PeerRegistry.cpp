@@ -147,21 +147,32 @@ void PeerRegistry::broadcastUDP(
 	const IO::ByteBuffer& payload,
 	Transport::Sockets::UDPSocket& socket
 ) {
-	std::lock_guard<std::mutex> lock(peerMutex);
-
-	for (auto& peer : peers) {
-		if (peer.udpConnected)
-			peer.udpChannel.send(socket, peer.udpAddress, payload);
+	std::vector<std::pair<Transport::Address, Transport::Channels::UDPChannel*>> targets;
+	{
+		std::lock_guard lock(peerMutex);
+		for (auto& peer: peers) {
+			if (peer.udpConnected)
+				targets.emplace_back(peer.udpAddress, &peer.udpChannel);
+		}
 	}
+
+	for (auto& [addr, ch] : targets)
+		ch->send(socket, addr, payload);
 }
 
 void PeerRegistry::broadcastTCP(const IO::ByteBuffer& payload) {
-	std::lock_guard<std::mutex> lock(peerMutex);
-
-	for (auto& peer : peers) {
-		if (peer.isConnected() && peer.tcpSocket && peer.tcpChannel)
-			peer.tcpChannel->send(*peer.tcpSocket, payload);
+	std::vector<std::pair<Transport::Channels::TCPChannel*, Transport::Sockets::ISocket*>> targets;
+	{
+		std::lock_guard lock(peerMutex);
+		for (auto& peer : peers) {
+			if (peer.isConnected() && peer.tcpSocket && peer.tcpChannel) {
+				targets.emplace_back(peer.tcpChannel.get(), peer.tcpSocket.get());
+			}
+		}
 	}
+
+	for (auto& [ch, sock] : targets)
+		ch->send(*sock, payload);
 }
 
 void PeerRegistry::setRateLimit(PeerId peerId, const RateLimitConfig& config) {
