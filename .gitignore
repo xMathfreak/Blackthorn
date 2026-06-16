@@ -8,6 +8,9 @@ saves/
 !assets/shaders/
 !engine/include/assets/
 !engine/src/assets/
+!engine/include/saves/
+!engine/src/saves/
+
 
 *.cfg
 *.dll
