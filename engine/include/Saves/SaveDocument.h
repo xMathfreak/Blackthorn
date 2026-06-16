@@ -11,7 +11,7 @@ namespace Blackthorn::Saves {
 // Forward declarations
 class ICompressor;
 class IEncryptor;
-struct ISaveSection;
+class ISaveSection;
 
 /// Engine format version. Increment when the FileHeader or SectionTable
 /// layout changes in a breaking way.
