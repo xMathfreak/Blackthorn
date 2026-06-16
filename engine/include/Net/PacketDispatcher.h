@@ -98,9 +98,11 @@ private:
 	ConnectHandler connectHandler;
 	DisconnectHandler disconnectHandler;
 
+	std::vector<ConnectionEvent> eventScratch;
+
 	Jobs::JobHandlePtr pendingJobHandle;
 
-	std::vector<ConnectionEvent> eventScratch;
+	U32 timeoutCheckCounter = 0;
 };
 
 } // namespace Net

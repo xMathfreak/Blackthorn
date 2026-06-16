@@ -13,7 +13,10 @@ void PacketDispatcher::poll(Jobs::JobSystem* jobs) {
 		pendingJobHandle = nullptr;
 	}
 
-	checkTimeouts();
+	if (++timeoutCheckCounter >= 60) {
+		timeoutCheckCounter = 0;
+		checkTimeouts();
+	}
 
 	dispatchEvents();
 
