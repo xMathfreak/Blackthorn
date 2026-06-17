@@ -70,6 +70,7 @@ bool NetworkIOWorker::start(
 	ioRunning.store(true, std::memory_order::release);
 	ioThread = std::thread([this] { ioThreadLoop(); });
 
+	BT_LOG("NetworkIOWorker: I/O worker started");
 	return true;
 }
 
@@ -86,12 +87,12 @@ void NetworkIOWorker::stop() {
 	if (tcpListenSocket)
 		tcpListenSocket->close();
 
-	BT_LOG("NetworkIOWorker: Stopped");
+	BT_LOG("NetworkIOWorker: I/O worker stopped");
 }
 
 void NetworkIOWorker::ioThreadLoop() {
 	Threads::ThreadRegistry::instance().registerCurrent("Net-IO");
-	BT_LOG("NetworkIOWorker: I/O thread started");
+	BT_DEBUG("NetworkIOWorker: I/O thread started");
 
 	while (ioRunning.load(std::memory_order::relaxed)) {
 		pollUDP();
@@ -117,7 +118,7 @@ void NetworkIOWorker::ioThreadLoop() {
 	}
 
 	Threads::ThreadRegistry::instance().unregisterCurrent();
-	BT_LOG("NetworkIOWorker: I/O thread stopped");
+	BT_DEBUG("NetworkIOWorker: I/O thread stopped");
 }
 
 void NetworkIOWorker::pollUDP() {

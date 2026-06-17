@@ -4,9 +4,7 @@ namespace Blackthorn::Assets {
 
 AssetManager::AssetManager(Jobs::JobSystem& js)
 	: jobs(js)
-{
-	BT_DEBUG("AssetManager: Initialized");
-}
+{}
 
 void AssetManager::shutdown() {
 	flushAllPendingUploads();
@@ -17,12 +15,12 @@ void AssetManager::flushPendingUploads() {
 }
 
 void AssetManager::flushAllPendingUploads() {
-    while (pendingTotal.load(std::memory_order::acquire) > 0) {
-        BT_LOG("AssetManager: waiting on {} pending loads", pendingTotal.load());
-        jobs.flushMainThread();
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
-    }
-    jobs.flushMainThread();
+	while (pendingTotal.load(std::memory_order::acquire) > 0) {
+		jobs.flushMainThread();
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+	}
+
+	jobs.flushMainThread();
 }
 
 size_t AssetManager::pendingCount() const {

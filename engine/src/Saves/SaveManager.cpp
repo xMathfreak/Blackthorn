@@ -114,8 +114,8 @@ SaveResult SaveManager::save(SaveId& saveId, bool makeBackup) {
 		return SaveResult::failure("No storage backend configured");
 
 	#ifdef BLACKTHORN_DEBUG
-		if (!encryptor)
-			BT_WARN("SaveManager: encryption is disabled, save data will not be encrypted");
+	if (!encryptor)
+		BT_WARN("SaveManager: encryption is disabled, save data will not be encrypted");
 	#endif
 
 	saveId.updatedAt = static_cast<U64>(

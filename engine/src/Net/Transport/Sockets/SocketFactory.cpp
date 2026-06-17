@@ -23,7 +23,7 @@ bool SocketFactory::init() {
 		return false;
 	}
 
-	BT_DEBUG(
+	BT_LOG(
 		"SocketFactory: WinSock2 initialized (v{}.{})",
 		LOBYTE(wsaData.wVersion), HIBYTE(wsaData.wVersion)
 	);

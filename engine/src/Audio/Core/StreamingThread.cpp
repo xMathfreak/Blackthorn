@@ -27,8 +27,6 @@ bool StreamingThread::start(
 	thread = std::thread([this] { threadLoop(); });
 
 	ready.wait();
-
-	BT_LOG("StreamingThread: started");
 	return true;
 }
 
@@ -40,8 +38,6 @@ void StreamingThread::stop() {
 
 	if (thread.joinable())
 		thread.join();
-
-	BT_LOG("StreamingThread: stopped");
 }
 
 void StreamingThread::submitJob(StreamingJob&& job) {

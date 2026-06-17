@@ -81,8 +81,6 @@ bool EngineCore::init(const EngineConfig& cfg) {
 		return false;
 	}
 
-	Net::Transport::Sockets::SocketFactory::init();
-
 	jobSystem = std::make_unique<Jobs::JobSystem>(
 		cfg.threading.jobWorkerCount
 	);
@@ -90,6 +88,8 @@ bool EngineCore::init(const EngineConfig& cfg) {
 	assetManager = std::make_unique<Assets::AssetManager>(
 		*jobSystem
 	);
+
+	BT_LOG("AssetManager: Initialized");
 
 	connectionManager = std::make_unique<Net::ConnectionManager>(cfg.net);
 
@@ -110,7 +110,7 @@ bool EngineCore::init(const EngineConfig& cfg) {
 
 	initialized = true;
 
-	BT_LOG("Engine: Initialization complete [Headless | Tick: {}]", simClock->getCurrentTick());
+	BT_LOG("Engine: Core initialized (Tick: {})", simClock->getCurrentTick());
 	return true;
 }
 
@@ -357,7 +357,7 @@ void EngineCore::initSaveManager() {
 	onRegisterSaveSections(*saveManager);
 
 	BT_LOG(
-		"SaveManager: Initialized (dir: '{}', ext: '{}', backup ext: '{}', "
+		"SaveManager: Ready (dir: '{}', ext: '{}', backup ext: '{}', "
 		"compression: {}, encryption: {}, backups: {})",
 		config.save.directory,
 		config.save.extension,

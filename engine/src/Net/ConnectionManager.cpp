@@ -21,6 +21,8 @@ bool ConnectionManager::start() {
 		return false;
 	}
 
+	Net::Transport::Sockets::SocketFactory::init();
+
 	registry.init(config.maxPeers, config.rateLimitDefaults, ioWorker.getGlobalFragmentBytes());
 
 	dispatcher.registry = &registry;
@@ -37,6 +39,9 @@ bool ConnectionManager::start() {
 }
 
 void ConnectionManager::stop() {
+	if (!ioWorker.isRunning())
+		return;
+
 	ioWorker.stop();
 	eventBus.clear();
 	dispatcher.reset();

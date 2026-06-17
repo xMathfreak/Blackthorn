@@ -37,7 +37,7 @@ Renderer::Renderer(U32 maxQuads)
 	textureSlots.fill(nullptr);
 	textureSlots[0] = whiteTexture.get();
 
-	BT_DEBUG("Renderer: Initialized (Max Quads: {}, Max Textures: {})", MAX_QUADS, MAX_TEXTURE_SLOTS);
+	BT_LOG("Renderer: Initialized (Max Quads: {}, Max Textures: {})", MAX_QUADS, MAX_TEXTURE_SLOTS);
 }
 
 Renderer::~Renderer() {}

@@ -45,7 +45,7 @@ JobSystem::JobSystem(size_t workerCount) {
 		});
 	}
 
-	BT_DEBUG("JobSystem: Initialized (Workers: {})", workerCount);
+	BT_LOG("JobSystem: Initialized (Workers: {})", workerCount);
 }
 
 void JobSystem::shutdown() {

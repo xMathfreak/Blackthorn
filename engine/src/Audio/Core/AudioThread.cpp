@@ -321,7 +321,7 @@ void AudioThread::tickDeviceHealth() {
 
 		if (pendingMigrationHint.exchange(false, std::memory_order::acq_rel)) {
 			if (defaultDeviceChanged()) {
-				BT_LOG("AudioThread: default device changed, migrating");
+				BT_LOG("AudioThread: default device changed, migrating to new output device");
 				enterRecovery(AudioThreadState::Migrating);
 			}
 		}
@@ -384,7 +384,7 @@ void AudioThread::enterRecovery(AudioThreadState reason) {
 		voice.source().invalidate();
 	}
 
-	BT_LOG(
+	BT_DEBUG(
 		"AudioThread: snapshotted {} voice(s) for restore",
 		voiceSnapshots.size()
 	);
@@ -403,8 +403,8 @@ void AudioThread::attemptReconnect(AudioThreadState returnStateOnFailure) {
 		(returnStateOnFailure == AudioThreadState::Migrating);
 
 	BT_LOG(
-		"AudioThread: attempting {} (backoff index {})",
-		isMigration ? "migration" : "reconnect",
+		"AudioThread: {} device (backoff index {})",
+		isMigration ? "migrating" : "reconnecting",
 		backoffIndex
 	);
 
@@ -457,7 +457,10 @@ void AudioThread::attemptReconnect(AudioThreadState returnStateOnFailure) {
 	voiceSnapshots.clear();
 
 	state.store(AudioThreadState::Running, std::memory_order::relaxed);
-	BT_DEBUG("AudioThread: Reconnect successful");
+	BT_LOG(
+		"AudioThread: recovery completed successfully (mode: {})",
+		isMigration ? "migration" : "reconnect"
+	);
 }
 
 void AudioThread::restoreVoices() {

@@ -103,7 +103,6 @@ bool Engine::init(const EngineConfig& cfg) {
 	}
 
 	try {
-		BT_LOG("Renderer: Initializing");
 		renderer = std::make_unique<Graphics::Renderer>(cfg.render.maxQuads);
 		renderer->setPostProcessingEnabled(
 			Core::Settings::instance().get<bool>("graphics", "post_processing")
@@ -135,7 +134,7 @@ bool Engine::init(const EngineConfig& cfg) {
 	applyPostProcessing();
 	logEngineInfo();
 
-	BT_LOG("Engine: Initialization complete [Runtime]");
+	BT_LOG("Engine: Core runtime ready");
 	return true;
 }
 
