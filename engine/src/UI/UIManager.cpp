@@ -23,8 +23,9 @@ float UIManager::effectiveScale = 1.0f;
 Fonts::Font* UIManager::defaultFont = nullptr;
 std::vector<UIManager*> UIManager::managers;
 
-UIManager::UIManager() {
-	root = std::make_unique<Container>();
+UIManager::UIManager()
+	: root(std::make_unique<Container>())
+{
 	root->setSizingMode(Container::SizingMode::FillParent);
 
 	managers.push_back(this);

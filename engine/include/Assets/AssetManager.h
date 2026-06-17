@@ -7,7 +7,6 @@
 #include <string>
 #include <typeindex>
 #include <unordered_map>
-#include <unordered_set>
 
 #include "Core/Export.h"
 #include "Assets/AssetHandle.h"
@@ -96,7 +95,7 @@ public:
 		);
 
 		if (storages.find(type) == storages.end())
-			storages[type] = std::make_unique<AssetStorage<AssetType>>();
+			storages.try_emplace(type, std::make_unique<AssetStorage<AssetType>>());
 	}
 
 	/**
