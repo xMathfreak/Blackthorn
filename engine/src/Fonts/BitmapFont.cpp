@@ -161,7 +161,7 @@ bool BitmapFont::loadFromFile(const std::string& texturePath, const std::string&
 
 		size_t commentPos = line.find('#');
 		if (commentPos != std::string::npos)
-			line = line.substr(0, commentPos);
+			line.resize(commentPos);
 
 		line.erase(0, line.find_first_not_of(" \t"));
 		line.erase(line.find_last_not_of(" \t") + 1);

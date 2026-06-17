@@ -35,7 +35,7 @@ bool Settings::loadFromFile(const std::string& path) {
 		for (char c : {'#', ';'}) {
 			auto pos = line.find(c);
 			if (pos != std::string::npos)
-				line = line.substr(0, pos);
+				line.resize(pos);
 		}
 
 		line = trimStr(line);
