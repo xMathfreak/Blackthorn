@@ -31,6 +31,8 @@ private:
 	void processEvents();
 	void shutdown();
 
+	static bool handleLiveResize(void* userdata, SDL_Event* event);
+
 private: // Panels
 	Panels::Dockspace dockspace;
 	Panels::Hierarchy hierarchy;
@@ -55,6 +57,7 @@ private:
 
 	bool initialized = false;
 	bool running = false;
+	bool frameInProgress = false;
 
 	ImFont* zekton24 = nullptr;
 	Graphics::Texture texture;

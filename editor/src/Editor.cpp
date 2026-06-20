@@ -147,6 +147,7 @@ bool Application::init() {
 	};
 
 	SDL_SetWindowHitTest(window, hitTest, this);
+	SDL_AddEventWatch(&Application::handleLiveResize, this);
 
 	auto& inspector = Inspector::InspectorRegistry::instance();
 
@@ -164,6 +165,8 @@ bool Application::init() {
 void Application::shutdown() {
 	if (!initialized)
 		return;
+
+	SDL_RemoveEventWatch(&Application::handleLiveResize, this);
 
 	renderer.reset();
 
@@ -215,6 +218,8 @@ void Application::processEvents() {
 }
 
 void Application::render() {
+	frameInProgress = true;
+
 	ImGui_ImplOpenGL3_NewFrame();
 	ImGui_ImplSDL3_NewFrame();
 	ImGui::NewFrame();
@@ -246,10 +251,31 @@ void Application::render() {
 	}
 
 	SDL_GL_SwapWindow(window);
+	frameInProgress = false;
 }
 
 void Application::update() {
 
 }
+
+bool Application::handleLiveResize(void* userdata, SDL_Event* event) {
+	if (event->type != SDL_EVENT_WINDOW_RESIZED &&
+		event->type != SDL_EVENT_WINDOW_EXPOSED)
+	{
+		return true;
+	}
+
+	auto* self = static_cast<Application*>(userdata);
+
+	if (SDL_GetWindowFromID(event->window.windowID) != self->window)
+		return true;
+
+	if (self->frameInProgress)
+		return true;
+
+	self->render();
+	return true;
+}
+
 
 } // namespace Blackthorn
