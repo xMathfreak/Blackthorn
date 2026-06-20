@@ -92,6 +92,12 @@ target_include_directories(imgui SYSTEM PUBLIC
 	imgui
 )
 
+target_sources(imgui
+	PRIVATE
+	imgui/misc/cpp/imgui_stdlib.h
+	imgui/misc/cpp/imgui_stdlib.cpp
+)
+
 target_link_libraries(imgui
 	PUBLIC
 		glad
