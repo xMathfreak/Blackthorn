@@ -34,6 +34,7 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
 # Options
 option(BLACKTHORN_BUILD_APP "Build sample application" ON)
+option(BLACKTHORN_BUILD_EDITOR "Build GUI Editor" ON)
 
 # External dependencies
 find_package(OpenGL REQUIRED)
@@ -47,4 +48,8 @@ add_subdirectory(engine)
 
 if (BLACKTHORN_BUILD_APP)
 	add_subdirectory(app)
+endif()
+
+if (BLACKTHORN_BUILD_EDITOR)
+	add_subdirectory(editor)
 endif()
