@@ -21,8 +21,9 @@ class View;
 class BLACKTHORN_API EntityPool {
 private:
 	struct EntityData {
-		U8 generation = 0;
 		U64 componentMask = 0;
+		U8 generation = 0;
+		bool alive = false;
 	};
 
 	std::vector<EntityData> entities;
@@ -57,6 +58,7 @@ public:
 		#endif
 
 		Entity entity = Detail::makeEntity(index, entities[index].generation);
+		entities[index].alive = true;
 		++entityCount;
 
 		bumpEpoch();
@@ -79,6 +81,7 @@ public:
 		}
 
 		entities[index].componentMask = 0;
+		entities[index].alive = false;
 		entities[index].generation++;
 		freeList.push_back(index);
 		--entityCount;
@@ -94,7 +97,8 @@ public:
 		if (index >= entities.size())
 			return false;
 
-		return entities[index].generation == Detail::entityGeneration(entity);
+		const EntityData& ed = entities[index];
+		return ed.alive && entities[index].generation == Detail::entityGeneration(entity);
 	}
 
 	size_t aliveCount() const { return entityCount; }

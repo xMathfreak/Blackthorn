@@ -18,6 +18,9 @@ void FBO::allocate(GLsizei w, GLsizei h) {
 	colorAttachment = std::make_unique<Texture>(width, height);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colorAttachment->getID(), 0);
 
+	if (w <= 0 || h <= 0)
+		return;
+
 	glGenRenderbuffers(1, &depthRBO);
 	glBindRenderbuffer(GL_RENDERBUFFER, depthRBO);
 	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, width, height);
@@ -34,7 +37,7 @@ void FBO::allocate(GLsizei w, GLsizei h) {
 		depthRBO = 0;
 		id = 0;
 
-		throw std::runtime_error("FBO incomplete (status 0x)" + std::to_string(status) + ')');
+		throw std::runtime_error("FBO incomplete (status 0x" + std::to_string(status) + ')');
 	}
 }
 

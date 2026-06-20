@@ -305,6 +305,12 @@ public:
 	Shader& getScreenShader() const { return *screenShader; }
 
 	/**
+	 * @brief Returns the FBO color attachment for off-screen consumers
+	 *        (e.g. an editor viewport panel).
+	 */
+	const Texture& getSceneTexture() const { return fbo->getTexture(); }
+
+	/**
 	 * @brief Draws a colored quad.
 	 * @param rect Destination rectangle.
 	 * @param rotation Rotation in radians.
