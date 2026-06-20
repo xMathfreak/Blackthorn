@@ -27,6 +27,8 @@ bool Application::init() {
 	cfg.metadata.identifier = "blackthorn.editor";
 	cfg.metadata.type = "application";
 
+	timingConfig = cfg.timing;
+
 	engine = std::make_unique<EngineCore>();
 	if (!engine->init(cfg))
 		return false;
@@ -228,7 +230,7 @@ void Application::render() {
 	dockspace.draw(titleBarState, dockspaceState, running);
 	hierarchy.draw(context);
 	inspector.draw(context);
-	viewport.draw(context, *renderer, viewportState);
+	viewport.draw(context, *renderer, viewportState, simulationState.alpha);
 
 	ImGui::Render();
 
@@ -255,7 +257,7 @@ void Application::render() {
 }
 
 void Application::update() {
-
+	stepSimulation();
 }
 
 bool Application::handleLiveResize(void* userdata, SDL_Event* event) {
@@ -275,6 +277,50 @@ bool Application::handleLiveResize(void* userdata, SDL_Event* event) {
 
 	self->render();
 	return true;
+}
+
+void Application::stepSimulation() {
+	const float freq = static_cast<float>(SDL_GetPerformanceFrequency());
+	const U64 now = SDL_GetPerformanceCounter();
+
+	if (simulationState.lastPerfCounter == 0)
+		simulationState.lastPerfCounter = now;
+
+	float frameTime = static_cast<float>(now - simulationState.lastPerfCounter) / freq;
+	simulationState.lastPerfCounter = now;
+
+	if (frameTime > timingConfig.maxDeltaTime)
+		frameTime = timingConfig.maxDeltaTime;
+
+	if (!simulationState.playing) {
+		simulationState.accumulated = 0.0f;
+		simulationState.alpha = 1.0f;
+		return;
+	}
+
+	simulationState.accumulated += frameTime;
+
+	int numFixed = 0;
+	float accumulatedCopy = simulationState.accumulated;
+
+	while (
+		accumulatedCopy >= timingConfig.fixedDeltaTime &&
+		numFixed < timingConfig.maxFixedUpdates
+	) {
+		accumulatedCopy -= timingConfig.fixedDeltaTime;
+		++numFixed;
+	}
+
+	simulationState.accumulated = (numFixed >= timingConfig.maxFixedUpdates)
+		? 0.0f
+		: accumulatedCopy;
+
+	for (int i = 0; i < numFixed; ++i) {
+		++simulationState.tick;
+		context.activeWorld->fixedUpdate(timingConfig.fixedDeltaTime, simulationState.tick);
+	}
+
+	simulationState.alpha = simulationState.accumulated / timingConfig.fixedDeltaTime;
 }
 
 

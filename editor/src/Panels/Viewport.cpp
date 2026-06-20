@@ -10,7 +10,8 @@ namespace Blackthorn::Editor::Panels {
 void Viewport::draw(
 	State::Context& context,
 	Graphics::Renderer& renderer,
-	State::Viewport& viewport
+	State::Viewport& viewport,
+	float alpha
 ) {
 	ImGui::Begin("Viewport");
 
@@ -37,7 +38,7 @@ void Viewport::draw(
 	renderer.beginScene();
 
 	if (context.activeWorld)
-		context.activeWorld->render(1);
+		context.activeWorld->render(alpha);
 
 	renderer.endScene();
 

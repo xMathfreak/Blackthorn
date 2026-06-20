@@ -16,7 +16,8 @@ public:
 	void draw(
 		State::Context& context,
 		Graphics::Renderer& renderer,
-		State::Viewport& viewport
+		State::Viewport& viewport,
+		float alpha
 	);
 };
 

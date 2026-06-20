@@ -12,6 +12,8 @@
 #include "Panels/TitleBar.h"
 #include "Panels/Viewport.h"
 
+#include "State/Simulation.h"
+
 namespace Blackthorn::Editor {
 
 class Application {
@@ -30,6 +32,7 @@ private:
 	void update();
 	void processEvents();
 	void shutdown();
+	void stepSimulation();
 
 	static bool handleLiveResize(void* userdata, SDL_Event* event);
 
@@ -43,10 +46,13 @@ private: // Panels
 private: // State
 	State::Context context;
 	State::Dockspace dockspaceState;
+	State::Simulation simulationState;
 	State::Titlebar titleBarState;
 	State::Viewport viewportState;
 
 private:
+	TimingConfig timingConfig;
+
 	std::unique_ptr<EngineCore> engine;
 	std::unique_ptr<Graphics::Renderer> renderer;
 
