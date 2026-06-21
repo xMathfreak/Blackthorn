@@ -1,6 +1,6 @@
 #pragma once
 
-#include <string>
+#include <filesystem>
 
 #include <glad/glad.h>
 #include <SDL3/SDL.h>
@@ -102,7 +102,7 @@ public:
 	 * @param path Path to the image file.
 	 * @param parameters Texture sampling and wrapping parameters.
 	 */
-	explicit Texture(const std::string& path, const TextureParams& parameters = TextureParams());
+	explicit Texture(const std::filesystem::path& path, const TextureParams& parameters = TextureParams());
 
 	/**
 	 * @brief Creates a texture from raw pixel data.
@@ -153,7 +153,7 @@ public:
 	 * @param parameters Texture sampling and wrapping parameters.
 	 * @return True on success, false otherwise.
 	 */
-	bool loadFromFile(const std::string& path, const TextureParams& parameters = TextureParams());
+	bool loadFromFile(const std::filesystem::path& path, const TextureParams& parameters = TextureParams());
 
 	/**
 	 * @brief Loads texture data from an SDL Surface.

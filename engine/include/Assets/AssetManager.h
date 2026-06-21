@@ -136,13 +136,13 @@ public:
 	}
 
 	template <typename AssetType>
-	AssetHandle<AssetType> load(const std::string& id, const std::string& path) {
-		return load<AssetType>(id, PathLoadParams(path));
+	AssetHandle<AssetType> load(const std::string& id, std::filesystem::path path) {
+		return load<AssetType>(id, PathLoadParams(std::move(path)));
 	}
 
 	template <typename AssetType>
-	AssetHandle<AssetType> load(const std::string& path) {
-		return load<AssetType>(std::filesystem::path(path).stem().string(), PathLoadParams(path));
+	AssetHandle<AssetType> load(std::filesystem::path path) {
+		return load<AssetType>(std::filesystem::path(path).stem().string(), PathLoadParams(std::move(path)));
 	}
 
 	/**
@@ -259,8 +259,13 @@ public:
 	}
 
 	template <typename AssetType>
-	AssetHandle<AssetType> loadAsync(const std::string& id, const std::string& path) {
-		return loadAsync<AssetType>(id, PathLoadParams(path));
+	AssetHandle<AssetType> loadAsync(const std::string& id, std::filesystem::path path) {
+		return loadAsync<AssetType>(id, PathLoadParams(std::move(path)));
+	}
+
+	template <typename AssetType>
+	AssetHandle<AssetType> loadAsync(std::filesystem::path path) {
+		return loadAsync<AssetType>(std::filesystem::path(path).stem().string(), PathLoadParams(std::move(path)));
 	}
 
 	template <typename AssetType>

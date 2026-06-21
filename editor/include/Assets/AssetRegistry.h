@@ -19,7 +19,7 @@ namespace Blackthorn::Editor::Assets {
  */
 class AssetRegistry {
 public:
-	using LoadFn = void*(*)(Blackthorn::Assets::AssetManager&, const std::string& id, const std::string& path);
+	using LoadFn = void*(*)(Blackthorn::Assets::AssetManager&, const std::string& id, const std::filesystem::path& path);
 
 	struct Entry {
 		std::type_index type = std::type_index(typeid(void));
@@ -47,7 +47,7 @@ public:
 		entry.name = name;
 		entry.extensions = manager.getSupportedExtensions<T>();
 
-		entry.load = [](Blackthorn::Assets::AssetManager& mgr, const std::string& id, const std::string& path) -> void* {
+		entry.load = [](Blackthorn::Assets::AssetManager& mgr, const std::string& id, const std::filesystem::path& path) -> void* {
 			auto handle = mgr.load<T>(id, path);
 			return handle ? handle.get() : nullptr;
 		};

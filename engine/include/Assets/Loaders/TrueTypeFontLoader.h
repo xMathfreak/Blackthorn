@@ -6,10 +6,10 @@
 namespace Blackthorn::Fonts {
 
 struct BLACKTHORN_API TTFParams : Assets::LoadParams {
-	std::string path;
+	std::filesystem::path path;
 	int size;
 
-	TTFParams(const std::string& ttfPath, int pointSize)
+	TTFParams(const std::filesystem::path& ttfPath, int pointSize)
 		: path(ttfPath)
 		, size(pointSize)
 	{}

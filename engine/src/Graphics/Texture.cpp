@@ -46,7 +46,7 @@ void Texture::applyParams() {
 
 }
 
-Texture::Texture(const std::string& path, const TextureParams& parameters) {
+Texture::Texture(const std::filesystem::path& path, const TextureParams& parameters) {
 	loadFromFile(path, parameters);
 }
 
@@ -94,15 +94,16 @@ Texture& Texture::operator=(Texture&& other) noexcept {
 	return *this;
 }
 
-bool Texture::loadFromFile(const std::string& path, const TextureParams& parameters) {
+bool Texture::loadFromFile(const std::filesystem::path& path, const TextureParams& parameters) {
 	if (id != 0)
 		glDeleteTextures(1, &id);
 
 	this->params = parameters;
 
-	SDL_Surface* surface = IMG_Load(path.c_str());
+	const auto pathStr = path.string();
+	SDL_Surface* surface = IMG_Load(pathStr.c_str());
 	if (!surface) {
-		BT_ERROR("Failed to load texture from '{}': {}", path, SDL_GetError());
+		BT_ERROR("Failed to load texture from '{}': {}", pathStr, SDL_GetError());
 		return false;
 	}
 

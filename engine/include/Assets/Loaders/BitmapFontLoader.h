@@ -6,10 +6,10 @@
 namespace Blackthorn::Fonts {
 
 struct BLACKTHORN_API BitmapParams : Assets::LoadParams {
-	std::string texturePath;
-	std::string metricsPath;
+	std::filesystem::path texturePath;
+	std::filesystem::path metricsPath;
 
-	BitmapParams(const std::string& texture, const std::string& metrics)
+	BitmapParams(const std::filesystem::path& texture, const std::filesystem::path& metrics)
 		: texturePath(texture)
 		, metricsPath(metrics)
 	{}

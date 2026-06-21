@@ -41,10 +41,11 @@ void TrueTypeFont::cleanupShader() {
 		shader->destroy();
 }
 
-bool TrueTypeFont::loadFromFile(const std::string& filePath, int pointSize) {
-	font = TTF_OpenFont(filePath.c_str(), pointSize);
+bool TrueTypeFont::loadFromFile(const std::filesystem::path& filePath, int pointSize) {
+	const auto pathStr = filePath.string();
+	font = TTF_OpenFont(pathStr.c_str(), pointSize);
 	if (!font) {
-		BT_ERROR("TrueTypeFont: Failed to load True Type font '{}': '{}'", filePath, SDL_GetError());
+		BT_ERROR("TrueTypeFont: Failed to load True Type font '{}': '{}'", pathStr, SDL_GetError());
 		return false;
 	}
 
@@ -71,7 +72,7 @@ bool TrueTypeFont::loadFromFile(const std::string& filePath, int pointSize) {
 
 	BT_DEBUG(
 		"Loaded TrueType font '{}' at {} pt (line height: {})",
-		filePath, pointSize, lineHeight
+		pathStr, pointSize, lineHeight
 	);
 
 	return true;
