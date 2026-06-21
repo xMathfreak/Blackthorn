@@ -2,7 +2,7 @@
 
 #include <SDL3/SDL.h>
 
-#include "State/Context.h"
+#include "State/EditorContext.h"
 #include "State/TitleBar.h"
 
 namespace Blackthorn::Editor::Panels {

@@ -3,6 +3,7 @@
 #include <imgui.h>
 
 #include "ECS/Components/Sprite.h"
+#include "Inspector/AssetPicker.h"
 #include "Inspector/ComponentInspector.h"
 
 namespace Blackthorn::Editor {
@@ -17,6 +18,8 @@ struct ComponentInspector<ECS::Components::Sprite> {
 		bool changed = false;
 
 		if (ImGui::CollapsingHeader("Sprite", ImGuiTreeNodeFlags_DefaultOpen)) {
+			changed |= Inspector::drawAssetPicker<Graphics::Texture>("Texture", sprite.texture);
+
 			changed |= ImGui::DragFloat2(
 				"Dimensions",
 				&sprite.width,

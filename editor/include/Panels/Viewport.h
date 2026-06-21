@@ -1,6 +1,6 @@
 #pragma once
 
-#include "State/Context.h"
+#include "State/EditorContext.h"
 #include "State/Viewport.h"
 
 namespace Blackthorn {

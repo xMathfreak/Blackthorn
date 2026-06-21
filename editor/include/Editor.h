@@ -6,6 +6,7 @@
 #include <Core/Engine.h>
 #include <Graphics/Renderer.h>
 
+#include "Panels/AssetBrowser.h"
 #include "Panels/Dockspace.h"
 #include "Panels/Hierarchy.h"
 #include "Panels/Inspector.h"
@@ -33,10 +34,14 @@ private:
 	void processEvents();
 	void shutdown();
 	void stepSimulation();
+	void initAssetLoaders();
+	void showImportDialog();
 
 	static bool handleLiveResize(void* userdata, SDL_Event* event);
+	static void handleImportDialog(void* userdata, const char* const* filelist, int filter);
 
 private: // Panels
+	Panels::AssetBrowser assetBrowser;
 	Panels::Dockspace dockspace;
 	Panels::Hierarchy hierarchy;
 	Panels::Inspector inspector;
@@ -51,6 +56,9 @@ private: // State
 	State::Viewport viewportState;
 
 private:
+	std::vector<SDL_DialogFileFilter> importFilters;
+	std::string importFilterPattern;
+
 	TimingConfig timingConfig;
 
 	std::unique_ptr<EngineCore> engine;

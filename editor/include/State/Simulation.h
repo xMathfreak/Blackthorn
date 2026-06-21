@@ -11,7 +11,7 @@ struct Simulation {
 	float accumulated = 0.0f;
 	float alpha = 1.0f;
 
-	bool playing = false;
+	bool playing = true;
 };
 
 } // namespace Blackthorn::Editor::Panels

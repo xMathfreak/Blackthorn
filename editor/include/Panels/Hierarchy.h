@@ -1,6 +1,6 @@
 #pragma once
 
-#include "State/Context.h"
+#include "State/EditorContext.h"
 
 namespace Blackthorn::Editor::Panels {
 

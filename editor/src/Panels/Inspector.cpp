@@ -1,6 +1,7 @@
 #include "Panels/Inspector.h"
 
 #include <imgui.h>
+#include <misc/cpp/imgui_stdlib.h>
 
 #include "Inspector/InspectorRegistry.h"
 #include "ECS/Components/Tag.h"
@@ -25,13 +26,7 @@ void Inspector::draw(
 	auto* tag = context.activeWorld->getComponent<ECS::Components::Tag>(context.selectedEntity);
 
 	if (tag) {
-		char buffer[256];
-		memset(buffer, 0, sizeof(buffer));
-		strncpy(buffer, tag->name.c_str(), sizeof(buffer) - 1);
-
-		if (ImGui::InputText("Name", buffer, sizeof(buffer)))
-			tag->name = buffer;
-
+		ImGui::InputText("Name", &tag->name);
 		ImGui::Separator();
 	} else {
 		ImGui::TextDisabled("(no Tag component)");

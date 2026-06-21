@@ -4,6 +4,7 @@
 #include <backends/imgui_impl_sdl3.h>
 #include <backends/imgui_impl_opengl3.h>
 
+#include "Debug/Logger.h"
 #include "Graphics/GLLoader.h"
 
 #include "Inspector/InspectorRegistry.h"
@@ -11,6 +12,14 @@
 #include "Inspector/Components/Sprite.h"
 #include "Inspector/Components/Kinematics.h"
 #include "Inspector/Components/Persistent.h"
+
+#include "Assets/Loaders/AudioLoader.h"
+#include "Assets/Loaders/TextureLoader.h"
+#include "Assets/Loaders/ShaderLoader.h"
+#include "Assets/Loaders/BitmapFontLoader.h"
+#include "Assets/Loaders/TrueTypeFontLoader.h"
+
+#include "ECS/Systems/RenderSystem.h"
 
 namespace Blackthorn::Editor {
 
@@ -44,8 +53,8 @@ bool Application::init() {
 
 	window = SDL_CreateWindow(
 		"Blackthorn Editor",
-		640,
-		480,
+		800,
+		600,
 		SDL_WINDOW_RESIZABLE | SDL_WINDOW_OPENGL | SDL_WINDOW_BORDERLESS
 	);
 
@@ -65,6 +74,7 @@ bool Application::init() {
 		return false;
 	}
 
+	SDL_SetWindowMinimumSize(window, 800, 600);
 	SDL_GL_SetSwapInterval(-1);
 
 	if (!Graphics::loadGLFunctions())
@@ -72,7 +82,6 @@ bool Application::init() {
 
 	if (!gladLoadGLLoader((GLADloadproc)SDL_GL_GetProcAddress))
 		return false;
-
 
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -92,6 +101,27 @@ bool Application::init() {
 		);
 
 	renderer = std::make_unique<Graphics::Renderer>();
+
+	initAssetLoaders();
+
+	auto& assetRegistry = Assets::AssetRegistry::instance();
+	assetRegistry.registerAssetType<Graphics::Texture>("Texture", engine->getAssetManager());
+	assetRegistry.registerAssetType<Audio::AudioClip>("Audio Clip", engine->getAssetManager());
+	assetRegistry.registerAssetType<Graphics::Shader>("Shader", engine->getAssetManager());
+	assetRegistry.registerAssetType<Fonts::BitmapFont>("Bitmap Font", engine->getAssetManager());
+	assetRegistry.registerAssetType<Fonts::TrueTypeFont>("TrueType Font", engine->getAssetManager());
+
+	for (const auto& entry : assetRegistry.allEntries()) {
+		for (const auto& ext : entry.extensions) {
+			if (!importFilterPattern.empty())
+				importFilterPattern += ';';
+
+			importFilterPattern += ext.substr(1);
+		}
+	}
+
+	importFilters.push_back({ "All Supported Assets", importFilterPattern.c_str() });
+	importFilters.push_back({ "All Files", "*" });
 
 	ImGui::StyleColorsDark();
 
@@ -160,8 +190,27 @@ bool Application::init() {
 
 
 	context.activeWorld = &world;
+	context.activeWorld->addSystem<ECS::Systems::RenderSystem>(renderer.get());
 	initialized = true;
 	return true;
+}
+
+void Application::initAssetLoaders() {
+	auto& assets = engine->getAssetManager();
+
+	assets.registerLoader<Audio::AudioClip>(
+		std::make_unique<Audio::AudioLoader>(),
+		std::make_unique<Audio::AsyncAudioLoader>()
+	);
+
+	assets.registerLoader<Graphics::Texture>(
+		std::make_unique<Graphics::TextureLoader>(),
+		std::make_unique<Graphics::AsyncTextureLoader>()
+	);
+
+	assets.registerLoader<Graphics::Shader>(std::make_unique<Graphics::ShaderLoader>());
+	assets.registerLoader<Fonts::BitmapFont>(std::make_unique<Fonts::BitmapFontLoader>());
+	assets.registerLoader<Fonts::TrueTypeFont>(std::make_unique<Fonts::TrueTypeFontLoader>());
 }
 
 void Application::shutdown() {
@@ -226,10 +275,13 @@ void Application::render() {
 	ImGui_ImplSDL3_NewFrame();
 	ImGui::NewFrame();
 
+	Inspector::AssetPickerContext::set(&context.assetCache, &engine->getAssetManager());
+
 	titleBar.draw(window, running, titleBarState, context);
-	dockspace.draw(titleBarState, dockspaceState, running);
+	dockspace.draw(titleBarState, dockspaceState, context, running);
 	hierarchy.draw(context);
 	inspector.draw(context);
+	assetBrowser.draw(context, engine->getAssetManager());
 	viewport.draw(context, *renderer, viewportState, simulationState.alpha);
 
 	ImGui::Render();
@@ -257,6 +309,11 @@ void Application::render() {
 }
 
 void Application::update() {
+	if (context.importRequested) {
+		context.importRequested = false;
+		showImportDialog();
+	}
+
 	stepSimulation();
 }
 
@@ -323,5 +380,55 @@ void Application::stepSimulation() {
 	simulationState.alpha = simulationState.accumulated / timingConfig.fixedDeltaTime;
 }
 
+void Application::showImportDialog() {
+	std::error_code ec;
+	std::string defaultLocation = std::filesystem::absolute(context.assetsRoot, ec).string();
+
+	SDL_ShowOpenFileDialog(
+		&Application::handleImportDialog,
+		this,
+		window,
+		importFilters.data(),
+		static_cast<int>(importFilters.size()),
+		defaultLocation.c_str(),
+		true
+	);
+}
+
+void Application::handleImportDialog(void* userdata, const char* const* filelist, int /*filter*/) {
+	auto* self = static_cast<Application*>(userdata);
+
+	if (!filelist) {
+		BT_ERROR("Asset import: file dialog error - {}", SDL_GetError());
+		return;
+	}
+
+	bool importedAny = false;
+
+	for (const char* const* f = filelist; *f != nullptr; ++f) {
+		std::filesystem::path source(*f);
+		std::filesystem::path destination = self->context.assetsRoot / source.filename();
+
+		std::error_code ec;
+		std::filesystem::create_directories(self->context.assetsRoot, ec);
+
+		std::filesystem::copy_file(
+			source, destination,
+			std::filesystem::copy_options::overwrite_existing,
+			ec
+		);
+
+		if (ec) {
+			BT_ERROR("Asset import: failed to copy '{}' to '{}': {}",
+				source.string(), destination.string(), ec.message());
+			continue;
+		}
+
+		importedAny = true;
+	}
+
+	if (importedAny)
+		self->context.assetCache.markStale();
+}
 
 } // namespace Blackthorn

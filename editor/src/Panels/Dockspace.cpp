@@ -10,6 +10,7 @@ namespace Blackthorn::Editor::Panels {
 void Dockspace::draw(
 	State::Titlebar& titleBar,
 	State::Dockspace& dockspace,
+	State::Context& context,
 	bool& running
 ) {
 	ImGuiWindowFlags windowFlags =
@@ -63,6 +64,16 @@ void Dockspace::draw(
 		}
 
 		if (ImGui::BeginMenu("Options")) {
+			ImGui::EndMenu();
+		}
+
+		if (ImGui::BeginMenu("Assets")) {
+			if (ImGui::MenuItem("Refresh"))
+				context.assetCache.markStale();
+
+			if (ImGui::MenuItem("Import..."))
+				context.importRequested = true;
+
 			ImGui::EndMenu();
 		}
 
