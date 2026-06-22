@@ -152,6 +152,21 @@ public:
 		audioSource.create();
 	}
 
+	void markPendingSeek(float seconds) noexcept {
+		pendingSeekFlag = true;
+		pendingSeekTarget = seconds;
+	}
+
+	void clearPendingSeek() noexcept {
+		pendingSeekFlag = false;
+		pendingSeekTarget = 0.0f;
+	}
+
+	void resetFrameCounters(U64 newConsumedFrames = 0) noexcept {
+		consumedFrames = newConsumedFrames;
+		decodedFrames = 0;
+	}
+
 	[[nodiscard]]
 	bool active() const noexcept {
 		return audioHandle.isValid();
@@ -287,6 +302,16 @@ public:
 		return pendingStop;
 	}
 
+	[[nodiscard]]
+	bool isPendingSeek() const noexcept {
+		return pendingSeekFlag;
+	}
+
+	[[nodiscard]]
+	float pendingSeekSeconds() const noexcept {
+		return pendingSeekTarget;
+	}
+
 private:
 	glm::vec3 sourcePosition{0};
 
@@ -306,11 +331,13 @@ private:
 	float finalGain = 1.0f; ///< Computed AL gain: userVolume * catVol * master.
 	float minDist = 1.0f;
 	float maxDist = 50.0f;
+	float pendingSeekTarget = 0.0f;
 
 	bool spatial = false;
 	bool looped = false;
 	bool jobInFlight = false;
 	bool pendingStop = false;
+	bool pendingSeekFlag = false;
 	AudioCategory audioCategory = AudioCategory::SFX;
 };
 
