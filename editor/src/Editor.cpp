@@ -8,10 +8,16 @@
 #include "Graphics/GLLoader.h"
 
 #include "Inspector/InspectorRegistry.h"
+#include "Inspector/AudioPreviewContext.h"
+
 #include "Inspector/Components/Transform.h"
 #include "Inspector/Components/Sprite.h"
 #include "Inspector/Components/Kinematics.h"
 #include "Inspector/Components/Persistent.h"
+
+#include "Inspector/AssetInspectors/Texture.h"
+#include "Inspector/AssetInspectors/AudioClip.h"
+#include "Inspector/AssetInspectors/Shader.h"
 
 #include "Assets/Loaders/AudioLoader.h"
 #include "Assets/Loaders/TextureLoader.h"
@@ -104,10 +110,16 @@ bool Application::init() {
 
 	initAssetLoaders();
 
+	audioManager = std::make_unique<Audio::AudioManager>();
+	if (!audioManager->init())
+		BT_ERROR("Editor: failed to initialize AudioManager");
+
+	AudioPreviewContext::setManager(audioManager.get());
+
 	auto& assetRegistry = Assets::AssetRegistry::instance();
 	assetRegistry.registerAssetType<Graphics::Texture>("Texture", engine->getAssetManager());
 	assetRegistry.registerAssetType<Audio::AudioClip>("Audio Clip", engine->getAssetManager());
-	assetRegistry.registerAssetType<Graphics::Shader>("Shader", engine->getAssetManager());
+	assetRegistry.registerFileType<Graphics::Shader>("Shader", { ".glsl", ".vert", ".frag" });
 	assetRegistry.registerAssetType<Fonts::BitmapFont>("Bitmap Font", engine->getAssetManager());
 	assetRegistry.registerAssetType<Fonts::TrueTypeFont>("TrueType Font", engine->getAssetManager());
 
@@ -226,6 +238,7 @@ void Application::shutdown() {
 
 	SDL_RemoveEventWatch(&Application::handleLiveResize, this);
 
+	audioManager.reset();
 	renderer.reset();
 
 	ImGui_ImplOpenGL3_Shutdown();
@@ -289,6 +302,7 @@ void Application::render() {
 	hierarchy.draw(context);
 	inspector.draw(context);
 	assetBrowser.draw(context, engine->getAssetManager());
+	assetInspector.draw(context, engine->getAssetManager());
 	viewport.draw(context, *renderer, viewportState, simulationState.alpha);
 
 	ImGui::Render();
@@ -320,6 +334,11 @@ void Application::update() {
 		context.importRequested = false;
 		showImportDialog();
 	}
+
+	if (audioManager)
+		audioManager->update();
+
+	engine->getAssetManager().flushPendingUploads();
 
 	stepSimulation();
 }

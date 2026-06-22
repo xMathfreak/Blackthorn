@@ -1,6 +1,7 @@
 #pragma once
 
 #include <filesystem>
+#include <optional>
 #include <string>
 
 #include "Assets/AssetDirectoryCache.h"
@@ -27,6 +28,7 @@ struct Context {
 	ECS::Entity selectedEntity = ECS::INVALID_ENTITY;
 
 	Assets::AssetDirectoryCache assetCache;
+	std::optional<Assets::AssetEntry> selectedAsset;
 	bool importRequested = false;
 };
 

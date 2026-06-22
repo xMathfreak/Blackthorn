@@ -347,6 +347,15 @@ public:
 		return (it != loaders.end()) ? it->second->getSupportedExtensions() : std::vector<std::string>{};
 	}
 
+	void unloadById(const std::string& id) {
+		for (auto& [type, storage] : storages) {
+			if (storage->has(id))
+				storage->remove(id);
+		}
+
+		assetParams.erase(id);
+	}
+
 	/**
 	 * @brief Promotes all completed decode jobs into GPU-resident assets.
 	 *

@@ -15,7 +15,8 @@ constexpr float kThumbnailSize = 24.0f;
 void drawFileRow(
 	const Editor::Assets::AssetEntry& entry,
 	const Editor::Assets::AssetRegistry& registry,
-	Blackthorn::Assets::AssetManager& manager
+	Blackthorn::Assets::AssetManager& manager,
+	State::Context& context
 ) {
 	const auto* typeEntry = registry.getEntry(entry.assetType);
 	std::string filename = entry.relativePath.filename().string();
@@ -44,7 +45,12 @@ void drawFileRow(
 	}
 
 	ImGui::SameLine();
-	ImGui::Selectable(filename.c_str());
+
+	bool selected = context.selectedAsset.has_value()
+		&& context.selectedAsset->relativePath == entry.relativePath;
+
+	if (ImGui::Selectable(filename.c_str()))
+		context.selectedAsset = entry;
 
 	if (ImGui::BeginDragDropSource()) {
 		std::string payload = entry.relativePath.string();
@@ -59,13 +65,14 @@ void drawFileRow(
 void drawTreeNode(
 	const Editor::Assets::AssetTreeNode& node,
 	const Editor::Assets::AssetRegistry& registry,
-	Blackthorn::Assets::AssetManager& manager
+	Blackthorn::Assets::AssetManager& manager,
+	State::Context& context
 ) {
 	for (const auto& dir : node.directories) {
 		ImGui::PushID(dir.name.c_str());
 
 		if (ImGui::TreeNode(dir.name.c_str())) {
-			drawTreeNode(dir, registry, manager);
+			drawTreeNode(dir, registry, manager, context);
 			ImGui::TreePop();
 		}
 
@@ -73,7 +80,7 @@ void drawTreeNode(
 	}
 
 	for (const auto* entry : node.files)
-		drawFileRow(*entry, registry, manager);
+		drawFileRow(*entry, registry, manager, context);
 }
 
 } // namespace
@@ -96,7 +103,7 @@ void AssetBrowser::draw(State::Context& context, Blackthorn::Assets::AssetManage
 	ImGui::Separator();
 
 	const auto& registry = Blackthorn::Editor::Assets::AssetRegistry::instance();
-	drawTreeNode(context.assetCache.tree(), registry, manager);
+	drawTreeNode(context.assetCache.tree(), registry, manager, context);
 
 	ImGui::End();
 }

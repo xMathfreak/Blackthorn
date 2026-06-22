@@ -7,6 +7,7 @@
 #include <Graphics/Renderer.h>
 
 #include "Panels/AssetBrowser.h"
+#include "Panels/AssetInspector.h"
 #include "Panels/Dockspace.h"
 #include "Panels/Hierarchy.h"
 #include "Panels/Inspector.h"
@@ -42,6 +43,7 @@ private:
 
 private: // Panels
 	Panels::AssetBrowser assetBrowser;
+	Panels::AssetInspector assetInspector;
 	Panels::Dockspace dockspace;
 	Panels::Hierarchy hierarchy;
 	Panels::Inspector inspector;
@@ -68,6 +70,8 @@ private:
 
 	SDL_Window* window = nullptr;
 	SDL_GLContext glContext = nullptr;
+
+	std::unique_ptr<Audio::AudioManager> audioManager;
 
 	bool initialized = false;
 	bool running = false;

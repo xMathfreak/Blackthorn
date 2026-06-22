@@ -6,8 +6,14 @@
 #include <vector>
 
 #include "Assets/AssetManager.h"
+#include "Inspector/AssetInspector.h"
 
 namespace Blackthorn::Editor::Assets {
+
+template <typename T>
+concept HasAssetInspectorSpecialization = requires(T* t, const Assets::AssetEntry& entry) {
+	{ Editor::AssetInspector<T>::draw(t, entry) };
+};
 
 /**
  * @brief Type-erased entry describing one asset type the editor knows how
@@ -20,12 +26,15 @@ namespace Blackthorn::Editor::Assets {
 class AssetRegistry {
 public:
 	using LoadFn = void*(*)(Blackthorn::Assets::AssetManager&, const std::string& id, const std::filesystem::path& path);
+	using DrawInspectorFn = void(*)(void* asset, const AssetEntry& entry);
 
 	struct Entry {
 		std::type_index type = std::type_index(typeid(void));
 		std::string_view name;
 		std::vector<std::string> extensions;
+
 		LoadFn load = nullptr;
+		DrawInspectorFn drawInspector = nullptr;
 	};
 
 	static AssetRegistry& instance();
@@ -48,9 +57,15 @@ public:
 		entry.extensions = manager.getSupportedExtensions<T>();
 
 		entry.load = [](Blackthorn::Assets::AssetManager& mgr, const std::string& id, const std::filesystem::path& path) -> void* {
-			auto handle = mgr.load<T>(id, path);
-			return handle ? handle.get() : nullptr;
+			auto handle = mgr.loadAsync<T>(id, path);
+			return (handle && handle.isReady()) ? handle.get() : nullptr;
 		};
+
+		if constexpr (HasAssetInspectorSpecialization<T>) {
+			entry.drawInspector = [](void* asset, const AssetEntry& e) {
+				Editor::AssetInspector<T>::draw(static_cast<T*>(asset), e);
+			};
+		}
 
 		entries.push_back(std::move(entry));
 	}
@@ -73,6 +88,28 @@ public:
 	}
 
 	const std::vector<Entry>& allEntries() const { return entries; }
+
+	template <typename T>
+	void registerFileType(std::string_view name, std::vector<std::string> extensions) {
+		const std::type_index type = std::type_index(typeid(T));
+
+		for (const auto& existing : entries)
+			if (existing.type == type) return;
+
+		Entry entry;
+		entry.type = type;
+		entry.name = name;
+		entry.extensions = std::move(extensions);
+		entry.load = nullptr;
+
+		if constexpr (HasAssetInspectorSpecialization<T>) {
+			entry.drawInspector = [](void* asset, const AssetEntry& e) {
+				Editor::AssetInspector<T>::draw(static_cast<T*>(asset), e);
+			};
+		}
+
+		entries.push_back(std::move(entry));
+	}
 
 private:
 	AssetRegistry() = default;

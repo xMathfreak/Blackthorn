@@ -4,6 +4,7 @@
 
 #include <imgui.h>
 
+#include "Assets/AssetManager.h"
 #include "Assets/AssetDirectoryCache.h"
 #include "Assets/AssetRegistry.h"
 #include "Inspector/AssetPickerContext.h"
@@ -50,14 +51,10 @@ bool drawAssetPicker(const char* label, T*& assetPtr) {
 				std::string display = entry.relativePath.string();
 
 				if (ImGui::Selectable(display.c_str())) {
-					void* loaded = typeEntry->load(
-						*manager,
-						entry.relativePath.string(),
-						entry.absolutePath.string()
-					);
+					auto handle = manager->load<T>(entry.relativePath.string(), entry.absolutePath);
 
-					if (loaded) {
-						assetPtr = static_cast<T*>(loaded);
+					if (handle) {
+						assetPtr = handle.get();
 						changed = true;
 					}
 				}
