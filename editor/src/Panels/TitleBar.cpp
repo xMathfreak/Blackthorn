@@ -180,8 +180,8 @@ void TitleBar::draw(
 
 	ImGui::PopStyleColor(3);
 
-	titleBar.itemHovered = ImGui::IsAnyItemHovered() ||
-		!ImGui::IsWindowHovered();
+	titleBar.itemHovered = ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem | ImGuiHoveredFlags_AllowWhenBlockedByPopup) &&
+		(ImGui::IsAnyItemHovered() || ImGui::IsAnyItemActive());
 
 	ImGui::PopStyleVar(3);
 	ImGui::End();

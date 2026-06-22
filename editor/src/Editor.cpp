@@ -172,8 +172,15 @@ bool Application::init() {
 				return SDL_HITTEST_RESIZE_BOTTOM;
 		}
 
-		if (area->y < self->titleBarState.height && !self->titleBarState.itemHovered)
-			return SDL_HITTEST_DRAGGABLE;
+	if (area->y < self->titleBarState.height) {
+		int w, h;
+		SDL_GetWindowSizeInPixels(win, &w, &h);
+
+		if (area->x >= w - self->titleBarState.buttonWidth * 3)
+			return SDL_HITTEST_NORMAL;
+
+		return SDL_HITTEST_DRAGGABLE;
+	}
 
 		return SDL_HITTEST_NORMAL;
 	};
