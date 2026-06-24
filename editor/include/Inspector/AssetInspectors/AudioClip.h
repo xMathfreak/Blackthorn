@@ -40,16 +40,22 @@ struct AssetInspector<Audio::AudioClip> {
 			return;
 		}
 
-		bool isPlaying = handle.isValid() && manager->isPlaying(handle);
+		const bool playing = handle.isValid() && manager->isPlaying(handle);
+		const bool paused = handle.isValid() && manager->isPaused(handle);
+		const bool stopped = !playing && !paused;
 
-		if (!isPlaying) {
+		if (stopped) {
 			if (ImGui::Button("Play")) {
 				Audio::PlayOptions opts;
 				opts.mode = Audio::PlaybackMode::Stream;
 				handle = manager->play(*clip, opts);
 			}
-		} else if (ImGui::Button("Pause")) {
-			manager->pause(handle);
+		} else if (playing) {
+			if (ImGui::Button("Pause"))
+				manager->pause(handle);
+		} else {
+			if (ImGui::Button("Resume"))
+				manager->resume(handle);
 		}
 
 		ImGui::SameLine();
