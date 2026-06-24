@@ -184,17 +184,15 @@ bool Application::init() {
 				return SDL_HITTEST_RESIZE_BOTTOM;
 		}
 
-	if (area->y < self->titleBarState.height) {
-		int w, h;
-		SDL_GetWindowSizeInPixels(win, &w, &h);
-
-		if (area->x >= w - self->titleBarState.buttonWidth * 3)
+		if (area->y >= static_cast<int>(self->titleBarState.height))
 			return SDL_HITTEST_NORMAL;
 
-		return SDL_HITTEST_DRAGGABLE;
-	}
+		for (const SDL_Rect& rect : self->titleBarState.hitExclusionRects) {
+			if (SDL_PointInRect(area, &rect))
+				return SDL_HITTEST_NORMAL;
+		}
 
-		return SDL_HITTEST_NORMAL;
+		return SDL_HITTEST_DRAGGABLE;
 	};
 
 	SDL_SetWindowHitTest(window, hitTest, this);

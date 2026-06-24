@@ -101,6 +101,20 @@ bool titleBarButton(const char* id, const ImVec2& size, IconDrawFn drawIcon) {
 	return clicked;
 }
 
+void pushHitExclusion(State::Titlebar& titleBar) {
+	ImVec2 min = ImGui::GetItemRectMin();
+	ImVec2 max = ImGui::GetItemRectMax();
+
+	ImVec2 windowPos = ImGui::GetWindowPos();
+
+	titleBar.hitExclusionRects.push_back(SDL_Rect{
+		static_cast<int>(min.x - windowPos.x),
+		static_cast<int>(min.y - windowPos.y),
+		static_cast<int>(max.x - min.x),
+		static_cast<int>(max.y - min.y)
+	});
+}
+
 } // namespace
 
 void TitleBar::draw(
@@ -109,6 +123,8 @@ void TitleBar::draw(
 	State::Titlebar& titleBar,
 	State::Context& context
 ) {
+	titleBar.hitExclusionRects.clear();
+
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8.0f, 0.0f));
 	ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.5f, 0.5f));
@@ -158,6 +174,8 @@ void TitleBar::draw(
 	if (titleBarButton("##minimize", {titleBar.buttonWidth, titleBar.height}, drawMinimizeIcon))
 		SDL_MinimizeWindow(window);
 
+	pushHitExclusion(titleBar);
+
 	x += titleBar.buttonWidth;
 	bool maximized = SDL_GetWindowFlags(window) & SDL_WINDOW_MAXIMIZED;
 	ImGui::SetCursorPos({x, 0.0f});
@@ -166,9 +184,14 @@ void TitleBar::draw(
 		{titleBar.buttonWidth, titleBar.height},
 		maximized ? drawRestoreIcon : drawMaximizeIcon
 	)) {
-		if (maximized) SDL_RestoreWindow(window);
-		else SDL_MaximizeWindow(window);
+		if (maximized) {
+			SDL_RestoreWindow(window);
+		} else {
+			SDL_MaximizeWindow(window);
+		}
 	}
+
+	pushHitExclusion(titleBar);
 
 	ImGui::PopStyleColor(1); // pop the grey hover used by minimize/maximize
 
@@ -178,11 +201,9 @@ void TitleBar::draw(
 	if (titleBarButton("##close", {titleBar.buttonWidth, titleBar.height}, drawCloseIcon))
 		running = false;
 
+	pushHitExclusion(titleBar);
+
 	ImGui::PopStyleColor(3);
-
-	titleBar.itemHovered = ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem | ImGuiHoveredFlags_AllowWhenBlockedByPopup) &&
-		(ImGui::IsAnyItemHovered() || ImGui::IsAnyItemActive());
-
 	ImGui::PopStyleVar(3);
 	ImGui::End();
 }
