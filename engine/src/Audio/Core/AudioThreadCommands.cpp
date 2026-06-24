@@ -255,15 +255,18 @@ void AudioThread::process(SeekCommand cmd) {
 	}
 
 	const bool wasPlaying = voice->source().isPlaying();
+	const bool wasPaused = voice->source().isPaused();
 
-	if (wasPlaying)
-		voice->source().stop();
+	voice->source().stop();
 
 	alSourcef(voice->source().get(), AL_SEC_OFFSET, cmd.seconds);
 	voice->setPlaybackTime(cmd.seconds);
 
-	if (wasPlaying)
+	if (wasPlaying) {
 		voice->source().play();
+	} else if (wasPaused) {
+		voice->source().pause();
+	}
 }
 
 void AudioThread::performStreamingSeek(Voice& voice, float seconds) {
@@ -271,7 +274,7 @@ void AudioThread::performStreamingSeek(Voice& voice, float seconds) {
 	if (!sstate || !sstate->decoder)
 		return;
 
-	const bool wasPlaying = voice.source().isPlaying();
+	const bool wasPaused = voice.source().isPaused();
 
 	voice.source().stop();
 	voice.source().unqueueAllBuffers();
@@ -320,8 +323,10 @@ void AudioThread::performStreamingSeek(Voice& voice, float seconds) {
 
 	voice.addDecodedFrames(prefillFrames);
 
-	if (wasPlaying)
-		voice.source().play();
+	voice.source().play();
+
+	if (wasPaused)
+		voice.source().pause();
 
 	submitStreamingJob(voice, *sstate, false);
 }

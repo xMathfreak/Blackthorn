@@ -49,6 +49,7 @@ public:
 
 	[[nodiscard]] ALuint get() const noexcept;
 	[[nodiscard]] bool isPlaying() const;
+	[[nodiscard]] bool isPaused() const;
 	[[nodiscard]] bool isStopped() const;
 	[[nodiscard]] int processedBuffers() const;
 	[[nodiscard]] int queuedBuffers() const;

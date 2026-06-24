@@ -161,6 +161,12 @@ bool AudioSource::isStopped() const {
 	return state == AL_STOPPED;
 }
 
+bool AudioSource::isPaused() const {
+	ALint state = 0;
+	alGetSourcei(source, AL_SOURCE_STATE, &state);
+	return state == AL_PAUSED;
+}
+
 int AudioSource::processedBuffers() const {
 	ALint n = 0;
 	alGetSourcei(source, AL_BUFFERS_PROCESSED, &n);
