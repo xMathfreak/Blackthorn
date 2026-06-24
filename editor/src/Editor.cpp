@@ -455,4 +455,4 @@ void Application::handleImportDialog(void* userdata, const char* const* filelist
 		self->context.assetCache.markStale();
 }
 
-} // namespace Blackthorn
+} // namespace Blackthorn::Editor
