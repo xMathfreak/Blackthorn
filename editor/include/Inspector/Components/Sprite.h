@@ -20,11 +20,8 @@ struct ComponentInspector<ECS::Components::Sprite> {
 		if (ImGui::CollapsingHeader("Sprite", ImGuiTreeNodeFlags_DefaultOpen)) {
 			changed |= Inspector::drawAssetPicker<Graphics::Texture>("Texture", sprite.texture);
 
-			changed |= ImGui::DragFloat2(
-				"Dimensions",
-				&sprite.width,
-				0.1f
-			);
+			changed |= ImGui::DragFloat("Width", &sprite.width, 0.1f);
+			changed |= ImGui::DragFloat("Height", &sprite.height, 0.1f);
 
 			changed |= ImGui::DragFloat(
 				"Z-Index",
