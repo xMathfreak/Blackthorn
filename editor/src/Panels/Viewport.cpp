@@ -17,7 +17,7 @@ void Viewport::draw(
 
 	ImVec2 avail = ImGui::GetContentRegionAvail();
 
-	if (avail.x <= 0.0f || avail.y <= 0) {
+	if (avail.x <= 0.0f || avail.y <= 0.0f) {
 		ImGui::End();
 		return;
 	}

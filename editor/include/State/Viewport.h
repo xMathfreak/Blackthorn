@@ -9,4 +9,4 @@ struct Viewport {
 	U32 height = 1;
 };
 
-} // namespace Blackthorn::Editor::Panels
+} // namespace Blackthorn::Editor::State

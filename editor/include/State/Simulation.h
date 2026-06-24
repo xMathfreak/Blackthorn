@@ -14,4 +14,4 @@ struct Simulation {
 	bool playing = true;
 };
 
-} // namespace Blackthorn::Editor::Panels
+} // namespace Blackthorn::Editor::State

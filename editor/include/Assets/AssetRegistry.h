@@ -30,7 +30,7 @@ public:
 
 	struct Entry {
 		std::type_index type = std::type_index(typeid(void));
-		std::string_view name;
+		std::string name;
 		std::vector<std::string> extensions;
 
 		LoadFn load = nullptr;

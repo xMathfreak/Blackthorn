@@ -45,7 +45,7 @@ void AssetInspector::draw(State::Context& context, Blackthorn::Assets::AssetMana
 	void* loaded = nullptr;
 
 	if (typeEntry->load)
-		loaded = typeEntry->load(manager, entry.relativePath.string(), entry.absolutePath.string());
+		loaded = typeEntry->load(manager, entry.relativePath.string(), entry.absolutePath);
 
 	if (typeEntry->drawInspector) {
 		typeEntry->drawInspector(loaded, entry);

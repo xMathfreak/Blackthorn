@@ -6,4 +6,4 @@ struct Dockspace {
 	bool open = true;
 };
 
-} // namespace Blackthorn::Editor::Panels
+} // namespace Blackthorn::Editor::State
