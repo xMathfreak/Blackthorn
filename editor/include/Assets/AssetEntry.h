@@ -11,6 +11,7 @@ struct AssetEntry {
 	std::string extension;
 
 	std::type_index assetType = std::type_index(typeid(void));
+	mutable void* cachedPtr = nullptr;
 };
 
 } // namespace Blackthorn::Editor::Assets

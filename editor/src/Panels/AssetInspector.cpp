@@ -8,8 +8,15 @@ namespace Blackthorn::Editor::Panels {
 
 void AssetInspector::draw(State::Context& context, Blackthorn::Assets::AssetManager& manager) {
 	ImGui::Begin("Asset Inspector");
+	const auto& registry = Blackthorn::Editor::Assets::AssetRegistry::instance();
 
 	if (!context.selectedAsset) {
+		if (lastEntry) {
+			const auto* prev = registry.getEntry(lastEntry->assetType);
+			if (prev && prev->load)
+				manager.unloadById(lastEntry->relativePath.string());
+		}
+
 		lastEntry.reset();
 		ImGui::TextDisabled("No asset selected");
 		ImGui::End();
@@ -17,7 +24,6 @@ void AssetInspector::draw(State::Context& context, Blackthorn::Assets::AssetMana
 	}
 
 	const auto& entry = *context.selectedAsset;
-	const auto& registry = Blackthorn::Editor::Assets::AssetRegistry::instance();
 
 	if (!lastEntry || lastEntry->relativePath != entry.relativePath) {
 		if (lastEntry) {

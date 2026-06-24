@@ -3,14 +3,12 @@
 #include <string>
 #include <vector>
 
-#include "Assets/AssetEntry.h"
-
 namespace Blackthorn::Editor::Assets {
 
 struct AssetTreeNode {
 	std::string name;
 	std::vector<AssetTreeNode> directories;
-	std::vector<const AssetEntry*> files;
+	std::vector<size_t> fileIndices;
 };
 
 } // namespace Blackthorn::Editor::Assets

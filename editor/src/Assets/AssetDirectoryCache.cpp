@@ -68,7 +68,7 @@ void AssetDirectoryCache::refresh(const std::filesystem::path& assetsRoot) {
 				: &node->directories.emplace_back(AssetTreeNode{ segmentName, {}, {} });
 		}
 
-		node->files.push_back(&entry);
+		node->fileIndices.push_back(static_cast<size_t>(&entry - cached.data()));
 	}
 }
 

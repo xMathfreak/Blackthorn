@@ -30,12 +30,14 @@ void drawFileRow(
 	}
 
 	if (entry.assetType == std::type_index(typeid(Graphics::Texture))) {
-		void* loaded = typeEntry->load(
-			manager, entry.relativePath.string(), entry.absolutePath.string()
-		);
+		if (!entry.cachedPtr) {
+			entry.cachedPtr = typeEntry->load(
+				manager, entry.relativePath.string(), entry.absolutePath
+			);
+		}
 
-		if (loaded) {
-			auto* tex = static_cast<Graphics::Texture*>(loaded);
+		if (entry.cachedPtr) {
+			auto* tex = static_cast<Graphics::Texture*>(entry.cachedPtr);
 			ImGui::Image((ImTextureID)(intptr_t)tex->getID(), { kThumbnailSize, kThumbnailSize });
 		} else {
 			ImGui::Dummy({ kThumbnailSize, kThumbnailSize });
@@ -79,8 +81,9 @@ void drawTreeNode(
 		ImGui::PopID();
 	}
 
-	for (const auto* entry : node.files)
-		drawFileRow(*entry, registry, manager, context);
+	const auto cache = context.assetCache;
+	for (size_t idx : node.fileIndices)
+		drawFileRow(cache.entries()[idx], registry, manager, context);
 }
 
 } // namespace
