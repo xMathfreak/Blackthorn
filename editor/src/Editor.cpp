@@ -287,7 +287,7 @@ void Application::processEvents() {
 }
 
 void Application::render() {
-	frameInProgress = true;
+	frameInProgress.store(true, std::memory_order::relaxed);
 
 	ImGui_ImplOpenGL3_NewFrame();
 	ImGui_ImplSDL3_NewFrame();
@@ -324,7 +324,7 @@ void Application::render() {
 	}
 
 	SDL_GL_SwapWindow(window);
-	frameInProgress = false;
+	frameInProgress.store(false, std::memory_order::relaxed);
 }
 
 void Application::update() {
@@ -353,7 +353,7 @@ bool Application::handleLiveResize(void* userdata, SDL_Event* event) {
 	if (SDL_GetWindowFromID(event->window.windowID) != self->window)
 		return true;
 
-	if (self->frameInProgress)
+	if (self->frameInProgress.load(std::memory_order::relaxed))
 		return true;
 
 	self->render();

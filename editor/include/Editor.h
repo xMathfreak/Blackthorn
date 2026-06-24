@@ -1,5 +1,7 @@
 #pragma once
 
+#include <atomic>
+
 #include <imgui.h>
 #include <SDL3/SDL.h>
 
@@ -75,10 +77,10 @@ private:
 
 	bool initialized = false;
 	bool running = false;
-	bool frameInProgress = false;
+	std::atomic<bool> frameInProgress{false};
 
 	ImFont* zekton24 = nullptr;
 	Graphics::Texture texture;
 };
 
-} // namespace Blackthorn
+} // namespace Blackthorn::Editor
