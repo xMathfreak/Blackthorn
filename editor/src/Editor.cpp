@@ -100,19 +100,26 @@ bool Application::init() {
 	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 	io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
 
+	const char* fontPath = "assets/fonts/Zekton-Regular.otf";
 	zekton24 =
 		io.Fonts->AddFontFromFileTTF(
-			"assets/fonts/Zekton-Regular.otf",
+			fontPath,
 			24.0f
 		);
+
+	if (!zekton24)
+		BT_WARN("Editor: failed to load font: {}", fontPath);
 
 	renderer = std::make_unique<Graphics::Renderer>();
 
 	initAssetLoaders();
 
 	audioManager = std::make_unique<Audio::AudioManager>();
-	if (!audioManager->init())
+	if (!audioManager->init()) {
 		BT_ERROR("Editor: failed to initialize AudioManager");
+		audioManager.reset();
+		AudioPreviewContext::setManager(nullptr);
+	}
 
 	AudioPreviewContext::setManager(audioManager.get());
 
