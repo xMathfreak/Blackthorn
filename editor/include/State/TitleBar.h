@@ -1,12 +1,16 @@
 #pragma once
 
+#include <vector>
+
+#include <SDL3/SDL.h>
+
 namespace Blackthorn::Editor::State {
 
 struct Titlebar {
 	float height = 36.0f;
 	float buttonWidth = 54.0f;
 
-	bool itemHovered = false;
+	std::vector<SDL_Rect> hitExclusionRects;
 };
 
-} // namespace Blackthorn::Editor::Panels
+} // namespace Blackthorn::Editor::State
