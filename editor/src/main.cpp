@@ -2,7 +2,10 @@
 
 int main(int argc, char const *argv[]) {
 	Blackthorn::Editor::Application app;
-	app.init();
+
+	if (!app.init()) {
+		return -1;
+	}
 
 	app.run();
 
