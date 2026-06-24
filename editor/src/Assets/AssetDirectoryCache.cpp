@@ -22,16 +22,17 @@ void AssetDirectoryCache::refresh(const std::filesystem::path& assetsRoot) {
 	rootNode = AssetTreeNode{};
 	stale = false;
 
-	std::error_code ec;
-	if (!std::filesystem::exists(assetsRoot, ec))
+	std::error_code existsEc;
+	if (!std::filesystem::exists(assetsRoot, existsEc))
 		return;
 
 	const auto& registry = AssetRegistry::instance();
 
+	std::error_code iterEc;
 	for (const auto& dirEntry :
-		std::filesystem::recursive_directory_iterator(assetsRoot, ec))
+		std::filesystem::recursive_directory_iterator(assetsRoot, iterEc))
 	{
-		if (ec)
+		if (iterEc)
 			break;
 
 		if (!dirEntry.is_regular_file())
