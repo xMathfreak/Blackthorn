@@ -35,6 +35,8 @@ void Inspector::draw(
 	auto& reg = ::Blackthorn::Editor::Inspector::InspectorRegistry::instance();
 	auto& pool = context.activeWorld->getPool();
 
+	size_t pendingDestroy = SIZE_MAX;
+
 	for (size_t i = 0; i < ECS::Detail::MAX_COMPONENTS; ++i) {
 		const auto* regEntry = reg.getEntry(i);
 		if (!regEntry)
@@ -49,10 +51,16 @@ void Inspector::draw(
 			ImGui::SameLine();
 
 			if (ImGui::SmallButton("X"))
-				regEntry->destroy(pool, context.selectedEntity);
+				pendingDestroy = i;
 
 			ImGui::PopID();
 		}
+	}
+
+	if (pendingDestroy != SIZE_MAX) {
+		const auto* regEntry = reg.getEntry(pendingDestroy);
+		if (regEntry && regEntry->destroy)
+			regEntry->destroy(pool, context.selectedEntity);
 	}
 
 	if (ImGui::Button("Add Component"))
