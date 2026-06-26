@@ -110,6 +110,7 @@ public:
 	 *         if loading fails or no loader is registered for AssetType.
 	 */
 	template <typename AssetType>
+	[[nodiscard]]
 	AssetHandle<AssetType> load(const std::string& id, const LoadParams& params) {
 		if (has<AssetType>(id))
 			return makeReadyHandle<AssetType>(id);
@@ -136,13 +137,15 @@ public:
 	}
 
 	template <typename AssetType>
-	AssetHandle<AssetType> load(const std::string& id, std::filesystem::path path) {
-		return load<AssetType>(id, PathLoadParams(std::move(path)));
+	[[nodiscard]]
+	AssetHandle<AssetType> load(const std::string& id, const std::string& path) {
+		return load<AssetType>(id, PathLoadParams(path));
 	}
 
 	template <typename AssetType>
-	AssetHandle<AssetType> load(std::filesystem::path path) {
-		return load<AssetType>(std::filesystem::path(path).stem().string(), PathLoadParams(std::move(path)));
+	[[nodiscard]]
+	AssetHandle<AssetType> load(const std::string& path) {
+		return load<AssetType>(std::filesystem::path(path).stem().string(), PathLoadParams(path));
 	}
 
 	/**
@@ -163,6 +166,7 @@ public:
 	 *         is registered for AssetType.
 	 */
 	template <typename AssetType>
+	[[nodiscard]]
 	AssetHandle<AssetType> loadAsync(const std::string& id, const LoadParams& params) {
 		if (has<AssetType>(id))
 			return makeReadyHandle<AssetType>(id);
@@ -259,16 +263,13 @@ public:
 	}
 
 	template <typename AssetType>
-	AssetHandle<AssetType> loadAsync(const std::string& id, std::filesystem::path path) {
-		return loadAsync<AssetType>(id, PathLoadParams(std::move(path)));
+	[[nodiscard]]
+	AssetHandle<AssetType> loadAsync(const std::string& id, const std::string& path) {
+		return loadAsync<AssetType>(id, PathLoadParams(path));
 	}
 
 	template <typename AssetType>
-	AssetHandle<AssetType> loadAsync(std::filesystem::path path) {
-		return loadAsync<AssetType>(std::filesystem::path(path).stem().string(), PathLoadParams(std::move(path)));
-	}
-
-	template <typename AssetType>
+	[[nodiscard]]
 	AssetType* get(const std::string& id) {
 		auto* storage = getStorage<AssetType>();
 		if (!storage || !storage->has(id))
@@ -277,6 +278,7 @@ public:
 	}
 
 	template <typename AssetType>
+	[[nodiscard]]
 	const AssetType* get(const std::string& id) const {
 		return const_cast<AssetManager*>(this)->get<AssetType>(id);
 	}
@@ -338,22 +340,6 @@ public:
 		for (const auto& [type, storage] : storages)
 			total += storage->getMemoryUsage();
 		return total;
-	}
-
-	template <typename AssetType>
-	std::vector<std::string> getSupportedExtensions() const {
-		auto type = std::type_index(typeid(AssetType));
-		auto it = loaders.find(type);
-		return (it != loaders.end()) ? it->second->getSupportedExtensions() : std::vector<std::string>{};
-	}
-
-	void unloadById(const std::string& id) {
-		for (auto& [type, storage] : storages) {
-			if (storage->has(id))
-				storage->remove(id);
-		}
-
-		assetParams.erase(id);
 	}
 
 	/**
@@ -418,7 +404,6 @@ private:
 		virtual ~ILoaderWrapper() = default;
 		virtual std::unique_ptr<IRawAssetData> loadRaw(const LoadParams&) = 0;
 		virtual void upload(IRawAssetData&, AssetManager&) = 0;
-		virtual std::vector<std::string> getSupportedExtensions() const = 0;
 	};
 
 	template <typename AssetType>
@@ -437,10 +422,6 @@ private:
 		void upload(IRawAssetData& raw, AssetManager& manager) override {
 			if (asyncLoader)
 				asyncLoader->upload(raw, manager);
-		}
-
-		std::vector<std::string> getSupportedExtensions() const override {
-			return syncLoader->getSupportedExtensions();
 		}
 
 		std::unique_ptr<IAssetLoader<AssetType>> syncLoader;

@@ -149,11 +149,9 @@ public:
 private:
 	static constexpr size_t MASK = Capacity - 1;
 
-	using Storage =
-		std::aligned_storage_t<
-			sizeof(T),
-			alignof(T)
-		>;
+	struct alignas(T) Storage {
+		std::byte data[sizeof(T)];
+	};
 
 	static constexpr size_t increment(size_t index) noexcept {
 		return (index + 1) & MASK;

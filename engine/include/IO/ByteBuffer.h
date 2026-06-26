@@ -3,7 +3,9 @@
 #include <cassert>
 #include <cstring>
 #include <stdexcept>
+#include <span>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "Core/Export.h"
@@ -49,24 +51,28 @@ public:
 	 * @brief Constructs a read buffer from an existing byte span.
 	 *
 	 * Copies the provided bytes into internal storage and positions the
-	 * read cursor at the beginning. The original pointer does not need to
+	 * read cursor at the beginning. The original data does not need to
 	 * remain valid after construction.
+	 *
+	 * @param data View over the source bytes.
+	 */
+	explicit ByteBuffer(std::span<const U8> data)
+		: buffer(data.begin(), data.end())
+		, readCursor(0)
+	{}
+
+	/**
+	 * @brief Constructs a read buffer from a raw pointer + size pair.
+	 *
+	 * Retained for compatibility with C APIs (e.g. socket recv buffers,
+	 * libsodium, zstd) that produce raw U8* output rather than spans.
+	 * Prefer the span overload when the source is under your control.
 	 *
 	 * @param data Pointer to source bytes.
 	 * @param size Number of bytes to copy.
 	 */
 	ByteBuffer(const U8* data, size_t size)
-		: buffer(data, data + size)
-		, readCursor(0)
-	{}
-
-	/**
-	 * @brief Constructs a read buffer from an existing vector, taking
-	 * ownership of its contents via move.
-	 */
-	explicit ByteBuffer(std::vector<U8>&& data)
-		: buffer(std::move(data))
-		, readCursor(0)
+		: ByteBuffer(std::span<const U8>{ data, size })
 	{}
 
 	void writeU8(U8 v) {
@@ -130,21 +136,37 @@ public:
 	 * @param str String to write.
 	 * @throws std::length_error if the string exceeds 65535 bytes.
 	 */
-	void writeString(const std::string& str) {
+	void writeString(std::string_view str) {
 		if (str.size() > 65535)
 			throw std::length_error("ByteBuffer::writeString: string exceeds 65535 bytes");
 
 		writeU16(static_cast<U16>(str.size()));
-		writeBytes(reinterpret_cast<const U8*>(str.data()), str.size());
+		writeBytes(std::span<const U8>{
+			reinterpret_cast<const U8*>(str.data()),
+			str.size()
+		});
 	}
 
 	/**
 	 * @brief Writes raw bytes directly into the buffer.
+	 *
+	 * @param data View over the source bytes.
+	 */
+	void writeBytes(std::span<const U8> data) {
+		buffer.insert(buffer.end(), data.begin(), data.end());
+	}
+
+	/**
+	 * @brief Writes raw bytes from a raw pointer + size pair.
+	 *
+	 * Retained for compatibility with C APIs that produce raw U8* output.
+	 * Prefer the span overload when the source is under your control.
+	 *
 	 * @param data Pointer to source bytes.
 	 * @param size Number of bytes to write.
 	 */
 	void writeBytes(const U8* data, size_t size) {
-		buffer.insert(buffer.end(), data, data + size);
+		writeBytes(std::span<const U8>{ data, size });
 	}
 
 	U8 readU8() {
@@ -223,14 +245,28 @@ public:
 	}
 
 	/**
-	 * @brief Reads exactly `size` bytes into `dest`.
-	 * @param dest Destination buffer. Must be at least `size` bytes.
+	 * @brief Reads exactly @p dest.size() bytes into @p dest.
+	 *
+	 * @param dest Destination span. The number of bytes read equals
+	 *             @c dest.size().
+	 */
+	void readBytes(std::span<U8> dest) {
+		checkAvailable(dest.size());
+		std::memcpy(dest.data(), &buffer[readCursor], dest.size());
+		readCursor += dest.size();
+	}
+
+	/**
+	 * @brief Reads exactly @p size bytes into @p dest.
+	 *
+	 * Retained for compatibility with C APIs that expect raw U8* output.
+	 * Prefer the span overload when the destination is under your control.
+	 *
+	 * @param dest Destination buffer. Must be at least @p size bytes.
 	 * @param size Number of bytes to read.
 	 */
 	void readBytes(U8* dest, size_t size) {
-		checkAvailable(size);
-		std::memcpy(dest, &buffer[readCursor], size);
-		readCursor += size;
+		readBytes(std::span<U8>{ dest, size });
 	}
 
 	/**
@@ -264,6 +300,9 @@ public:
 		buffer[offset] = static_cast<U8>(v);
 		buffer[offset + 1] = static_cast<U8>(v >> 8);
 	}
+
+	/** @brief Returns a view over the raw buffer contents. */
+	std::span<const U8> span() const { return { buffer.data(), buffer.size() }; }
 
 	/** @brief Returns a pointer to the raw buffer contents. */
 	const U8* data() const { return buffer.data(); }

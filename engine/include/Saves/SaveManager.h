@@ -206,6 +206,7 @@ public:
 	 *         returned — a failed backup must not prevent the primary save from
 	 *         being reported as successful.
 	 */
+	[[nodiscard]]
 	SaveResult save(SaveId& saveId, bool makeBackup = true);
 
 	/**
@@ -218,6 +219,7 @@ public:
 	 * @param saveId  Identity of the save to load.
 	 * @return @c SaveResult::success() on success.
 	 */
+	[[nodiscard]]
 	SaveResult load(const SaveId& saveId);
 
 	/**
@@ -230,6 +232,7 @@ public:
 	 * @param sectionIds Set of section ID hashes to process. Others are skipped.
 	 * @return @c SaveResult::success() on success.
 	 */
+	[[nodiscard]]
 	SaveResult loadSections(
 		const SaveId& saveId,
 		const std::vector<U64>& sectionIds
