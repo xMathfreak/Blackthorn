@@ -160,56 +160,57 @@ void Shader::unbind() {
 	glUseProgram(0);
 }
 
-GLint Shader::getUniformLocation(const std::string& name) {
+GLint Shader::getUniformLocation(std::string_view name) {
 	if (auto it = uniformCache.find(name); it != uniformCache.end())
 		return it->second;
 
-	GLint location = glGetUniformLocation(programID, name.c_str());
+	std::string nameStr{name};
+	GLint location = glGetUniformLocation(programID, nameStr.c_str());
 
 	if (location == -1)
 		BT_WARN("Shader: Uniform '{}' not found in shader program {}", name, programID);
 
-	uniformCache[name] = location;
+	uniformCache.emplace(std::move(nameStr), location);
 	return location;
 }
 
-void Shader::setBool(const std::string& name, bool value) {
+void Shader::setBool(std::string_view name, bool value) {
 	GLint location = getUniformLocation(name);
 	if (location != -1)
 		glUniform1i(location, value);
 }
 
-void Shader::setInt(const std::string& name, int value) {
+void Shader::setInt(std::string_view name, int value) {
 	GLint location = getUniformLocation(name);
 	if (location != -1)
 		glUniform1i(location, value);
 }
 
-void Shader::setFloat(const std::string& name, float value) {
+void Shader::setFloat(std::string_view name, float value) {
 	GLint location = getUniformLocation(name);
 	if (location != -1)
 		glUniform1f(location, value);
 }
 
-void Shader::setVec2(const std::string& name, float x, float y) {
+void Shader::setVec2(std::string_view name, float x, float y) {
 	GLint location = getUniformLocation(name);
 	if (location != -1)
 		glUniform2f(location, x, y);
 }
 
-void Shader::setVec3(const std::string& name, float x, float y, float z) {
+void Shader::setVec3(std::string_view name, float x, float y, float z) {
 	GLint location = getUniformLocation(name);
 	if (location != -1)
 		glUniform3f(location, x, y, z);
 }
 
-void Shader::setVec4(const std::string& name, float x, float y, float z, float w) {
+void Shader::setVec4(std::string_view name, float x, float y, float z, float w) {
 	GLint location = getUniformLocation(name);
 	if (location != -1)
 		glUniform4f(location, x, y, z, w);
 }
 
-void Shader::setMat4(const std::string& name, const float* value) {
+void Shader::setMat4(std::string_view name, const float* value) {
 	GLint location = getUniformLocation(name);
 	if (location != -1)
 		glUniformMatrix4fv(location, 1, GL_FALSE, value);

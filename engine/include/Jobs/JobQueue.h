@@ -13,6 +13,7 @@ class BLACKTHORN_API JobQueue {
 public:
     JobQueue() = default;
 
+    [[nodiscard]]
     bool push(std::unique_ptr<Job> job) {
         std::lock_guard<std::mutex> lock(mtx);
         queue.push_back(std::move(job));

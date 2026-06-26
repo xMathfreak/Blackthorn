@@ -110,6 +110,7 @@ public:
 	 *         if loading fails or no loader is registered for AssetType.
 	 */
 	template <typename AssetType>
+	[[nodiscard]]
 	AssetHandle<AssetType> load(const std::string& id, const LoadParams& params) {
 		if (has<AssetType>(id))
 			return makeReadyHandle<AssetType>(id);
@@ -136,11 +137,13 @@ public:
 	}
 
 	template <typename AssetType>
+	[[nodiscard]]
 	AssetHandle<AssetType> load(const std::string& id, const std::string& path) {
 		return load<AssetType>(id, PathLoadParams(path));
 	}
 
 	template <typename AssetType>
+	[[nodiscard]]
 	AssetHandle<AssetType> load(const std::string& path) {
 		return load<AssetType>(std::filesystem::path(path).stem().string(), PathLoadParams(path));
 	}
@@ -163,6 +166,7 @@ public:
 	 *         is registered for AssetType.
 	 */
 	template <typename AssetType>
+	[[nodiscard]]
 	AssetHandle<AssetType> loadAsync(const std::string& id, const LoadParams& params) {
 		if (has<AssetType>(id))
 			return makeReadyHandle<AssetType>(id);
@@ -259,11 +263,13 @@ public:
 	}
 
 	template <typename AssetType>
+	[[nodiscard]]
 	AssetHandle<AssetType> loadAsync(const std::string& id, const std::string& path) {
 		return loadAsync<AssetType>(id, PathLoadParams(path));
 	}
 
 	template <typename AssetType>
+	[[nodiscard]]
 	AssetType* get(const std::string& id) {
 		auto* storage = getStorage<AssetType>();
 		if (!storage || !storage->has(id))
@@ -272,6 +278,7 @@ public:
 	}
 
 	template <typename AssetType>
+	[[nodiscard]]
 	const AssetType* get(const std::string& id) const {
 		return const_cast<AssetManager*>(this)->get<AssetType>(id);
 	}

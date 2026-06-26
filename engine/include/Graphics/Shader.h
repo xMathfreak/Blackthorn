@@ -6,6 +6,7 @@
 #include <glad/glad.h>
 
 #include "Core/Export.h"
+#include "Core/Types/StringHash.h"
 
 namespace Blackthorn::Graphics {
 
@@ -27,7 +28,7 @@ private:
 	GLuint programID = 0;
 
 	/// Cache of uniform locations indexed by Uniform name.
-	std::unordered_map<std::string, GLint> uniformCache;
+	std::unordered_map<std::string, GLint, StringHash, std::equal_to<>> uniformCache;
 
 	/**
 	 * @brief Links a shader program from compiled shaders.
@@ -51,7 +52,7 @@ private:
 	 * @param name Uniform name..
 	 * @return Uniform location, or -1 if not.
 	 */
-	GLint getUniformLocation(const std::string& name);
+	GLint getUniformLocation(std::string_view name);
 
 public:
 	/**
@@ -120,21 +121,21 @@ public:
 	 * @param name Uniform name.
 	 * @param value Boolean value.
 	 */
-	void setBool(const std::string& name, bool value);
+	void setBool(std::string_view name, bool value);
 
 	/**
 	 * @brief Sets an integer uniform.
 	 * @param name Uniform name.
 	 * @param value Integer value.
 	 */
-	void setInt(const std::string& name, int value);
+	void setInt(std::string_view name, int value);
 
 	/**
 	 * @brief Sets a float uniform
 	 * @param name Uniform name.
 	 * @param value Float value.
 	 */
-	void setFloat(const std::string& name, float value);
+	void setFloat(std::string_view name, float value);
 
 	/**
 	 * @brief Sets a vec2 uniform
@@ -142,7 +143,7 @@ public:
 	 * @param x X component.
 	 * @param y Y component.
 	 */
-	void setVec2(const std::string& name, float x, float y);
+	void setVec2(std::string_view name, float x, float y);
 
 	/**
 	 * @brief Sets a vec3 uniform
@@ -151,7 +152,7 @@ public:
 	 * @param y Y component.
 	 * @param z Z component.
 	 */
-	void setVec3(const std::string& name, float x, float y, float z);
+	void setVec3(std::string_view name, float x, float y, float z);
 
 	/**
 	 * @brief Sets a vec4 uniform
@@ -161,7 +162,7 @@ public:
 	 * @param z Z component.
 	 * @param w W component.
 	 */
-	void setVec4(const std::string& name, float x, float y, float z, float w);
+	void setVec4(std::string_view name, float x, float y, float z, float w);
 
 	/**
 	 * @brief Sets a 4x4 matrix uniform.
@@ -171,7 +172,7 @@ public:
 	 * The matrix is uploaded as-is; column/row major expectations must
 	 * match the shader definition.
 	 */
-	void setMat4(const std::string& name, const float* value);
+	void setMat4(std::string_view name, const float* value);
 };
 
 } // namespace Blackthorn::Graphics
