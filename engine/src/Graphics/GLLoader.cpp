@@ -1,6 +1,6 @@
 #include "Graphics/GLLoader.h"
 
-#include <glad/glad.h>
+#include <glad/gl.h>
 #include <SDL3/SDL.h>
 
 #include "Debug/Logger.h"
@@ -8,7 +8,7 @@
 namespace Blackthorn::Graphics {
 
 bool loadGLFunctions() {
-	if (!gladLoadGLLoader(reinterpret_cast<GLADloadproc>(SDL_GL_GetProcAddress))) {
+	if (gladLoadGL(SDL_GL_GetProcAddress) == 0) {
 		BT_ERROR("Graphics::loadGLFunctions: gladLoadGLLoader failed");
 		return false;
 	}

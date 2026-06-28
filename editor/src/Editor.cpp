@@ -1,6 +1,6 @@
 #include "Editor.h"
 
-#include <glad/glad.h>
+#include <glad/gl.h>
 #include <backends/imgui_impl_sdl3.h>
 #include <backends/imgui_impl_opengl3.h>
 
@@ -86,7 +86,7 @@ bool Application::init() {
 	if (!Graphics::loadGLFunctions())
 		return false;
 
-	if (!gladLoadGLLoader((GLADloadproc)SDL_GL_GetProcAddress))
+	if (gladLoadGL(SDL_GL_GetProcAddress) == 0)
 		return false;
 
 	glEnable(GL_BLEND);
