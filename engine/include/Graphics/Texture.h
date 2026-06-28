@@ -2,7 +2,7 @@
 
 #include <filesystem>
 
-#include <glad/glad.h>
+#include <glad/gl.h>
 #include <SDL3/SDL.h>
 
 #include "Core/Export.h"

@@ -3,7 +3,7 @@
 #include <concepts>
 #include <vector>
 
-#include <glad/glad.h>
+#include <glad/gl.h>
 
 #include "Core/Export.h"
 #include "Debug/Logger.h"

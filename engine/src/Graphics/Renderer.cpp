@@ -9,12 +9,13 @@
 
 namespace Blackthorn::Graphics {
 
-Renderer::Renderer(U32 maxQuads)
+Renderer::Renderer(U32 maxQuads, const RenderConfig& cfg)
 	: MAX_QUADS(maxQuads)
 	, MAX_VERTICES(maxQuads * 4)
 	, MAX_INDICES(maxQuads * 6)
 	, projectionMatrix(1.0f)
 	, viewMatrix(1.0f)
+	, renderConfig(cfg)
 {
 	quadBuffer = std::make_unique<Vertex[]>(MAX_VERTICES);
 
@@ -37,14 +38,28 @@ Renderer::Renderer(U32 maxQuads)
 	textureSlots.fill(nullptr);
 	textureSlots[0] = whiteTexture.get();
 
-	BT_LOG("Renderer: Initialized (Max Quads: {}, Max Textures: {})", MAX_QUADS, MAX_TEXTURE_SLOTS);
+	BT_LOG("Renderer: Initialized (maxQuads={}, resMode={})",
+		MAX_QUADS,
+		[&]{
+			switch (cfg.resolutionMode) {
+				case RenderResolutionMode::FollowWindow:
+					return "FollowWindow";
+				case RenderResolutionMode::Fixed:
+					return "Fixed";
+				case RenderResolutionMode::PixelPerfect:
+					return "PixelPerfect";
+				default:
+					return "Unknown";
+			}
+		}()
+	);
 }
 
 Renderer::~Renderer() {}
 
 void Renderer::initQuadBuffers() {
 	QuadVAO = std::make_unique<VAO>(true);
-	QuadVBO = std::make_unique<VBO>(true);
+	QuadVBO = std::make_unique<VBO>(BufferType::Streaming, true);
 	QuadEBO = std::make_unique<EBO>(true);
 
 	QuadVAO->bind();
@@ -110,6 +125,27 @@ void Renderer::initWhiteTexture() {
 	BT_DEBUG("Renderer: Screen pass initialized");
 }
 
+void Renderer::rebuildFBO(int fboW, int fboH) {
+	if (fbo) {
+		fbo->resize(fboW, fboH);
+	} else {
+		fbo = std::make_unique<FBO>(fboW, fboH);
+	}
+
+	projectionMatrix = glm::ortho(
+		0.0f, static_cast<float>(fboW),
+		static_cast<float>(fboH), 0.0f,
+		RenderLayers::NearPlane, RenderLayers::FarPlane
+	);
+
+	viewBounds = { 0.0f, 0.0f,
+		static_cast<float>(fboW),
+		static_cast<float>(fboH) };
+
+	globalUBO->getData().viewProjection = getViewProjectionMatrix();
+	globalUBO->uploadField(&GlobalData::viewProjection);
+}
+
 void Renderer::startBatch() {
 	quadBufferPtr = quadBuffer.get();
 	quadIndexCount = 0;
@@ -163,26 +199,72 @@ void Renderer::presentToScreen() {
 
 	FBO::unbind();
 
-	if (!postProcessingEnabled) {
-		glBindFramebuffer(GL_READ_FRAMEBUFFER, fbo->getID());
-		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+	const int fboW = fbo->getWidth();
+	const int fboH = fbo->getHeight();
 
-		glBlitFramebuffer(
-			0, 0, fbo->getWidth(), fbo->getHeight(),
-			0, 0, fbo->getWidth(), fbo->getHeight(),
-			GL_COLOR_BUFFER_BIT, GL_NEAREST
-		);
+	switch (renderConfig.resolutionMode) {
+		case RenderResolutionMode::FollowWindow: {
+			if (!postProcessingEnabled) {
+				glBindFramebuffer(GL_READ_FRAMEBUFFER, fbo->getID());
+				glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+				glBlitFramebuffer(
+					0, 0, fboW, fboH,
+					0, 0, fboW, fboH,
+					GL_COLOR_BUFFER_BIT, GL_NEAREST
+				);
+				glBindFramebuffer(GL_FRAMEBUFFER, 0);
+				return;
+			}
 
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-		return;
+			glDisable(GL_DEPTH_TEST);
+			activeScreenShader->bind();
+			fbo->getTexture().bind(0);
+			screenVAO->bind();
+			glDrawArrays(GL_TRIANGLES, 0, 3);
+			glEnable(GL_DEPTH_TEST);
+			return;
+		}
+
+		case RenderResolutionMode::Fixed: {
+			glBindFramebuffer(GL_READ_FRAMEBUFFER, fbo->getID());
+			glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+			glBlitFramebuffer(
+				0, 0, fboW, fboH,
+				0, 0, windowWidth, windowHeight,
+				GL_COLOR_BUFFER_BIT, GL_NEAREST
+			);
+			glBindFramebuffer(GL_FRAMEBUFFER, 0);
+			return;
+		}
+
+		case RenderResolutionMode::PixelPerfect: {
+			const int scaleX = windowWidth / fboW;
+			const int scaleY = windowHeight / fboH;
+			const int scale = std::max(1, std::min(scaleX, scaleY));
+
+			const int scaledW = fboW * scale;
+			const int scaledH = fboH * scale;
+
+			const int offsetX = (windowWidth - scaledW) / 2;
+			const int offsetY = (windowHeight - scaledH) / 2;
+
+			glBindFramebuffer(GL_FRAMEBUFFER, 0);
+			const auto& lbc = renderConfig.letterboxColor;
+			glClearColor(lbc.r, lbc.g, lbc.b, lbc.a);
+			glClear(GL_COLOR_BUFFER_BIT);
+
+			glBindFramebuffer(GL_READ_FRAMEBUFFER, fbo->getID());
+			glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+			glBlitFramebuffer(
+				0, 0, fboW, fboH,
+				offsetX, offsetY,
+				offsetX + scaledW, offsetY + scaledH,
+				GL_COLOR_BUFFER_BIT, GL_NEAREST
+			);
+			glBindFramebuffer(GL_FRAMEBUFFER, 0);
+			return;
+		}
 	}
-
-	glDisable(GL_DEPTH_TEST);
-	activeScreenShader->bind();
-	fbo->getTexture().bind(0);
-	screenVAO->bind();
-	glDrawArrays(GL_TRIANGLES, 0, 3);
-	glEnable(GL_DEPTH_TEST);
 }
 
 void Renderer::setPostProcessingEnabled(bool enabled) {
@@ -364,22 +446,36 @@ void Renderer::drawNineSlice(const Texture& texture, const SDL_FRect& dest, cons
 }
 
 void Renderer::setProjection(int width, int height) {
-	if (fbo) {
-		fbo->resize(width, height);
-	} else {
-		fbo = std::make_unique<FBO>(width, height);
+	rebuildFBO(width, height);
+}
+
+void Renderer::onWindowResized(int windowW, int windowH) {
+	windowWidth = windowW;
+	windowHeight = windowH;
+
+	switch (renderConfig.resolutionMode) {
+		case RenderResolutionMode::FollowWindow:
+			rebuildFBO(windowW, windowH);
+			glViewport(0, 0, windowW, windowH);
+			break;
+		case RenderResolutionMode::Fixed:
+		case RenderResolutionMode::PixelPerfect:
+			glViewport(0, 0, windowW, windowH);
+			break;
 	}
+}
 
-	projectionMatrix = glm::ortho(
-		0.0f, static_cast<float>(width),
-		static_cast<float>(height), 0.0f,
-		RenderLayers::NearPlane, RenderLayers::FarPlane
-	);
+glm::ivec2 Renderer::getRenderSize() const noexcept {
+	switch (renderConfig.resolutionMode) {
+		case RenderResolutionMode::Fixed:
+		case RenderResolutionMode::PixelPerfect:
+			return { renderConfig.renderWidth, renderConfig.renderHeight };
 
-	viewBounds = { 0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height) };
-
-	globalUBO->getData().viewProjection = getViewProjectionMatrix();
-	globalUBO->uploadField(&GlobalData::viewProjection);
+		case RenderResolutionMode::FollowWindow:
+		default:
+			return {fbo ? fbo->getWidth() : windowWidth,
+					 fbo ? fbo->getHeight() : windowHeight };
+	}
 }
 
 void Renderer::setProjection(const glm::mat4& projection) {

@@ -23,8 +23,8 @@ add_subdirectory(glfw)
 
 # glad
 add_library(glad STATIC
-	${CMAKE_CURRENT_SOURCE_DIR}/glad/src/glad.c
-	${CMAKE_CURRENT_SOURCE_DIR}/glad/include/glad/glad.h
+	${CMAKE_CURRENT_SOURCE_DIR}/glad/src/gl.c
+	${CMAKE_CURRENT_SOURCE_DIR}/glad/include/glad/gl.h
 	${CMAKE_CURRENT_SOURCE_DIR}/glad/include/KHR/khrplatform.h
 )
 

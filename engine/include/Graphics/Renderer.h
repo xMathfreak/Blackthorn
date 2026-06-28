@@ -10,6 +10,7 @@
 #include "Core/Types/Numeric.h"
 #include "Graphics/EBO.h"
 #include "Graphics/FBO.h"
+#include "Graphics/RenderConfig.h"
 #include "Graphics/Shader.h"
 #include "Graphics/Texture.h"
 #include "Graphics/Types.h"
@@ -136,6 +137,11 @@ private:
 	/// View matrix
 	glm::mat4 viewMatrix;
 
+	RenderConfig renderConfig;
+
+	int windowWidth = 0;
+	int windowHeight = 0;
+
 	/**
 	 * @brief Initializes the renderer shader.
 	 */
@@ -169,6 +175,19 @@ private:
 	void flush();
 
 	/**
+	 * @brief Rebuilds the FBO and orthographic projection for a given size.
+	 *
+	 * Called internally by @c setProjection(int, int) and
+	 * @c onWindowResized(). In Fixed / PixelPerfect modes the FBO is only
+	 * allocated once; subsequent calls only update @c windowWidth /
+	 * @c windowHeight and the GL viewport.
+	 *
+	 * @param fboW Width for the FBO in pixels.
+	 * @param fboH Height for the FBO in pixels.
+	 */
+	void rebuildFBO(int fboW, int fboH);
+
+	/**
 	 * @brief Checks whether a rectangle is visible within the view bounds.
 	 * @param rect Rectangle to test.
 	 * @param rotation Optional rotation in radians.
@@ -191,8 +210,10 @@ public:
 	/**
 	 * @brief Constructs the renderer and initializes GPU resources.
 	 * @param maxQuads Maximum quads per batch. Defaults to 4096.
+	 * @param cfg Render configuration. Controls FBO resolution mode,
+	 * letterbox color, etc. Defaults to @c RenderConfig{}.
 	 */
-	explicit Renderer(U32 maxQuads = DEFAULT_MAX_QUADS);
+	explicit Renderer(U32 maxQuads = DEFAULT_MAX_QUADS, const RenderConfig& cfg = RenderConfig{});
 
 	/**
 	 * @brief Destroys the renderer and releases GPU resources.
@@ -218,6 +239,22 @@ public:
 	void endScene();
 
 	/**
+	 * @brief Notifies the renderer that the window has been resized.
+	 *
+	 * Should be called from the @c SDL_EVENT_WINDOW_RESIZED handler in place
+	 * of the previous @c setProjection(w, h) call. Behavior depends on
+	 * @c RenderConfig::resolutionMode:
+	 *
+	 * - @c FollowWindow: resizes the FBO and rebuilds the projection matrix.
+	 * - @c Fixed / @c PixelPerfect: only updates the stored window dimensions
+	 * and the GL viewport; the FBO and projection are left unchanged.
+	 *
+	 * @param windowW New window width in pixels.
+	 * @param windowH New window height in pixels.
+	 */
+	void onWindowResized(int windowW, int windowH);
+
+	/**
 	 * @brief Sets an orthographic projection based on viewport size.
 	 * @param width Viewport width in pixels.
 	 * @param height Viewport height in pixels.
@@ -231,6 +268,8 @@ public:
 
 	/**
 	 * @brief Sets the view matrix.
+	 *
+	 * Use @c Camera2D::applyToRenderer() rather than calling this directly.
 	 */
 	void setView(const glm::mat4& view);
 
@@ -240,6 +279,15 @@ public:
 	void setClearColor(float r, float g, float b, float a = 1.0f) {
 		clearColor = { r, g, b, a };
 	}
+
+	/**
+	 * @brief Returns the current logical render dimensions.
+	 *
+	 * In FollowWindow mode this equals the window pixel size. In Fixed /
+	 * PixelPerfect modes this returns @c renderWidth × @c renderHeight from
+	 * the config regardless of the current window size.
+	 */
+	[[nodiscard]] glm::ivec2 getRenderSize() const noexcept;
 
 	/**
 	 * @brief Enables or disables view frustum culling.
