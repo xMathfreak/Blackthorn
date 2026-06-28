@@ -103,7 +103,7 @@ bool Engine::init(const EngineConfig& cfg) {
 	}
 
 	try {
-		renderer = std::make_unique<Graphics::Renderer>(cfg.render.maxQuads);
+		renderer = std::make_unique<Graphics::Renderer>(cfg.render.maxQuads, cfg.render);
 		renderer->setPostProcessingEnabled(
 			Core::Settings::instance().get<bool>("graphics", "post_processing")
 		);
@@ -411,7 +411,6 @@ void Engine::processEvents() {
 					config.window.width = pw;
 					config.window.height = ph;
 
-					glViewport(0, 0, pw, ph);
 					renderer->onWindowResized(pw, ph);
 					UI::UIManager::onWindowResize(pw, ph);
 
