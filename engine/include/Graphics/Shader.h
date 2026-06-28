@@ -3,7 +3,7 @@
 #include <string>
 #include <unordered_map>
 
-#include <glad/glad.h>
+#include <glad/gl.h>
 
 #include "Core/Export.h"
 #include "Core/Types/StringHash.h"

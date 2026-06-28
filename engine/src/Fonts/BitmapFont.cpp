@@ -7,6 +7,7 @@
 
 #include <SDL3_image/SDL_image.h>
 
+#include "Debug/Logger.h"
 #include "Fonts/FontConfig.h"
 
 namespace {

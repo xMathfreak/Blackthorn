@@ -2,7 +2,7 @@
 
 #include <utility>
 
-#include <glad/glad.h>
+#include <glad/gl.h>
 
 #include "Debug/Logger.h"
 

@@ -116,7 +116,7 @@ bool Engine::init(const EngineConfig& cfg) {
 
 	int w, h;
 	SDL_GetWindowSizeInPixels(window, &w, &h);
-	renderer->setProjection(w, h);
+	renderer->onWindowResized(w, h);
 	UI::UIManager::onWindowResize(w, h);
 
 	simContext = std::make_unique<Scene::SceneContextImpl>(
@@ -188,7 +188,7 @@ void Engine::initGraphics(const EngineConfig& cfg) {
 		return;
 	}
 
-	if (!gladLoadGLLoader((GLADloadproc)SDL_GL_GetProcAddress)) {
+	if (gladLoadGL(SDL_GL_GetProcAddress) == 0) {
 		BT_ERROR("Renderer (OpenGL): Failed to initialize GLAD");
 		return;
 	}
@@ -412,7 +412,7 @@ void Engine::processEvents() {
 					config.window.height = ph;
 
 					glViewport(0, 0, pw, ph);
-					renderer->setProjection(pw, ph);
+					renderer->onWindowResized(pw, ph);
 					UI::UIManager::onWindowResize(pw, ph);
 
 					if (!(SDL_GetWindowFlags(window) & SDL_WINDOW_MAXIMIZED)) {

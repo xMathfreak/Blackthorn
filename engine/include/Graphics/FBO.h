@@ -2,7 +2,7 @@
 
 #include <memory>
 
-#include <glad/glad.h>
+#include <glad/gl.h>
 
 #include "Core/Export.h"
 #include "Graphics/Texture.h"
