@@ -9,10 +9,14 @@ namespace Blackthorn::Audio::Streaming {
 struct Mp3StreamDecoder::Impl {
 	drmp3 mp3{};
 
+	std::vector<drmp3_seek_point> seekPoints;
+
 	bool open = false;
 
 	AudioMetadata metadata{};
 };
+
+static constexpr drmp3_uint32 SEEK_POINT_COUNT = 128;
 
 Mp3StreamDecoder::Mp3StreamDecoder()
 	: m_impl(std::make_unique<Impl>()) {}
@@ -27,11 +31,7 @@ bool Mp3StreamDecoder::open(const std::filesystem::path& path) {
 	const auto pathStr = path.string();
 
 	if (!drmp3_init_file(&m_impl->mp3, pathStr.c_str(), nullptr)) {
-		BT_ERROR(
-			"Mp3StreamDecoder: failed to open '{}'",
-			pathStr
-		);
-
+		BT_ERROR("Mp3StreamDecoder: failed to open '{}'", pathStr);
 		return false;
 	}
 
@@ -46,21 +46,49 @@ bool Mp3StreamDecoder::open(const std::filesystem::path& path) {
 	m_impl->metadata.frameCount =
 		static_cast<U64>(m_impl->mp3.totalPCMFrameCount);
 
-	BT_DEBUG(
-		"Mp3StreamDecoder: opened '{}' [{} ch, {} Hz, {} frames]",
-		pathStr,
-		m_impl->metadata.channels,
-		m_impl->metadata.sampleRate,
-		m_impl->metadata.frameCount
+	drmp3_uint32 actualPointCount = SEEK_POINT_COUNT;
+	m_impl->seekPoints.resize(SEEK_POINT_COUNT);
+
+	const drmp3_bool32 tableBuilt = drmp3_calculate_seek_points(
+		&m_impl->mp3,
+		&actualPointCount,
+		m_impl->seekPoints.data()
 	);
+
+	if (tableBuilt == DRMP3_TRUE && actualPointCount > 0) {
+		m_impl->seekPoints.resize(actualPointCount);
+
+		drmp3_bind_seek_table(
+			&m_impl->mp3,
+			actualPointCount,
+			m_impl->seekPoints.data()
+		);
+
+		BT_DEBUG(
+			"Mp3StreamDecoder: seek table built for '{}' "
+			"({} points, {} ch, {} Hz, {} frames)",
+			pathStr,
+			actualPointCount,
+			m_impl->metadata.channels,
+			m_impl->metadata.sampleRate,
+			m_impl->metadata.frameCount
+		);
+	} else {
+		m_impl->seekPoints.clear();
+
+		BT_WARN(
+			"Mp3StreamDecoder: failed to build seek table for '{}' "
+			", seeks will use the slower forward-scan path",
+			pathStr
+		);
+	}
+
+	drmp3_seek_to_pcm_frame(&m_impl->mp3, 0);
 
 	return true;
 }
 
-size_t Mp3StreamDecoder::readFrames(
-	I16* dest,
-	size_t frameCount
-) {
+size_t Mp3StreamDecoder::readFrames(I16* dest, size_t frameCount) {
 	if (!m_impl->open)
 		return 0;
 
@@ -85,11 +113,7 @@ bool Mp3StreamDecoder::seek(U64 frameOffset) {
 		);
 
 	if (ok != DRMP3_TRUE) {
-		BT_WARN(
-			"Mp3StreamDecoder: seek to frame {} failed",
-			frameOffset
-		);
-
+		BT_WARN("Mp3StreamDecoder: seek to frame {} failed", frameOffset);
 		return false;
 	}
 
@@ -98,10 +122,12 @@ bool Mp3StreamDecoder::seek(U64 frameOffset) {
 
 void Mp3StreamDecoder::close() {
 	if (m_impl->open) {
+		drmp3_bind_seek_table(&m_impl->mp3, 0, nullptr);
 		drmp3_uninit(&m_impl->mp3);
 		m_impl->open = false;
 	}
 
+	m_impl->seekPoints.clear();
 	m_impl->metadata = {};
 }
 
@@ -113,4 +139,4 @@ bool Mp3StreamDecoder::isOpen() const {
 	return m_impl->open;
 }
 
-} // Blackthorn::Audio
+} // namespace Blackthorn::Audio::Streaming
