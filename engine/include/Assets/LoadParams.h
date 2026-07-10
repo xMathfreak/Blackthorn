@@ -1,5 +1,6 @@
 #pragma once
 
+#include <filesystem>
 #include <memory>
 
 #include "Core/Export.h"
@@ -12,9 +13,9 @@ struct BLACKTHORN_API LoadParams {
 };
 
 struct BLACKTHORN_API PathLoadParams final : LoadParams {
-	std::string path;
+	std::filesystem::path path;
 
-	explicit PathLoadParams(std::string p)
+	PathLoadParams(std::filesystem::path p)
 		: path(std::move(p))
 	{}
 

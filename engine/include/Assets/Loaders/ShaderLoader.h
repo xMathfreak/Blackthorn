@@ -22,9 +22,11 @@ struct BLACKTHORN_API ShaderParams : Assets::LoadParams {
 class BLACKTHORN_API ShaderLoader final : public Assets::IAssetLoader<Shader> {
 public:
 	std::unique_ptr<Shader> load(const Assets::LoadParams& params) override {
-		const auto& p  = static_cast<const ShaderParams&>(params);
-		std::unique_ptr<Shader> shader = std::make_unique<Shader>(p.vertexPath, p.fragmentPath);
-		return shader;
+		if (auto* p = dynamic_cast<const ShaderParams*>(&params))
+			return std::make_unique<Shader>(p->vertexPath, p->fragmentPath);
+
+		return nullptr;
+
 	}
 
 	std::vector<std::string> getSupportedExtensions() const override {

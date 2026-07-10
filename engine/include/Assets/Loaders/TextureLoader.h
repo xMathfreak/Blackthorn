@@ -21,16 +21,16 @@ struct BLACKTHORN_API RawTextureData : Assets::IRawAssetData {
 	int channels = 0;
 	TextureParams params;
 
-	std::string srcPath;
+	std::filesystem::path srcPath;
 
 	RawTextureData() = default;
 };
 
 struct BLACKTHORN_API TextureLoadParams final : Assets::LoadParams {
-	std::string		path;
-	TextureParams	textureParams;
+	std::filesystem::path path;
+	TextureParams textureParams;
 
-	TextureLoadParams(std::string p, TextureParams tp = {})
+	TextureLoadParams(std::filesystem::path p, TextureParams tp = {})
 		: path(std::move(p))
 		, textureParams(std::move(tp))
 	{}
@@ -43,7 +43,7 @@ struct BLACKTHORN_API TextureLoadParams final : Assets::LoadParams {
 class BLACKTHORN_API TextureLoader final : public Assets::IAssetLoader<Texture> {
 public:
 	std::unique_ptr<Graphics::Texture> load(const Assets::LoadParams& params) override {
-		std::string filePath;
+		std::filesystem::path filePath;
 		TextureParams texParams;
 
 		if (const auto* tp = dynamic_cast<const TextureLoadParams*>(&params)) {
@@ -67,7 +67,7 @@ public:
 class BLACKTHORN_API AsyncTextureLoader final : public Assets::IAsyncAssetLoader<Texture> {
 public:
 	std::unique_ptr<Assets::IRawAssetData> loadRaw(const Assets::LoadParams& params) override {
-		std::string filePath;
+		std::filesystem::path filePath;
 		TextureParams texParams;
 
 		if (const auto* tp = dynamic_cast<const TextureLoadParams*>(&params)) {
@@ -84,11 +84,13 @@ public:
 		raw->params = texParams;
 		raw->srcPath = filePath;
 
-		SDL_Surface* surface = IMG_Load(filePath.c_str());
+		const auto filePathStr = filePath.string();
+
+		SDL_Surface* surface = IMG_Load(filePathStr.c_str());
 		if (!surface) {
 			BT_ERROR(
 				"AsyncTextureLoader: IMG_Load failed for '{}': {}",
-				filePath, SDL_GetError()
+				filePathStr, SDL_GetError()
 			);
 
 			return nullptr;
@@ -100,7 +102,7 @@ public:
 		if (!converted) {
 			BT_ERROR(
 				"AsyncTextureLoader: SDL_ConvertSurface failed for '{}': {}",
-				filePath, SDL_GetError()
+				filePathStr, SDL_GetError()
 			);
 
 			return nullptr;
@@ -131,13 +133,14 @@ public:
 
 	void upload(Assets::IRawAssetData& rawBase, Assets::AssetManager& manager) override {
 		auto& raw = static_cast<RawTextureData&>(rawBase);
+		const auto rawPathStr = raw.srcPath.string();
 
 		auto texture = std::make_unique<Texture>();
 
 		if (!texture->loadFromMemory(raw.width, raw.height, raw.channels, raw.pixels.data(), raw.params)) {
 			BT_ERROR(
 				"AsyncTextureLoader: GPU upload failed for '{}' (source: '{}')",
-				raw.assetID, raw.srcPath
+				raw.assetID, rawPathStr
 			);
 
 			return;
@@ -147,7 +150,7 @@ public:
 
 		BT_DEBUG(
 			"AsyncTextureLoader: '{}' ready - {}x{} RGBA, source '{}'",
-			raw.assetID, raw.width, raw.height, raw.srcPath
+			raw.assetID, raw.width, raw.height, rawPathStr
 		);
 	}
 

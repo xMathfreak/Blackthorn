@@ -8,10 +8,10 @@
 namespace Blackthorn::Audio {
 
 struct BLACKTHORN_API AudioParams : Assets::LoadParams {
-	std::string path;
+	std::filesystem::path path;
 	bool isPCM = false;
 
-	AudioParams(const std::string& filePath, bool loadPCM = false)
+	AudioParams(const std::filesystem::path& filePath, bool loadPCM = false)
 		: path(filePath)
 		, isPCM(loadPCM)
 	{}
