@@ -99,6 +99,7 @@ public:
 	void setCategoryVolume(AudioCategory category, float volume);
 	void setPitch(AudioHandle handle, float pitch);
 	void stopAll();
+	void seek(AudioHandle handle, float seconds);
 	void setPosition(AudioHandle handle, const glm::vec3& position);
 	void setListenerTransform(
 		const glm::vec3& position,

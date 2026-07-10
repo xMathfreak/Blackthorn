@@ -1,7 +1,6 @@
 #include "Audio/Streaming/StreamDecoderFactory.h"
 
 #include <algorithm>
-#include <filesystem>
 
 #include "Audio/Streaming/Codecs/FlacStreamDecoder.h"
 #include "Audio/Streaming/Codecs/Mp3StreamDecoder.h"
@@ -13,20 +12,19 @@ namespace Blackthorn::Audio::Streaming {
 
 namespace {
 
-/// Returns the lowercase extension of @p path including the leading dot.
-std::string lowerExtension(const std::string& path) {
-	std::string ext = std::filesystem::path(path).extension().string();
-	std::transform(ext.begin(), ext.end(), ext.begin(),
-		[](unsigned char c) { return static_cast<char>(std::tolower(c)); });
-	return ext;
+std::string toLower(std::string str) {
+	std::transform(str.begin(), str.end(), str.begin(),
+		[](unsigned char c) { return static_cast<char>(std::tolower(c)); }
+	);
+	return str;
 }
 
 } // anonymous namespace
 
 std::unique_ptr<IStreamDecoder> StreamDecoderFactory::create(
-	const std::string& path
+	const std::filesystem::path& path
 ) {
-	const std::string ext = lowerExtension(path);
+	const auto ext = toLower(path.extension().string());
 
 	if (ext == ".wav")
 		return std::make_unique<WavStreamDecoder>();
@@ -42,13 +40,13 @@ std::unique_ptr<IStreamDecoder> StreamDecoderFactory::create(
 
 	BT_ERROR(
 		"StreamDecoderFactory: unsupported extension '{}' for path '{}'",
-		ext, path
+		ext, path.string()
 	);
 	return nullptr;
 }
 
-bool StreamDecoderFactory::isSupported(const std::string& path) noexcept {
-	const std::string ext = lowerExtension(path);
+bool StreamDecoderFactory::isSupported(const std::filesystem::path& path) noexcept {
+	const std::string ext = toLower(path.string());
 	return ext == ".wav"
 		|| ext == ".mp3"
 		|| ext == ".flac"

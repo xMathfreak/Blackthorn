@@ -1,5 +1,6 @@
 #pragma once
 
+#include <filesystem>
 #include <memory>
 #include <string>
 
@@ -79,8 +80,8 @@ public:
 	BitmapFont(BitmapFont&& other) noexcept;
 	BitmapFont& operator=(BitmapFont&& other) noexcept;
 
-	bool loadFromFile(const std::string& texturePath, const std::string& metricsPath);
-	bool loadFromBMFont(const std::string& bmfPath);
+	bool loadFromFile(const std::filesystem::path& texturePath, const std::filesystem::path& metricsPath);
+	bool loadFromBMFont(const std::filesystem::path& bmfPath);
 
 	void draw(std::string_view text, const glm::vec2& position, float scale = 1.0f, float z = 0.0f, float maxWidth = 0.0f, const Math::Color& color = Math::Colors::White, Text::Alignment alignment = Text::Alignment::Left) override;
 	void drawCached(std::string_view text, const glm::vec2& position, float scale = 1.0f, float z = 0.0f, float maxWidth = 0.0f, const Math::Color& color = Math::Colors::White, Text::Alignment alignment = Text::Alignment::Left) override;

@@ -128,6 +128,11 @@ void AudioManager::setListenerTransform(
 	});
 }
 
+void AudioManager::seek(AudioHandle handle, float seconds) {
+	if (handle.isValid())
+		audioThread.enqueue(SeekCommand{handle, seconds});
+}
+
 void AudioManager::update() {
 	audioThread.views().acquire();
 }

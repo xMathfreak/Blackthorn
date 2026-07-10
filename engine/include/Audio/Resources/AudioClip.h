@@ -62,6 +62,10 @@ public:
 		return true;
 	}
 
+	void clearPCM() noexcept {
+		pcmData.reset();
+	}
+
 	void unload() noexcept {
 		clipPath = std::filesystem::path("");
 		metaData = {};

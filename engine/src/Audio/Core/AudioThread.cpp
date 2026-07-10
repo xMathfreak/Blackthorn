@@ -240,7 +240,7 @@ void AudioThread::tickViews() {
 			view.state = PlaybackState::Playing;
 		} else if (voice.source().isStopped()) {
 			view.state = PlaybackState::Stopped;
-		} else {
+		} else if (voice.source().isPaused()) {
 			view.state = PlaybackState::Paused;
 		}
 

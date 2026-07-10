@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <charconv>
 #include <concepts>
+#include <filesystem>
 #include <functional>
 #include <mutex>
 #include <optional>
@@ -73,7 +74,7 @@ public:
 	 * @param path  Path to the INI file.
 	 * @return true if the file was opened and read successfully.
 	 */
-	bool loadFromFile(const std::string& path);
+	bool loadFromFile(const std::filesystem::path& path);
 
 	/**
 	 * @brief Saves all in-memory settings to an INI file.
@@ -83,7 +84,7 @@ public:
 	 * @param path  Path to write. Created if absent, overwritten if present.
 	 * @return true on success.
 	 */
-	bool saveToFile(const std::string& path);
+	bool saveToFile(const std::filesystem::path& path);
 
 	/**
 	 * @brief Returns the value of a key, creating it with a default if absent.

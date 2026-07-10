@@ -190,6 +190,13 @@ void AudioThread::process(StreamBufferReadyCommand&& cmd) {
 		return;
 	}
 
+	if (voice->isPendingSeek()) {
+		float target = voice->pendingSeekSeconds();
+		voice->clearPendingSeek();
+		performStreamingSeek(*voice, target);
+		return;
+	}
+
 	StreamingVoiceState* sstate = voice->streamState();
 
 	const U32 channels =
@@ -229,6 +236,99 @@ void AudioThread::process(StreamBufferReadyCommand&& cmd) {
 		cmd.samples.size() < fullChunkSamples;
 
 	submitStreamingJob(*voice, *sstate, shortRead);
+}
+
+void AudioThread::process(SeekCommand cmd) {
+	Voice* voice = voicePool->find(cmd.handle);
+
+	if (!voice)
+		return;
+
+	if (voice->streaming()) {
+		if (voice->hasJobInFlight()) {
+			voice->markPendingSeek(cmd.seconds);
+			return;
+		}
+
+		performStreamingSeek(*voice, cmd.seconds);
+		return;
+	}
+
+	const bool wasPlaying = voice->source().isPlaying();
+	const bool wasPaused = voice->source().isPaused();
+
+	voice->source().stop();
+
+	alSourcef(voice->source().get(), AL_SEC_OFFSET, cmd.seconds);
+	voice->setPlaybackTime(cmd.seconds);
+
+	if (wasPlaying) {
+		voice->source().play();
+	} else if (wasPaused) {
+		voice->source().pause();
+	}
+}
+
+void AudioThread::performStreamingSeek(Voice& voice, float seconds) {
+	StreamingVoiceState* sstate = voice.streamState();
+	if (!sstate || !sstate->decoder)
+		return;
+
+	const bool wasPaused = voice.source().isPaused();
+
+	voice.source().stop();
+	voice.source().unqueueAllBuffers();
+
+	sstate->freeBuffers.clear();
+	for (ALuint buf : sstate->alBuffers)
+		sstate->freeBuffers.push_back(buf);
+
+	sstate->pendingUpload.clear();
+	sstate->pendingEndOfStream = false;
+	sstate->endOfStream = false;
+
+	const U64 targetFrame = static_cast<U64>(
+		seconds * static_cast<float>(sstate->sampleRate)
+	);
+
+	voice.resetFrameCounters(targetFrame);
+	voice.setPlaybackTime(seconds);
+
+	if (!sstate->decoder->seek(targetFrame))
+		BT_WARN("AudioThread: streaming seek to {:.2f}s failed for handle {}",
+			seconds, voice.handle().id);
+
+	int queued = 0;
+	U64 prefillFrames = 0;
+
+	while (!sstate->freeBuffers.empty()) {
+		const ALuint buf = sstate->freeBuffers.back();
+		sstate->freeBuffers.pop_back();
+
+		const size_t frames = prefillBuffer(*sstate, buf, voice.looping());
+		if (frames == 0) {
+			sstate->freeBuffers.push_back(buf);
+			break;
+		}
+
+		voice.source().queueBufferId(buf);
+		prefillFrames += frames;
+		++queued;
+	}
+
+	if (queued == 0) {
+		sstate->endOfStream = true;
+		return;
+	}
+
+	voice.addDecodedFrames(prefillFrames);
+
+	voice.source().play();
+
+	if (wasPaused)
+		voice.source().pause();
+
+	submitStreamingJob(voice, *sstate, false);
 }
 
 } // namespace Blackthorn::Audio

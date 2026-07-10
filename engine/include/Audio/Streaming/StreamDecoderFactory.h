@@ -1,7 +1,7 @@
 #pragma once
 
+#include <filesystem>
 #include <memory>
-#include <string>
 
 #include "Audio/Streaming/IStreamDecoder.h"
 #include "Core/Export.h"
@@ -44,12 +44,12 @@ public:
 	 * @return     A concrete decoder, or @c nullptr if the extension is
 	 *             unsupported.
 	 */
-	static std::unique_ptr<IStreamDecoder> create(const std::string& path);
+	static std::unique_ptr<IStreamDecoder> create(const std::filesystem::path& path);
 
 	/**
 	 * @brief Returns true if @p path has a supported audio extension.
 	 */
-	static bool isSupported(const std::string& path) noexcept;
+	static bool isSupported(const std::filesystem::path& path) noexcept;
 };
 
 } // namespace Blackthorn::Audio

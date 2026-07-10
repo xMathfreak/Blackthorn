@@ -9,7 +9,7 @@ Settings& Settings::instance() {
 	return inst;
 }
 
-bool Settings::loadFromFile(const std::string& path) {
+bool Settings::loadFromFile(const std::filesystem::path& path) {
 	std::lock_guard lock(mutex);
 
 	groupedValues.clear();
@@ -67,7 +67,7 @@ bool Settings::loadFromFile(const std::string& path) {
 	return true;
 }
 
-bool Settings::saveToFile(const std::string& path) {
+bool Settings::saveToFile(const std::filesystem::path& path) {
 	std::lock_guard lock(mutex);
 
 	std::ofstream out(path, std::ios::out | std::ios::trunc);

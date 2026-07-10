@@ -1,7 +1,7 @@
 #pragma once
 
+#include <filesystem>
 #include <memory>
-#include <string>
 #include <unordered_map>
 #include <vector>
 
@@ -27,7 +27,7 @@ public:
 	TrueTypeFont(const TrueTypeFont&) = delete;
 	TrueTypeFont& operator=(const TrueTypeFont&) = delete;
 
-	bool loadFromFile(const std::string& filePath, int pointSize);
+	bool loadFromFile(const std::filesystem::path& filePath, int pointSize);
 
 	void draw(std::string_view text, const glm::vec2& position, float scale = 1.0f, float z = 0.0f, float maxWidth = 0.0f, const Math::Color& color = Math::Colors::White, Text::Alignment alignment = Text::Alignment::Left) override;
 	void drawCached(std::string_view text, const glm::vec2& position, float scale = 1.0f, float z = 0.0f, float maxWidth = 0.0f, const Math::Color& color = Math::Colors::White, Text::Alignment alignment = Text::Alignment::Left) override;

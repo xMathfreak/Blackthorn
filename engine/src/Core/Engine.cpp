@@ -200,8 +200,6 @@ void Engine::initGraphics(const EngineConfig& cfg) {
 
 	if (msaaSamples > 0)
 		glEnable(GL_MULTISAMPLE);
-
-	glViewport(0, 0, cfg.window.width, cfg.window.height);
 }
 
 void Engine::shutdown() {

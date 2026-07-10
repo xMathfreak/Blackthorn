@@ -1,5 +1,6 @@
 #pragma once
 
+#include <filesystem>
 #include <string>
 #include <unordered_map>
 
@@ -67,7 +68,7 @@ public:
 	 *
 	 * Compiles the shaders, links the program and deletes the intermediate shader objects.
 	 */
-	Shader(const std::string& vertexPath, const std::string& fragmentPath);
+	Shader(const std::filesystem::path& vertexPath, const std::filesystem::path& fragmentPath);
 
 	/**
 	 * @brief Destroys the shader program and releases OpenGL resources.

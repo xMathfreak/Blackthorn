@@ -8,10 +8,10 @@
 
 namespace Blackthorn::Graphics {
 
-static std::string readFile(const std::string& path) {
+static std::string readFile(const std::filesystem::path& path) {
 	std::ifstream file(path, std::ios::in | std::ios::binary);
 	if (!file.is_open())
-		throw std::runtime_error("Failed to open file " + path);
+		throw std::runtime_error("Failed to open file " + path.string());
 
 	std::stringstream buffer;
 	buffer << file.rdbuf();
@@ -92,8 +92,8 @@ void Shader::linkProgram(GLuint vertexShader, GLuint fragmentShader) {
 	glDetachShader(programID, fragmentShader);
 }
 
-Shader::Shader(const std::string& vertexPath, const std::string& fragmentPath) {
-	BT_DEBUG("Shader: Loading (vertex: {}, fragment: {})", vertexPath, fragmentPath);
+Shader::Shader(const std::filesystem::path& vertexPath, const std::filesystem::path& fragmentPath) {
+	BT_DEBUG("Shader: Loading (vertex: {}, fragment: {})", vertexPath.string(), fragmentPath.string());
 
 	try {
 		std::string vertexSource = readFile(vertexPath);

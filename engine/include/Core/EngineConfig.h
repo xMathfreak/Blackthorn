@@ -1,5 +1,6 @@
 #pragma once
 
+#include <filesystem>
 #include <string>
 
 #include "Core/Export.h"
@@ -52,7 +53,7 @@ struct BLACKTHORN_API EngineConfig {
 	ThreadingConfig threading;
 	Assets::AssetConfig assets;
 
-	std::string settingsFilePath = "settings.ini";
+	std::filesystem::path settingsFilePath = "settings.ini";
 };
 
 }
