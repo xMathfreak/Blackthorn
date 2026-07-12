@@ -5,6 +5,13 @@ project(BlackthornEngine VERSION 0.1.0 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+option(BT_PACK_MODE "Enable pack-file asset resolution (forced ON for Release)" OFF)
+
+set(XXHASH_INCLUDE_DIR
+	"${CMAKE_CURRENT_SOURCE_DIR}/../third_party/zstd/lib/common"
+	CACHE PATH "Path to the directory containing xxhash.h"
+)
+
 # Source Directories
 file(GLOB_RECURSE ALL_ENGINE_SOURCES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
 file(GLOB_RECURSE ALL_ENGINE_HEADERS "${CMAKE_CURRENT_SOURCE_DIR}/include/*.h")
@@ -48,6 +55,9 @@ target_compile_definitions(BlackthornCore
 		$<$<CONFIG:Debug>:BLACKTHORN_DEBUG>
 		$<$<NOT:$<CONFIG:Debug>>:BLACKTHORN_RELEASE>
 
+		$<$<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>>:BT_PACK_MODE>
+		$<$<AND:$<CONFIG:Debug>,$<BOOL:${BT_PACK_MODE}>>:BT_PACK_MODE>
+
 		BLACKTHORN_VERSION_MAJOR=${PROJECT_VERSION_MAJOR}
 		BLACKTHORN_VERSION_MINOR=${PROJECT_VERSION_MINOR}
 		BLACKTHORN_VERSION_PATCH=${PROJECT_VERSION_PATCH}
@@ -60,6 +70,7 @@ target_include_directories(BlackthornCore
 	PRIVATE
 		${CMAKE_CURRENT_SOURCE_DIR}/src
 		${CMAKE_CURRENT_SOURCE_DIR}/private
+		${XXHASH_INCLUDE_DIR}
 )
 
 target_link_libraries(BlackthornCore
@@ -90,6 +101,9 @@ target_compile_definitions(BlackthornEngine
 	PUBLIC
 		$<$<CONFIG:Debug>:BLACKTHORN_DEBUG>
 		$<$<NOT:$<CONFIG:Debug>>:BLACKTHORN_RELEASE>
+
+		$<$<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>>:BT_PACK_MODE>
+		$<$<AND:$<CONFIG:Debug>,$<BOOL:${BT_PACK_MODE}>>:BT_PACK_MODE>
 )
 
 target_include_directories(BlackthornEngine
@@ -99,6 +113,7 @@ target_include_directories(BlackthornEngine
 	PRIVATE
 		${CMAKE_CURRENT_SOURCE_DIR}/src
 		${CMAKE_CURRENT_SOURCE_DIR}/private
+		${XXHASH_INCLUDE_DIR}
 )
 
 target_link_libraries(BlackthornEngine
