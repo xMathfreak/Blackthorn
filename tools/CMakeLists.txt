@@ -5,7 +5,7 @@ if(BLACKTHORN_BUILD_ASSET_PACKER)
 endif()
 
 if(TARGET btpacker)
-	set(MANIFESTS_DIR "${PROJECT_SOURCE_DIR}/data")
+	set(MANIFESTS_DIR "${CMAKE_SOURCE_DIR}/data")
 
 	add_custom_target(pack_assets
 		COMMENT "Packing game assets..."
@@ -21,6 +21,6 @@ if(TARGET btpacker)
 		#     pack
 		#     --manifest "${MANIFESTS_DIR}/chapter1.pack.json"
 
-		WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
+		WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
 	)
 endif()

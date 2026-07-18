@@ -259,7 +259,7 @@ bool readTOC(
 /**
  * @brief Reads the symbol table from an open file into two maps.
  *
- * Populates @p symbols (assetID → string ID) and @p sources (assetID → source path).
+ * Populates @p symbols (assetID → string ID) and @p sources (assetID → relative source path).
  * No-op if header.symbolTableOff is 0.
  */
 void readSymbolTable(
@@ -312,6 +312,65 @@ void readSymbolTable(
 		symbols[assetID] = std::move(idStr);
 		sources[assetID] = std::move(srcPath);
 	}
+}
+
+/**
+ * @brief Appends one entry to the in-memory symbol table byte buffer.
+ *
+ * Binary layout per entry:
+ *   uint64_t  assetID
+ *   uint16_t  idLen
+ *   char      id[idLen]          (not null-terminated)
+ *   char      relSourcePath[]    (null-terminated, relative to manifest dir)
+ *
+ * Storing a relative path means the symbol table is portable across machines
+ * and does not leak local directory structure into shipped binaries.
+ *
+ * @param buf         Buffer to append to.
+ * @param assetID     xxHash64 of the asset string ID.
+ * @param id          The asset string ID (e.g. "player_tex").
+ * @param absPath     Absolute path to the source file on disk.
+ * @param manifestDir Directory of the manifest; used to compute the relative path.
+ */
+void appendSymbolEntry(
+	std::vector<uint8_t>& buf,
+	uint64_t assetID,
+	const std::string& id,
+	const std::filesystem::path& absPath,
+	const std::filesystem::path& manifestDir
+) {
+	std::string relPath;
+	std::error_code ec;
+	const auto rel = std::filesystem::relative(absPath, manifestDir, ec);
+
+	if (!ec && !rel.empty()) {
+		std::string raw = rel.generic_string();
+		relPath = std::move(raw);
+	} else {
+		relPath = absPath.generic_string();
+	}
+
+	// -- assetID (8 bytes) --
+	const size_t idStart = buf.size();
+	buf.resize(idStart + sizeof(uint64_t));
+	std::memcpy(buf.data() + idStart, &assetID, sizeof(uint64_t));
+
+	// -- idLen (2 bytes) --
+	const uint16_t idLen = static_cast<uint16_t>(id.size());
+	const size_t   idLenStart = buf.size();
+	buf.resize(idLenStart + sizeof(uint16_t));
+	std::memcpy(buf.data() + idLenStart, &idLen, sizeof(uint16_t));
+
+	// -- id string (idLen bytes) --
+	const size_t idStrStart = buf.size();
+	buf.resize(idStrStart + idLen);
+	std::memcpy(buf.data() + idStrStart, id.data(), idLen);
+
+	// -- relative source path (null-terminated) --
+	const size_t pathStart = buf.size();
+	buf.resize(pathStart + relPath.size() + 1);
+	std::memcpy(buf.data() + pathStart, relPath.data(), relPath.size());
+	buf[pathStart + relPath.size()] = '\0';
 }
 
 } // anonymous namespace
@@ -379,7 +438,7 @@ bool Packer::pack(const PackManifest& manifest, std::ostream& log) {
 			return false;
 		}
 
-		const uint64_t hash = XXH64(compressed.data(), compressed.size(), 0);
+		const uint64_t blobHash = XXH64(compressed.data(), compressed.size(), 0);
 		const uint64_t assetID = XXH64(asset.id.data(), asset.id.size(), 0);
 
 		const int64_t dataOffset = fileTell(out);
@@ -402,33 +461,19 @@ bool Packer::pack(const PackManifest& manifest, std::ostream& log) {
 		entry.dataOffset = static_cast<uint64_t>(dataOffset);
 		entry.compressedSize = static_cast<uint64_t>(compressed.size());
 		entry.uncompressedSize = static_cast<uint64_t>(raw.size());
-		entry.xxhash = hash;
+		entry.xxhash = blobHash;
 		entry.assetType = resolveAssetType(asset.typeStr);
 		entry.compression = PackCompression::Zstd;
 		toc.push_back(entry);
 
 		if (manifest.writeSymbolTable) {
-			// assetID
-			symbolTableBytes.resize(symbolTableBytes.size() + sizeof(uint64_t));
-			std::memcpy(symbolTableBytes.data() + symbolTableBytes.size() - sizeof(uint64_t),
-				&assetID, sizeof(uint64_t));
-
-			// idLen
-			const uint16_t idLen = static_cast<uint16_t>(asset.id.size());
-			symbolTableBytes.resize(symbolTableBytes.size() + sizeof(uint16_t));
-			std::memcpy(symbolTableBytes.data() + symbolTableBytes.size() - sizeof(uint16_t),
-				&idLen, sizeof(uint16_t));
-
-			const size_t oldSize = symbolTableBytes.size();
-			symbolTableBytes.resize(oldSize + idLen);
-			std::memcpy(symbolTableBytes.data() + oldSize, asset.id.data(), idLen);
-
-			// source
-			const std::string srcStr = asset.sourcePath.string();
-			const size_t pathStart = symbolTableBytes.size();
-			symbolTableBytes.resize(pathStart + srcStr.size() + 1);
-			std::memcpy(symbolTableBytes.data() + pathStart, srcStr.data(), srcStr.size());
-			symbolTableBytes[pathStart + srcStr.size()] = '\0';
+			appendSymbolEntry(
+				symbolTableBytes,
+				assetID,
+				asset.id,
+				asset.sourcePath,
+				manifest.manifestDir
+			);
 		}
 
 		const float ratio = raw.empty() ? 0.0f
@@ -506,13 +551,13 @@ bool Packer::pack(const PackManifest& manifest, std::ostream& log) {
 	const auto fileSize = std::filesystem::file_size(manifest.outputPath);
 
 	log << "\n"
-		<< "  output:      " << outPathStr << "\n"
-		<< "  assets:      " << toc.size() << "\n"
-		<< "  source size: " << totalSourceBytes << " B\n"
-		<< "  pack size:   " << fileSize << " B\n"
-		<< "  reduction:   " << std::fixed << std::setprecision(1)
+		<< "  output:       " << outPathStr << "\n"
+		<< "  assets:       " << toc.size() << "\n"
+		<< "  source size:  " << totalSourceBytes << " B\n"
+		<< "  pack size:    " << fileSize << " B\n"
+		<< "  reduction:    " << std::fixed << std::setprecision(1)
 		<< overallRatio << "%\n"
-		<< "  symbol table: " << (manifest.writeSymbolTable ? "yes" : "no") << "\n";
+		<< "  symbol table: " << (manifest.writeSymbolTable ? "yes" : "no")     << "\n";
 
 	return true;
 }
@@ -594,11 +639,7 @@ bool Packer::verify(const std::filesystem::path& btpPath, std::ostream& log) {
 		auto it = symbols.find(entry.assetID);
 		const std::string label = (it != symbols.end())
 			? it->second
-			: ("0x" + [&]{
-				std::ostringstream ss;
-				ss << std::hex << entry.assetID;
-				return ss.str();
-			}());
+			: [&]{ std::ostringstream ss; ss << "0x" << std::hex << entry.assetID; return ss.str(); }();
 
 		log << "  ok    " << label << "\n";
 		++passed;
@@ -606,8 +647,7 @@ bool Packer::verify(const std::filesystem::path& btpPath, std::ostream& log) {
 
 	std::fclose(f);
 
-	log << "\n"
-		<< "  passed: " << passed << " / " << (passed + failed) << "\n";
+	log << "\n  passed: " << passed << " / " << (passed + failed) << "\n";
 
 	return failed == 0;
 }
@@ -639,9 +679,9 @@ bool Packer::list(const std::filesystem::path& btpPath, std::ostream& log) {
 	const auto fileSize = std::filesystem::file_size(btpPath);
 
 	log << "pack: " << pathStr << "\n"
-		<< "  version:      " << header.version<< "\n"
+		<< "  version:      " << header.version << "\n"
 		<< "  entries:      " << header.entryCount << "\n"
-		<< "  file size:    " << fileSize<< " B\n"
+		<< "  file size:    " << fileSize << " B\n"
 		<< "  symbol table: " << (header.symbolTableOff != 0 ? "yes" : "no") << "\n"
 		<< "\n";
 
@@ -740,11 +780,7 @@ bool Packer::unpack(
 		std::filesystem::path outFile;
 		auto srcIt = sources.find(entry.assetID);
 		if (srcIt != sources.end() && !srcIt->second.empty()) {
-			std::filesystem::path srcPath(srcIt->second);
-			if (srcPath.is_absolute())
-				srcPath = srcPath.relative_path();
-
-			outFile = destDir / srcPath;
+			outFile = destDir / srcIt->second;
 		} else {
 			std::ostringstream name;
 			name << std::hex << std::setw(16) << std::setfill('0') << entry.assetID << ".bin";
@@ -791,8 +827,7 @@ bool Packer::unpack(
 			? symIt->second
 			: [&]{ std::ostringstream s; s << "0x" << std::hex << entry.assetID; return s.str(); }();
 
-		log << "  unpacked  " << label
-			<< "  ->  " << outFile.string() << "\n";
+		log << "  unpacked  " << label << "  ->  " << outFile.string() << "\n";
 	}
 
 	std::fclose(f);

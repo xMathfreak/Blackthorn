@@ -4,7 +4,6 @@ project(btpacker VERSION 0.1.0 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-
 add_executable(btpacker
 	src/main.cpp
 	src/Manifest.h
@@ -12,6 +11,8 @@ add_executable(btpacker
 	src/ManifestParser.cpp
 	src/Packer.h
 	src/Packer.cpp
+	src/ManifestGenerator.h
+	src/ManifestGenerator.cpp
 )
 
 target_include_directories(btpacker
@@ -70,7 +71,7 @@ set_target_properties(btpacker PROPERTIES
 	RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
 )
 
-if (IPO_SUPPORTED)
+if(IPO_SUPPORTED)
 	set_target_properties(btpacker PROPERTIES
 		INTERPROCEDURAL_OPTIMIZATION $<$<CONFIG:Release>:TRUE>
 	)
