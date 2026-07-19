@@ -103,6 +103,7 @@ private:
 	bool defaultDeviceChanged() const noexcept;
 	void tickDeviceHealth();
 	void updatePlaybackTimes();
+	void performStreamingSeek(Voice& voice, float seconds);
 
 private:
 	AudioCommandQueue commandQueue;
@@ -141,6 +142,7 @@ private:
 	void process(ListenerTransformCommand cmd);
 	void process(StopAllCommand cmd);
 	void process(StreamBufferReadyCommand&& cmd);
+	void process(SeekCommand cmd);
 
 private:
 	std::vector<VoiceSnapshot> voiceSnapshots;

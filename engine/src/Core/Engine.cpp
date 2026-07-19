@@ -200,8 +200,61 @@ void Engine::initGraphics(const EngineConfig& cfg) {
 
 	if (msaaSamples > 0)
 		glEnable(GL_MULTISAMPLE);
+}
 
-	glViewport(0, 0, cfg.window.width, cfg.window.height);
+void Engine::initAssetLoaders() {
+#ifdef BT_PACK_MODE
+	assetManager->registerPackLoader<Audio::AudioClip>(
+		std::make_unique<Audio::AudioLoader>(),
+		std::make_unique<Audio::AsyncAudioLoader>(&assetManager->resolver())
+	);
+
+	assetManager->registerPackLoader<Graphics::Texture>(
+		std::make_unique<Graphics::TextureLoader>(),
+		std::make_unique<Graphics::AsyncTextureLoader>(&assetManager->resolver())
+	);
+
+	assetManager->registerPackLoader<Graphics::Shader>(
+		std::make_unique<Graphics::ShaderLoader>(),
+		std::make_unique<Graphics::AsyncShaderLoader>(&assetManager->resolver())
+	);
+
+	assetManager->registerPackLoader<Fonts::BitmapFont>(
+		std::make_unique<Fonts::BitmapFontLoader>(),
+		std::make_unique<Fonts::AsyncBitmapFontLoader>(&assetManager->resolver())
+	);
+
+	assetManager->registerPackLoader<Fonts::TrueTypeFont>(
+		std::make_unique<Fonts::TrueTypeFontLoader>(),
+		std::make_unique<Fonts::AsyncTrueTypeFontLoader>(&assetManager->resolver())
+	);
+
+#else
+	assetManager->registerLoader<Audio::AudioClip>(
+		std::make_unique<Audio::AudioLoader>(),
+		std::make_unique<Audio::AsyncAudioLoader>()
+	);
+
+	assetManager->registerLoader<Graphics::Texture>(
+		std::make_unique<Graphics::TextureLoader>(),
+		std::make_unique<Graphics::AsyncTextureLoader>()
+	);
+
+	assetManager->registerLoader<Graphics::Shader>(
+		std::make_unique<Graphics::ShaderLoader>(),
+		std::make_unique<Graphics::AsyncShaderLoader>()
+	);
+
+	assetManager->registerLoader<Fonts::BitmapFont>(
+		std::make_unique<Fonts::BitmapFontLoader>(),
+		std::make_unique<Fonts::AsyncBitmapFontLoader>()
+	);
+
+	assetManager->registerLoader<Fonts::TrueTypeFont>(
+		std::make_unique<Fonts::TrueTypeFontLoader>(),
+		std::make_unique<Fonts::AsyncTrueTypeFontLoader>()
+	);
+#endif
 }
 
 void Engine::shutdown() {
@@ -231,30 +284,6 @@ void Engine::cleanupGraphics() {
 
 	TTF_Quit();
 	SDL_QuitSubSystem(SDL_INIT_VIDEO);
-}
-
-void Engine::initAssetLoaders() {
-	assetManager->registerLoader<Audio::AudioClip>(
-		std::make_unique<Audio::AudioLoader>(),
-		std::make_unique<Audio::AsyncAudioLoader>()
-	);
-
-	assetManager->registerLoader<Graphics::Texture>(
-		std::make_unique<Graphics::TextureLoader>(),
-		std::make_unique<Graphics::AsyncTextureLoader>()
-	);
-
-	assetManager->registerLoader<Graphics::Shader>(
-		std::make_unique<Graphics::ShaderLoader>()
-	);
-
-	assetManager->registerLoader<Fonts::BitmapFont>(
-		std::make_unique<Fonts::BitmapFontLoader>()
-	);
-
-	assetManager->registerLoader<Fonts::TrueTypeFont>(
-		std::make_unique<Fonts::TrueTypeFontLoader>()
-	);
 }
 
 void Engine::run() {

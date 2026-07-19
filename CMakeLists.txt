@@ -34,6 +34,7 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
 # Options
 option(BLACKTHORN_BUILD_APP "Build sample application" ON)
+option(BLACKTHORN_BUILD_TOOLS "Build tools" ON)
 
 # External dependencies
 find_package(OpenGL REQUIRED)
@@ -45,6 +46,10 @@ find_package(SDL3_ttf REQUIRED)
 add_subdirectory(third_party)
 add_subdirectory(engine)
 
-if (BLACKTHORN_BUILD_APP)
+if(BLACKTHORN_BUILD_APP)
 	add_subdirectory(app)
+endif()
+
+if(BLACKTHORN_BUILD_TOOLS)
+	add_subdirectory(tools)
 endif()

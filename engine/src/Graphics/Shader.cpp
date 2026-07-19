@@ -8,10 +8,10 @@
 
 namespace Blackthorn::Graphics {
 
-static std::string readFile(const std::string& path) {
+static std::string readFile(const std::filesystem::path& path) {
 	std::ifstream file(path, std::ios::in | std::ios::binary);
 	if (!file.is_open())
-		throw std::runtime_error("Failed to open file " + path);
+		throw std::runtime_error("Failed to open file " + path.string());
 
 	std::stringstream buffer;
 	buffer << file.rdbuf();
@@ -92,8 +92,8 @@ void Shader::linkProgram(GLuint vertexShader, GLuint fragmentShader) {
 	glDetachShader(programID, fragmentShader);
 }
 
-Shader::Shader(const std::string& vertexPath, const std::string& fragmentPath) {
-	BT_DEBUG("Shader: Loading (vertex: {}, fragment: {})", vertexPath, fragmentPath);
+Shader::Shader(const std::filesystem::path& vertexPath, const std::filesystem::path& fragmentPath) {
+	BT_DEBUG("Shader: Loading (vertex: {}, fragment: {})", vertexPath.string(), fragmentPath.string());
 
 	try {
 		std::string vertexSource = readFile(vertexPath);
@@ -118,6 +118,45 @@ Shader::Shader(const std::string& vertexPath, const std::string& fragmentPath) {
 
 Shader::~Shader() {
 	destroy();
+}
+
+bool Shader::compileFromSource(const std::string& vertexSource, const std::string& fragmentSource) {
+	// Allow re-compiling an existing instance: drop the old program and any
+	// uniform locations cached against it before building the new one.
+	destroy();
+	uniformCache.clear();
+
+	GLuint vertexShader = 0;
+	GLuint fragmentShader = 0;
+
+	try {
+		vertexShader = compileShader(vertexSource, GL_VERTEX_SHADER);
+		fragmentShader = compileShader(fragmentSource, GL_FRAGMENT_SHADER);
+
+		linkProgram(vertexShader, fragmentShader);
+	} catch (const std::exception& e) {
+		// compileShader() already deletes its own shader object internally
+		// when it throws, but a stage that succeeded before a later stage
+		// failed would otherwise leak - clean up whatever we're still holding.
+		if (vertexShader != 0)
+			glDeleteShader(vertexShader);
+
+		if (fragmentShader != 0)
+			glDeleteShader(fragmentShader);
+
+		if (programID != 0) {
+			glDeleteProgram(programID);
+			programID = 0;
+		}
+
+		return false;
+	}
+
+	glDeleteShader(vertexShader);
+	glDeleteShader(fragmentShader);
+
+	BT_DEBUG("Shader: Compiled and linked from in-memory source (ID: {})", programID);
+	return true;
 }
 
 void Shader::destroy() {

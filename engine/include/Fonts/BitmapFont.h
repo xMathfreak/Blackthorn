@@ -1,5 +1,7 @@
 #pragma once
 
+#include <filesystem>
+#include <iosfwd>
 #include <memory>
 #include <string>
 
@@ -70,6 +72,39 @@ private:
 	Layout buildLayout(std::string_view text, float scale, float maxWidth) const;
 	void generateVertices(const Layout& layout, float scale, Text::Alignment alignment, std::vector<Vertex>& outVertices) const;
 
+	/**
+	 * @brief Parses a `.fnt`-style text metrics stream (the format produced
+	 * by loadFromFile()'s @p metricsPath argument).
+	 *
+	 * Shared by loadFromFile() (reading a `std::ifstream`) and loadFromMemory()
+	 * (reading a `std::istringstream` over an in-memory buffer). Populates
+	 * @c glyphs, @c lineHeight, @c baseline, @c spaceWidth, and @c tabWidth.
+	 *
+	 * @param stream Text stream positioned at the start of the metrics data.
+	 * @param sourceLabel Human-readable source identifier used in log messages
+	 *                    only (e.g. a file path, or "<memory>").
+	 * @return true on success. Malformed individual lines are logged and
+	 *         skipped rather than failing the whole parse, matching the
+	 *         original loadFromFile() behavior.
+	 */
+	bool parseMetricsText(std::istream& stream, const std::string& sourceLabel);
+
+	/**
+	 * @brief Parses a binary `.bmf` stream (magic + version + metrics +
+	 * embedded image + glyph table).
+	 *
+	 * Shared by loadFromBMFont() (reading a `std::ifstream`) and
+	 * loadFromBMFontMemory() (reading a `std::istringstream` over an
+	 * in-memory buffer). On success, replaces @c texture and populates
+	 * @c glyphs and the layout metrics.
+	 *
+	 * @param stream Binary stream positioned at the start of the BMF data.
+	 * @param sourceLabel Human-readable source identifier used in log messages
+	 *                    only (e.g. a file path, or "<memory>").
+	 * @return true on success.
+	 */
+	bool parseBMFontStream(std::istream& stream, const std::string& sourceLabel);
+
 public:
 	BitmapFont();
 
@@ -79,8 +114,40 @@ public:
 	BitmapFont(BitmapFont&& other) noexcept;
 	BitmapFont& operator=(BitmapFont&& other) noexcept;
 
-	bool loadFromFile(const std::string& texturePath, const std::string& metricsPath);
-	bool loadFromBMFont(const std::string& bmfPath);
+	bool loadFromFile(const std::filesystem::path& texturePath, const std::filesystem::path& metricsPath);
+	bool loadFromBMFont(const std::filesystem::path& bmfPath);
+
+	/**
+	 * @brief Loads a bitmap font from in-memory texture bytes and a
+	 * `.fnt`-style text metrics buffer.
+	 *
+	 * @details
+	 * Memory counterpart to loadFromFile(). Intended for asset-pipeline use,
+	 * where both files have already been read into memory (e.g. decompressed
+	 * from a `.btp` pack) rather than living on disk. @p textureData is an
+	 * encoded image (PNG/etc.), decoded via SDL_image the same way
+	 * loadFromBMFont() decodes its embedded image.
+	 *
+	 * @param textureData Pointer to the encoded texture image bytes.
+	 * @param textureSize Size of @p textureData in bytes.
+	 * @param metricsData Pointer to the `.fnt`-format metrics text bytes.
+	 * @param metricsSize Size of @p metricsData in bytes.
+	 * @return true on success.
+	 */
+	bool loadFromMemory(const U8* textureData, size_t textureSize, const U8* metricsData, size_t metricsSize);
+
+	/**
+	 * @brief Loads a bitmap font from an in-memory single-file `.bmf` buffer.
+	 *
+	 * Memory counterpart to loadFromBMFont(). Intended for asset-pipeline use,
+	 * where the `.bmf` file has already been read into memory (e.g.
+	 * decompressed from a `.btp` pack) rather than living on disk.
+	 *
+	 * @param data Pointer to the raw `.bmf` file bytes.
+	 * @param size Size of @p data in bytes.
+	 * @return true on success.
+	 */
+	bool loadFromBMFontMemory(const U8* data, size_t size);
 
 	void draw(std::string_view text, const glm::vec2& position, float scale = 1.0f, float z = 0.0f, float maxWidth = 0.0f, const Math::Color& color = Math::Colors::White, Text::Alignment alignment = Text::Alignment::Left) override;
 	void drawCached(std::string_view text, const glm::vec2& position, float scale = 1.0f, float z = 0.0f, float maxWidth = 0.0f, const Math::Color& color = Math::Colors::White, Text::Alignment alignment = Text::Alignment::Left) override;

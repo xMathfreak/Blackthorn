@@ -91,6 +91,11 @@ struct StreamBufferReadyCommand {
 	bool endOfStream = false;
 };
 
+struct SeekCommand {
+	AudioHandle handle;
+	float seconds = 0.0f;
+};
+
 using AudioCommand = std::variant<
 	PlayCommand,
 	StopCommand,
@@ -102,7 +107,8 @@ using AudioCommand = std::variant<
 	SetCategoryVolumeCommand,
 	StopAllCommand,
 	ListenerTransformCommand,
-	StreamBufferReadyCommand
+	StreamBufferReadyCommand,
+	SeekCommand
 >;
 
 } // namespace Blackthorn::Audio
