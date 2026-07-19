@@ -108,6 +108,10 @@ bool EngineCore::init(const EngineConfig& cfg) {
 		*saveManager
 	);
 
+	// Every scene pushed from here on receives *simContext automatically -
+	// see SceneManager::setContext() and ISimScene.
+	sceneManager->setContext(*simContext);
+
 	initialized = true;
 
 	BT_LOG("Engine: Core initialized (Tick: {})", simClock->getCurrentTick());

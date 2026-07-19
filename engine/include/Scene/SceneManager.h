@@ -6,7 +6,8 @@
 
 #include "Core/Export.h"
 #include "Core/Types/Numeric.h"
-#include "Scene/IScene.h"
+#include "Debug/Logger.h"
+#include "Scene/ISimScene.h"
 
 namespace Blackthorn::Scene {
 
@@ -19,6 +20,19 @@ namespace Blackthorn::Scene {
  *
  * Used directly by `EngineBase` and the dedicated server. `Engine` replaces
  * the `EngineBase` instance with a `ClientSceneManager` at init time.
+ *
+ * @par Context injection
+ * `SceneManager` is responsible for handing every scene its `ISimContext`
+ * automatically. Call `setContext()` once, right after the engine's
+ * context object exists, before pushing any scenes:
+ * @code
+ * sceneManager = std::make_unique<Scene::SceneManager>();
+ * simContext = std::make_unique<Scene::SimContextImpl>(..., *sceneManager, ...);
+ * sceneManager->setContext(*simContext);
+ * @endcode
+ * From then on, `pushScene()` and `changeScene()` inject the context into
+ * each scene automatically before calling `init()`. Scene subclasses never
+ * need to know about this - see `ISimScene`.
  */
 class BLACKTHORN_API SceneManager {
 protected:
@@ -27,11 +41,14 @@ protected:
 		FadeIn
 	};
 
-	std::vector<std::unique_ptr<IScene>> scenes;
+	std::vector<std::unique_ptr<ISimScene>> scenes;
+
+	// Injected once via setContext(), then handed to every pushed scene.
+	ISimContext* context = nullptr;
 
 	bool inTransition = false;
 	TransitionPhase transitionPhase = TransitionPhase::FadeOut;
-	std::unique_ptr<IScene> pendingScene;
+	std::unique_ptr<ISimScene> pendingScene;
 	std::function<void(float)> transitionCallback;
 	float transitionDuration = 0.0f;
 	float transitionTime = 0.0f;
@@ -51,6 +68,25 @@ protected:
 		}
 	}
 
+	/**
+	 * @brief Injects the active context into @p scene. Logs and returns
+	 * false if `setContext()` has not been called yet.
+	 */
+	bool injectContext(ISimScene& scene) {
+		if (!context) {
+			BT_ERROR(
+				"SceneManager: cannot push scene '{}', SceneManager::setContext() "
+				"was never called",
+				scene.getName()
+			);
+
+			return false;
+		}
+
+		scene.setContext(*context);
+		return true;
+	}
+
 public:
 	SceneManager() = default;
 	virtual ~SceneManager() = default;
@@ -58,8 +94,19 @@ public:
 	SceneManager(const SceneManager&) = delete;
 	SceneManager& operator=(const SceneManager&) = delete;
 
-	void pushScene(std::unique_ptr<IScene> scene) {
-		if (!scene)
+	/**
+	 * @brief Sets the simulation context handed to every scene from now on.
+	 *
+	 * Must be called once before the first `pushScene()`/`changeScene()`.
+	 * Called by `EngineCore`/`Engine` immediately after the engine's context
+	 * object is constructed. Not intended to be called by game code.
+	 *
+	 * @param ctx Context to inject into scenes. Must outlive this manager.
+	 */
+	void setContext(ISimContext& ctx) { context = &ctx; }
+
+	void pushScene(std::unique_ptr<ISimScene> scene) {
+		if (!scene || !injectContext(*scene))
 			return;
 
 		if (!scenes.empty())
@@ -82,8 +129,8 @@ public:
 			scenes.back()->onResume();
 	}
 
-	void changeScene(std::unique_ptr<IScene> scene) {
-		if (!scene)
+	void changeScene(std::unique_ptr<ISimScene> scene) {
+		if (!scene || !injectContext(*scene))
 			return;
 
 		clear();
@@ -102,7 +149,7 @@ public:
 	}
 
 	void changeSceneWithTransition(
-		std::unique_ptr<IScene> scene,
+		std::unique_ptr<ISimScene> scene,
 		std::function<void(float)> transition,
 		float duration = 1.0f
 	) {
@@ -152,11 +199,11 @@ public:
 		}
 	}
 
-	IScene* getCurrentScene() {
+	ISimScene* getCurrentScene() {
 		return scenes.empty() ? nullptr : scenes.back().get();
 	}
 
-	const IScene* getCurrentScene() const {
+	const ISimScene* getCurrentScene() const {
 		return scenes.empty() ? nullptr : scenes.back().get();
 	}
 

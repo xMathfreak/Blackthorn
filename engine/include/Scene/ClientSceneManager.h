@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Core/Export.h"
-#include "Scene/IClientScene.h"
+#include "Scene/IScene.h"
 #include "Scene/SceneManager.h"
 
 namespace Blackthorn::Scene {
@@ -15,10 +15,10 @@ namespace Blackthorn::Scene {
  * `EngineBase::init()`.
  *
  * `render()` walks the scene stack in the same render-visibility order as
- * the update walk, downcasting each scene to `IClientScene*`. Scenes that
- * are not `IClientScene` (e.g. a shared sim scene pushed onto a client
- * stack for testing) are silently skipped during render - they still
- * receive all simulation updates normally.
+ * the update walk, downcasting each scene to `IScene*`. Scenes that are not
+ * `IScene` (e.g. a headless `ISimScene` pushed onto a client stack for
+ * testing) are silently skipped during render - they still receive all
+ * simulation updates normally.
  *
  * The transition overlay callback is also dispatched here, so fade effects
  * still work correctly.
@@ -47,7 +47,7 @@ public:
 		}
 
 		for (auto it = firstRender; it != scenes.end(); ++it) {
-			auto* clientScene = dynamic_cast<IClientScene*>(it->get());
+			auto* clientScene = dynamic_cast<IScene*>(it->get());
 
 			if (clientScene)
 				clientScene->render(alpha);

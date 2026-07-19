@@ -131,6 +131,8 @@ bool Engine::init(const EngineConfig& cfg) {
 		*saveManager
 	);
 
+	sceneManager->setContext(*simContext);
+
 	applyPostProcessing();
 	logEngineInfo();
 
