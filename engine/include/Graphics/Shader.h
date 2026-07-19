@@ -75,6 +75,29 @@ public:
 	 */
 	~Shader();
 
+	/**
+	 * @brief Compiles and links a shader program from GLSL source strings.
+	 *
+	 * @details
+	 * Intended for asset-pipeline use, where shader source has already been
+	 * read into memory (e.g. decompressed from a `.btp` pack) rather than
+	 * living on disk. Behaves like the file-based constructor otherwise:
+	 * both stages are compiled, linked into a single program, and the
+	 * intermediate shader objects are deleted before returning.
+	 *
+	 * Safe to call on an already-loaded `Shader` to replace its program.
+	 * Any existing program owned by this instance is destroyed first and
+	 * the uniform location cache is cleared, since cached locations are
+	 * only valid for the program they were resolved against.
+	 *
+	 * @param vertexSource GLSL vertex shader source code.
+	 * @param fragmentSource GLSL fragment shader source code.
+	 * @return true on success. On failure this instance is left with
+	 *         `isValid() == false` and no GL objects are leaked; details
+	 *         are written to the log by the underlying compile/link steps.
+	 */
+	bool compileFromSource(const std::string& vertexSource, const std::string& fragmentSource);
+
 	/// Copy construction is disabled (unique ownership)
 	Shader(const Shader&) = delete;
 	/// Copy assignment is disabled (unique ownership)

@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cstring>
 #include <fstream>
+#include <istream>
 #include <sstream>
 
 #include <SDL3_image/SDL_image.h>
@@ -157,10 +158,51 @@ bool BitmapFont::loadFromFile(const std::filesystem::path& texturePath, const st
 		return false;
 	}
 
+	return parseMetricsText(file, metPathString);
+}
+
+bool BitmapFont::loadFromMemory(const U8* textureData, size_t textureSize, const U8* metricsData, size_t metricsSize) {
+	if (!textureData || textureSize == 0 || !metricsData || metricsSize == 0) {
+		BT_ERROR("BitmapFont: loadFromMemory called with empty data");
+		return false;
+	}
+
+	SDL_IOStream* texStream = SDL_IOFromConstMem(textureData, static_cast<int>(textureSize));
+	if (!texStream) {
+		BT_ERROR("BitmapFont: SDL_IOFromConstMem failed for texture: {}", SDL_GetError());
+		return false;
+	}
+
+	SDL_Surface* surface = IMG_Load_IO(texStream, true);
+	if (!surface) {
+		BT_ERROR("BitmapFont: Failed to load font texture from memory: {}", SDL_GetError());
+		return false;
+	}
+
+	texture = std::make_unique<Graphics::Texture>();
+	texture->loadFromSurface(surface);
+	SDL_DestroySurface(surface);
+
+	if (!texture->isValid()) {
+		BT_ERROR("BitmapFont: Failed to create texture from in-memory font data");
+		return false;
+	}
+
+	std::string metricsText(reinterpret_cast<const char*>(metricsData), metricsSize);
+	std::istringstream metricsStream(metricsText);
+
+	return parseMetricsText(metricsStream, "<memory>");
+}
+
+bool BitmapFont::parseMetricsText(std::istream& stream, const std::string& sourceLabel) {
 	std::string line;
 	int lineNum = 0;
 
-	while (std::getline(file, line)) {
+	glyphs.clear();
+	baseline = 0.0f;
+	lineHeight = 0.0f;
+
+	while (std::getline(stream, line)) {
 		lineNum++;
 
 		size_t commentPos = line.find('#');
@@ -189,7 +231,7 @@ bool BitmapFont::loadFromFile(const std::filesystem::path& texturePath, const st
 			U32 id = parseIntValue(line, "id");
 
 			if (id == 0) {
-				BT_WARN("BitmapFont: Skipping glyph with missing/invalid id in {}", metPathString);
+				BT_WARN("BitmapFont: Skipping glyph with missing/invalid id in {}", sourceLabel);
 				continue;
 			}
 
@@ -213,7 +255,7 @@ bool BitmapFont::loadFromFile(const std::filesystem::path& texturePath, const st
 		} else {
 			BT_WARN(
 				"BitmapFont: Unknown command '{}' on line {} in {}",
-				command, lineNum, metPathString
+				command, lineNum, sourceLabel
 			);
 		}
 	}
@@ -235,20 +277,13 @@ bool BitmapFont::loadFromFile(const std::filesystem::path& texturePath, const st
 	tabWidth = spaceWidth * 4.0f;
 
 	BT_DEBUG(
-		"BitmapFont loaded {} glyphs from '{}' and '{}\nlineHeight={:.1f}, baseline={:.1f}, spaceWidth={:.1f}",
-		glyphs.size(), texPathString, metPathString, lineHeight, baseline, spaceWidth
-	);
-
-	BT_DEBUG(
 		"BitmapFont loaded\n"
-		"    texture: {}\n"
-		"    metrics: {}\n"
+		"    metrics source: {}\n"
 		"    glyphs: {}\n"
 		"    lineHeight: {:.1f}\n"
 		"    baseline: {:.1f}\n"
 		"    spaceWidth: {:.1f}",
-		texPathString,
-		metPathString,
+		sourceLabel,
 		glyphs.size(),
 		lineHeight,
 		baseline,
@@ -267,30 +302,46 @@ bool BitmapFont::loadFromBMFont(const std::filesystem::path& bmfPath) {
 		return false;
 	}
 
+	return parseBMFontStream(file, pathStr);
+}
+
+bool BitmapFont::loadFromBMFontMemory(const U8* data, size_t size) {
+	if (!data || size == 0) {
+		BT_ERROR("BitmapFont: loadFromBMFontMemory called with empty data");
+		return false;
+	}
+
+	std::string buffer(reinterpret_cast<const char*>(data), size);
+	std::istringstream stream(buffer, std::ios::binary);
+
+	return parseBMFontStream(stream, "<memory>");
+}
+
+bool BitmapFont::parseBMFontStream(std::istream& stream, const std::string& sourceLabel) {
 	char sign[4];
-	file.read(sign, 4);
+	stream.read(sign, 4);
 	if (sign[0] != 'B' || sign[1] != 'M' || sign[2] != 'F' || sign[3] != '\0') {
-		BT_ERROR("BitmapFont: Invalid BMF file format: {}", pathStr);
+		BT_ERROR("BitmapFont: Invalid BMF file format: {}", sourceLabel);
 		return false;
 	}
 
 	U16 version;
-	file.read(reinterpret_cast<char*>(&version), sizeof(version));
+	stream.read(reinterpret_cast<char*>(&version), sizeof(version));
 
 	if (version != 1) {
-		BT_ERROR("BitmapFont: Unsupported BMF version {} in file: {}", version, pathStr);
+		BT_ERROR("BitmapFont: Unsupported BMF version {} in file: {}", version, sourceLabel);
 		return false;
 	}
 
-	file.read(reinterpret_cast<char*>(&lineHeight), sizeof(float));
-	file.read(reinterpret_cast<char*>(&baseline), sizeof(float));
-	file.read(reinterpret_cast<char*>(&spaceWidth), sizeof(float));
+	stream.read(reinterpret_cast<char*>(&lineHeight), sizeof(float));
+	stream.read(reinterpret_cast<char*>(&baseline), sizeof(float));
+	stream.read(reinterpret_cast<char*>(&spaceWidth), sizeof(float));
 
 	U32 imageSize;
-	file.read(reinterpret_cast<char*>(&imageSize), sizeof(imageSize));
+	stream.read(reinterpret_cast<char*>(&imageSize), sizeof(imageSize));
 
 	std::vector<U8> imageData(imageSize);
-	file.read(reinterpret_cast<char*>(imageData.data()), imageSize);
+	stream.read(reinterpret_cast<char*>(imageData.data()), imageSize);
 
 	SDL_IOStream* rw = SDL_IOFromConstMem(imageData.data(), imageSize);
 	if (!rw) {
@@ -314,7 +365,7 @@ bool BitmapFont::loadFromBMFont(const std::filesystem::path& bmfPath) {
 	}
 
 	U32 glyphCount;
-	file.read(reinterpret_cast<char*>(&glyphCount), sizeof(glyphCount));
+	stream.read(reinterpret_cast<char*>(&glyphCount), sizeof(glyphCount));
 
 	glyphs.clear();
 
@@ -323,14 +374,14 @@ bool BitmapFont::loadFromBMFont(const std::filesystem::path& bmfPath) {
 
 		Glyph glyph;
 
-		file.read(reinterpret_cast<char*>(&codePoint), sizeof(codePoint));
-		file.read(reinterpret_cast<char*>(&glyph.rect.x), sizeof(glyph.rect.x));
-		file.read(reinterpret_cast<char*>(&glyph.rect.y), sizeof(glyph.rect.y));
-		file.read(reinterpret_cast<char*>(&glyph.rect.w), sizeof(glyph.rect.w));
-		file.read(reinterpret_cast<char*>(&glyph.rect.h), sizeof(glyph.rect.h));
-		file.read(reinterpret_cast<char*>(&glyph.xOffset), sizeof(glyph.xOffset));
-		file.read(reinterpret_cast<char*>(&glyph.yOffset), sizeof(glyph.yOffset));
-		file.read(reinterpret_cast<char*>(&glyph.xAdvance), sizeof(glyph.xAdvance));
+		stream.read(reinterpret_cast<char*>(&codePoint), sizeof(codePoint));
+		stream.read(reinterpret_cast<char*>(&glyph.rect.x), sizeof(glyph.rect.x));
+		stream.read(reinterpret_cast<char*>(&glyph.rect.y), sizeof(glyph.rect.y));
+		stream.read(reinterpret_cast<char*>(&glyph.rect.w), sizeof(glyph.rect.w));
+		stream.read(reinterpret_cast<char*>(&glyph.rect.h), sizeof(glyph.rect.h));
+		stream.read(reinterpret_cast<char*>(&glyph.xOffset), sizeof(glyph.xOffset));
+		stream.read(reinterpret_cast<char*>(&glyph.yOffset), sizeof(glyph.yOffset));
+		stream.read(reinterpret_cast<char*>(&glyph.xAdvance), sizeof(glyph.xAdvance));
 
 		glyphs[codePoint] = glyph;
 	}
@@ -339,12 +390,12 @@ bool BitmapFont::loadFromBMFont(const std::filesystem::path& bmfPath) {
 
 	BT_DEBUG(
 		"BitmapFont loaded\n"
-		"    file: {}\n"
+		"    source: {}\n"
 		"    glyphs: {}\n"
 		"    lineHeight: {:.1f}\n"
 		"    baseline: {:.1f}\n"
 		"    spaceWidth: {:.1f}",
-		pathStr,
+		sourceLabel,
 		glyphs.size(),
 		lineHeight,
 		baseline,

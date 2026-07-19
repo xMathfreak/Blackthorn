@@ -43,9 +43,56 @@ void TrueTypeFont::cleanupShader() {
 
 bool TrueTypeFont::loadFromFile(const std::filesystem::path& filePath, int pointSize) {
 	const auto pathStr = filePath.string();
-	font = TTF_OpenFont(pathStr.c_str(), pointSize);
+	font = TTF_OpenFont(pathStr.c_str(), static_cast<float>(pointSize));
 	if (!font) {
 		BT_ERROR("TrueTypeFont: Failed to load True Type font '{}': '{}'", pathStr, SDL_GetError());
+		return false;
+	}
+
+	// This instance previously owned a loadFromMemory() buffer; a file-backed
+	// font doesn't need it.
+	fontDataBuffer.clear();
+	fontDataBuffer.shrink_to_fit();
+
+	TTF_SetFontSDF(font, true);
+	TTF_SetFontKerning(font, true);
+
+	lineHeight = TTF_GetFontLineSkip(font);
+
+	initializeAtlas();
+
+	BT_DEBUG(
+		"Loaded TrueType font '{}' at {} pt (line height: {})",
+		pathStr, pointSize, lineHeight
+	);
+
+	return true;
+}
+
+bool TrueTypeFont::loadFromMemory(const U8* data, size_t size, int pointSize) {
+	if (!data || size == 0) {
+		BT_ERROR("TrueTypeFont: loadFromMemory called with empty data");
+		return false;
+	}
+
+	if (font) {
+		TTF_CloseFont(font);
+		font = nullptr;
+	}
+
+	fontDataBuffer.assign(data, data + size);
+
+	SDL_IOStream* stream = SDL_IOFromConstMem(fontDataBuffer.data(), fontDataBuffer.size());
+	if (!stream) {
+		BT_ERROR("TrueTypeFont: SDL_IOFromConstMem failed: '{}'", SDL_GetError());
+		fontDataBuffer.clear();
+		return false;
+	}
+
+	font = TTF_OpenFontIO(stream, true, static_cast<float>(pointSize));
+	if (!font) {
+		BT_ERROR("TrueTypeFont: Failed to load True Type font from memory: '{}'", SDL_GetError());
+		fontDataBuffer.clear();
 		return false;
 	}
 
@@ -54,6 +101,17 @@ bool TrueTypeFont::loadFromFile(const std::filesystem::path& filePath, int point
 
 	lineHeight = TTF_GetFontLineSkip(font);
 
+	initializeAtlas();
+
+	BT_DEBUG(
+		"Loaded TrueType font from memory ({} bytes) at {} pt (line height: {})",
+		size, pointSize, lineHeight
+	);
+
+	return true;
+}
+
+void TrueTypeFont::initializeAtlas() {
 	atlas = std::make_unique<Graphics::Texture>();
 
 	const int atlasSize = FontConfig::getCurrent().atlasSize;
@@ -69,13 +127,6 @@ bool TrueTypeFont::loadFromFile(const std::filesystem::path& filePath, int point
 	atlasCursor = {0, 0};
 	atlasRowHeight = 0;
 	glyphCache.clear();
-
-	BT_DEBUG(
-		"Loaded TrueType font '{}' at {} pt (line height: {})",
-		pathStr, pointSize, lineHeight
-	);
-
-	return true;
 }
 
 
