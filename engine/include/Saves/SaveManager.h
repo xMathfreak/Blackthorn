@@ -108,6 +108,50 @@ using SaveKeyDeriveFn = std::function<void(
  * saves.loadSections(saveId, { "bt.clock"_saveid, "game.inventory"_saveid });
  * @endcode
  *
+ * @par Accessing loaded data
+ * @c load() and @c loadSections() only return a @c SaveResult indicating
+ * success or failure. They do not hand back the deserialized data
+ * directly. This is because @c ISaveSection::read() deserializes straight
+ * into the same section instance that was registered, so the loaded state
+ * is already sitting on that instance once @c load() returns. There are
+ * two ways a section exposes that state, depending on how it was built:
+ *
+ * - @b Reference-backed sections (e.g. @c WorldSaveSection, @c
+ *   ClockSaveSection) write directly into the game object passed to their
+ *   constructor (an @c EntityPool, a @c SimClock, ...). Nothing further is
+ *   needed as that object already reflects the loaded state.
+ * - @b Self-contained sections (e.g. @c MetaSaveSection) own their data as
+ *   member fields and expose it through getters. Retrieve the section
+ *   instance with @c getSection() and downcast it to read the data:
+ *
+ * @code
+ * auto result = saves.load(saveId);
+ * if (!result) {
+ *     BT_ERROR("Load failed: {}", result.error);
+ *     return;
+ * }
+ *
+ * // Reference-backed: `pool` and `simClock` were already updated in place.
+ *
+ * // Self-contained: fetch the section and downcast to read its getters.
+ * if (auto* meta = saves.getSection("bt.meta"_saveid)) {
+ *     auto* metaSection = static_cast<Sections::MetaSaveSection*>(meta);
+ *     BT_LOG("Loaded save from {} ({} ticks played)",
+ *         metaSection->getEngineVersion(), metaSection->getPlaytimeTicks());
+ * }
+ *
+ * // Custom game sections work the same way:
+ * if (auto* inv = saves.getSection("game.inventory"_saveid)) {
+ *     auto* inventory = static_cast<InventorySection*>(inv);
+ *     for (auto& item : inventory->getItems())
+ *         BT_LOG("  {}", item.id);
+ * }
+ * @endcode
+ *
+ * @note @c getSection() returns the same instance every time. It is not
+ * repopulated per call. The downcast is safe as long as the ID used to
+ * look it up matches the concrete type registered under that ID.
+ *
  * @par Encryption
  * If no @c IEncryptor is set, documents are compressed only. A warning is
  * logged in debug builds. If no @c ICompressor is set either, documents are
@@ -181,6 +225,18 @@ public:
 
 	/**
 	 * @brief Returns the registered section with the given ID, or null.
+	 *
+	 * This is the primary way to pull data back out after a successful
+	 * @c load() for sections that own their data (as opposed to
+	 * reference-backed sections, which write directly into a game object
+	 * you already hold). The returned pointer must be @c static_cast to the
+	 * concrete section type before its data can be read. See
+	 * "Accessing loaded data" in the class-level docs above for a worked
+	 * example.
+	 *
+	 * @param sectionId FNV-1a hash of the section name, e.g. @c "bt.meta"_saveid.
+	 * @return Pointer to the registered @c ISaveSection instance, or @c nullptr
+	 *         if no section with that ID has been registered.
 	 */
 	ISaveSection* getSection(U64 sectionId) const;
 

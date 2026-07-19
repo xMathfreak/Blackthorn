@@ -66,8 +66,27 @@ struct BLACKTHORN_API SectionReadContext {
  *         for (auto& item : items)
  *             item.id = ctx.buffer.readString();
  *     }
+ *
+ *     // Exposed so callers can retrieve the deserialized state after a
+ *     // load (see SaveManager's "Accessing loaded data" docs). Without a
+ *     // getter like this, read() still populates `items`, but nothing
+ *     // outside the class can reach it.
+ *     const std::vector<Item>& getItems() const { return items; }
+ *
+ * private:
+ *     std::vector<Item> items;
  * };
  * @endcode
+ *
+ * @par Accessing data after load()
+ * A section instance is not disposable, SaveManager keeps it alive for its
+ * own lifetime and reuses the same instance across every save and load.
+ * Once SaveManager::load() returns successfully, whatever read() wrote
+ * into this instance's member fields (here, `items`) is retrievable
+ * immediately via SaveManager::getSection(), downcast to the concrete
+ * type, then read through a getter like getItems() above. Sections built
+ * around an external reference (a pool, a clock, ...) skip the getter
+ * entirely, since read() writes straight into that referenced object.
  */
 class BLACKTHORN_API ISaveSection {
 public:
