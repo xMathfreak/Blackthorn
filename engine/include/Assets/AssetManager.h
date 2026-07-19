@@ -8,6 +8,10 @@
 #include <typeindex>
 #include <unordered_map>
 
+#ifdef BT_PACK_MODE
+	#include "Assets/AssetResolver.h"
+#endif
+
 #include "Core/Export.h"
 #include "Assets/AssetHandle.h"
 #include "Assets/AssetStorage.h"
@@ -31,23 +35,29 @@ namespace Blackthorn::Assets {
  *
  * @section registration Registration
  * @code
- * // Sync only - async path not available for this type:
+ * // Sync only:
  * manager.registerLoader<Texture>(make_unique<TextureLoader>());
  *
- * // Sync + async - both paths available:
+ * // Sync + async (debug/loose-file mode):
  * manager.registerLoader<Texture>(
  *     make_unique<TextureLoader>(),
  *     make_unique<AsyncTextureLoader>()
+ * );
+ *
+ * // Sync + async (BT_PACK_MODE resolver injected automatically):
+ * manager.registerPackLoader<Texture>(
+ *     make_unique<TextureLoader>(),
+ *     make_unique<AsyncTextureLoader>(&manager.resolver())
  * );
  * @endcode
  *
  * @section loading Loading
  * @code
- * AssetHandle<Texture> h1 = manager.load<Texture>("id", params);      // ready immediately
- * AssetHandle<Texture> h2 = manager.loadAsync<Texture>("id", params); // ready later
+ * // Debug mode: identify by path
+ * AssetHandle<Texture> h1 = manager.load<Texture>("player", PathLoadParams("assets/player.png"));
  *
- * if (h2.isReady()) { Texture* t = h2.get(); }
- * h2.wait();           // block until ready (loading screens only)
+ * // Pack mode: identify by pack ID
+ * AssetHandle<Texture> h2 = manager.loadAsync<Texture>("player", PackLoadParams("player_png"));
  * @endcode
  *
  * @section flushing Flushing
@@ -74,47 +84,79 @@ public:
 	AssetManager& operator=(const AssetManager&) = delete;
 
 	/**
-	 * @brief Register the sync loader (required) and optionally an async loader.
+	 * @brief Registers a synchronous loader and optionally an async loader.
 	 *
-	 * @param syncLoader  The synchronous loader.
-	 * @param asyncLoader The asynchronous loader.
+	 * Use in debug/loose-file builds. The async loader, if provided, is
+	 * responsible for sourcing the resolver itself in BT_PACK_MODE (use
+	 * registerPackLoader instead to have the manager inject it automatically).
 	 *
-	 * @tparam AssetType The type of asset for the corresponding loader.
-	 * @note Must be called before any load() / loadAsync() for AssetType.
+	 * @tparam AssetType  The asset type both loaders produce.
 	 */
 	template <typename AssetType>
 	void registerLoader(
 		std::unique_ptr<IAssetLoader<AssetType>> syncLoader,
 		std::unique_ptr<IAsyncAssetLoader<AssetType>> asyncLoader = nullptr
 	) {
-		auto type = std::type_index(typeid(AssetType));
+		const auto type = std::type_index(typeid(AssetType));
 
 		loaders[type] = std::make_unique<LoaderWrapper<AssetType>>(
 			std::move(syncLoader),
 			std::move(asyncLoader)
 		);
 
-		if (storages.find(type) == storages.end())
+		if (!storages.count(type))
 			storages.try_emplace(type, std::make_unique<AssetStorage<AssetType>>());
 	}
+
+#ifdef BT_PACK_MODE
+	/**
+	 * @brief Registers loaders for BT_PACK_MODE, injecting the AssetResolver
+	 *        into the async loader automatically.
+	 *
+	 * Async loaders in pack mode require a non-owning pointer to the
+	 * AssetResolver so they can call resolver.resolve(id) from the worker
+	 * thread. This overload passes &assetResolver at registration time so
+	 * callers never have to touch the resolver directly.
+	 *
+	 * Usage:
+	 * @code
+	 * // The async loader's constructor must accept AssetResolver* as its
+	 * // first argument. Any additional arguments follow.
+	 * manager.registerPackLoader<Texture>(
+	 *     std::make_unique<TextureLoader>(),
+	 *     std::make_unique<AsyncTextureLoader>(&manager.resolver())
+	 * );
+	 * @endcode
+	 *
+	 * @tparam AssetType   The asset type both loaders produce.
+	 */
+	template <typename AssetType>
+	void registerPackLoader(
+		std::unique_ptr<IAssetLoader<AssetType>> syncLoader,
+		std::unique_ptr<IAsyncAssetLoader<AssetType>> asyncLoader
+	) {
+		registerLoader<AssetType>(std::move(syncLoader), std::move(asyncLoader));
+	}
+#endif
 
 	/**
 	 * @brief Synchronous, blocking load for an asset of type AssetType.
 	 *
-	 * @param id     The asset identifier.
-	 * @param params The parameters for loading the asset.
+	 * Returns immediately with a ready handle. Prefer loadAsync() for assets
+	 * loaded during gameplay to avoid stalling the frame.
 	 *
-	 * @tparam AssetType The type of asset to be loaded.
+	 * In BT_PACK_MODE, pass PackLoadParams to identify the asset by its
+	 * pack ID. PathLoadParams is only meaningful in debug (loose-file) builds.
 	 *
-	 * @return A ready AssetHandle to the loaded asset, or an invalid handle
-	 *         if loading fails or no loader is registered for AssetType.
+	 * @param id     Runtime identifier stored in AssetStorage.
+	 * @param params Load parameters (PathLoadParams or PackLoadParams).
 	 */
 	template <typename AssetType>
 	AssetHandle<AssetType> load(const std::string& id, const LoadParams& params) {
 		if (has<AssetType>(id))
 			return makeReadyHandle<AssetType>(id);
 
-		auto type = std::type_index(typeid(AssetType));
+		const auto type = std::type_index(typeid(AssetType));
 		auto it = loaders.find(type);
 		if (it == loaders.end()) {
 			BT_WARN("AssetManager: no loader registered for '{}' (id '{}')",
@@ -142,32 +184,29 @@ public:
 
 	template <typename AssetType>
 	AssetHandle<AssetType> load(std::filesystem::path path) {
-		return load<AssetType>(std::filesystem::path(path).stem().string(), PathLoadParams(std::move(path)));
+		return load<AssetType>(path.stem().string(), PathLoadParams(std::move(path)));
 	}
 
 	/**
 	 * @brief Asynchronous, non-blocking load for an asset of type AssetType.
 	 *
-	 * Submits two jobs to the JobSystem: a worker-thread decode job, followed
-	 * by a main-thread upload job chained to it via a JobHandle dependency.
-	 * The upload runs automatically the next time the engine calls
-	 * JobSystem::flushMainThread() (i.e. flushPendingUploads()).
+	 * Submits a worker-thread decode job followed by a main-thread upload job
+	 * chained to it. The upload runs the next time flushPendingUploads() is
+	 * called (once per frame).
 	 *
-	 * @param id     The asset identifier.
-	 * @param params The parameters for loading the asset.
+	 * In BT_PACK_MODE, @p params must be PackLoadParams. PathLoadParams will
+	 * cause the async loader to fail silently because the ID derivation from
+	 * a file path does not match the ID written by gen-manifest/btpacker.
 	 *
-	 * @tparam AssetType The type of asset to be loaded.
-	 *
-	 * @return A pending AssetHandle that becomes ready once the upload job
-	 *         completes. Falls back to a synchronous load if no async loader
-	 *         is registered for AssetType.
+	 * @param id     Runtime identifier stored in AssetStorage.
+	 * @param params Load parameters (PackLoadParams in pack mode).
 	 */
 	template <typename AssetType>
 	AssetHandle<AssetType> loadAsync(const std::string& id, const LoadParams& params) {
 		if (has<AssetType>(id))
 			return makeReadyHandle<AssetType>(id);
 
-		auto type = std::type_index(typeid(AssetType));
+		const auto type = std::type_index(typeid(AssetType));
 		auto it = loaders.find(type);
 		if (it == loaders.end()) {
 			BT_WARN("AssetManager: no loader registered for '{}' (id '{}')",
@@ -184,9 +223,7 @@ public:
 
 		{
 			std::unique_lock<std::mutex> lock(inFlightMutex);
-
 			auto flightIt = inFlight.find(id);
-
 			if (flightIt != inFlight.end()) {
 				BT_DEBUG("AssetManager: '{}' already in-flight", id);
 				return AssetHandle<AssetType>(id, this, flightIt->second);
@@ -265,15 +302,13 @@ public:
 
 	template <typename AssetType>
 	AssetHandle<AssetType> loadAsync(std::filesystem::path path) {
-		return loadAsync<AssetType>(std::filesystem::path(path).stem().string(), PathLoadParams(std::move(path)));
+		return loadAsync<AssetType>(path.stem().string(), PathLoadParams(std::move(path)));
 	}
 
 	template <typename AssetType>
 	AssetType* get(const std::string& id) {
 		auto* storage = getStorage<AssetType>();
-		if (!storage || !storage->has(id))
-			return nullptr;
-		return storage->get(id);
+		return (storage && storage->has(id)) ? storage->get(id) : nullptr;
 	}
 
 	template <typename AssetType>
@@ -342,9 +377,11 @@ public:
 
 	template <typename AssetType>
 	std::vector<std::string> getSupportedExtensions() const {
-		auto type = std::type_index(typeid(AssetType));
+		const auto type = std::type_index(typeid(AssetType));
 		auto it = loaders.find(type);
-		return (it != loaders.end()) ? it->second->getSupportedExtensions() : std::vector<std::string>{};
+		return (it != loaders.end())
+			? it->second->getSupportedExtensions()
+			: std::vector<std::string>{};
 	}
 
 	void unloadById(const std::string& id) {
@@ -352,15 +389,12 @@ public:
 			if (storage->has(id))
 				storage->remove(id);
 		}
-
 		assetParams.erase(id);
 	}
 
 	/**
 	 * @brief Promotes all completed decode jobs into GPU-resident assets.
 	 *
-	 * Delegates to JobSystem::flushMainThread(), running every pending
-	 * main-thread upload job that has had its decode dependency satisfied.
 	 * Call once per frame before beginScene().
 	 */
 	void flushPendingUploads();
@@ -368,24 +402,51 @@ public:
 	/**
 	 * @brief Blocks until all outstanding async loads are complete.
 	 *
-	 * Spins on pendingTotal, flushing main-thread upload jobs each iteration.
-	 * Only call from loading screens or scene transitions — not during normal
-	 * frame execution.
+	 * Only call from loading screens or scene transitions.
 	 */
 	void flushAllPendingUploads();
 
-	/// Total outstanding loads (decode jobs + upload jobs not yet complete).
+	/// Total outstanding loads (decode + upload jobs not yet complete).
 	size_t pendingCount() const;
 
-	/**
-	 * @brief Blocks until all outstanding async loads complete.
-	 */
+	/// Blocks until all outstanding async loads complete.
 	void shutdown();
+
+#ifdef BT_PACK_MODE
+	/**
+	 * @brief Mounts a .btp pack file onto the resolver stack.
+	 *
+	 * Call during engine startup before loading any packed assets. Safe to
+	 * call at any time for runtime mod / DLC support.
+	 *
+	 * Mount order matters: the last pack mounted wins any ID conflict, giving
+	 * mod packs priority over base game packs.
+	 *
+	 * @param path Path to the .btp file.
+	 * @return true if the pack mounted successfully.
+	 */
+	bool mountPack(const std::filesystem::path& path) {
+		return assetResolver.mount(path);
+	}
+
+	/**
+	 * @brief Unmounts a previously mounted pack file.
+	 *
+	 * Assets already loaded from this pack remain alive in AssetStorage.
+	 * Typical use: unmounting a chapter pack to reclaim TOC memory.
+	 */
+	void unmountPack(const std::filesystem::path& path) {
+		assetResolver.unmount(path);
+	}
+
+	AssetResolver& resolver() { return assetResolver; }
+	const AssetResolver& resolver() const { return assetResolver; }
+#endif
 
 private:
 	template <typename AssetType>
 	AssetStorage<AssetType>* getStorage() {
-		auto type = std::type_index(typeid(AssetType));
+		const auto type = std::type_index(typeid(AssetType));
 		auto it = storages.find(type);
 		if (it == storages.end()) {
 			storages[type] = std::make_unique<AssetStorage<AssetType>>();
@@ -396,7 +457,7 @@ private:
 
 	template <typename AssetType>
 	const AssetStorage<AssetType>* getStorage() const {
-		auto type = std::type_index(typeid(AssetType));
+		const auto type = std::type_index(typeid(AssetType));
 		auto it = storages.find(type);
 		return (it != storages.end())
 			? static_cast<const AssetStorage<AssetType>*>(it->second.get())
@@ -406,12 +467,6 @@ private:
 	template <typename AssetType>
 	AssetHandle<AssetType> makeReadyHandle(const std::string& id) {
 		return AssetHandle<AssetType>(id, this, Jobs::JobHandle::createComplete());
-	}
-
-	/// Returns a handle whose flag is permanently false.
-	template <typename AssetType>
-	AssetHandle<AssetType> makePendingHandle(const std::string& id) {
-		return AssetHandle<AssetType>(id, this, nullptr);
 	}
 
 	struct ILoaderWrapper {
@@ -450,6 +505,10 @@ private:
 	std::unordered_map<std::type_index, std::unique_ptr<ILoaderWrapper>> loaders;
 	std::unordered_map<std::type_index, std::unique_ptr<IAssetStorage>> storages;
 	std::unordered_map<std::string, std::unique_ptr<LoadParams>> assetParams;
+
+#ifdef BT_PACK_MODE
+	AssetResolver assetResolver;
+#endif
 
 	Jobs::JobSystem& jobs;
 

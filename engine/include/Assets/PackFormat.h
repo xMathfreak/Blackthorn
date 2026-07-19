@@ -12,7 +12,7 @@ constexpr uint32_t BTP_VERSION = 1u;
  * @brief Compression codec tag stored per BTPEntry.
  *
  * Stored as a uint8_t in the binary format. Additional codecs can be added
- * in future versions without breaking the format — loaders check this field
+ * in future versions without breaking the format. Loaders check this field
  * before decompressing.
  */
 enum class PackCompression : uint8_t {
@@ -95,7 +95,7 @@ struct BTPEntry {
 	uint64_t assetID; ///< xxHash64 of the asset string ID.
 	uint64_t dataOffset; ///< Byte offset of the compressed data blob from file start.
 	uint64_t compressedSize; ///< Compressed byte size on disk.
-	uint64_t uncompressedSize; ///< Uncompressed byte size — pre-allocate buffers to this.
+	uint64_t uncompressedSize; ///< Uncompressed byte size, pre-allocate buffers to this.
 	uint64_t xxhash; ///< xxHash64 of the compressed blob for integrity verification.
 	PackAssetType assetType; ///< Broad asset category.
 	PackCompression compression; ///< Codec used to compress this entry.
