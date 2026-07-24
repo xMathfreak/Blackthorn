@@ -39,6 +39,7 @@ struct BLACKTHORN_API RawAudioData : Assets::IRawAssetData {
 	std::string srcPath;
 	std::optional<AudioData> data;
 	AudioMetadata metadata;
+	std::optional<std::vector<U8>> compressedBytes;
 };
 
 class BLACKTHORN_API AudioLoader final : public Assets::IAssetLoader<AudioClip> {
@@ -92,7 +93,7 @@ public:
 	void upload(Assets::IRawAssetData& rawBase, Assets::AssetManager& manager) override {
 		auto& raw = static_cast<RawAudioData&>(rawBase);
 		auto clip = std::make_unique<AudioClip>();
-		clip->loadFromMemory(raw.srcPath, raw.metadata, raw.data);
+		clip->loadFromMemory(raw.srcPath, raw.metadata, raw.data, std::move(raw.compressedBytes));
 		manager.add<AudioClip>(raw.assetID, std::move(clip));
 	}
 
@@ -122,7 +123,7 @@ private:
 			return nullptr;
 		}
 
-		return decodeAudioFromMemory(pp->assetID, packed->bytes, packed->sourcePath, false);
+		return decodeAudioFromMemory(pp->assetID, std::move(packed->bytes), packed->sourcePath, false);
 	}
 
 	Assets::AssetResolver* m_resolver = nullptr;
@@ -162,7 +163,7 @@ private:
 
 	std::unique_ptr<Assets::IRawAssetData> decodeAudioFromMemory(
 		const std::string& assetID,
-		const std::vector<U8>& bytes,
+		std::vector<U8> bytes,
 		const std::string& sourcePath,
 		bool loadPCM
 	) {
@@ -183,6 +184,8 @@ private:
 
 			raw->data = std::move(data);
 		}
+
+		raw->compressedBytes = std::move(bytes);
 
 		raw->valid = true;
 		return raw;

@@ -2,10 +2,12 @@
 
 #include <optional>
 #include <filesystem>
+#include <vector>
 
 #include "Audio/Decoding/AudioDecoder.h"
 #include "Audio/Resources/AudioData.h"
 #include "Core/Export.h"
+#include "Core/Types/Numeric.h"
 
 namespace Blackthorn::Audio {
 
@@ -50,13 +52,32 @@ public:
 		}
 
 		AudioData decoded;
-		if (!Decoding::AudioDecoder::decode(clipPath, decoded)) {
-			BT_ERROR(
-				"AudioClip: loadPCM() failed to decode clip '{}'",
-				clipPath.string()
+		bool ok = false;
+
+		if (compressedBytes) {
+			ok = Decoding::AudioDecoder::decodeFromMemory(
+				compressedBytes->data(), compressedBytes->size(), decoded
 			);
-			return false;
+
+			if (!ok) {
+				BT_ERROR(
+					"AudioClip: loadPCM() failed to decode packed clip ({} bytes)",
+					compressedBytes->size()
+				);
+			}
+		} else {
+			ok = Decoding::AudioDecoder::decode(clipPath, decoded);
+
+			if (!ok) {
+				BT_ERROR(
+					"AudioClip: loadPCM() failed to decode clip '{}'",
+					clipPath.string()
+				);
+			}
 		}
+
+		if (!ok)
+			return false;
 
 		pcmData = std::move(decoded);
 		return true;
@@ -70,6 +91,7 @@ public:
 		clipPath = std::filesystem::path("");
 		metaData = {};
 		pcmData.reset();
+		compressedBytes.reset();
 		duration = 0.0;
 		loaded = false;
 	}
@@ -118,18 +140,50 @@ public:
 		return pcmData.has_value();
 	}
 
+	/**
+	 * @brief True if this clip was loaded from a pack and retains its
+	 * compressed source bytes.
+	 *
+	 * When true, loadPCM() and AudioThread's streaming path decode from
+	 * compressedData()/compressedSize() instead of sourcePath(), a packed
+	 * asset generally has no file at sourcePath() that exists at runtime.
+	 */
+	[[nodiscard]]
+	bool hasCompressedSource() const noexcept {
+		return compressedBytes.has_value();
+	}
+
+	/// Pointer to the owned compressed source bytes, or nullptr if this clip
+	/// wasn't loaded from a pack (see hasCompressedSource()).
+	[[nodiscard]]
+	const U8* compressedData() const noexcept {
+		return compressedBytes ? compressedBytes->data() : nullptr;
+	}
+
+	/// Size in bytes of compressedData(), or 0 if hasCompressedSource() is false.
+	[[nodiscard]]
+	size_t compressedSize() const noexcept {
+		return compressedBytes ? compressedBytes->size() : 0;
+	}
+
 	[[nodiscard]]
 	const AudioData& data() const noexcept {
 		return *pcmData;
 	}
 
-	void loadFromMemory(std::filesystem::path path, AudioMetadata& meta, std::optional<AudioData> pcm) {
+	void loadFromMemory(
+		std::filesystem::path path,
+		AudioMetadata& meta,
+		std::optional<AudioData> pcm,
+		std::optional<std::vector<U8>> sourceBytes = std::nullopt
+	) {
 		unload();
 
-		clipPath = path;
+		clipPath = std::move(path);
 		metaData = std::move(meta);
 
 		pcmData = std::move(pcm);
+		compressedBytes = std::move(sourceBytes);
 
 		if (metaData.sampleRate > 0 && metaData.frameCount > 0) {
 			duration = static_cast<double>(metaData.frameCount) /
@@ -143,6 +197,10 @@ private:
 	std::filesystem::path clipPath;
 	AudioMetadata metaData;
 	std::optional<AudioData> pcmData;
+
+	/// Owned compressed source bytes for packed loads.
+	std::optional<std::vector<U8>> compressedBytes;
+
 	double duration = 0.0;
 	bool loaded = false;
 };

@@ -69,7 +69,7 @@ private:
 
 	void processResidentPlayback(
 		Voice& voice,
-		const AudioClip& clip,
+		AudioClip& clip,
 		float seekSeconds = 0.0f
 	);
 

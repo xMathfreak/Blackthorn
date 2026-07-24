@@ -531,7 +531,7 @@ void AudioThread::restoreVoices() {
 			);
 			processStreamingPlayback(*voice, *snap.clip, startFrame);
 		} else {
-			processResidentPlayback(*voice, *snap.clip, effectiveTime);
+			processResidentPlayback(*voice, const_cast<AudioClip&>(*snap.clip), effectiveTime);
 		}
 
 		BT_DEBUG(
@@ -601,33 +601,26 @@ void AudioThread::submitStreamingJob(
 
 void AudioThread::processResidentPlayback(
 	Voice& voice,
-	const AudioClip& clip,
+	AudioClip& clip,
 	float seekSeconds
 ) {
 	AudioBuffer buffer;
 	buffer.create();
 
 	try {
-		if (clip.hasPCM()) {
-			buffer.setData(clip.data(), clip.metadata());
-		} else {
+		if (!clip.hasPCM()) {
 			BT_WARN(
 				"AudioThread: decoding '{}' on audio thread, call loadPCM() before play() to avoid this",
-				clip.sourcePath().string()
+				clip.hasCompressedSource() ? "<packed>" : clip.sourcePath().string()
 			);
 
-			AudioData data;
-			if (!Decoding::AudioDecoder::decode(clip.sourcePath(), data)) {
-				BT_ERROR(
-					"AudioThread: Failed to decode '{}'",
-					clip.sourcePath().string()
-				);
+			if (!clip.loadPCM()) {
 				voicePool->release(voice);
 				return;
 			}
-
-			buffer.setData(data, clip.metadata());
 		}
+
+		buffer.setData(clip.data(), clip.metadata());
 	} catch (const AudioException& e) {
 		BT_ERROR(
 			"AudioThread: failed to set buffer data: {}",
@@ -654,24 +647,37 @@ void AudioThread::processStreamingPlayback(
 	const AudioClip& clip,
 	U64 startFrame
 ) {
-	auto decoder = Streaming::StreamDecoderFactory::create(
-		clip.sourcePath().string()
-	);
+	const auto describeSource = [&clip]() -> std::string {
+		return clip.hasCompressedSource()
+			? "<packed>"
+			: clip.sourcePath().string();
+	};
+
+	std::unique_ptr<Streaming::IStreamDecoder> decoder;
+	bool opened = false;
+
+	if (clip.hasCompressedSource()) {
+		decoder = Streaming::StreamDecoderFactory::createFromMemory(
+			clip.compressedData(), clip.compressedSize()
+		);
+
+		if (decoder)
+			opened = decoder->openMemory(clip.compressedData(), clip.compressedSize());
+	} else {
+		decoder = Streaming::StreamDecoderFactory::create(clip.sourcePath());
+
+		if (decoder)
+			opened = decoder->open(clip.sourcePath());
+	}
 
 	if (!decoder) {
-		BT_ERROR(
-			"AudioThread: no decoder for '{}'",
-			clip.sourcePath().string()
-		);
+		BT_ERROR("AudioThread: no decoder for '{}'", describeSource());
 		voicePool->release(voice);
 		return;
 	}
 
-	if (!decoder->open(clip.sourcePath())) {
-		BT_ERROR(
-			"AudioThread: failed to open decoder for '{}'",
-			clip.sourcePath().string()
-		);
+	if (!opened) {
+		BT_ERROR("AudioThread: failed to open decoder for '{}'", describeSource());
 		voicePool->release(voice);
 		return;
 	}
@@ -691,7 +697,7 @@ void AudioThread::processStreamingPlayback(
 			BT_WARN(
 				"AudioThread: seek to frame {} failed for '{}', "
 				"resuming from start",
-				startFrame, clip.sourcePath().string()
+				startFrame, describeSource()
 			);
 		}
 	}
@@ -719,7 +725,7 @@ void AudioThread::processStreamingPlayback(
 	if (queued == 0) {
 		BT_ERROR(
 			"AudioThread: pre-fill produced no frames for '{}', aborting",
-			clip.sourcePath().string()
+			describeSource()
 		);
 		voicePool->release(voice);
 		return;

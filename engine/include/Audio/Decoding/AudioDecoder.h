@@ -25,21 +25,31 @@ namespace {
 		return ext;
 	}
 
+} // anonymous namespace
+
+class BLACKTHORN_API AudioDecoder {
+public:
 	/**
-	 * @brief Detects the audio container format from the first few bytes.
+	 * @brief Detects the audio container format from the first few bytes
+	 * of an in-memory buffer.
 	 *
-	 * Used in the memory-backed decode/getInfo paths where no file extension
-	 * is available. Returns a lowercase extension string (".ogg", ".mp3",
-	 * ".flac", ".wav") or an empty string if the format is unrecognised.
+	 * Used internally by decodeFromMemory()/getInfoFromMemory() (no file
+	 * extension is available in the memory-backed path), and by
+	 * Streaming::StreamDecoderFactory::createFromMemory() for the same
+	 * reason when opening a streaming decoder from packed/in-memory bytes
+	 * rather than a file.
 	 *
 	 * Detection logic:
-	 *   OGG:  bytes[0..3] == "OggS"
-	 *   FLAC: bytes[0..3] == "fLaC"
-	 *   WAV:  bytes[0..3] == "RIFF"  &&  bytes[8..11] == "WAVE"
+	 *   OGG:  bytes[0..3] == "OggS".
+	 *   FLAC: bytes[0..3] == "fLaC".
+	 *   WAV:  bytes[0..3] == "RIFF"  &&  bytes[8..11] == "WAVE".
 	 *   MP3:  ID3 tag    (bytes[0..2] == "ID3")
-	 *          or sync word (bytes[0] == 0xFF && (bytes[1] & 0xE0) == 0xE0)
+	 *          or sync word (bytes[0] == 0xFF && (bytes[1] & 0xE0) == 0xE0).
+	 *
+	 * @return A lowercase extension string (".ogg", ".mp3", ".flac", ".wav"),
+	 * or an empty string if the format is unrecognised.
 	 */
-	std::string detectFormat(const uint8_t* src, size_t srcSize) {
+	static std::string detectFormat(const uint8_t* src, size_t srcSize) {
 		if (srcSize < 12)
 			return {};
 
@@ -53,7 +63,7 @@ namespace {
 
 		// RIFF/WAVE container.
 		if (src[0] == 'R' && src[1] == 'I' && src[2] == 'F' && src[3] == 'F' &&
-		    src[8] == 'W' && src[9] == 'A' && src[10] == 'V' && src[11] == 'E')
+			src[8] == 'W' && src[9] == 'A' && src[10] == 'V' && src[11] == 'E')
 			return ".wav";
 
 		// MP3: ID3v2 tag header.
@@ -67,10 +77,6 @@ namespace {
 		return {};
 	}
 
-} // anonymous namespace
-
-class BLACKTHORN_API AudioDecoder {
-public:
 	/**
 	 * @brief Fully decodes @p path into @p data.
 	 *
@@ -159,7 +165,6 @@ public:
 		AudioData&     data
 	) {
 		const std::string ext = detectFormat(src, srcSize);
-
 		if (ext == ".ogg")
 			return OggDecoder::decodeFromMemory(src, srcSize, data);
 
