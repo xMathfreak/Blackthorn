@@ -5,6 +5,7 @@
 #include <memory>
 
 #include "Assets/AssetManager.h"
+#include "Core/CachedSetting.h"
 #include "Core/EngineConfig.h"
 #include "Core/Export.h"
 #include "Core/Settings.h"
@@ -182,6 +183,25 @@ protected:
 	std::unique_ptr<Core::SimClock> simClock;
 	std::unique_ptr<Scene::ISimContext> simContext;
 	std::unique_ptr<Scene::SceneManager> sceneManager;
+
+	/**
+	 * @brief Cached mirror of the frame_cap/target_fps settings read by the
+	 * loop-pacing section of run(). See Core::CachedSetting for why these
+	 * exist: reading these via Settings::get<T>() every frame means a mutex
+	 * lock and a string allocation per value, per frame, purely to check
+	 * values that only change when the user changes a setting.
+	 *
+	 * Declared here (rather than duplicated in EngineCore and Engine) since
+	 * both run() implementations use them. attach()'d once in
+	 * registerEngineCallbacks() - see that method for why attach() can't
+	 * happen at construction time.
+	 *
+	 * @note vsync is deliberately NOT cached here. EngineCore never creates
+	 * a window or GL context, so vsync has no meaning for it - that cache
+	 * lives on Engine, the only place it actually applies.
+	 */
+	Core::CachedSetting<bool> frameCapEnabled{"graphics", "frame_cap", false};
+	Core::CachedSetting<int> targetFPS{"graphics", "target_fps", 60};
 
 	virtual void processEvents();
 	virtual void fixedUpdate(float dt);

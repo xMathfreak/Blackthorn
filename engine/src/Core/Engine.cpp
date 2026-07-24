@@ -14,6 +14,7 @@
 #include "Fonts/BitmapFont.h"
 #include "Fonts/TrueTypeFont.h"
 #include "Scene/SceneContext.h"
+#include "Threads/Relax.h"
 #include "UI/UIManager.h"
 
 namespace Blackthorn {
@@ -71,7 +72,7 @@ inline std::string getSIMDInfo() {
 	return simd;
 }
 
-}
+} // anonymous namespace
 
 Engine::~Engine() {
 	shutdown();
@@ -141,8 +142,8 @@ bool Engine::init(const EngineConfig& cfg) {
 }
 
 void Engine::initGraphics(const EngineConfig& cfg) {
-	if (!SDL_InitSubSystem(SDL_INIT_VIDEO)) {
-		BT_ERROR("SDL: Failed to initialize Video subsystem - {}", SDL_GetError());
+	if (!SDL_InitSubSystem(SDL_INIT_VIDEO | SDL_INIT_AUDIO)) {
+		BT_ERROR("SDL: Failed to initialize video or audio subsystem(s) - {}", SDL_GetError());
 		return;
 	}
 
@@ -301,7 +302,6 @@ void Engine::run() {
 	const float freq = static_cast<float>(SDL_GetPerformanceFrequency());
 
 	running = true;
-	auto& settings = Core::Settings::instance();
 
 	#ifdef BLACKTHORN_DEBUG
 		auto& profiler = Debug::Profiler::instance();
@@ -380,20 +380,24 @@ void Engine::run() {
 			render(alpha);
 		}
 
-		if (
-			settings.get<bool>("graphics", "frame_cap") &&
-			!settings.get<bool>("window", "vsync")
-		) {
-			const float target = 1.0f / settings.get<int>("graphics", "target_fps");
-			const U64 end = SDL_GetPerformanceCounter();
-			const float elapsed = static_cast<float>(end - now) / freq;
-			const float sleepMs = (target - elapsed - 0.002f) * 1000.0f;
+		if (frameCapEnabled.get() && !vsyncEnabled.get()) {
+			const int fps = std::max(targetFPS.get(), 1);
+			const float target = 1.0f / static_cast<float>(fps);
 
-			if (sleepMs > 0.0f)
-				SDL_Delay(static_cast<U32>(sleepMs));
+			constexpr float spinWindow = 0.001f;
 
-			while (static_cast<float>(
-				SDL_GetPerformanceCounter() - now) / freq < target) {}
+			while (true) {
+				const float elapsed = static_cast<float>(SDL_GetPerformanceCounter() - now) / freq;
+				const float remaining = target - elapsed;
+
+				if (remaining <= 0.0f)
+					break;
+
+				if (remaining > spinWindow)
+					SDL_Delay(1);
+				else
+					Threads::relax();
+			}
 		}
 
 		#ifdef BLACKTHORN_DEBUG
@@ -497,7 +501,7 @@ void Engine::registerDefaultSettings(Core::Settings& s) {
 	s.setDefault("window", "width", config.window.width);
 	s.setDefault("window", "height", config.window.height);
 	s.setDefault("window", "fullscreen", false);
-	s.setDefault("window", "vsync", false);
+	s.setDefault("window", "vsync", true);
 	s.setDefault("window", "maximized", false);
 	s.setDefault("window", "pos_x", SDL_WINDOWPOS_CENTERED);
 	s.setDefault("window", "pos_y", SDL_WINDOWPOS_CENTERED);
@@ -511,7 +515,7 @@ void Engine::registerDefaultSettings(Core::Settings& s) {
 	s.setDefault("graphics", "saturation", 1.0f);
 	s.setDefault("graphics", "gamma", 1.0f);
 	s.setDefault("graphics", "vignette", false);
-	s.setDefault("graphics", "vignette_intensity",0.5f);
+	s.setDefault("graphics", "vignette_intensity", 0.5f);
 
 	s.setDefault("ui", "scale", 1.0f);
 
@@ -544,7 +548,8 @@ void Engine::applyEngineSettings() {
 			SDL_Rect bounds;
 			if (SDL_GetDisplayBounds(i, &bounds)) {
 				if (posX >= bounds.x && posX < bounds.x + bounds.w &&
-					posY >= bounds.y && posY < bounds.y + bounds.h) {
+					posY >= bounds.y && posY < bounds.y + bounds.h
+				) {
 					displayIndex = i;
 					break;
 				}
@@ -554,10 +559,8 @@ void Engine::applyEngineSettings() {
 		SDL_Rect usable;
 		if (SDL_GetDisplayUsableBounds(displayIndex, &usable)) {
 			const int margin = 50;
-			posX = std::max(usable.x - width + margin,
-				std::min(posX, usable.x + usable.w - margin));
-			posY = std::max(usable.y - height + margin,
-				std::min(posY, usable.y + usable.h - margin));
+			posX = std::max(usable.x - width + margin, std::min(posX, usable.x + usable.w - margin));
+			posY = std::max(usable.y - height + margin, std::min(posY, usable.y + usable.h - margin));
 		}
 	}
 
@@ -574,20 +577,12 @@ void Engine::applyEngineSettings() {
 
 	SDL_GL_SetSwapInterval(s.get<bool>("window", "vsync") ? 1 : 0);
 
-	audioManager->setCategoryVolume(
-		Audio::AudioCategory::Master,
-		s.get<float>("audio", "master_volume")
-	);
-
-	audioManager->setCategoryVolume(
-		Audio::AudioCategory::Music,
-		s.get<float>("audio", "music_volume")
-	);
-
-	audioManager->setCategoryVolume(
-		Audio::AudioCategory::SFX,
-		s.get<float>("audio", "sfx_volume")
-	);
+	audioManager->setCategoryVolume(Audio::AudioCategory::Master,
+		s.get<float>("audio", "master_volume"));
+	audioManager->setCategoryVolume(Audio::AudioCategory::Music,
+		s.get<float>("audio", "music_volume"));
+	audioManager->setCategoryVolume(Audio::AudioCategory::SFX,
+		s.get<float>("audio", "sfx_volume"));
 
 	inputManager.loadBindingsFromSettings();
 }
@@ -614,8 +609,10 @@ void Engine::applyPostProcessing() {
 void Engine::registerEngineCallbacks(Core::Settings& s) {
 	EngineCore::registerEngineCallbacks(s);
 
+	vsyncEnabled.attach();
+
 	s.onChange("ui", "scale", [](const std::string& val) {
-		try { UI::UIManager::setGlobalUIScale(std::stof(val)); }
+			try { UI::UIManager::setGlobalUIScale(std::stof(val)); }
 		catch (...) {}
 	});
 
@@ -624,25 +621,21 @@ void Engine::registerEngineCallbacks(Core::Settings& s) {
 	});
 
 	s.onChange("audio", "master_volume", [this](const std::string& val) {
-		try {
-			audioManager->setCategoryVolume(Audio::AudioCategory::Master, std::stof(val));
-		} catch (...) {}
+		try { audioManager->setCategoryVolume(Audio::AudioCategory::Master, std::stof(val)); }
+		catch (...) {}
 	});
 
 	s.onChange("audio", "music_volume", [this](const std::string& val) {
-		try {
-			audioManager->setCategoryVolume(Audio::AudioCategory::Music, std::stof(val));
-		} catch (...) {}
+		try { audioManager->setCategoryVolume(Audio::AudioCategory::Music, std::stof(val)); }
+		catch (...) {}
 	});
 
 	s.onChange("audio", "sfx_volume", [this](const std::string& val) {
-		try {
-			audioManager->setCategoryVolume(Audio::AudioCategory::SFX, std::stof(val));
-		} catch (...) {}
+		try { audioManager->setCategoryVolume(Audio::AudioCategory::SFX, std::stof(val)); }
+		catch (...) {}
 	});
 
 	auto applyPP = [this](const std::string&) { applyPostProcessing(); };
-
 	for (const char* key : {
 		"post_processing", "brightness", "contrast",
 		"saturation", "gamma", "vignette", "vignette_intensity"
@@ -668,19 +661,14 @@ void Engine::logEngineInfo() {
 
 	BT_LOG(
 		"Engine: Graphics Info\n"
-		"    OpenGL: {}\n"
-		"    Renderer: {}\n"
-		"    Max Texture Size: {}\n"
-		"    Max Vertex Attributes: {}\n"
-		"    Depth: {} bits | Stencil: {} bits | MSAA: {}x\n"
-		"    SIMD: {}",
-		glVersion,
-		rd,
-		maxTex,
-		maxAttribs,
-		depthBits,
-		stencilBits,
-		msaaSamples,
+		" OpenGL: {}\n"
+		" Renderer: {}\n"
+		" Max Texture Size: {}\n"
+		" Max Vertex Attributes: {}\n"
+		" Depth: {} bits | Stencil: {} bits | MSAA: {}x\n"
+		" SIMD: {}",
+		glVersion, rd, maxTex, maxAttribs,
+		depthBits, stencilBits, msaaSamples,
 		getSIMDInfo()
 	);
 }

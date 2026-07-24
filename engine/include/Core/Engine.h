@@ -64,9 +64,15 @@ public:
 	/**
 	 * @brief Runs the client loop (simulation + render).
 	 *
-	 * Identical to `EngineCore::run()` but adds a render step after
-	 * `lateUpdate()` using the interpolation alpha computed from the
+	 * Follows the same fixed-timestep structure as `EngineCore::run()`
+	 * (events, fixed updates, update, late update) but adds a render step
+	 * after `lateUpdate()` using the interpolation alpha computed from the
 	 * accumulated fixed-update remainder.
+	 *
+	 * The frame-cap section also differs from `EngineCore::run()`: this
+	 * override additionally skips capping when vsync is enabled, since
+	 * vsync already throttles the loop via the buffer swap. `EngineCore`
+	 * has no window/vsync concept, so its own frame cap has no such gate.
 	 */
 	void run() override;
 
@@ -101,6 +107,16 @@ private:
 	Input::InputManager inputManager;
 	SDL_Window* window = nullptr;
 	SDL_GLContext glContext = nullptr;
+
+	/**
+	 * @brief Cached mirror of the "window/vsync" setting.
+	 *
+	 * Lives here rather than on EngineCore: vsync only means anything once
+	 * a window/GL context exists, which only Engine creates. attach()'d in
+	 * registerEngineCallbacks() alongside the frameCapEnabled/targetFPS
+	 * caches EngineCore already owns.
+	 */
+	Core::CachedSetting<bool> vsyncEnabled{"window", "vsync", true};
 
 	void initGraphics(const EngineConfig& cfg);
 	void initAssetLoaders();

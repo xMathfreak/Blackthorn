@@ -1,5 +1,7 @@
 #include "Core/EngineCore.h"
 
+#include <algorithm>
+
 #include "Core/Settings.h"
 #include "Core/SimClock.h"
 #include "Debug/Logger.h"
@@ -9,6 +11,7 @@
 #include "Saves/Sections/MetaSaveSection.h"
 #include "Saves/Sections/WorldSaveSection.h"
 #include "Scene/SimContext.h"
+#include "Threads/Relax.h"
 #include "Threads/ThreadRegistry.h"
 
 namespace Blackthorn {
@@ -41,6 +44,7 @@ bool EngineCore::init(const EngineConfig& cfg) {
 	SDL_SetAppMetadataProperty(SDL_PROP_APP_METADATA_COPYRIGHT_STRING, cfg.metadata.copyright.c_str());
 	SDL_SetAppMetadataProperty(SDL_PROP_APP_METADATA_URL_STRING, cfg.metadata.url.c_str());
 	SDL_SetAppMetadataProperty(SDL_PROP_APP_METADATA_TYPE_STRING, cfg.metadata.type.c_str());
+	SDL_SetHint(SDL_HINT_AUDIO_DEVICE_STREAM_ROLE, "Game");
 
 	#ifdef BLACKTHORN_DEBUG
 		SDL_SetLogPriorities(SDL_LOG_PRIORITY_DEBUG);
@@ -163,7 +167,6 @@ void EngineCore::run() {
 	float accumulated = 0.0f;
 	const float freq = static_cast<float>(SDL_GetPerformanceFrequency());
 
-	auto& settings = Core::Settings::instance();
 	running = true;
 
 	#ifdef BLACKTHORN_DEBUG
@@ -236,19 +239,24 @@ void EngineCore::run() {
 
 		jobSystem->flushMainThread();
 
-		if (settings.get<bool>("graphics", "frame_cap") &&
-		 !settings.get<bool>("window", "vsync"))
-		{
-			const float target = 1.0f / settings.get<int>("graphics", "target_fps");
-			const U64 end = SDL_GetPerformanceCounter();
-			const float elapsed = static_cast<float>(end - now) / freq;
-			const float sleepMs = (target - elapsed - 0.002f) * 1000.0f;
+		if (frameCapEnabled.get()) {
+			const int fps = std::max(targetFPS.get(), 1);
+			const float target = 1.0f / static_cast<float>(fps);
 
-			if (sleepMs > 0.0f)
-				SDL_Delay(static_cast<U32>(sleepMs));
+			constexpr float spinWindow = 0.001f;
 
-			while (static_cast<float>(
-				SDL_GetPerformanceCounter() - now) / freq < target) {}
+			while (true) {
+				const float elapsed = static_cast<float>(SDL_GetPerformanceCounter() - now) / freq;
+				const float remaining = target - elapsed;
+
+				if (remaining <= 0.0f)
+					break;
+
+				if (remaining > spinWindow)
+					SDL_Delay(1);
+				else
+					Threads::relax();
+			}
 		}
 
 		#ifdef BLACKTHORN_DEBUG
@@ -286,6 +294,8 @@ void EngineCore::lateUpdate(float dt) {
 void EngineCore::registerDefaultSettings(Core::Settings& s) {
 	#ifdef BLACKTHORN_HEADLESS
 		s.setDefault<U64>("simulation", "tick", static_cast<U64>(0));
+		s.setDefault("graphics", "frame_cap", true);
+		s.setDefault("graphics", "target_fps", 60);
 	#endif
 
 	#ifdef BLACKTHORN_DEBUG
@@ -297,6 +307,9 @@ void EngineCore::registerDefaultSettings(Core::Settings& s) {
 }
 
 void EngineCore::registerEngineCallbacks(Core::Settings& s) {
+	frameCapEnabled.attach();
+	targetFPS.attach();
+
 	#ifdef BLACKTHORN_DEBUG
 		s.onChange("developer", "log_level", [](const std::string& val) {
 			try {
