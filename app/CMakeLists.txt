@@ -78,7 +78,7 @@ target_compile_options(${PROJECT_NAME} PRIVATE
 
 		$<$<CONFIG:Release>:
 			-O3
-			-mtune=native
+			-mtune=generic
 		>
 	>
 )

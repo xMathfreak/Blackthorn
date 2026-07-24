@@ -174,6 +174,7 @@ foreach(TARGET BlackthornCore BlackthornEngine)
 			-Wimplicit-fallthrough
 			-fvisibility=hidden
 			-Wformat=2
+			-msse4.2
 
 			$<$<CONFIG:Debug>:
 				-Og
@@ -189,7 +190,7 @@ foreach(TARGET BlackthornCore BlackthornEngine)
 
 			$<$<CONFIG:Release>:
 				-O3
-				-mtune=native
+				-mtune=generic
 			>
 		>
 	)
