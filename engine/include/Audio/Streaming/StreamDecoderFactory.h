@@ -5,6 +5,7 @@
 
 #include "Audio/Streaming/IStreamDecoder.h"
 #include "Core/Export.h"
+#include "Core/Types/Numeric.h"
 
 namespace Blackthorn::Audio::Streaming {
 
@@ -45,6 +46,25 @@ public:
 	 *             unsupported.
 	 */
 	static std::unique_ptr<IStreamDecoder> create(const std::filesystem::path& path);
+
+	/**
+	 * @brief Creates an @c IStreamDecoder appropriate for an in-memory buffer.
+	 *
+	 * Alternative to create() for packed/in-memory assets that have no file
+	 * extension to dispatch on. The container format is instead detected
+	 * from the first bytes of @p data via magic-number inspection (see
+	 * Decoding::AudioDecoder::detectFormat()).
+	 *
+	 * @note Does not call openMemory(). The caller is responsible for
+	 * opening the decoder before reading, and must keep @p data alive for as
+	 * long as the returned decoder remains open (see
+	 * IStreamDecoder::openMemory()).
+	 *
+	 * @param data Pointer to the encoded audio bytes.
+	 * @param size Size of @p data in bytes.
+	 * @return A concrete decoder, or @c nullptr if the format is unrecognised.
+	 */
+	static std::unique_ptr<IStreamDecoder> createFromMemory(const U8* data, size_t size);
 
 	/**
 	 * @brief Returns true if @p path has a supported audio extension.

@@ -35,6 +35,21 @@ bool Mp3StreamDecoder::open(const std::filesystem::path& path) {
 		return false;
 	}
 
+	return finalizeAfterInit(pathStr);
+}
+
+bool Mp3StreamDecoder::openMemory(const U8* data, size_t size) {
+	close();
+
+	if (!drmp3_init_memory(&m_impl->mp3, data, size, nullptr)) {
+		BT_ERROR("Mp3StreamDecoder: failed to open from memory ({} bytes)", size);
+		return false;
+	}
+
+	return finalizeAfterInit("<memory>");
+}
+
+bool Mp3StreamDecoder::finalizeAfterInit(const std::string& sourceLabel) {
 	m_impl->open = true;
 
 	m_impl->metadata.channels =
@@ -67,7 +82,7 @@ bool Mp3StreamDecoder::open(const std::filesystem::path& path) {
 		BT_DEBUG(
 			"Mp3StreamDecoder: seek table built for '{}' "
 			"({} points, {} ch, {} Hz, {} frames)",
-			pathStr,
+			sourceLabel,
 			actualPointCount,
 			m_impl->metadata.channels,
 			m_impl->metadata.sampleRate,
@@ -79,7 +94,7 @@ bool Mp3StreamDecoder::open(const std::filesystem::path& path) {
 		BT_WARN(
 			"Mp3StreamDecoder: failed to build seek table for '{}' "
 			", seeks will use the slower forward-scan path",
-			pathStr
+			sourceLabel
 		);
 	}
 

@@ -57,6 +57,40 @@ bool WavStreamDecoder::open(const std::filesystem::path& path) {
 	return true;
 }
 
+bool WavStreamDecoder::openMemory(const U8* data, size_t size) {
+	close();
+
+	if (!drwav_init_memory(&m_impl->wav, data, size, nullptr)) {
+		BT_ERROR(
+			"WavStreamDecoder: failed to open from memory ({} bytes)",
+			size
+		);
+
+		return false;
+	}
+
+	m_impl->open = true;
+
+	m_impl->metadata.channels =
+		static_cast<U32>(m_impl->wav.channels);
+
+	m_impl->metadata.sampleRate =
+		static_cast<U32>(m_impl->wav.sampleRate);
+
+	m_impl->metadata.frameCount =
+		static_cast<U64>(m_impl->wav.totalPCMFrameCount);
+
+	BT_DEBUG(
+		"WavStreamDecoder: opened from memory ({} bytes) [{} ch, {} Hz, {} frames]",
+		size,
+		m_impl->metadata.channels,
+		m_impl->metadata.sampleRate,
+		m_impl->metadata.frameCount
+	);
+
+	return true;
+}
+
 size_t WavStreamDecoder::readFrames(
 	I16* dest,
 	size_t frameCount
@@ -113,4 +147,4 @@ bool WavStreamDecoder::isOpen() const {
 	return m_impl->open;
 }
 
-} // Blackthorn::Audio
+} // Blackthorn::Audio::Streaming

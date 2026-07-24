@@ -2,6 +2,7 @@
 
 #include <algorithm>
 
+#include "Audio/Decoding/AudioDecoder.h"
 #include "Audio/Streaming/Codecs/FlacStreamDecoder.h"
 #include "Audio/Streaming/Codecs/Mp3StreamDecoder.h"
 #include "Audio/Streaming/Codecs/OggStreamDecoder.h"
@@ -42,6 +43,32 @@ std::unique_ptr<IStreamDecoder> StreamDecoderFactory::create(
 		"StreamDecoderFactory: unsupported extension '{}' for path '{}'",
 		ext, path.string()
 	);
+	return nullptr;
+}
+
+std::unique_ptr<IStreamDecoder> StreamDecoderFactory::createFromMemory(
+	const U8* data,
+	size_t size
+) {
+	const std::string ext = Decoding::AudioDecoder::detectFormat(data, size);
+
+	if (ext == ".wav")
+		return std::make_unique<WavStreamDecoder>();
+
+	if (ext == ".mp3")
+		return std::make_unique<Mp3StreamDecoder>();
+
+	if (ext == ".flac")
+		return std::make_unique<FlacStreamDecoder>();
+
+	if (ext == ".ogg")
+		return std::make_unique<OggStreamDecoder>();
+
+	BT_ERROR(
+		"StreamDecoderFactory: unrecognised in-memory format ({} bytes)",
+		size
+	);
+
 	return nullptr;
 }
 

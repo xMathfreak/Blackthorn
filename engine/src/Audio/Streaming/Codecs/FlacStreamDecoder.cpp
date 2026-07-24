@@ -54,6 +54,34 @@ bool FlacStreamDecoder::open(
 	return true;
 }
 
+bool FlacStreamDecoder::openMemory(const U8* data, size_t size) {
+	close();
+
+	m_impl->flac = drflac_open_memory(data, size, nullptr);
+
+	if (!m_impl->flac) {
+		BT_ERROR(
+			"FlacStreamDecoder: failed to open from memory ({} bytes)",
+			size
+		);
+
+		return false;
+	}
+
+	m_impl->open = true;
+
+	m_impl->metadata.channels =
+		static_cast<U32>(m_impl->flac->channels);
+
+	m_impl->metadata.sampleRate =
+		static_cast<U32>(m_impl->flac->sampleRate);
+
+	m_impl->metadata.frameCount =
+		static_cast<U64>(m_impl->flac->totalPCMFrameCount);
+
+	return true;
+}
+
 size_t FlacStreamDecoder::readFrames(
 	I16* dest,
 	size_t frameCount

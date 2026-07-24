@@ -17,6 +17,7 @@ public:
 	FlacStreamDecoder& operator=(const FlacStreamDecoder&) = delete;
 
 	bool open(const std::filesystem::path& path) override;
+	bool openMemory(const U8* data, size_t size) override;
 	size_t readFrames(I16* dest, size_t frameCount) override;
 	bool seek(U64 frameOffset) override;
 	void close() override;

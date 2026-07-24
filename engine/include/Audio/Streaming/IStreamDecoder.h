@@ -45,6 +45,25 @@ public:
 	virtual bool open(const std::filesystem::path& path) = 0;
 
 	/**
+	 * @brief Opens an in-memory encoded audio buffer and prepares the
+	 * decoder for reading.
+	 *
+	 * Alternative to open() for packed/in-memory assets that have no
+	 * backing file on disk.
+	 *
+	 * @note The decoder does NOT take ownership of @p data. The caller
+	 * (AudioClip, via its owned compressed-bytes buffer) must keep it alive
+	 * for as long as this decoder remains open, i.e. for the lifetime of
+	 * the streaming voice, matching the same "clip must outlive the voice"
+	 * contract AudioManager::play() uses.
+	 *
+	 * @param data Pointer to the encoded audio bytes (the full compressed file).
+	 * @param size Size of @p data in bytes.
+	 * @return true on success.
+	 */
+	virtual bool openMemory(const U8* data, size_t size) = 0;
+
+	/**
 	 * @brief Reads up to @p frameCount interleaved PCM frames into @p dest.
 	 *
 	 * Samples are always 16-bit signed. The caller must ensure @p dest has
