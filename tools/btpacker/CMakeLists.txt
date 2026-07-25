@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16.0)
-project(btpacker VERSION 0.1.0 LANGUAGES CXX)
+project(btpacker VERSION 1.0.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -14,6 +14,16 @@ add_executable(btpacker
 	src/ManifestGenerator.h
 	src/ManifestGenerator.cpp
 )
+
+target_set_metadata(btpacker
+	NAME       "Blackthorn Asset Packer"
+	VERSION    "${PROJECT_VERSION}"
+	IDENTIFIER "com.blackthorn.tools.assetPacker"
+	COMPANY    ""
+	COPYRIGHT  ""
+	TYPE       "application"
+)
+target_add_platform_resources(btpacker)
 
 target_include_directories(btpacker
 	PRIVATE

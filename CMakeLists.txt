@@ -3,6 +3,9 @@ project(Blackthorn VERSION 0.1.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_SCAN_FOR_MODULES OFF)
 
+# Platform metadata / packaging system
+include(${CMAKE_SOURCE_DIR}/cmake/PlatformResources.cmake)
+
 # Build type
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
 	set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)

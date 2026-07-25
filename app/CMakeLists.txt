@@ -20,6 +20,17 @@ add_executable(${PROJECT_NAME}
 
 enable_windows_gui(${PROJECT_NAME})
 
+target_set_metadata(${PROJECT_NAME}
+	NAME       "${PROJECT_NAME}"
+	VERSION    "${PROJECT_VERSION}"
+	IDENTIFIER "com.blackthorn.game"
+	COMPANY    ""
+	COPYRIGHT  ""
+	TYPE       "game"
+	# ICON      "${CMAKE_SOURCE_DIR}/assets/icons/app.ico"
+)
+target_add_platform_resources(${PROJECT_NAME})
+
 target_compile_definitions(${PROJECT_NAME}
 	PRIVATE
 		$<$<CONFIG:Debug>:BLACKTHORN_DEBUG>
