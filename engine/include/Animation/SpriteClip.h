@@ -32,8 +32,8 @@ struct BLACKTHORN_API Frame {
 /**
  * @brief Shared, reusable frame-animation data for sprites.
  *
- * A @c SpriteClip only describes *which sub-rects of a texture to show and
- * for how long* - it does not own a texture. The texture stays on the
+ * A @c SpriteClip only describes which sub-rects of a texture to show and
+ * for how long. It does not own a texture. The texture stays on the
  * entity's @c Sprite component, exactly as it does for non-animated sprites.
  * Many entities can reference the same @c SpriteClip, the same way they
  * already share a single @c Texture asset.

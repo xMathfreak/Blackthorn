@@ -193,9 +193,9 @@ public:
 };
 
 /**
- * @brief Async loader for @c SpriteClip - decodes on a worker thread via
- * @c loadRaw, then parses and installs the asset on the main thread via
- * @c upload, matching the @c AsyncBitmapFontLoader pattern.
+ * @brief Async loader for @c SpriteClip.
+ * Decodes on a worker thread via @c loadRaw, then parses and installs
+ * the asset on the main thread via @c upload, matching the @c AsyncBitmapFontLoader pattern.
  *
  * `.btclip` files are tiny plain text, so "decode" here is just a file
  * read; the actual parse happens in @c upload since it's cheap enough not

@@ -13,8 +13,7 @@ namespace Blackthorn::ECS::Systems {
  * resulting frame rect into @c Components::Sprite::sourceRect.
  *
  * Runs in @c fixedUpdate so frame advancement is tied to simulation ticks
- * rather than render framerate - identical logic and timing regardless of
- * how fast or slow the machine is rendering.
+ * rather than render framerate.
  *
  * Client-side only: only add this system to the client's SystemManager, not
  * the headless server's. @c SpriteAnimation carries no simulation state, so

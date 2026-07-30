@@ -9,16 +9,16 @@ namespace Blackthorn::ECS::Components {
 /**
  * @brief Per-entity playback state for a @c Animation::SpriteClip.
  *
- * Requires a @c Sprite component on the same entity - @c Systems::AnimationSystem
- * writes the current frame's rect into @c Sprite::sourceRect, the same way
- * @c Kinematics requires @c Transform.
+ * Requires a @c Sprite component on the same entity.
+ * @c Systems::AnimationSystem  writes the current frame's rect into @c Sprite::sourceRect,
+ * the same way @c Kinematics requires @c Transform.
  *
  * @note Client-side only. Deliberately not registered with
- * @c Serialization::SerializerRegistry - playback state is derived visual
+ * @c Serialization::SerializerRegistry. Playback state is derived visual
  * state, not simulation state, and is never sent over the network or saved.
  */
 struct BLACKTHORN_API SpriteAnimation {
-	/// Clip providing frame data. Not owned - must outlive the component.
+	/// Clip providing frame data. Not owned, must outlive the component.
 	const Animation::SpriteClip* clip = nullptr;
 
 	/// Index of the currently displayed frame within clip->frames.
