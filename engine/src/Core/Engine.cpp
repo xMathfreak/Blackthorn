@@ -5,6 +5,7 @@
 #include "Assets/Loaders/AudioLoader.h"
 #include "Assets/Loaders/BitmapFontLoader.h"
 #include "Assets/Loaders/ShaderLoader.h"
+#include "Assets/Loaders/SpriteClipLoader.h"
 #include "Assets/Loaders/TextureLoader.h"
 #include "Assets/Loaders/TrueTypeFontLoader.h"
 
@@ -232,6 +233,11 @@ void Engine::initAssetLoaders() {
 		std::make_unique<Fonts::AsyncTrueTypeFontLoader>(&assetManager->resolver())
 	);
 
+	assetManager->registerPackLoader<Animation::SpriteClip>(
+		std::make_unique<Animation::SpriteClipLoader>(),
+		std::make_unique<Animation::AsyncSpriteClipLoader>(&assetManager->resolver())
+	);
+
 #else
 	assetManager->registerLoader<Audio::AudioClip>(
 		std::make_unique<Audio::AudioLoader>(),
@@ -256,6 +262,11 @@ void Engine::initAssetLoaders() {
 	assetManager->registerLoader<Fonts::TrueTypeFont>(
 		std::make_unique<Fonts::TrueTypeFontLoader>(),
 		std::make_unique<Fonts::AsyncTrueTypeFontLoader>()
+	);
+
+	assetManager->registerLoader<Animation::SpriteClip>(
+		std::make_unique<Animation::SpriteClipLoader>(),
+		std::make_unique<Animation::AsyncSpriteClipLoader>()
 	);
 #endif
 }

@@ -154,6 +154,8 @@ PackAssetType resolveAssetType(const std::string& typeStr) {
 		return PackAssetType::Shader;
 	if (lower == "font")
 		return PackAssetType::Font;
+	if (lower == "spriteclip")
+		return PackAssetType::SpriteClip;
 	if (lower == "raw")
 		return PackAssetType::Raw;
 
@@ -171,6 +173,8 @@ const char* assetTypeName(PackAssetType t) {
 			return "Shader";
 		case PackAssetType::Font:
 			return "Font";
+		case PackAssetType::SpriteClip:
+			return "SpriteClip";
 		case PackAssetType::Raw:
 			return "Raw";
 		default:

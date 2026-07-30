@@ -30,7 +30,8 @@ public:
 				s.height * t.scale
 			};
 
-			renderer->drawTexture(*s.texture, rect, nullptr, t.angle, s.zOrder);
+			const bool hasSourceRect = s.sourceRect.w > 0.0f && s.sourceRect.h > 0.0f;
+			renderer->drawTexture(*s.texture, rect, hasSourceRect ? &s.sourceRect : nullptr, t.angle, s.zOrder);
 		});
 	}
 };
