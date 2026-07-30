@@ -293,35 +293,35 @@ bool BitmapFont::parseMetricsText(std::istream& stream, const std::string& sourc
 	return true;
 }
 
-bool BitmapFont::loadFromBMFont(const std::filesystem::path& bmfPath) {
-	const auto pathStr = bmfPath.string();
-	std::ifstream file(bmfPath, std::ios::binary);
+bool BitmapFont::loadFromBTFont(const std::filesystem::path& btfPath) {
+	const auto pathStr = btfPath.string();
+	std::ifstream file(btfPath, std::ios::binary);
 
 	if (!file) {
-		BT_ERROR("BitmapFont: Failed to open BMF file: {}", pathStr);
+		BT_ERROR("BitmapFont: Failed to open BTF file: {}", pathStr);
 		return false;
 	}
 
-	return parseBMFontStream(file, pathStr);
+	return parseBTFontStream(file, pathStr);
 }
 
-bool BitmapFont::loadFromBMFontMemory(const U8* data, size_t size) {
+bool BitmapFont::loadFromBTFontMemory(const U8* data, size_t size) {
 	if (!data || size == 0) {
-		BT_ERROR("BitmapFont: loadFromBMFontMemory called with empty data");
+		BT_ERROR("BitmapFont: loadFromBTFontMemory called with empty data");
 		return false;
 	}
 
 	std::string buffer(reinterpret_cast<const char*>(data), size);
 	std::istringstream stream(buffer, std::ios::binary);
 
-	return parseBMFontStream(stream, "<memory>");
+	return parseBTFontStream(stream, "<memory>");
 }
 
-bool BitmapFont::parseBMFontStream(std::istream& stream, const std::string& sourceLabel) {
+bool BitmapFont::parseBTFontStream(std::istream& stream, const std::string& sourceLabel) {
 	char sign[4];
 	stream.read(sign, 4);
-	if (sign[0] != 'B' || sign[1] != 'M' || sign[2] != 'F' || sign[3] != '\0') {
-		BT_ERROR("BitmapFont: Invalid BMF file format: {}", sourceLabel);
+	if (sign[0] != 'B' || sign[1] != 'T' || sign[2] != 'F' || sign[3] != '\0') {
+		BT_ERROR("BitmapFont: Invalid BTF file format: {}", sourceLabel);
 		return false;
 	}
 
@@ -329,7 +329,7 @@ bool BitmapFont::parseBMFontStream(std::istream& stream, const std::string& sour
 	stream.read(reinterpret_cast<char*>(&version), sizeof(version));
 
 	if (version != 1) {
-		BT_ERROR("BitmapFont: Unsupported BMF version {} in file: {}", version, sourceLabel);
+		BT_ERROR("BitmapFont: Unsupported BTF version {} in file: {}", version, sourceLabel);
 		return false;
 	}
 
@@ -351,7 +351,7 @@ bool BitmapFont::parseBMFontStream(std::istream& stream, const std::string& sour
 
 	SDL_Surface* surface = IMG_Load_IO(rw, true);
 	if (!surface) {
-		BT_ERROR("BitmapFont: Failed to load image from BMF: {}", SDL_GetError());
+		BT_ERROR("BitmapFont: Failed to load image from BTF: {}", SDL_GetError());
 		return false;
 	}
 
@@ -360,7 +360,7 @@ bool BitmapFont::parseBMFontStream(std::istream& stream, const std::string& sour
 	SDL_DestroySurface(surface);
 
 	if (!texture->isValid()) {
-		BT_ERROR("BitmapFont: Failed to create texture from BMF image data");
+		BT_ERROR("BitmapFont: Failed to create texture from BTF image data");
 		return false;
 	}
 

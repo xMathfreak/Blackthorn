@@ -90,20 +90,20 @@ private:
 	bool parseMetricsText(std::istream& stream, const std::string& sourceLabel);
 
 	/**
-	 * @brief Parses a binary `.bmf` stream (magic + version + metrics +
+	 * @brief Parses a binary `.btf` stream (magic + version + metrics +
 	 * embedded image + glyph table).
 	 *
-	 * Shared by loadFromBMFont() (reading a `std::ifstream`) and
-	 * loadFromBMFontMemory() (reading a `std::istringstream` over an
+	 * Shared by loadFromBTFont() (reading a `std::ifstream`) and
+	 * loadFromBTFontMemory() (reading a `std::istringstream` over an
 	 * in-memory buffer). On success, replaces @c texture and populates
 	 * @c glyphs and the layout metrics.
 	 *
-	 * @param stream Binary stream positioned at the start of the BMF data.
+	 * @param stream Binary stream positioned at the start of the BTF data.
 	 * @param sourceLabel Human-readable source identifier used in log messages
 	 *                    only (e.g. a file path, or "<memory>").
 	 * @return true on success.
 	 */
-	bool parseBMFontStream(std::istream& stream, const std::string& sourceLabel);
+	bool parseBTFontStream(std::istream& stream, const std::string& sourceLabel);
 
 public:
 	BitmapFont();
@@ -115,7 +115,7 @@ public:
 	BitmapFont& operator=(BitmapFont&& other) noexcept;
 
 	bool loadFromFile(const std::filesystem::path& texturePath, const std::filesystem::path& metricsPath);
-	bool loadFromBMFont(const std::filesystem::path& bmfPath);
+	bool loadFromBTFont(const std::filesystem::path& btfPath);
 
 	/**
 	 * @brief Loads a bitmap font from in-memory texture bytes and a
@@ -126,7 +126,7 @@ public:
 	 * where both files have already been read into memory (e.g. decompressed
 	 * from a `.btp` pack) rather than living on disk. @p textureData is an
 	 * encoded image (PNG/etc.), decoded via SDL_image the same way
-	 * loadFromBMFont() decodes its embedded image.
+	 * loadFromBTFont() decodes its embedded image.
 	 *
 	 * @param textureData Pointer to the encoded texture image bytes.
 	 * @param textureSize Size of @p textureData in bytes.
@@ -137,17 +137,17 @@ public:
 	bool loadFromMemory(const U8* textureData, size_t textureSize, const U8* metricsData, size_t metricsSize);
 
 	/**
-	 * @brief Loads a bitmap font from an in-memory single-file `.bmf` buffer.
+	 * @brief Loads a bitmap font from an in-memory single-file `.btf` buffer.
 	 *
-	 * Memory counterpart to loadFromBMFont(). Intended for asset-pipeline use,
-	 * where the `.bmf` file has already been read into memory (e.g.
+	 * Memory counterpart to loadFromBTFont(). Intended for asset-pipeline use,
+	 * where the `.btf` file has already been read into memory (e.g.
 	 * decompressed from a `.btp` pack) rather than living on disk.
 	 *
-	 * @param data Pointer to the raw `.bmf` file bytes.
+	 * @param data Pointer to the raw `.btf` file bytes.
 	 * @param size Size of @p data in bytes.
 	 * @return true on success.
 	 */
-	bool loadFromBMFontMemory(const U8* data, size_t size);
+	bool loadFromBTFontMemory(const U8* data, size_t size);
 
 	void draw(std::string_view text, const glm::vec2& position, float scale = 1.0f, float z = 0.0f, float maxWidth = 0.0f, const Math::Color& color = Math::Colors::White, Text::Alignment alignment = Text::Alignment::Left) override;
 	void drawCached(std::string_view text, const glm::vec2& position, float scale = 1.0f, float z = 0.0f, float maxWidth = 0.0f, const Math::Color& color = Math::Colors::White, Text::Alignment alignment = Text::Alignment::Left) override;

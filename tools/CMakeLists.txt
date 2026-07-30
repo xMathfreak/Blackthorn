@@ -1,7 +1,12 @@
-option(BLACKTHORN_BUILD_ASSET_PACKER "Build btpacker" ON)
+option(BLACKTHORN_BUILD_ASSET_PACKER "Build Asset Packer" ON)
+option(BLACKTHORN_BUILD_FONT_PACKER "Build Font Packer" ON)
 
 if(BLACKTHORN_BUILD_ASSET_PACKER)
 	add_subdirectory(btpacker)
+endif()
+
+if(BLACKTHORN_BUILD_ASSET_PACKER)
+	add_subdirectory(btfpacker)
 endif()
 
 if(TARGET btpacker)
