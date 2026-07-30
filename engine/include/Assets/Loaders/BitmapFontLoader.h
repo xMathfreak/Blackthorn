@@ -34,12 +34,12 @@ struct BLACKTHORN_API BitmapParams : Assets::LoadParams {
 };
 
 struct BLACKTHORN_API PackBitmapParams final : Assets::LoadParams {
-	std::string bmfID;
+	std::string btfID;
 	std::string textureID;
 	std::string metricsID;
 
-	explicit PackBitmapParams(std::string bmf)
-		: bmfID(std::move(bmf))
+	explicit PackBitmapParams(std::string btf)
+		: btfID(std::move(btf))
 	{}
 
 	PackBitmapParams(std::string texture, std::string metrics)
@@ -47,7 +47,7 @@ struct BLACKTHORN_API PackBitmapParams final : Assets::LoadParams {
 		, metricsID(std::move(metrics))
 	{}
 
-	bool isSingleFile() const { return !bmfID.empty(); }
+	bool isSingleFile() const { return !btfID.empty(); }
 
 	std::unique_ptr<Assets::LoadParams> clone() const override {
 		return std::make_unique<PackBitmapParams>(*this);
@@ -55,7 +55,7 @@ struct BLACKTHORN_API PackBitmapParams final : Assets::LoadParams {
 };
 
 struct BLACKTHORN_API RawBitmapFontData : Assets::IRawAssetData {
-	std::vector<U8> bmfBytes;
+	std::vector<U8> btfBytes;
 
 	std::vector<U8> textureBytes;
 	std::vector<U8> metricsBytes;
@@ -76,7 +76,7 @@ public:
 		}
 
 		if (const auto* pp = dynamic_cast<const Assets::PathLoadParams*>(&params)) {
-			font->loadFromBMFont(pp->path);
+			font->loadFromBTFont(pp->path);
 			return font;
 		}
 
@@ -84,7 +84,7 @@ public:
 	}
 
 	std::vector<std::string> getSupportedExtensions() const override {
-		return { ".bmf", ".fnt" };
+		return { ".btf", ".fnt" };
 	}
 };
 
@@ -112,7 +112,7 @@ public:
 		bool ok = false;
 
 		if (raw.isSingleFile) {
-			ok = font->loadFromBMFontMemory(raw.bmfBytes.data(), raw.bmfBytes.size());
+			ok = font->loadFromBTFontMemory(raw.btfBytes.data(), raw.btfBytes.size());
 		} else {
 			ok = font->loadFromMemory(
 				raw.textureBytes.data(), raw.textureBytes.size(),
@@ -130,7 +130,7 @@ public:
 	}
 
 	std::vector<std::string> getSupportedExtensions() const override {
-		return { ".bmf", ".fnt" };
+		return { ".btf", ".fnt" };
 	}
 
 private:
@@ -151,14 +151,14 @@ private:
 		auto raw = std::make_unique<RawBitmapFontData>();
 
 		if (pp->isSingleFile()) {
-			auto packed = m_resolver->resolve(pp->bmfID);
+			auto packed = m_resolver->resolve(pp->btfID);
 			if (!packed) {
 				BT_ERROR("AsyncBitmapFontLoader: '{}' not found in any mounted pack",
-					pp->bmfID);
+					pp->btfID);
 				return nullptr;
 			}
 
-			raw->bmfBytes = std::move(packed->bytes);
+			raw->btfBytes = std::move(packed->bytes);
 			raw->isSingleFile = true;
 		} else {
 			auto texPacked = m_resolver->resolve(pp->textureID);
@@ -202,7 +202,7 @@ private:
 		}
 
 		if (const auto* pp = dynamic_cast<const Assets::PathLoadParams*>(&params)) {
-			if (!readFile(pp->path.string(), raw->bmfBytes))
+			if (!readFile(pp->path.string(), raw->btfBytes))
 				return nullptr;
 
 			raw->isSingleFile = true;

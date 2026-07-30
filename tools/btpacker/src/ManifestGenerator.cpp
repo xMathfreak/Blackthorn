@@ -21,7 +21,7 @@ std::string ManifestGenerator::classifyExtension(const std::string& ext) {
 		".glsl", ".hlsl", ".wgsl", ".spv"
 	};
 	static const std::set<std::string> fonts = {
-		".ttf", ".otf", ".woff", ".woff2", ".bmf"
+		".ttf", ".otf", ".woff", ".woff2", ".btf"
 	};
 	static const std::set<std::string> spriteClips = {
 		".btclip"
