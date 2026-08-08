@@ -390,7 +390,7 @@ void EngineCore::initSaveManager() {
 void EngineCore::logProfilingInfo() {
 	auto& profiler = Debug::Profiler::instance();
 
-	SDL_Log("Frame Time: %.2f ms (%.1f FPS)",
+	BT_TRACE("Frame Time: {:.2f} ms ({:.1f} FPS)",
 		profiler.getAverageFrameTime(60),
 		1000.0f / profiler.getAverageFrameTime(60)
 	);
@@ -398,7 +398,7 @@ void EngineCore::logProfilingInfo() {
 	for (const auto& name : profiler.getAllScopeNames()) {
 		auto stats = profiler.getStats(name, 60);
 		if (stats.average > 0.1f) {
-			SDL_Log(" %s: avg=%.2f min=%.2f max=%.2f calls=%d",
+			BT_TRACE(" {}: avg={:.2f} min={:.2f} max={:.2f} calls={}",
 				name.c_str(),
 				stats.average, stats.min, stats.max, stats.callCount
 			);
