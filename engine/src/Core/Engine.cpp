@@ -181,6 +181,10 @@ void Engine::initGraphics(const EngineConfig& cfg) {
 		return;
 	}
 
+	const U32 windowFlags = SDL_GetWindowFlags(window);
+	windowFocused = (windowFlags & SDL_WINDOW_INPUT_FOCUS) != 0;
+	windowMinimized = (windowFlags & SDL_WINDOW_MINIMIZED) != 0;
+
 	glContext = SDL_GL_CreateContext(window);
 	if (!glContext) {
 		BT_ERROR("Renderer (OpenGL): Failed to create GL context - {}", SDL_GetError());
@@ -391,8 +395,14 @@ void Engine::run() {
 			render(alpha);
 		}
 
-		if (frameCapEnabled.get() && !vsyncEnabled.get()) {
-			const int fps = std::max(targetFPS.get(), 1);
+		const int fpsLimit = windowMinimized
+			? minimizedFPS.get()
+			: (!windowFocused
+				? unfocusedFPS.get()
+				: (frameCapEnabled.get() ? targetFPS.get() : 0));
+
+		if (fpsLimit > 0 && !vsyncEnabled.get()) {
+			const int fps = std::max(fpsLimit, 1);
 			const float target = 1.0f / static_cast<float>(fps);
 
 			constexpr float spinWindow = 0.001f;
@@ -472,21 +482,32 @@ void Engine::processEvents() {
 			case SDL_EVENT_WINDOW_FOCUS_GAINED:
 				if (settings.get<bool>("window", "fullscreen"))
 					SDL_SetWindowFullscreen(window, true);
+
+				windowFocused = true;
+
 				break;
 
 			case SDL_EVENT_WINDOW_FOCUS_LOST:
 				if (SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN)
 					SDL_SetWindowFullscreen(window, false);
+
+				windowFocused = false;
 				break;
 
 			case SDL_EVENT_WINDOW_MAXIMIZED:
 				settings.set<bool>("window", "maximized", true);
 				settings.saveToFile(config.settingsFilePath);
+				windowMinimized = false;
+				break;
+
+			case SDL_EVENT_WINDOW_MINIMIZED:
+				windowMinimized = true;
 				break;
 
 			case SDL_EVENT_WINDOW_RESTORED:
 				settings.set<bool>("window", "maximized", false);
 				settings.saveToFile(config.settingsFilePath);
+				windowMinimized = false;
 				break;
 
 			case SDL_EVENT_WINDOW_MOVED: {
@@ -513,6 +534,8 @@ void Engine::registerDefaultSettings(Core::Settings& s) {
 	s.setDefault("window", "height", config.window.height);
 	s.setDefault("window", "fullscreen", false);
 	s.setDefault("window", "vsync", true);
+	s.setDefault("window", "minimized_fps", 10);
+	s.setDefault("window", "unfocused_fps", 15);
 	s.setDefault("window", "maximized", false);
 	s.setDefault("window", "pos_x", SDL_WINDOWPOS_CENTERED);
 	s.setDefault("window", "pos_y", SDL_WINDOWPOS_CENTERED);
@@ -621,6 +644,8 @@ void Engine::registerEngineCallbacks(Core::Settings& s) {
 	EngineCore::registerEngineCallbacks(s);
 
 	vsyncEnabled.attach();
+	minimizedFPS.attach();
+	unfocusedFPS.attach();
 
 	s.onChange("ui", "scale", [](const std::string& val) {
 			try { UI::UIManager::setGlobalUIScale(std::stof(val)); }

@@ -110,13 +110,21 @@ private:
 
 	/**
 	 * @brief Cached mirror of the "window/vsync" setting.
-	 *
-	 * Lives here rather than on EngineCore: vsync only means anything once
-	 * a window/GL context exists, which only Engine creates. attach()'d in
-	 * registerEngineCallbacks() alongside the frameCapEnabled/targetFPS
-	 * caches EngineCore already owns.
 	 */
 	Core::CachedSetting<bool> vsyncEnabled{"window", "vsync", true};
+
+	/**
+	 * @brief Cached mirror of the "window/unfocused_fps" setting.
+	 */
+	Core::CachedSetting<U32> unfocusedFPS{"window", "unfocused_fps", 0};
+
+	/**
+	 * @brief Cached mirror of the "window/minimized_fps" setting.
+	 */
+	Core::CachedSetting<U32> minimizedFPS{"window", "minimized_fps", 0};
+
+	bool windowFocused = false;
+	bool windowMinimized = true;
 
 	void initGraphics(const EngineConfig& cfg);
 	void initAssetLoaders();
