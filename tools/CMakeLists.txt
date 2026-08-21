@@ -1,6 +1,18 @@
 option(BLACKTHORN_BUILD_ASSET_PACKER "Build Asset Packer" ON)
 option(BLACKTHORN_BUILD_FONT_PACKER "Build Font Packer" ON)
 
+add_library(BlackthornCLI STATIC
+	include/CLI.h
+	src/CLI.cpp
+)
+
+target_include_directories(BlackthornCLI
+	PUBLIC
+		include
+)
+
+target_compile_features(BlackthornCLI PUBLIC cxx_std_20)
+
 if(BLACKTHORN_BUILD_ASSET_PACKER)
 	add_subdirectory(btpacker)
 endif()
