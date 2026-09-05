@@ -18,6 +18,7 @@ target_link_libraries(${PROJECT_NAME}
 	PRIVATE
 		BlackthornCore
 		BlackthornEngine
+		BlackthornShared
 )
 
 add_test(

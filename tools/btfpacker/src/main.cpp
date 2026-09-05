@@ -1,3 +1,6 @@
+#include "CLI.h"
+#include "Terminal.h"
+
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
@@ -7,6 +10,9 @@
 #include <string>
 #include <sstream>
 #include <vector>
+
+namespace cli = Blackthorn::Tools;
+namespace term = Blackthorn::Terminal;
 
 enum ExitCodes {
 	Ok = 0,
@@ -18,18 +24,16 @@ enum ExitCodes {
 
 struct CLIOptions {
 	bool dryRun = false;
-	bool help = false;
 	bool quiet = false;
 	bool verbose = false;
-	bool version = false;
 
 	float baselineOverride = -1.0f;
 	float lineHeightOverride = -1.0f;
 	float spaceWidthOverride = -1.0f;
 
 	std::string outputPath;
-
-	std::vector<std::string> positional;
+	std::string imagePath;
+	std::string metricsPath;
 };
 
 struct FontMetaData {
@@ -43,24 +47,6 @@ struct FontGlyph {
 	float x, y, w, h;
 	int16_t xOffset, yOffset, xAdvance;
 };
-
-void printUsage() {
-	std::cout << "Usage: btfpacker [options] <font_image> <metrics_file> -o <output>\n";
-	std::cout << "\nPacks a font image and metrics file into a binary .btf file.\n";
-	std::cout << "\nOptions:\n";
-	std::cout << "  -h, --help\t\tShows this help message.\n";
-	std::cout << "  -q, --quiet\t\tSuppress non-error output.\n";
-	std::cout << "  -v, --verbose\t\tShow verbose output.\n";
-	std::cout << "  -o, --output <file>\tOutput BTF file.\n";
-	std::cout << "  --version\t\tDisplay version information.\n";
-	std::cout << "  --dry-run\t\tValidate and parse, but do not write output.\n";
-	std::cout << "  --baseline\t<val>\tOverride baseline.\n";
-	std::cout << "  --line-height <val>\tOverride line height.\n";
-	std::cout << "  --space-width <val>\tOverride space width.\n";
-	std::cout << "\nMetrics Format:\n";
-	std::cout << "  common lineHeight=N [baseline=N]\n";
-	std::cout << "  char id=N x=N y=N width=N height=N xoffset=N yoffset=N xadvance=N\n";
-}
 
 inline void toLower(std::string& s) {
 	std::transform(s.begin(), s.end(), s.begin(), ::tolower);
@@ -127,7 +113,7 @@ bool parseNumericValue(const std::string& line, const std::string& key, int line
 			long long tmp = std::stoll(value);
 
 			if (tmp < std::numeric_limits<T>::min() || tmp > std::numeric_limits<T>::max()) {
-				std::cerr << "Error: Integer value out of range for key '" << key << "' on line " << lineNum << '\n';
+				std::cerr << term::colorize("Error: ", term::Color::Red, stderr) << "Integer value out of range for key '" << key << "' on line " << lineNum << '\n';
 				return false;
 			}
 
@@ -136,7 +122,7 @@ bool parseNumericValue(const std::string& line, const std::string& key, int line
 			long double tmp = std::stold(value);
 
 			if (!std::isfinite(tmp)) {
-				std::cerr << "Error: Non-finite float for key '" << key << "' on line " << lineNum << '\n';
+				std::cerr << term::colorize("Error: ", term::Color::Red, stderr) << "Non-finite float for key '" << key << "' on line " << lineNum << '\n';
 				return false;
 			}
 
@@ -145,19 +131,10 @@ bool parseNumericValue(const std::string& line, const std::string& key, int line
 
 		return true;
 	} catch (const std::invalid_argument&) {
-		std::cerr << "Error: Invalid numeric value for key '" << key << "' on line " << lineNum << '\n';
+		std::cerr << term::colorize("Error: ", term::Color::Red, stderr) << "Invalid numeric value for key '" << key << "' on line " << lineNum << '\n';
 		return false;
 	} catch (const std::out_of_range&) {
-		std::cerr << "Error: Numeric value out of range for key '" << key << "' on line " << lineNum << '\n';
-		return false;
-	}
-}
-
-bool parseFloat(const std::string& str, float& outFloat) {
-	try {
-		outFloat = std::stof(str);
-		return true;
-	} catch(std::invalid_argument&) {
+		std::cerr << term::colorize("Error: ", term::Color::Red, stderr) << "Numeric value out of range for key '" << key << "' on line " << lineNum << '\n';
 		return false;
 	}
 }
@@ -166,7 +143,7 @@ bool parseMetrics(const std::string& path, FontMetaData& metadata, std::vector<F
 	std::ifstream file(path);
 
 	if (!file) {
-		std::cerr << "Error: Failed to open metrics file: " << path << '\n';
+		std::cerr << term::colorize("Error: ", term::Color::Red, stderr) << "Failed to open metrics file: " << path << '\n';
 		return false;
 	}
 
@@ -194,7 +171,7 @@ bool parseMetrics(const std::string& path, FontMetaData& metadata, std::vector<F
 			if (opts.lineHeightOverride == -1.0f) {
 				if (!parseNumericValue(line, "lineheight", lineNum, metadata.lineHeight)) {
 					if (opts.verbose && !opts.quiet) {
-						std::cerr << "Error: Common value 'lineHeight' not found in metrics\n";
+						std::cerr << term::colorize("Error: ", term::Color::Red, stderr) << "Common value 'lineHeight' not found in metrics\n";
 						std::cout << "  No lineHeight found in metrics file; use --line-height <value> to provide one.\n";
 					}
 				} else {
@@ -220,7 +197,7 @@ bool parseMetrics(const std::string& path, FontMetaData& metadata, std::vector<F
 
 			if (glyph.codePoint == 0) {
 				if (opts.verbose && !opts.quiet)
-					std::cerr << "Warning: Skipping glyph with id=0 on line " << lineNum << '\n';
+					std::cerr << term::colorize("Warning: ", term::Color::Yellow, stderr) << "Skipping glyph with id=0 on line " << lineNum << '\n';
 
 				continue;
 			}
@@ -240,20 +217,20 @@ bool parseMetrics(const std::string& path, FontMetaData& metadata, std::vector<F
 
 			if (!ok) {
 				if (opts.verbose && !opts.quiet)
-					std::cerr << "Warning: Skipping glyph on line " << lineNum << " due to missing required fields\n";
+					std::cerr << term::colorize("Warning: ", term::Color::Yellow, stderr) << "Skipping glyph on line " << lineNum << " due to missing required fields\n";
 
 				continue;
 			}
 
 			if (glyph.w < 0 || glyph.h < 0) {
 				if (opts.verbose && !opts.quiet)
-					std::cerr << "Warning: Skipping glyph with id=" << glyph.codePoint << " on line " << lineNum << " with negative dimensions\n";
+					std::cerr << term::colorize("Warning: ", term::Color::Yellow, stderr) << "Skipping glyph with id=" << glyph.codePoint << " on line " << lineNum << " with negative dimensions\n";
 				continue;
 			}
 
 			if (glyph.xAdvance < 0) {
 				if (opts.verbose && !opts.quiet)
-					std::cerr << "Warning: Skipping glyph with id=" << glyph.codePoint << " on line " << lineNum << " with non-positive advance\n";
+					std::cerr << term::colorize("Warning: ", term::Color::Yellow, stderr) << "Skipping glyph with id=" << glyph.codePoint << " on line " << lineNum << " with non-positive advance\n";
 				continue;
 			}
 
@@ -262,7 +239,7 @@ bool parseMetrics(const std::string& path, FontMetaData& metadata, std::vector<F
 			continue;
 		} else {
 			if (!opts.quiet && opts.verbose)
-				std::cerr << "Warning: Skipping unknown command '" << command << "' on line " << lineNum << '\n';
+				std::cerr << term::colorize("Warning: ", term::Color::Yellow, stderr) << "Skipping unknown command '" << command << "' on line " << lineNum << '\n';
 		}
 	}
 
@@ -321,92 +298,18 @@ bool parseMetrics(const std::string& path, FontMetaData& metadata, std::vector<F
 	return !glyphs.empty();
 }
 
-bool parseArguments(int argc, char const *argv[], CLIOptions& opts) {
-	size_t i = 1;
-
-	while (i < static_cast<size_t>(argc)) {
-		std::string arg = argv[i];
-
-		if (arg == "-h" || arg == "--help") {
-			opts.help = true;
-		} else if (arg == "-q" || arg == "--quiet") {
-			opts.quiet = true;
-		} else if (arg == "-v" || arg == "--verbose") {
-			opts.verbose = true;
-		} else if (arg == "--dry-run") {
-			opts.dryRun = true;
-		} else if (arg == "--version") {
-			opts.version = true;
-		} else if (arg == "--baseline") {
-			if (++i >= static_cast<size_t>(argc)) {
-				std::cerr << "Error: Missing value for --baseline\n";
-				return false;
-			}
-
-			if (!parseFloat(argv[i], opts.baselineOverride)) {
-				std::cerr << "Error: Invalid number for --baseline\n";
-				return false;
-			}
-		} else if (arg == "--line-height") {
-			if (++i >= static_cast<size_t>(argc)) {
-				std::cerr << "Error: Missing value for --line-height\n";
-				return false;
-			}
-
-			if (!parseFloat(argv[i], opts.lineHeightOverride)) {
-				std::cerr << "Error: Invalid number for --line-height\n";
-				return false;
-			}
-		} else if (arg == "--space-width") {
-			if (++i >= static_cast<size_t>(argc)) {
-				std::cerr << "Error: Missing value for --space-width\n";
-				return false;
-			}
-
-			if (!parseFloat(argv[i], opts.spaceWidthOverride)) {
-				std::cerr << "Error: Invalid number for --space-width\n";
-				return false;
-			}
-		} else if (arg == "-o" || arg == "--output") {
-			if (++i >= static_cast<size_t>(argc)) {
-				std::cerr << "Error: missing value for " << arg << '\n';
-				return false;
-			}
-
-			if (!opts.outputPath.empty() && !opts.quiet)
-				std::cerr << "Duplicate output path specified, using " << argv[i] << '\n';
-
-			opts.outputPath = argv[i];
-		} else if (!arg.empty() && arg[0] == '-') {
-			std::cerr << "Error: Unrecognized option " << arg << "\n";
-			return false;
-		} else {
-			opts.positional.push_back(arg);
-		}
-
-		i++;
-	}
-
-	if (opts.positional.size() < 2 && !opts.help && !opts.version) {
-		printUsage();
-		return false;
-	}
-
-	return true;
-}
-
 bool readImageFile(const std::string& path, std::vector<uint8_t>& imageData, const CLIOptions& opts) {
 	std::ifstream file(path, std::ios::binary);
 
 	if (!file) {
-		std::cerr << "Error: Failed to open image file: " << path << '\n';
+		std::cerr << term::colorize("Error: ", term::Color::Red, stderr) << "Failed to open image file: " << path << '\n';
 		return false;
 	}
 
 	imageData.assign(std::istreambuf_iterator<char>(file), {});
 
 	if (imageData.empty()) {
-		std::cerr << "Error: Image file is empty\n";
+		std::cerr << term::colorize("Error: ", term::Color::Red, stderr) << "Image file is empty\n";
 		return false;
 	}
 
@@ -425,25 +328,25 @@ bool writeBTF(const FontMetaData& metadata, const std::vector<uint8_t>& imageDat
 	}
 
 	if (metadata.lineHeight <= 0.0f) {
-		std::cerr << "Error: Metrics file does not define a valid lineHeight\n";
+		std::cerr << term::colorize("Error: ", term::Color::Red, stderr) << "Metrics file does not define a valid lineHeight\n";
 		std::cout << "  Use --line-height <value> to provide one.\n";
 		return false;
 	}
 
 	if (glyphs.empty()) {
-		std::cerr << "Error: No glyphs to write\n";
+		std::cerr << term::colorize("Error: ", term::Color::Red, stderr) << "No glyphs to write\n";
 		return false;
 	}
 
 	if (imageData.empty()) {
-		std::cerr << "Error: No image data\n";
+		std::cerr << term::colorize("Error: ", term::Color::Red, stderr) << "No image data\n";
 		return false;
 	}
 
 	std::ofstream file(opts.outputPath, std::ios::binary);
 
 	if (!file) {
-		std::cerr << "Error: Failed to create output file: " << opts.outputPath << '\n';
+		std::cerr << term::colorize("Error: ", term::Color::Red, stderr) << "Failed to create output file: " << opts.outputPath << '\n';
 		return false;
 	}
 
@@ -476,13 +379,13 @@ bool writeBTF(const FontMetaData& metadata, const std::vector<uint8_t>& imageDat
 	}
 
 	if (!file.good()) {
-		std::cerr << "Error: Failed while writing output file\n";
+		std::cerr << term::colorize("Error: ", term::Color::Red, stderr) << "Failed while writing output file\n";
 		return false;
 	}
 
 	if (!opts.quiet) {
 		if (opts.verbose && !opts.quiet) {
-			std::cout << "Successfully wrote BTF file: " << opts.outputPath << '\n';
+			std::cout << term::colorize("Successfully wrote BTF file: ", term::Color::Green, stdout) << opts.outputPath << '\n';
 			std::cout << "  Version: " << version << '\n';
 			std::cout << "  Line Height: " << metadata.lineHeight << '\n';
 			std::cout << "  Baseline: " << metadata.baseline << '\n';
@@ -490,63 +393,105 @@ bool writeBTF(const FontMetaData& metadata, const std::vector<uint8_t>& imageDat
 			std::cout << "  Image Size: " << imageSize << " bytes\n";
 			std::cout << "  Glyph Count: " << glyphCount << '\n';
 		} else {
-			std::cout << "Wrote " << opts.outputPath << " (" << glyphCount << " glyphs, " << imageSize << " bytes image).\n";
+			std::cout << term::colorize("Wrote ", term::Color::Green, stdout) << opts.outputPath << " (" << glyphCount << " glyphs, " << imageSize << " bytes image).\n";
 		}
 	}
 
 	return true;
 }
 
-int main(int argc, char const *argv[]) {
-	CLIOptions options;
+int main(int argc, char** argv) {
+	cli::Command app{"btfpacker", "Packs a font image and metrics file into a binary .btf file."};
 
-	if (!parseArguments(argc, argv, options)) {
+	app.option("quiet", 'q').flag().help("Suppress non-error output.");
+	app.option("verbose", 'v').flag().help("Show verbose output.");
+	app.option("version").flag().help("Display version information.");
+	app.option("dry-run").flag().help("Validate and parse, but do not write output.");
+	app.option("output", 'o').value<std::string>().help("Output BTF file.");
+	app.option("baseline").value<float>().help("Override baseline.");
+	app.option("line-height").value<float>().help("Override line height.");
+	app.option("space-width").value<float>().help("Override space width.");
+
+	app.positional("font_image").help("Font image file.");
+	app.positional("metrics_file").help("Font metrics file.");
+
+	auto result = app.parse(argc, argv);
+	if (!result) {
+		std::cerr << term::colorize("btfpacker: error: ", term::Color::Red, stderr) << result.error().message << '\n';
 		return ExitCodes::BadArgs;
 	}
 
-	if (options.help) {
-		printUsage();
+	if (result->helpRequested()) {
+		if (auto topic = result->helpTopic()) {
+			std::cout << app.help(*topic);
+		} else {
+			std::cout << app.help();
+			std::cout << "\nMetrics Format:\n";
+			std::cout << "  common lineHeight=N [baseline=N]\n";
+			std::cout << "  char id=N x=N y=N width=N height=N xoffset=N yoffset=N xadvance=N\n";
+		}
+
 		return ExitCodes::Ok;
 	}
 
-	if (options.version) {
+	if (result->get<bool>("version")) {
 		std::cout << "btfpacker version 2.0.0\n";
 		return ExitCodes::Ok;
 	}
 
-	if (options.positional.size() > 2) {
-		std::cerr << "Error: Too many positional arguments, expected 2, got " << options.positional.size() << "\n";
+	const auto positionals = result->positional();
+
+	if (positionals.size() < 2) {
+		std::cerr << term::colorize("Error: ", term::Color::Red, stderr) << "no command specified.\n\n";
+		std::cerr << app.usage() << '\n';
+		return ExitCodes::BadArgs;
+	}
+	if (positionals.size() > 2) {
+		std::cerr << term::colorize("Error: ", term::Color::Red, stderr) << "Too many positional arguments, expected 2, got " << positionals.size() << "\n";
 		return ExitCodes::BadArgs;
 	}
 
-	if (options.outputPath.empty()) {
-		std::cerr << "Error: Output path missing\n";
+	if (!result->specified("output")) {
+		std::cerr << term::colorize("Error: ", term::Color::Red, stderr) << "Output path missing\n";
 		return ExitCodes::WriteError;
 	}
 
-	if (options.quiet && options.verbose) {
-		std::cerr << "Warning: Both --quiet and --verbose specified, quiet takes precedence\n";
-	}
+	CLIOptions options;
+	options.quiet = result->get<bool>("quiet");
+	options.verbose = result->get<bool>("verbose");
+	options.dryRun = result->get<bool>("dry-run");
+	options.outputPath = result->get<std::string>("output");
+	options.imagePath = positionals[0];
+	options.metricsPath = positionals[1];
 
-	std::string imagePath = options.positional[0];
-	std::string metricsPath = options.positional[1];
+	if (result->specified("baseline"))
+		options.baselineOverride = result->get<float>("baseline");
+
+	if (result->specified("line-height"))
+		options.lineHeightOverride = result->get<float>("line-height");
+
+	if (result->specified("space-width"))
+		options.spaceWidthOverride = result->get<float>("space-width");
+
+	if (options.quiet && options.verbose)
+		std::cerr << term::colorize("Warning: ", term::Color::Yellow, stderr) << "Both --quiet and --verbose specified, quiet takes precedence\n";
 
 	FontMetaData metadata = {};
 	std::vector<FontGlyph> glyphs;
 
-	if (!parseMetrics(metricsPath, metadata, glyphs, options)) {
-		std::cerr << "Error: Failed to parse metrics file\n";
+	if (!parseMetrics(options.metricsPath, metadata, glyphs, options)) {
+		std::cerr << term::colorize("Error: ", term::Color::Red, stderr) << "Failed to parse metrics file\n";
 		return ExitCodes::MetricsError;
 	}
 
 	std::vector<uint8_t> imageData;
-	if (!readImageFile(imagePath, imageData, options)) {
-		std::cerr << "Error: Failed to read image file\n";
+	if (!readImageFile(options.imagePath, imageData, options)) {
+		std::cerr << term::colorize("Error: ", term::Color::Red, stderr) << "Failed to read image file\n";
 		return ExitCodes::ImageError;
 	}
 
 	if (!writeBTF(metadata, imageData, glyphs, options)) {
-		std::cerr << "Error: Failed to write BTF file\n";
+		std::cerr << term::colorize("Error: ", term::Color::Red, stderr) << "Failed to write BTF file\n";
 		return ExitCodes::WriteError;
 	}
 

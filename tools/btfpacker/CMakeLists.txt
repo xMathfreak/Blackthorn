@@ -23,6 +23,11 @@ target_include_directories(btfpacker
 		src
 )
 
+target_link_libraries(btfpacker
+	PRIVATE
+		BlackthornCLI
+)
+
 target_compile_definitions(btfpacker
 	PRIVATE
 		$<$<CONFIG:Debug>:BTFPACKER_DEBUG>

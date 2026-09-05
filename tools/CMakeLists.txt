@@ -11,6 +11,11 @@ target_include_directories(BlackthornCLI
 		include
 )
 
+target_link_libraries(BlackthornCLI
+	PUBLIC
+		BlackthornShared
+)
+
 target_compile_features(BlackthornCLI PUBLIC cxx_std_20)
 
 if(BLACKTHORN_BUILD_ASSET_PACKER)
