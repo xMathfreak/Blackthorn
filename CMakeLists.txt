@@ -48,6 +48,7 @@ find_package(SDL3_ttf REQUIRED)
 
 # Subdirectories
 add_subdirectory(third_party)
+add_subdirectory(shared)
 add_subdirectory(engine)
 
 if (BLACKTHORN_ENABLE_TESTING)
