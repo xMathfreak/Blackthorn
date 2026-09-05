@@ -190,26 +190,6 @@ template <> std::string typeName<std::string>();
 } // namespace Detail
 
 /**
- * @brief Syntactic classification of a single raw argv token.
- *
- * Exposed for callers that want to introspect argument shape themselves.
- * Command's own parser performs tokenizing and matching as a single pass
- * internally (getopt-style short-option clustering isn't fully resolvable
- * without the option table, so it can't be a clean separate lexer stage).
- */
-struct Token {
-	enum class Kind {
-		Option,       ///< "-x", "-xyz", "--name", or "--name=value".
-		Value,        ///< A bare word appearing where an option's value is expected.
-		Positional,   ///< A bare word consumed as a positional (or subcommand name).
-		EndOfOptions, ///< The literal "--" marker.
-	};
-
-	Kind kind;
-	std::string text;
-};
-
-/**
  * @brief Schema for a single registered option (flag or value).
  *
  * Constructed and mutated via OptionBuilder/TypedOptionBuilder<T>; not intended
@@ -268,7 +248,7 @@ class TypedOptionBuilder;
 
 /**
  * @brief Fluent builder returned by Command::option() before `.value<T>()`/`.flag()`
- * commits it to a type. Chain immediately -- see the note on Command::option().
+ * commits it to a type. Chain immediately; see the note on Command::option().
  */
 class OptionBuilder {
 public:
@@ -376,7 +356,7 @@ private:
  * @brief The outcome of a successful Command::parse() at one command level.
  *
  * If the command had subcommands and one was invoked, subcommand() returns a
- * pointer to that subcommand's own ParseResult (recursively -- a subcommand
+ * pointer to that subcommand's own ParseResult (recursively, a subcommand
  * may itself have subcommands).
  */
 class ParseResult {
@@ -414,6 +394,13 @@ public:
 	/// @brief True if -h/--help was seen at this command level.
 	bool helpRequested() const;
 
+	/// @brief If -h/--help was immediately followed by a recognized option,
+	/// positional, or subcommand name (e.g. `-h --dry-run`, `--help output`,
+	/// or `--help pack`), that name so the caller can show focused help via
+	/// Command::help(name) instead of the full listing. std::nullopt for a
+	/// bare -h/--help with nothing recognized after it.
+	std::optional<std::string_view> helpTopic() const;
+
 	/// @brief The name of the Command this result belongs to.
 	std::string_view command_name() const;
 
@@ -433,19 +420,20 @@ private:
 	std::vector<std::string> positionalTokens_;
 	std::set<std::string> specifiedOptions_;
 	bool helpRequested_ = false;
+	std::string helpTopic_;
 	std::unique_ptr<ParseResult> subResult_;
 };
 
 /**
  * @brief A single command, and (via command()) the root of a tree of subcommands.
  *
- * Not copyable -- construct one per tool/subcommand and hold it by value or
+ * Not copyable. Construct one per tool/subcommand and hold it by value or
  * behind a stable reference for the program's lifetime.
  *
  * @note option()/positional()/command() return builders/references that stay
  * valid for the Command's lifetime, but a fluent chain off one of them
  * (`app.option(...).flag().help(...)`) must complete as a single expression
- * before the next `option()`/`positional()`/`command()` call -- don't store
+ * before the next `option()`/`positional()`/`command()` call. Don't store
  * the intermediate builder in a variable and call `option()` again in between.
  */
 class Command {
@@ -470,7 +458,7 @@ public:
 	 * A Command with subcommands registered treats the first positional-shaped
 	 * token as the subcommand selector; a subcommand is required unless -h/--help
 	 * is given. Declaring both subcommands AND positionals on the same Command
-	 * is not supported -- the positionals would be unreachable.
+	 * is not supported because the positionals would be unreachable.
 	 */
 	Command& command(std::string name, std::string description = {});
 
@@ -481,13 +469,15 @@ public:
 	/// and (if any) subcommands.
 	std::string help() const;
 
+	/// @brief Just the "Usage: name [OPTIONS] ..." line, no trailing sections.
+	/// Useful for short error messages that shouldn't dump the full listing.
+	std::string usage() const;
+
 	/// @brief Detailed help text for exactly one option or positional by name.
 	/// Returns a "no such option" message rather than throwing if not found.
 	std::string help(std::string_view name) const;
 
 private:
-	friend class OptionBuilder;
-
 	Result<ParseResult> parseArgs(std::span<const std::string_view> args) const;
 
 	OptionSpec* findOption(std::string_view name);
@@ -502,10 +492,6 @@ private:
 	std::deque<PositionalSpec> positionals_;
 	std::vector<std::unique_ptr<Command>> subcommands_;
 };
-
-// ---------------------------------------------------------------------------
-// Template definitions
-// ---------------------------------------------------------------------------
 
 template <class T>
 const T& ParseResult::get(std::string_view name) const {
@@ -527,6 +513,7 @@ TypedOptionBuilder<T> OptionBuilder::value() {
 			auto parsed = Parser<T>::parse(raw);
 			if (!parsed)
 				return parsed.error();
+
 			return std::any(std::move(*parsed));
 		};
 	} else {
@@ -543,6 +530,7 @@ TypedOptionBuilder<T> OptionBuilder::value() {
 	spec_->appendValue = [](std::any& storage, std::any value) {
 		if (!storage.has_value())
 			storage = std::vector<T>{};
+
 		std::any_cast<std::vector<T>&>(storage).push_back(std::any_cast<T&&>(std::move(value)));
 	};
 
@@ -564,6 +552,7 @@ TypedOptionBuilder<T>& TypedOptionBuilder<T>::choices(std::vector<std::string> a
 				break;
 			}
 		}
+
 		if (!matched) {
 			std::string list;
 			for (size_t i = 0; i < allowed.size(); ++i) {
@@ -571,6 +560,7 @@ TypedOptionBuilder<T>& TypedOptionBuilder<T>::choices(std::vector<std::string> a
 					list += ", ";
 				list += allowed[i];
 			}
+
 			return ParseError{
 				ParseError::Code::InvalidValue,
 				"invalid value '" + rawStr + "'; expected one of: " + list
@@ -603,6 +593,7 @@ TypedOptionBuilder<T>& TypedOptionBuilder<T>::choices(std::vector<std::pair<std:
 		for (size_t i = 0; i < mapping.size(); ++i) {
 			if (i != 0)
 				list += ", ";
+
 			list += mapping[i].first;
 		}
 		return ParseError{
@@ -623,6 +614,7 @@ TypedOptionBuilder<T>& TypedOptionBuilder<T>::range(T min, T max) {
 		if (v < min || v > max) {
 			return "must be between " + std::to_string(min) + " and " + std::to_string(max);
 		}
+
 		return std::nullopt;
 	};
 

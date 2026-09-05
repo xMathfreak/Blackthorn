@@ -1,23 +1,25 @@
-/**
- * @file CLI.cpp
- * @brief Implementation of the tokenizing/matching/validation engine declared
- * in CLI.h, plus the built-in Parser<T> and Detail::typeName<T> specializations.
- *
- * Everything here is non-template on purpose: this is compiled once into a
- * static library (see tools/CMakeLists.txt) and linked into every tool, so
- * only the genuinely type-dependent glue stays header-only.
- */
-
 #include "CLI.h"
 
+#include <cctype>
 #include <charconv>
 #include <stdexcept>
 
 namespace Blackthorn::Tools {
 
-// ---------------------------------------------------------------------------
-// Detail::typeName<T> specializations
-// ---------------------------------------------------------------------------
+namespace {
+
+/// @brief Used only for -h/--help topic matching.
+bool equalsIgnoreCase(std::string_view a, std::string_view b) {
+	if (a.size() != b.size())
+		return false;
+	for (size_t i = 0; i < a.size(); ++i) {
+		if (std::tolower(static_cast<unsigned char>(a[i])) != std::tolower(static_cast<unsigned char>(b[i])))
+			return false;
+	}
+	return true;
+}
+
+} // namespace
 
 namespace Detail {
 
@@ -34,10 +36,6 @@ template <> std::string typeName<std::string>() { return "string"; }
 
 } // namespace Detail
 
-// ---------------------------------------------------------------------------
-// Built-in Parser<T> specializations
-// ---------------------------------------------------------------------------
-
 namespace {
 
 /// @brief Shared implementation for every Parser<Integral>::parse() below.
@@ -53,6 +51,7 @@ Result<T> parseIntegral(std::string_view text) {
 			"expected an integer, got '" + std::string(text) + "'"
 		};
 	}
+
 	return value;
 }
 
@@ -69,6 +68,7 @@ Result<T> parseFloatingPoint(std::string_view text) {
 			"expected a number, got '" + std::string(text) + "'"
 		};
 	}
+
 	return value;
 }
 
@@ -77,8 +77,10 @@ Result<T> parseFloatingPoint(std::string_view text) {
 Result<bool> Parser<bool>::parse(std::string_view text) {
 	if (text == "true" || text == "1" || text == "yes" || text == "on")
 		return true;
+
 	if (text == "false" || text == "0" || text == "no" || text == "off")
 		return false;
+
 	return ParseError{
 		ParseError::Code::InvalidValue,
 		"expected a boolean (true/false), got '" + std::string(text) + "'"
@@ -97,10 +99,6 @@ Result<double> Parser<double>::parse(std::string_view text) { return parseFloati
 Result<std::string> Parser<std::string>::parse(std::string_view text) {
 	return std::string(text);
 }
-
-// ---------------------------------------------------------------------------
-// OptionBuilder (non-template members)
-// ---------------------------------------------------------------------------
 
 OptionBuilder& OptionBuilder::help(std::string text) {
 	spec_->description = std::move(text);
@@ -134,10 +132,6 @@ OptionBuilder& OptionBuilder::flag() {
 	return *this;
 }
 
-// ---------------------------------------------------------------------------
-// PositionalBuilder
-// ---------------------------------------------------------------------------
-
 PositionalBuilder& PositionalBuilder::help(std::string text) {
 	spec_->description = std::move(text);
 	return *this;
@@ -152,10 +146,6 @@ PositionalBuilder& PositionalBuilder::repeatable() {
 	spec_->repeatable = true;
 	return *this;
 }
-
-// ---------------------------------------------------------------------------
-// ParseResult
-// ---------------------------------------------------------------------------
 
 bool ParseResult::specified(std::string_view name) const {
 	return specifiedOptions_.count(std::string(name)) != 0;
@@ -172,6 +162,7 @@ const std::string& ParseResult::positional(std::string_view name) const {
 			"Blackthorn::Tools::ParseResult: no positional named '" + std::string(name) + "'"
 		);
 	}
+
 	return it->second;
 }
 
@@ -182,11 +173,19 @@ const std::vector<std::string>& ParseResult::positional_all(std::string_view nam
 			"Blackthorn::Tools::ParseResult: no repeatable positional named '" + std::string(name) + "'"
 		);
 	}
+
 	return it->second;
 }
 
 bool ParseResult::helpRequested() const {
 	return helpRequested_;
+}
+
+std::optional<std::string_view> ParseResult::helpTopic() const {
+	if (helpTopic_.empty())
+		return std::nullopt;
+
+	return helpTopic_;
 }
 
 std::string_view ParseResult::command_name() const {
@@ -205,12 +204,9 @@ const std::any& ParseResult::raw_value(std::string_view name) const {
 			"' (it was never specified and has no default_value())"
 		);
 	}
+
 	return it->second;
 }
-
-// ---------------------------------------------------------------------------
-// Command: construction & registration
-// ---------------------------------------------------------------------------
 
 Command::Command(std::string name, std::string description)
 	: name_(std::move(name)), description_(std::move(description)) {}
@@ -221,6 +217,7 @@ OptionBuilder Command::option(std::string longName, std::optional<char> shortNam
 			"Blackthorn::Tools::Command('" + name_ + "'): duplicate option '--" + longName + "'"
 		);
 	}
+
 	if (shortName && findShortOption(*shortName) != nullptr) {
 		throw std::logic_error(
 			"Blackthorn::Tools::Command('" + name_ + "'): duplicate short option '-" +
@@ -238,6 +235,13 @@ OptionBuilder Command::option(std::string longName, std::optional<char> shortNam
 }
 
 PositionalBuilder Command::positional(std::string name) {
+	if (!subcommands_.empty()) {
+		throw std::logic_error(
+			"Blackthorn::Tools::Command('" + name_ + "'): cannot register positional '" + name +
+			"' -- this command already has subcommands, and the positional would be unreachable"
+		);
+	}
+
 	for (const auto& existing : positionals_) {
 		if (existing.name == name) {
 			throw std::logic_error(
@@ -245,6 +249,7 @@ PositionalBuilder Command::positional(std::string name) {
 			);
 		}
 	}
+
 	if (!positionals_.empty() && positionals_.back().repeatable) {
 		throw std::logic_error(
 			"Blackthorn::Tools::Command('" + name_ + "'): positional '" + positionals_.back().name +
@@ -260,6 +265,13 @@ PositionalBuilder Command::positional(std::string name) {
 }
 
 Command& Command::command(std::string name, std::string description) {
+	if (!positionals_.empty()) {
+		throw std::logic_error(
+			"Blackthorn::Tools::Command('" + name_ + "'): cannot register subcommand '" + name +
+			"' -- this command already has positionals declared"
+		);
+	}
+
 	if (findSubcommand(name) != nullptr) {
 		throw std::logic_error(
 			"Blackthorn::Tools::Command('" + name_ + "'): duplicate subcommand '" + name + "'"
@@ -279,6 +291,7 @@ const OptionSpec* Command::findOption(std::string_view name) const {
 		if (spec.longName == name)
 			return &spec;
 	}
+
 	return nullptr;
 }
 
@@ -287,6 +300,7 @@ const OptionSpec* Command::findShortOption(char shortName) const {
 		if (spec.shortName && *spec.shortName == shortName)
 			return &spec;
 	}
+
 	return nullptr;
 }
 
@@ -295,12 +309,9 @@ Command* Command::findSubcommand(std::string_view name) const {
 		if (child->name_ == name)
 			return child.get();
 	}
+
 	return nullptr;
 }
-
-// ---------------------------------------------------------------------------
-// Command: parsing
-// ---------------------------------------------------------------------------
 
 Result<ParseResult> Command::parse(int argc, char** argv) const {
 	std::vector<std::string_view> args;
@@ -309,6 +320,7 @@ Result<ParseResult> Command::parse(int argc, char** argv) const {
 		for (int i = 1; i < argc; ++i)
 			args.emplace_back(argv[i]);
 	}
+
 	return parseArgs(args);
 }
 
@@ -345,8 +357,30 @@ Result<ParseResult> Command::parseArgs(std::span<const std::string_view> args) c
 	bool subcommandConsumed = false;
 	size_t positionalIndex = 0;
 
-	// options_ is fixed for the lifetime of this call, so this only needs computing once.
 	const bool helpIsReserved = findOption("help") == nullptr && findShortOption('h') == nullptr;
+
+	// A misspelled conflictsWith()/requires_option() argument would otherwise
+	// silently produce a requirement/conflict that can never trigger (or, for
+	// requires_option, one that can never be satisfied).
+	for (const OptionSpec& spec : options_) {
+		for (const std::string& other : spec.conflicts) {
+			if (findOption(other) == nullptr) {
+				throw std::logic_error(
+					"Blackthorn::Tools::Command('" + name_ + "'): option '--" + spec.longName +
+					"' conflictsWith() unknown option '--" + other + "'"
+				);
+			}
+		}
+
+		for (const std::string& other : spec.requirements) {
+			if (findOption(other) == nullptr) {
+				throw std::logic_error(
+					"Blackthorn::Tools::Command('" + name_ + "'): option '--" + spec.longName +
+					"' requires_option() unknown option '--" + other + "'"
+				);
+			}
+		}
+	}
 
 	for (size_t i = 0; i < args.size(); ++i) {
 		const std::string_view arg = args[i];
@@ -358,6 +392,57 @@ Result<ParseResult> Command::parseArgs(std::span<const std::string_view> args) c
 
 		if (!endOfOptions && helpIsReserved && (arg == "-h" || arg == "--help")) {
 			result.helpRequested_ = true;
+
+			if (i + 1 < args.size()) {
+				const std::string_view next = args[i + 1];
+				std::string_view topic;
+				bool matched = false;
+
+				if (next.size() >= 2 && next[0] == '-' && next[1] == '-') {
+					const std::string_view name = next.substr(2);
+					for (const auto& opt : options_) {
+						if (equalsIgnoreCase(opt.longName, name)) {
+							topic = opt.longName;
+							matched = true;
+							break;
+						}
+					}
+				} else if (next.size() == 2 && next[0] == '-') {
+					const char letter = next[1];
+					for (const auto& opt : options_) {
+						if (opt.shortName && std::tolower(static_cast<unsigned char>(*opt.shortName))
+							== std::tolower(static_cast<unsigned char>(letter))) {
+							topic = opt.longName;
+							matched = true;
+							break;
+						}
+					}
+				} else if (!next.empty() && next[0] != '-') {
+					for (const auto& pos : positionals_) {
+						if (equalsIgnoreCase(pos.name, next)) {
+							topic = pos.name;
+							matched = true;
+							break;
+						}
+					}
+
+					if (!matched) {
+						for (const auto& child : subcommands_) {
+							if (equalsIgnoreCase(child->name_, next)) {
+								topic = child->name_;
+								matched = true;
+								break;
+							}
+						}
+					}
+				}
+
+				if (matched) {
+					result.helpTopic_ = std::string(topic);
+					++i;
+				}
+			}
+
 			continue;
 		}
 
@@ -386,6 +471,7 @@ Result<ParseResult> Command::parseArgs(std::span<const std::string_view> args) c
 						"--" + spec->longName + " does not take a value"
 					};
 				}
+
 				result.values_[spec->longName] = std::any(true);
 				result.specifiedOptions_.insert(spec->longName);
 				continue;
@@ -401,11 +487,13 @@ Result<ParseResult> Command::parseArgs(std::span<const std::string_view> args) c
 						"--" + spec->longName + " requires a value"
 					};
 				}
+
 				raw = args[++i];
 			}
 
 			if (auto err = recordValue(*spec, raw))
 				return *err;
+
 			continue;
 		}
 
@@ -456,7 +544,7 @@ Result<ParseResult> Command::parseArgs(std::span<const std::string_view> args) c
 			continue;
 		}
 
-		// Everything else is positional-shaped: a subcommand name, or a positional value.
+		// Everything else is positional-shaped
 		if (!subcommandConsumed && !subcommands_.empty()) {
 			Command* child = findSubcommand(arg);
 			if (!child) {
@@ -477,6 +565,7 @@ Result<ParseResult> Command::parseArgs(std::span<const std::string_view> args) c
 			if (!subResult)
 				return subResult.error();
 
+			result.helpRequested_ = subResult->helpRequested();
 			result.subResult_ = std::make_unique<ParseResult>(std::move(*subResult));
 			break;
 		}
@@ -505,8 +594,6 @@ Result<ParseResult> Command::parseArgs(std::span<const std::string_view> args) c
 		result.positionalTokens_.emplace_back(arg);
 		if (spec.repeatable) {
 			result.positionalListsByName_[spec.name].emplace_back(arg);
-			// Deliberately don't advance positionalIndex: a repeatable positional
-			// must be last, so it keeps absorbing tokens for the rest of the loop.
 		} else {
 			result.positionalsByName_[spec.name] = std::string(arg);
 			++positionalIndex;
@@ -521,8 +608,10 @@ Result<ParseResult> Command::parseArgs(std::span<const std::string_view> args) c
 		for (size_t k = 0; k < subcommands_.size(); ++k) {
 			if (k != 0)
 				names += ", ";
+
 			names += subcommands_[k]->name_;
 		}
+
 		return ParseError{
 			ParseError::Code::MissingRequired,
 			"a subcommand is required; expected one of: " + names
@@ -533,6 +622,7 @@ Result<ParseResult> Command::parseArgs(std::span<const std::string_view> args) c
 		const bool has = spec.repeatable
 			? result.positionalListsByName_.count(spec.name) != 0
 			: result.positionalsByName_.count(spec.name) != 0;
+
 		if (spec.required && !has) {
 			return ParseError{
 				ParseError::Code::MissingRequired,
@@ -546,9 +636,21 @@ Result<ParseResult> Command::parseArgs(std::span<const std::string_view> args) c
 			continue;
 
 		if (!spec.takesValue) {
+			if (spec.required) {
+				return ParseError{
+					ParseError::Code::MissingRequired,
+					"missing required option '--" + spec.longName + "'"
+				};
+			}
 			result.values_[spec.longName] = std::any(false);
 		} else if (spec.defaultValue.has_value()) {
-			result.values_[spec.longName] = spec.defaultValue;
+			if (spec.repeatable) {
+				std::any defaultList;
+				spec.appendValue(defaultList, spec.defaultValue);
+				result.values_[spec.longName] = std::move(defaultList);
+			} else {
+				result.values_[spec.longName] = spec.defaultValue;
+			}
 		} else if (spec.required) {
 			return ParseError{
 				ParseError::Code::MissingRequired,
@@ -569,6 +671,7 @@ Result<ParseResult> Command::parseArgs(std::span<const std::string_view> args) c
 				};
 			}
 		}
+
 		for (const std::string& other : spec.requirements) {
 			if (result.specifiedOptions_.count(other) == 0) {
 				return ParseError{
@@ -582,10 +685,6 @@ Result<ParseResult> Command::parseArgs(std::span<const std::string_view> args) c
 	return result;
 }
 
-// ---------------------------------------------------------------------------
-// Command: help text
-// ---------------------------------------------------------------------------
-
 namespace {
 
 constexpr size_t HelpColumnWidth = 28;
@@ -597,14 +696,17 @@ std::string joinNames(const std::vector<std::string>& names) {
 			out += ", ";
 		out += names[i];
 	}
+
 	return out;
 }
 
 std::string padColumn(std::string text) {
-	if (text.size() < HelpColumnWidth)
+	if (text.size() < HelpColumnWidth) {
 		text += std::string(HelpColumnWidth - text.size(), ' ');
-	else
+	} else {
 		text += "  ";
+	}
+
 	return text;
 }
 
@@ -617,82 +719,63 @@ std::string formatOptionUsage(const OptionSpec& spec) {
 	} else {
 		out += "    ";
 	}
+
 	out += "--" + spec.longName;
+
 	if (spec.takesValue)
 		out += " <" + spec.metaVar + ">";
+
 	return out;
 }
 
 } // namespace
 
-std::string Command::help() const {
-	std::string out = name_;
-	if (!description_.empty())
-		out += " - " + description_;
-	out += "\n\nUSAGE:\n";
+std::string Command::usage() const {
+	std::string out = "Usage: " + name_ + " [OPTIONS]";
 
 	if (!subcommands_.empty()) {
-		out += "    " + name_ + " [OPTIONS] <SUBCOMMAND> [ARGS...]\n";
+		out += " <SUBCOMMAND> [ARGS...]";
 	} else {
-		out += "    " + name_ + " [OPTIONS]";
 		for (const auto& pos : positionals_) {
-			if (pos.repeatable)
+			if (pos.repeatable) {
 				out += " <" + pos.name + "...>";
-			else if (pos.required)
+			} else if (pos.required) {
 				out += " <" + pos.name + ">";
-			else
+			} else {
 				out += " [" + pos.name + "]";
-		}
-		out += "\n";
-	}
-
-	out += "\nOPTIONS:\n";
-	for (const auto& spec : options_) {
-		std::string line = padColumn(formatOptionUsage(spec)) + spec.description;
-
-		std::vector<std::string> notes;
-		if (spec.required)
-			notes.emplace_back("required");
-		if (spec.takesValue && spec.defaultValue.has_value())
-			notes.emplace_back("has a default");
-		if (!spec.choices.empty()) {
-			std::vector<std::string> choiceNames;
-			for (const auto& choice : spec.choices)
-				choiceNames.push_back(choice.first);
-			notes.emplace_back("one of: " + joinNames(choiceNames));
-		}
-		if (!spec.conflicts.empty())
-			notes.emplace_back("conflicts with: " + joinNames(spec.conflicts));
-		if (!spec.requirements.empty())
-			notes.emplace_back("requires: " + joinNames(spec.requirements));
-
-		if (!notes.empty()) {
-			line += " (";
-			for (size_t i = 0; i < notes.size(); ++i) {
-				if (i != 0)
-					line += "; ";
-				line += notes[i];
 			}
-			line += ")";
 		}
-		out += line + "\n";
 	}
-	out += padColumn("    -h, --help") + "Show this help message\n";
+
+	out += "\n";
+	return out;
+}
+
+std::string Command::help() const {
+	std::string out = usage();
+	out += "\n";
+
+	if (!description_.empty())
+		out += description_ + "\n\n";
+
+	out += "Options:\n";
+	for (const auto& spec : options_)
+		out += padColumn(formatOptionUsage(spec)) + spec.description + "\n";
+
+	if (findOption("help") == nullptr && findShortOption('h') == nullptr)
+		out += padColumn("    -h, --help") + "Show this help message.\n";
 
 	if (!positionals_.empty() && subcommands_.empty()) {
-		out += "\nPOSITIONALS:\n";
-		for (const auto& pos : positionals_) {
-			std::string line = padColumn("    <" + pos.name + ">") + pos.description;
-			if (pos.required)
-				line += " (required)";
-			out += line + "\n";
-		}
+		out += "\nPositionals:\n";
+		for (const auto& pos : positionals_)
+			out += padColumn("    <" + pos.name + ">") + pos.description + "\n";
 	}
 
 	if (!subcommands_.empty()) {
-		out += "\nSUBCOMMANDS:\n";
+		out += "\nSubcommands:\n";
 		for (const auto& child : subcommands_)
 			out += padColumn("    " + child->name_) + child->description_ + "\n";
+
 		out += "\nRun '" + name_ + " <subcommand> --help' for more information on a subcommand.\n";
 	}
 
@@ -704,20 +787,27 @@ std::string Command::help(std::string_view name) const {
 		std::string out = formatOptionUsage(*spec) + "\n";
 		if (!spec->description.empty())
 			out += "    " + spec->description + "\n";
+
 		if (spec->required)
 			out += "    Required.\n";
+
 		if (spec->takesValue && spec->defaultValue.has_value())
 			out += "    Has a default value.\n";
+
 		if (!spec->choices.empty()) {
 			std::vector<std::string> choiceNames;
 			for (const auto& choice : spec->choices)
 				choiceNames.push_back(choice.first);
+
 			out += "    Allowed values: " + joinNames(choiceNames) + "\n";
 		}
+
 		if (!spec->conflicts.empty())
 			out += "    Conflicts with: " + joinNames(spec->conflicts) + "\n";
+
 		if (!spec->requirements.empty())
 			out += "    Requires: " + joinNames(spec->requirements) + "\n";
+
 		return out;
 	}
 
@@ -726,10 +816,13 @@ std::string Command::help(std::string_view name) const {
 			std::string out = "<" + pos.name + ">\n";
 			if (!pos.description.empty())
 				out += "    " + pos.description + "\n";
+
 			if (pos.required)
 				out += "    Required.\n";
+
 			if (pos.repeatable)
 				out += "    Repeatable (collects all remaining positional arguments).\n";
+
 			return out;
 		}
 	}
