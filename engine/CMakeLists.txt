@@ -222,3 +222,17 @@ if(WIN32)
 		)
 	endforeach()
 endif()
+
+target_set_metadata(BlackthornEngine
+	NAME       "Blackthorn Engine"
+	VERSION    "${PROJECT_VERSION}"
+	IDENTIFIER "com.blackthorn.engine"
+)
+target_add_platform_resources(BlackthornEngine)
+
+target_set_metadata(BlackthornCore
+	NAME       "Blackthorn Core"
+	VERSION    "${PROJECT_VERSION}"
+	IDENTIFIER "com.blackthorn.engine.core"
+)
+target_add_platform_resources(BlackthornCore)
