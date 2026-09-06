@@ -1,6 +1,7 @@
 #version 330 core
 
 in vec2 v_TexCoord;
+in vec4 v_Color;
 
 uniform sampler2D u_Texture;
 uniform vec4 u_Color;
@@ -16,5 +17,6 @@ void main() {
 	if (alpha < 0.1)
 		discard;
 
-	FragColor = vec4(u_Color.rgb, u_Color.a * alpha);
+	vec4 col = u_Color * v_Color;
+	FragColor = vec4(col.rgb, col.a * alpha);
 }

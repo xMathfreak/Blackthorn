@@ -135,6 +135,7 @@ void BitmapFont::initBuffers() {
 
 	vao->enableAttrib(0, 2, GL_FLOAT, sizeof(Vertex), offsetof(Vertex, position));
 	vao->enableAttrib(1, 2, GL_FLOAT, sizeof(Vertex), offsetof(Vertex, texCoord));
+	vao->enableAttrib(2, 4, GL_FLOAT, sizeof(Vertex), offsetof(Vertex, color));
 
 	Graphics::VBO::unbind();
 	Graphics::VAO::unbind();
@@ -405,8 +406,17 @@ bool BitmapFont::parseBTFontStream(std::istream& stream, const std::string& sour
 	return true;
 }
 
-Text::Metrics BitmapFont::measure(std::string_view text, float scale, float maxWidth) {
-	const Layout layout = buildLayout(text, scale, maxWidth);
+Text::Metrics BitmapFont::measure(std::string_view text, float scale, float maxWidth, bool useMarkup) {
+	std::string plain;
+	std::string_view layoutText = text;
+
+	if (useMarkup) {
+		auto m = parseMarkup(text);
+		plain = std::move(m.plainText);
+		layoutText = plain;
+	}
+
+	const Layout layout = buildLayout(layoutText, scale, maxWidth);
 	return {
 		layout.totalWidth,
 		layout.totalHeight,
@@ -415,13 +425,24 @@ Text::Metrics BitmapFont::measure(std::string_view text, float scale, float maxW
 }
 
 
-void BitmapFont::draw(std::string_view text, const glm::vec2& position, float scale, float z, float maxWidth, const Math::Color& color, Text::Alignment alignment) {
+void BitmapFont::draw(std::string_view text, const glm::vec2& position, float scale, float z, float maxWidth, const Math::Color& color, Text::Alignment alignment, bool useMarkup) {
 	if (!isLoaded() || text.empty())
 		return;
 
-	const Layout layout = buildLayout(text, scale, maxWidth);
+	std::string plain;
+	std::vector<TextStyle> markupStyles;
+	std::string_view layoutText = text;
+
+	if (useMarkup) {
+		auto m = parseMarkup(text);
+		plain = std::move(m.plainText);
+		markupStyles = std::move(m.charStyle);
+		layoutText = plain;
+	}
+
+	const Layout layout = buildLayout(layoutText, scale, maxWidth);
 	vertexBuffer.clear();
-	generateVertices(layout, scale, alignment, vertexBuffer);
+	generateVertices(layout, scale, alignment, vertexBuffer, useMarkup ? &markupStyles : nullptr);
 
 	if (vertexBuffer.empty())
 		return;
@@ -431,25 +452,39 @@ void BitmapFont::draw(std::string_view text, const glm::vec2& position, float sc
 	shader->setVec4("u_Color", color.r, color.g, color.b, color.a);
 
 	vao->bind();
+	vbo->waitFence();
 	vbo->updateData(vertexBuffer);
 	texture->bind();
 
 	glDrawArrays(GL_TRIANGLES, 0, static_cast<GLsizei>(vertexBuffer.size()));
+	vbo->lockRange();
 }
 
-void BitmapFont::drawCached(std::string_view text, const glm::vec2& position, float scale, float z, float maxWidth, const Math::Color& color, Text::Alignment alignment) {
+void BitmapFont::drawCached(std::string_view text, const glm::vec2& position, float scale, float z, float maxWidth, const Math::Color& color, Text::Alignment alignment, bool useMarkup) {
 	if (!isLoaded() || text.empty())
 		return;
 
-	TextCacheKey key{ std::string(text), scale, maxWidth, alignment };
+	TextCacheKey key{ std::string(text), scale, maxWidth, alignment, useMarkup };
 	CachedText* cached = cache.get(key);
 
 	if (!cached) {
 		CachedText cacheEntry;
-		const Layout layout = buildLayout(key.text, scale, maxWidth);
+
+		std::string plain;
+		std::vector<TextStyle> markupStyles;
+		std::string_view layoutText = text;
+
+		if (useMarkup) {
+			auto m = parseMarkup(text);
+			plain = std::move(m.plainText);
+			markupStyles = std::move(m.charStyle);
+			layoutText = plain;
+		}
+
+		const Layout layout = buildLayout(layoutText, scale, maxWidth);
 
 		vertexBuffer.clear();
-		generateVertices(layout, scale, alignment, vertexBuffer);
+		generateVertices(layout, scale, alignment, vertexBuffer, useMarkup ? &markupStyles : nullptr);
 
 		cacheEntry.vao.create();
 		cacheEntry.vbo.create();
@@ -458,6 +493,7 @@ void BitmapFont::drawCached(std::string_view text, const glm::vec2& position, fl
 		cacheEntry.vbo.setData(vertexBuffer.data(), vertexBuffer.size() * sizeof(Vertex), GL_STATIC_DRAW);
 		cacheEntry.vao.enableAttrib(0, 2, GL_FLOAT, sizeof(Vertex), offsetof(Vertex, position));
 		cacheEntry.vao.enableAttrib(1, 2, GL_FLOAT, sizeof(Vertex), offsetof(Vertex, texCoord));
+		cacheEntry.vao.enableAttrib(2, 4, GL_FLOAT, sizeof(Vertex), offsetof(Vertex, color));
 
 		cacheEntry.vertexCount = vertexBuffer.size();
 
@@ -574,7 +610,7 @@ BitmapFont::Layout BitmapFont::buildLayout(std::string_view text, float scale, f
 	return layout;
 }
 
-void BitmapFont::generateVertices(const Layout& layout, float scale, Text::Alignment alignment, std::vector<Vertex>& outVertices) const {
+void BitmapFont::generateVertices(const Layout& layout, float scale, Text::Alignment alignment, std::vector<Vertex>& outVertices, const std::vector<TextStyle>* markup) const {
 	outVertices.clear();
 	outVertices.reserve(layout.totalWidth > 0 ? layout.lines.size() * 32 : 8);
 
@@ -582,6 +618,8 @@ void BitmapFont::generateVertices(const Layout& layout, float scale, Text::Align
 	const float texHeight = static_cast<float>(texture->getHeight());
 
 	auto snap = [](float n) { return std::floorf(n + 0.5f); };
+
+	size_t globalChar = 0;
 
 	float currentY = 0.0f;
 	for (size_t li = 0; li < layout.lines.size(); ++li) {
@@ -600,6 +638,12 @@ void BitmapFont::generateVertices(const Layout& layout, float scale, Text::Align
 		}
 
 		for (char c : line) {
+			Math::Color glyphColor = Math::Colors::White;
+			if (markup && globalChar < markup->size())
+				glyphColor = (*markup)[globalChar].color;
+
+			++globalChar;
+
 			if (c == ' ') {
 				currentX += spaceWidth * scale;
 				continue;
@@ -623,12 +667,16 @@ void BitmapFont::generateVertices(const Layout& layout, float scale, Text::Align
 			float u1 = (glyph.rect.x + glyph.rect.w) / texWidth;
 			float v1 = (glyph.rect.y + glyph.rect.h) / texHeight;
 
-			outVertices.push_back({{glyphX,         glyphY        }, {u0, v0}});
-			outVertices.push_back({{glyphX + glyphW, glyphY        }, {u1, v0}});
-			outVertices.push_back({{glyphX + glyphW, glyphY + glyphH}, {u1, v1}});
-			outVertices.push_back({{glyphX,          glyphY        }, {u0, v0}});
-			outVertices.push_back({{glyphX + glyphW, glyphY + glyphH}, {u1, v1}});
-			outVertices.push_back({{glyphX,          glyphY + glyphH}, {u0, v1}});
+			auto push = [&](const glm::vec2& p, const glm::vec2& uv) {
+				outVertices.push_back({p, uv, glyphColor});
+			};
+
+			push({glyphX,          glyphY        }, {u0, v0});
+			push({glyphX + glyphW, glyphY        }, {u1, v0});
+			push({glyphX + glyphW, glyphY + glyphH}, {u1, v1});
+			push({glyphX,          glyphY        }, {u0, v0});
+			push({glyphX + glyphW, glyphY + glyphH}, {u1, v1});
+			push({glyphX,          glyphY + glyphH}, {u0, v1});
 
 			currentX += glyph.xAdvance * scale;
 		}

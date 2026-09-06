@@ -9,6 +9,7 @@
 #include "Core/Export.h"
 #include "Fonts/Font.h"
 #include "Fonts/TextCacheKey.h"
+#include "Fonts/TextMarkup.h"
 #include "Graphics/Shader.h"
 #include "Graphics/Texture.h"
 #include "Graphics/VAO.h"
@@ -29,6 +30,7 @@ private:
 	struct Vertex {
 		glm::vec2 position;
 		glm::vec2 texCoord;
+		Math::Color color = Math::Colors::White;
 	};
 
 	struct CachedText {
@@ -70,7 +72,7 @@ private:
 	mutable std::vector<Vertex> vertexBuffer;
 
 	Layout buildLayout(std::string_view text, float scale, float maxWidth) const;
-	void generateVertices(const Layout& layout, float scale, Text::Alignment alignment, std::vector<Vertex>& outVertices) const;
+	void generateVertices(const Layout& layout, float scale, Text::Alignment alignment, std::vector<Vertex>& outVertices, const std::vector<TextStyle>* markup) const;
 
 	/**
 	 * @brief Parses a `.fnt`-style text metrics stream (the format produced
@@ -149,10 +151,10 @@ public:
 	 */
 	bool loadFromBTFontMemory(const U8* data, size_t size);
 
-	void draw(std::string_view text, const glm::vec2& position, float scale = 1.0f, float z = 0.0f, float maxWidth = 0.0f, const Math::Color& color = Math::Colors::White, Text::Alignment alignment = Text::Alignment::Left) override;
-	void drawCached(std::string_view text, const glm::vec2& position, float scale = 1.0f, float z = 0.0f, float maxWidth = 0.0f, const Math::Color& color = Math::Colors::White, Text::Alignment alignment = Text::Alignment::Left) override;
+	void draw(std::string_view text, const glm::vec2& position, float scale = 1.0f, float z = 0.0f, float maxWidth = 0.0f, const Math::Color& color = Math::Colors::White, Text::Alignment alignment = Text::Alignment::Left, bool useMarkup = false) override;
+	void drawCached(std::string_view text, const glm::vec2& position, float scale = 1.0f, float z = 0.0f, float maxWidth = 0.0f, const Math::Color& color = Math::Colors::White, Text::Alignment alignment = Text::Alignment::Left, bool useMarkup = false) override;
 
-	Text::Metrics measure(std::string_view text, float scale = 1.0f, float maxWidth = 0.0f) override;
+	Text::Metrics measure(std::string_view text, float scale = 1.0f, float maxWidth = 0.0f, bool useMarkup = false) override;
 
 	float getLineHeight() const override { return lineHeight; }
 	float getSpaceWidth() const { return spaceWidth; }

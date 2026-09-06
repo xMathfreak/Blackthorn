@@ -1,6 +1,7 @@
 #version 330 core
 
 in vec2 v_TexCoord;
+in vec4 v_Color;
 
 out vec4 FragColor;
 
@@ -13,5 +14,5 @@ void main() {
 	if (texColor.a < 0.1)
 		discard;
 
-	FragColor = texColor * u_Color;
+	FragColor = texColor * u_Color * v_Color;
 }

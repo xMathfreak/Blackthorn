@@ -284,6 +284,9 @@ void Engine::shutdown() {
 
 	renderer.reset();
 	audioManager.reset();
+
+	assetManager->shutdown();
+	assetManager.reset();
 	cleanupGraphics();
 
 	EngineCore::shutdown();

@@ -130,47 +130,99 @@ void TrueTypeFont::initializeAtlas() {
 }
 
 
-void TrueTypeFont::draw(std::string_view text, const glm::vec2& position, float scale, float z, float maxWidth, const Math::Color& color, Text::Alignment alignment) {
+void TrueTypeFont::draw(std::string_view text, const glm::vec2& position, float scale, float z, float maxWidth, const Math::Color& color, Text::Alignment alignment, bool useMarkup) {
 	if (!font || text.empty())
 		return;
+
+	std::string plain;
+	std::vector<TextStyle> markupStyles;
+	std::string_view renderText = text;
+
+	if (useMarkup) {
+		auto m = parseMarkup(text);
+		plain = std::move(m.plainText);
+		markupStyles = std::move(m.charStyle);
+		renderText = plain;
+	}
 
 	float layoutWidth = (maxWidth > 0.0f && scale > 0.0f) ? maxWidth / scale : maxWidth;
 
 	std::vector<Vertex> vertices;
 	GLsizei indices = 0;
-	generateVertices(text, layoutWidth, alignment, vertices, indices);
+	generateVertices(renderText, layoutWidth, alignment, vertices, indices, useMarkup ? &markupStyles : nullptr);
 	render(vertices, indices, position, scale, z, color);
 }
 
-void TrueTypeFont::drawCached(std::string_view text, const glm::vec2& position, float scale, float z, float maxWidth, const Math::Color& color, Text::Alignment alignment) {
+void TrueTypeFont::drawCached(std::string_view text, const glm::vec2& position, float scale, float z, float maxWidth, const Math::Color& color, Text::Alignment alignment, bool useMarkup) {
 	if (!font || text.empty())
 		return;
 
 	TextCacheKey key {
-		std::string(text), scale, maxWidth, alignment
+		std::string(text), scale, maxWidth, alignment, useMarkup
 	};
 
 	CachedText* cached = textCache.get(key);
 	if (!cached) {
 		CachedText cacheEntry;
+
+		std::string plain;
+		std::vector<TextStyle> markupStyles;
+		std::string_view renderText = text;
+
+		if (useMarkup) {
+			auto m = parseMarkup(text);
+			plain = std::move(m.plainText);
+			markupStyles = std::move(m.charStyle);
+			renderText = plain;
+		}
+
 		float layoutWidth = (maxWidth > 0.0f && scale > 0.0f) ? maxWidth / scale : maxWidth;
-		generateVertices(text, layoutWidth, alignment, cacheEntry.vertices, cacheEntry.indexCount);
+
+		std::vector<Vertex> vertices;
+		GLsizei indexCount = 0;
+		generateVertices(renderText, layoutWidth, alignment, vertices, indexCount, useMarkup ? &markupStyles : nullptr);
+
+		cacheEntry.vao.create();
+		cacheEntry.vbo.create();
+
+		cacheEntry.vao.bind();
+		cacheEntry.vbo.setData(vertices.data(), vertices.size() * sizeof(Vertex), GL_STATIC_DRAW);
+		cacheEntry.vao.enableAttrib(0, 2, GL_FLOAT, sizeof(Vertex), offsetof(Vertex, position));
+		cacheEntry.vao.enableAttrib(1, 2, GL_FLOAT, sizeof(Vertex), offsetof(Vertex, texCoord));
+		cacheEntry.vao.enableAttrib(2, 4, GL_FLOAT, sizeof(Vertex), offsetof(Vertex, color));
+
+		// The index pattern is fixed and shared across every cache entry, so
+		// binding the font's own EBO here just records it into this VAO's
+		// element-array-buffer state; it's never rewritten afterward.
+		ebo->bind();
+
+		cacheEntry.indexCount = indexCount;
+
 		textCache.put(key, std::move(cacheEntry));
 		cached = textCache.get(key);
 	}
 
-	render(cached->vertices, cached->indexCount, position, scale, z, color);
+	renderCached(*cached, position, scale, z, color);
 }
 
-Text::Metrics TrueTypeFont::measure(std::string_view text, float scale, float maxWidth) {
+Text::Metrics TrueTypeFont::measure(std::string_view text, float scale, float maxWidth, bool useMarkup) {
 	Text::Metrics metrics{0.0f, 0.0f, 0};
 
 	if (!font || text.empty())
 		return metrics;
 
+	std::string plain;
+	std::string_view lt = text;
+
+	if (useMarkup) {
+		auto m = parseMarkup(text);
+		plain = std::move(m.plainText);
+		lt = plain;
+	}
+
 	float layoutWidth = (maxWidth > 0.0f && scale > 0.0f) ? maxWidth / scale : maxWidth;
 
-	auto codePoints = utf8To32(text);
+	auto codePoints = utf8To32(lt);
 	auto lines = layoutText(codePoints, layoutWidth);
 
 	metrics.lineCount = lines.size();
@@ -248,6 +300,7 @@ void TrueTypeFont::initBuffers() {
 
 	vao->enableAttrib(0, 2, GL_FLOAT, sizeof(Vertex), offsetof(Vertex, position));
 	vao->enableAttrib(1, 2, GL_FLOAT, sizeof(Vertex), offsetof(Vertex, texCoord));
+	vao->enableAttrib(2, 4, GL_FLOAT, sizeof(Vertex), offsetof(Vertex, color));
 
 	Graphics::VBO::unbind();
 	Graphics::VAO::unbind();
@@ -322,7 +375,7 @@ const TrueTypeFont::Glyph& TrueTypeFont::getGlyph(char32_t codePoint) {
 	return glyphCache[codePoint];
 }
 
-void TrueTypeFont::generateVertices(std::string_view text, float maxWidth, Text::Alignment alignment, std::vector<Vertex>& outVertices, GLsizei& outIndexCount) {
+void TrueTypeFont::generateVertices(std::string_view text, float maxWidth, Text::Alignment alignment, std::vector<Vertex>& outVertices, GLsizei& outIndexCount, const std::vector<TextStyle>* markup) {
 	outVertices.clear();
 	outIndexCount = 0;
 
@@ -357,12 +410,16 @@ void TrueTypeFont::generateVertices(std::string_view text, float maxWidth, Text:
 			if (w == 0 || h == 0)
 				continue;
 
+			Math::Color glyphColor = Math::Colors::White;
+			if (markup && lg.charIndex < markup->size())
+				glyphColor = (*markup)[lg.charIndex].color;
+
 			const auto& uv = glyph.uv;
 
-			outVertices.push_back({{xPos, yPos},{uv.x, uv.w}});
-			outVertices.push_back({{xPos + w, yPos}, {uv.z, uv.w}});
-			outVertices.push_back({{xPos + w, yPos + h}, {uv.z, uv.y}});
-			outVertices.push_back({{xPos, yPos + h}, {uv.x, uv.y}});
+			outVertices.push_back({{xPos, yPos},{uv.x, uv.w}, glyphColor});
+			outVertices.push_back({{xPos + w, yPos}, {uv.z, uv.w}, glyphColor});
+			outVertices.push_back({{xPos + w, yPos + h}, {uv.z, uv.y}, glyphColor});
+			outVertices.push_back({{xPos, yPos + h}, {uv.x, uv.y}, glyphColor});
 
 			outIndexCount += 6;
 
@@ -388,9 +445,31 @@ void TrueTypeFont::render(const std::vector<Vertex>& vertices, GLsizei indexCoun
 	ebo->bind();
 	atlas->bind();
 
+	vbo->waitFence();
 	vbo->updateData(vertices);
 
 	glDrawElements(GL_TRIANGLES, indexCount, GL_UNSIGNED_INT, nullptr);
+	vbo->lockRange();
+}
+
+void TrueTypeFont::renderCached(const CachedText& cached, const glm::vec2& position, float scale, float z, const Math::Color& color) {
+	if (cached.indexCount == 0)
+		return;
+
+	shader->bind();
+
+	shader->setVec3("u_Offset", position.x, position.y, z);
+	shader->setFloat("u_Scale", scale);
+	shader->setVec4("u_Color", color.x, color.y, color.z, color.w);
+	shader->setInt("u_Texture", 0);
+
+	atlas->bind();
+	cached.vao.bind();
+
+	glDrawElements(GL_TRIANGLES, cached.indexCount, GL_UNSIGNED_INT, nullptr);
+
+	Graphics::VAO::unbind();
+	Graphics::Shader::unbind();
 }
 
 std::vector<char32_t> TrueTypeFont::utf8To32(std::string_view utf8) const {
@@ -493,7 +572,7 @@ std::vector<TrueTypeFont::LayoutLine> TrueTypeFont::layoutText(const std::vector
 		}
 
 		float wordWidth = 0.0f;
-		struct WordGlyph { const Glyph* glyph; float kern; };
+		struct WordGlyph { const Glyph* glyph; float kern; size_t charIndex; };
 		std::vector<WordGlyph> word;
 
 		char32_t prev = 0;
@@ -510,7 +589,7 @@ std::vector<TrueTypeFont::LayoutLine> TrueTypeFont::layoutText(const std::vector
 			if (prev)
 				TTF_GetGlyphKerning(font, prev, wc, &kern);
 
-			word.push_back({&g, static_cast<float>(kern)});
+			word.push_back({&g, static_cast<float>(kern), j});
 			wordWidth += kern + g.advance;
 			prev = wc;
 		}
@@ -520,7 +599,7 @@ std::vector<TrueTypeFont::LayoutLine> TrueTypeFont::layoutText(const std::vector
 
 		for (const auto& wg : word) {
 			cursorX += wg.kern;
-			lines.back().glyphs.push_back({wg.glyph, cursorX});
+			lines.back().glyphs.push_back({wg.glyph, cursorX, wg.charIndex});
 			lines.back().width = cursorX + wg.glyph->size.x;
 			cursorX += wg.glyph->advance;
 		}

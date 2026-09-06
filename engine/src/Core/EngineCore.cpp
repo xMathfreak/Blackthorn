@@ -142,7 +142,6 @@ void EngineCore::shutdown() {
 
 	connectionManager->stop();
 
-	assetManager->shutdown();
 	jobSystem->shutdown();
 
 	Net::Transport::Sockets::SocketFactory::shutdown();

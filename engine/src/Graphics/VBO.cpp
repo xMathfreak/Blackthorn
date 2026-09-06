@@ -189,9 +189,9 @@ void VBO::updateData(const void* data, size_t size, size_t offset) {
 		return;
 	}
 
-	if (offset + size > size) {
+	if (offset + size > bufferSize) {
 		BT_ERROR("VBO {}: updateData overflow ({} + {} > {})",
-			id, offset, size, size);
+			id, offset, size, bufferSize);
 		return;
 	}
 
@@ -226,9 +226,9 @@ void VBO::flushStreaming(size_t offset, size_t size) {
 	if (stagingBuffer.empty() || id == 0)
 		return;
 
-	if (offset + size > size) {
+	if (offset + size > bufferSize) {
 		BT_ERROR("VBO {}: flushStreaming overflow ({} + {} > {})",
-			id, offset, size, size);
+			id, offset, size, bufferSize);
 		return;
 	}
 

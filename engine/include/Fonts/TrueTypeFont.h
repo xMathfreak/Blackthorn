@@ -11,6 +11,7 @@
 #include "Core/Export.h"
 #include "Fonts/Font.h"
 #include "Fonts/TextCacheKey.h"
+#include "Fonts/TextMarkup.h"
 #include "Graphics/Texture.h"
 #include "Graphics/Shader.h"
 #include "Graphics/EBO.h"
@@ -50,10 +51,10 @@ public:
 	 */
 	bool loadFromMemory(const U8* data, size_t size, int pointSize);
 
-	void draw(std::string_view text, const glm::vec2& position, float scale = 1.0f, float z = 0.0f, float maxWidth = 0.0f, const Math::Color& color = Math::Colors::White, Text::Alignment alignment = Text::Alignment::Left) override;
-	void drawCached(std::string_view text, const glm::vec2& position, float scale = 1.0f, float z = 0.0f, float maxWidth = 0.0f, const Math::Color& color = Math::Colors::White, Text::Alignment alignment = Text::Alignment::Left) override;
+	void draw(std::string_view text, const glm::vec2& position, float scale = 1.0f, float z = 0.0f, float maxWidth = 0.0f, const Math::Color& color = Math::Colors::White, Text::Alignment alignment = Text::Alignment::Left, bool useMarkup = false) override;
+	void drawCached(std::string_view text, const glm::vec2& position, float scale = 1.0f, float z = 0.0f, float maxWidth = 0.0f, const Math::Color& color = Math::Colors::White, Text::Alignment alignment = Text::Alignment::Left, bool useMarkup = false) override;
 
-	Text::Metrics measure(std::string_view text, float scale, float maxWidth) override;
+	Text::Metrics measure(std::string_view text, float scale, float maxWidth, bool useMarkup = false) override;
 	float getLineHeight() const override;
 
 	void setStyle(TTF_FontStyleFlags style);
@@ -74,11 +75,13 @@ private:
 	struct Vertex {
 		glm::vec2 position;
 		glm::vec2 texCoord;
+		Math::Color color = Math::Colors::White;
 	};
 
 	struct LayoutGlyph {
 		const Glyph* glyph;
 		float xPos;
+		size_t charIndex;
 	};
 
 	struct LayoutLine {
@@ -87,7 +90,8 @@ private:
 	};
 
 	struct CachedText {
-		std::vector<Vertex> vertices;
+		Graphics::VAO vao;
+		Graphics::VBO vbo;
 		GLsizei indexCount = 0;
 	};
 
@@ -131,8 +135,21 @@ private:
 
 	const Glyph& getGlyph(char32_t codePoint);
 
-	void generateVertices(std::string_view text, float maxWidth, Text::Alignment alignment,std::vector<Vertex>& outVertices, GLsizei& outIndexCount);
+	void generateVertices(std::string_view text, float maxWidth, Text::Alignment alignment,std::vector<Vertex>& outVertices, GLsizei& outIndexCount, const std::vector<TextStyle>* markup);
 	void render(const std::vector<Vertex>& vertices, GLsizei indexCount, const glm::vec2& position, float scale, float z, const Math::Color& color);
+
+	/**
+	 * @brief Draws a previously-cached glyph run using its own dedicated
+	 * VAO/VBO, without touching the shared streaming @c vbo.
+	 *
+	 * @param cached Cache entry holding the pre-uploaded vertex buffer and
+	 *               index count for this text.
+	 * @param position Screen-space draw offset.
+	 * @param scale Uniform scale applied by the shader.
+	 * @param z Depth value passed through to the shader offset.
+	 * @param color Tint color multiplied with per-glyph markup colors.
+	 */
+	void renderCached(const CachedText& cached, const glm::vec2& position, float scale, float z, const Math::Color& color);
 
 	std::vector<char32_t> utf8To32(std::string_view utf8) const;
 
