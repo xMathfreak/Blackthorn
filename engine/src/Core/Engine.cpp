@@ -438,6 +438,10 @@ void Engine::run() {
 }
 
 void Engine::render(float alpha) {
+	const float fixedTime = static_cast<float>(simClock->getTotalSimulatedTime());
+	const float smoothTime = fixedTime + alpha * simClock->getTickDuration();
+	renderer->setTime(smoothTime, fixedTime);
+
 	renderer->beginScene();
 	getClientSceneManager().render(alpha);
 	renderer->endScene();

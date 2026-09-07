@@ -46,6 +46,13 @@ private:
 		float totalHeight = 0.0f;
 	};
 
+public:
+	struct DynamicText {
+		std::vector<Text::GlyphInstance> instances;
+		float width = 0.0f;
+		float height = 0.0f;
+	};
+
 private:
 	static std::shared_ptr<Graphics::Shader> shader;
 
@@ -57,6 +64,11 @@ private:
 
 	void initBuffers();
 
+	std::unique_ptr<Graphics::VAO> dynVAO;
+	std::unique_ptr<Graphics::VBO> dynVBO;
+
+	void initDynamicBuffers();
+
 	std::unique_ptr<Graphics::Texture> texture;
 	std::unordered_map<U32, Glyph> glyphs;
 
@@ -66,6 +78,7 @@ private:
 	float tabWidth = 0.0f;
 
 	Containers::LRUCache<TextCacheKey, CachedText> cache;
+	Containers::LRUCache<TextCacheKey, DynamicText> dynamicTextCache;
 
 	mutable std::vector<std::string_view> lineBuffer;
 	mutable std::vector<float> lineWidthBuffer;
@@ -73,6 +86,8 @@ private:
 
 	Layout buildLayout(std::string_view text, float scale, float maxWidth) const;
 	void generateVertices(const Layout& layout, float scale, Text::Alignment alignment, std::vector<Vertex>& outVertices, const std::vector<TextStyle>* markup) const;
+	void generateInstances(const Layout& layout, float scale, Text::Alignment alignment, std::vector<Text::GlyphInstance>& out, const std::vector<TextStyle>* markup) const;
+	void renderDynamic(const std::vector<Text::GlyphInstance>& instances, const glm::vec2& position, float z, const Math::Color& color);
 
 	/**
 	 * @brief Parses a `.fnt`-style text metrics stream (the format produced
@@ -151,8 +166,37 @@ public:
 	 */
 	bool loadFromBTFontMemory(const U8* data, size_t size);
 
-	void draw(std::string_view text, const glm::vec2& position, float scale = 1.0f, float z = 0.0f, float maxWidth = 0.0f, const Math::Color& color = Math::Colors::White, Text::Alignment alignment = Text::Alignment::Left, bool useMarkup = false) override;
-	void drawCached(std::string_view text, const glm::vec2& position, float scale = 1.0f, float z = 0.0f, float maxWidth = 0.0f, const Math::Color& color = Math::Colors::White, Text::Alignment alignment = Text::Alignment::Left, bool useMarkup = false) override;
+	void draw(std::string_view text, const glm::vec2& position, const Text::DrawParams& params = {}) override;
+	void drawCached(std::string_view text, const glm::vec2& position, const Text::DrawParams& params = {}) override;
+
+	/**
+	 * @brief Builds the per-glyph instance data for a run of dynamic
+	 * (effects-capable) text, without drawing or caching it.
+	 *
+	 * @details
+	 * Advanced/manual entry point, mirroring TrueTypeFont::buildDynamic().
+	 * Most callers want `drawDynamic(std::string_view, ...)` below instead.
+	 *
+	 * @param scale Baked directly into the returned instances' positions
+	 * and sizes. Determines the actual on-screen size of the text.
+	 */
+	DynamicText buildDynamic(std::string_view text, float maxWidth, Text::Alignment alignment, bool useMarkup = false, float scale = 1.0f);
+
+	/**
+	 * @brief Draws a previously-built @c DynamicText.
+	 *
+	 * @param scale Accepted only for signature parity with
+	 * TrueTypeFont::drawDynamic(); has no effect here since @p dyn's
+	 * instances already have their final scale baked in from whatever was
+	 * passed to buildDynamic() when they were built.
+	 */
+	void drawDynamic(const DynamicText& dyn, const glm::vec2& position, [[maybe_unused]] float scale, float z, const Math::Color& color);
+
+	/**
+	 * @brief Draws dynamic (effects-capable) text, building and caching its
+	 * instance data internally.
+	 */
+	void drawDynamic(std::string_view text, const glm::vec2& position, const Text::DrawParams& params = {}) override;
 
 	Text::Metrics measure(std::string_view text, float scale = 1.0f, float maxWidth = 0.0f, bool useMarkup = false) override;
 

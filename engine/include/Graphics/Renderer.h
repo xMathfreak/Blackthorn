@@ -100,6 +100,15 @@ private:
 	struct GlobalData {
 		/// Combined view-projection matrix
 		alignas(16) glm::mat4 viewProjection;
+
+		/// Monotonically increasing render time (seconds), interpolated
+		/// between simulation ticks via the render alpha. Smooth/continuous -
+		/// use for effects that should flow rather than step.
+		float time = 0.0f;
+
+		/// Monotonically increasing simulation time (seconds), quantized to
+		/// whole fixedUpdate() ticks. Only changes once per fixed tick.
+		float fixedTime = 0.0f;
 	};
 
 	/// Uniform buffer storing global rendering state
@@ -272,6 +281,22 @@ public:
 	 * Use @c Camera2D::applyToRenderer() rather than calling this directly.
 	 */
 	void setView(const glm::mat4& view);
+
+	/**
+	 * @brief Sets the render-time uniforms shared by every shader that
+	 * declares the GlobalData block, via partial UBO updates.
+	 *
+	 * @param time Smooth, interpolated time in seconds, see
+	 * @c GlobalData::time. Callers should blend between simulation ticks
+	 * using the render alpha, e.g.
+	 * @code
+	 * simClock.getTotalSimulatedTime() + alpha * simClock.getTickDuration()
+	 * @endcode
+	 * @param fixedTime Tick-quantized time in seconds, see
+	 * @c GlobalData::fixedTime. Typically just
+	 * @c simClock.getTotalSimulatedTime() with no alpha term.
+	 */
+	void setTime(float time, float fixedTime);
 
 	/**
 	 * @brief Sets the clear color used at the start of each scene.

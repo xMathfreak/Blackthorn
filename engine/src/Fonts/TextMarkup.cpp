@@ -69,6 +69,27 @@ TextStyle parseTag(
 			}
 		}
 
+		// shakeSpeed checked first since "shakeSpeed" also starts_with "shake"
+		if (tok.starts_with("shakeSpeed")) {
+			size_t pos = tok.find('=');
+
+			if (pos != std::string_view::npos) {
+				try {
+					s.shakeSpeed = std::max(0.0f, std::stof(std::string(tok.substr(pos + 1))));
+				} catch (const std::exception&) {
+				}
+			}
+		} else if (tok.starts_with("shake")) {
+			size_t pos = tok.find('=');
+
+			if (pos != std::string_view::npos) {
+				try {
+					s.shakeStrength = std::max(0.0f, std::stof(std::string(tok.substr(pos + 1))));
+				} catch (const std::exception&) {
+				}
+			}
+		}
+
 		a = b + 1;
 	}
 
@@ -85,7 +106,7 @@ MarkupResult parseMarkup(std::string_view text) {
 			size_t j = text.find(']', i);
 			if (j == std::string_view::npos) {
 				out.plainText += text[i];
-				out.charStyle.push_back(stk.top());
+				out.charStyles.push_back(stk.top());
 				continue;
 			}
 
@@ -100,11 +121,11 @@ MarkupResult parseMarkup(std::string_view text) {
 			i = j;
 		} else if (text[i] == '\\' && i + i < text.size() && text[i + 1] == '[') {
 			out.plainText += '[';
-			out.charStyle.push_back(stk.top());
+			out.charStyles.push_back(stk.top());
 			++i;
 		} else {
 			out.plainText += text[i];
-			out.charStyle.push_back(stk.top());
+			out.charStyles.push_back(stk.top());
 		}
 	}
 

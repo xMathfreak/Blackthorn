@@ -494,6 +494,14 @@ void Renderer::setView(const glm::mat4& view) {
 	globalUBO->uploadField(&GlobalData::viewProjection);
 }
 
+void Renderer::setTime(float time, float fixedTime) {
+	globalUBO->getData().time = time;
+	globalUBO->getData().fixedTime = fixedTime;
+
+	globalUBO->uploadField(&GlobalData::time);
+	globalUBO->uploadField(&GlobalData::fixedTime);
+}
+
 inline bool Renderer::isVisible(const SDL_FRect& rect, float rotation) const {
 	if (!cullingEnabled)
 		return true;

@@ -86,6 +86,7 @@ std::shared_ptr<Graphics::Shader> BitmapFont::shader = nullptr;
 
 BitmapFont::BitmapFont()
 	: cache(FontConfig::getCurrent().maxCachedText)
+	, dynamicTextCache(FontConfig::getCurrent().maxCachedText)
 {
 	const FontConfig& cfg = FontConfig::getCurrent();
 
@@ -96,29 +97,36 @@ BitmapFont::BitmapFont()
 		initializeShader();
 
 	initBuffers();
+	initDynamicBuffers();
 }
 
 BitmapFont::BitmapFont(BitmapFont&& other) noexcept
 	: vao(std::move(other.vao))
 	, vbo(std::move(other.vbo))
+	, dynVAO(std::move(other.dynVAO))
+	, dynVBO(std::move(other.dynVBO))
 	, texture(std::move(other.texture))
 	, glyphs(std::move(other.glyphs))
 	, lineHeight(other.lineHeight)
 	, spaceWidth(other.spaceWidth)
 	, tabWidth(other.tabWidth)
 	, cache(std::move(other.cache))
+	, dynamicTextCache(std::move(other.dynamicTextCache))
 {}
 
 BitmapFont& BitmapFont::operator=(BitmapFont&& other) noexcept {
 	if (this != &other) {
 		vao = std::move(other.vao);
 		vbo = std::move(other.vbo);
+		dynVAO = std::move(other.dynVAO);
+		dynVBO = std::move(other.dynVBO);
 		texture = std::move(other.texture);
 		glyphs = std::move(other.glyphs);
 		lineHeight = other.lineHeight;
 		spaceWidth = other.spaceWidth;
 		tabWidth = other.tabWidth;
 		cache = std::move(other.cache);
+		dynamicTextCache = std::move(other.dynamicTextCache);
 	}
 
 	return *this;
@@ -139,6 +147,41 @@ void BitmapFont::initBuffers() {
 
 	Graphics::VBO::unbind();
 	Graphics::VAO::unbind();
+}
+
+void BitmapFont::initDynamicBuffers() {
+	dynVAO = std::make_unique<Graphics::VAO>(true);
+	dynVBO = std::make_unique<Graphics::VBO>(true);
+
+	dynVAO->bind();
+	dynVBO->bind();
+
+	dynVBO->setData(nullptr, MAX_TEXT_GLYPHS * sizeof(Text::GlyphInstance), GL_DYNAMIC_DRAW);
+	size_t stride = sizeof(Text::GlyphInstance);
+
+	dynVAO->enableAttrib(3, 2, GL_FLOAT, stride, offsetof(Text::GlyphInstance, position));
+	glVertexAttribDivisor(3, 1);
+	dynVAO->enableAttrib(4, 2, GL_FLOAT, stride, offsetof(Text::GlyphInstance, size));
+	glVertexAttribDivisor(4, 1);
+	dynVAO->enableAttrib(5, 4, GL_FLOAT, stride, offsetof(Text::GlyphInstance, uv));
+	glVertexAttribDivisor(5, 1);
+	dynVAO->enableAttrib(6, 4, GL_FLOAT, stride, offsetof(Text::GlyphInstance, color));
+	glVertexAttribDivisor(6, 1);
+	dynVAO->enableAttrib(7, 1, GL_FLOAT, stride, offsetof(Text::GlyphInstance, z));
+	glVertexAttribDivisor(7, 1);
+	dynVAO->enableAttrib(8, 1, GL_FLOAT, stride, offsetof(Text::GlyphInstance, rotation));
+	glVertexAttribDivisor(8, 1);
+	dynVAO->enableAttrib(9, 2, GL_FLOAT, stride, offsetof(Text::GlyphInstance, shadowOffset));
+	glVertexAttribDivisor(9, 1);
+	dynVAO->enableAttrib(10, 4, GL_FLOAT, stride, offsetof(Text::GlyphInstance, shadowColor));
+	glVertexAttribDivisor(10, 1);
+	dynVAO->enableAttrib(11, 1, GL_FLOAT, stride, offsetof(Text::GlyphInstance, shadowBlur));
+	glVertexAttribDivisor(11, 1);
+	dynVAO->enableAttrib(12, 2, GL_FLOAT, stride, offsetof(Text::GlyphInstance, shake));
+	glVertexAttribDivisor(12, 1);
+
+	Graphics::VAO::unbind();
+	Graphics::VBO::unbind();
 }
 
 bool BitmapFont::loadFromFile(const std::filesystem::path& texturePath, const std::filesystem::path& metricsPath) {
@@ -424,8 +467,7 @@ Text::Metrics BitmapFont::measure(std::string_view text, float scale, float maxW
 	};
 }
 
-
-void BitmapFont::draw(std::string_view text, const glm::vec2& position, float scale, float z, float maxWidth, const Math::Color& color, Text::Alignment alignment, bool useMarkup) {
+void BitmapFont::draw(std::string_view text, const glm::vec2& position, const Text::DrawParams& params) {
 	if (!isLoaded() || text.empty())
 		return;
 
@@ -433,23 +475,23 @@ void BitmapFont::draw(std::string_view text, const glm::vec2& position, float sc
 	std::vector<TextStyle> markupStyles;
 	std::string_view layoutText = text;
 
-	if (useMarkup) {
+	if (params.useMarkup) {
 		auto m = parseMarkup(text);
 		plain = std::move(m.plainText);
-		markupStyles = std::move(m.charStyle);
+		markupStyles = std::move(m.charStyles);
 		layoutText = plain;
 	}
 
-	const Layout layout = buildLayout(layoutText, scale, maxWidth);
+	const Layout layout = buildLayout(layoutText, params.scale, params.maxWidth);
 	vertexBuffer.clear();
-	generateVertices(layout, scale, alignment, vertexBuffer, useMarkup ? &markupStyles : nullptr);
+	generateVertices(layout, params.scale, params.alignment, vertexBuffer, params.useMarkup ? &markupStyles : nullptr);
 
 	if (vertexBuffer.empty())
 		return;
 
 	shader->bind();
-	shader->setVec3("u_Offset", position.x, position.y, z);
-	shader->setVec4("u_Color", color.r, color.g, color.b, color.a);
+	shader->setVec3("u_Offset", position.x, position.y, params.z);
+	shader->setVec4("u_Color", params.color.r, params.color.g, params.color.b, params.color.a);
 
 	vao->bind();
 	vbo->waitFence();
@@ -460,11 +502,11 @@ void BitmapFont::draw(std::string_view text, const glm::vec2& position, float sc
 	vbo->lockRange();
 }
 
-void BitmapFont::drawCached(std::string_view text, const glm::vec2& position, float scale, float z, float maxWidth, const Math::Color& color, Text::Alignment alignment, bool useMarkup) {
+void BitmapFont::drawCached(std::string_view text, const glm::vec2& position, const Text::DrawParams& params) {
 	if (!isLoaded() || text.empty())
 		return;
 
-	TextCacheKey key{ std::string(text), scale, maxWidth, alignment, useMarkup };
+	TextCacheKey key{ std::string(text), params.scale, params.maxWidth, params.alignment, params.useMarkup };
 	CachedText* cached = cache.get(key);
 
 	if (!cached) {
@@ -474,17 +516,17 @@ void BitmapFont::drawCached(std::string_view text, const glm::vec2& position, fl
 		std::vector<TextStyle> markupStyles;
 		std::string_view layoutText = text;
 
-		if (useMarkup) {
+		if (params.useMarkup) {
 			auto m = parseMarkup(text);
 			plain = std::move(m.plainText);
-			markupStyles = std::move(m.charStyle);
+			markupStyles = std::move(m.charStyles);
 			layoutText = plain;
 		}
 
-		const Layout layout = buildLayout(layoutText, scale, maxWidth);
+		const Layout layout = buildLayout(layoutText, params.scale, params.maxWidth);
 
 		vertexBuffer.clear();
-		generateVertices(layout, scale, alignment, vertexBuffer, useMarkup ? &markupStyles : nullptr);
+		generateVertices(layout, params.scale, params.alignment, vertexBuffer, params.useMarkup ? &markupStyles : nullptr);
 
 		cacheEntry.vao.create();
 		cacheEntry.vbo.create();
@@ -502,8 +544,8 @@ void BitmapFont::drawCached(std::string_view text, const glm::vec2& position, fl
 	}
 
 	shader->bind();
-	shader->setVec3("u_Offset", position.x, position.y, z);
-	shader->setVec4("u_Color", color.r, color.g, color.b, color.a);
+	shader->setVec3("u_Offset", position.x, position.y, params.z);
+	shader->setVec4("u_Color", params.color.r, params.color.g, params.color.b, params.color.a);
 
 	texture->bind();
 	cached->vao.bind();
@@ -683,6 +725,178 @@ void BitmapFont::generateVertices(const Layout& layout, float scale, Text::Align
 
 		currentY += lineHeight * scale;
 	}
+}
+
+void BitmapFont::generateInstances(const Layout& layout, float scale, Text::Alignment alignment, std::vector<Text::GlyphInstance>& out, const std::vector<TextStyle>* markup) const {
+	out.clear();
+	out.reserve(layout.totalWidth > 0 ? layout.lines.size() * 8 : 8);
+
+	const float texWidth = static_cast<float>(texture->getWidth());
+	const float texHeight = static_cast<float>(texture->getHeight());
+
+	auto snap = [](float n) { return std::floorf(n + 0.5f); };
+
+	size_t globalChar = 0;
+
+	float currentY = 0.0f;
+	for (size_t li = 0; li < layout.lines.size(); ++li) {
+		const auto& line = layout.lines[li];
+		float currentX = 0.0f;
+
+		switch (alignment) {
+			case Text::Alignment::Center:
+				currentX -= layout.lineWidths[li] * 0.5f;
+				break;
+			case Text::Alignment::Right:
+				currentX -= layout.lineWidths[li];
+				break;
+			default:
+				break;
+		}
+
+		for (char c : line) {
+			Math::Color glyphColor = Math::Colors::White;
+			glm::vec2 shake(0.0f, 0.0f);
+
+			if (markup && globalChar < markup->size()) {
+				const TextStyle& style = (*markup)[globalChar];
+				glyphColor = style.color;
+				shake = glm::vec2(style.shakeStrength, style.shakeSpeed);
+			}
+
+			++globalChar;
+
+			if (c == ' ') {
+				currentX += spaceWidth * scale;
+				continue;
+			} else if (c == '\t') {
+				currentX += tabWidth * scale;
+				continue;
+			}
+
+			auto it = glyphs.find(static_cast<U32>(c));
+			if (it == glyphs.end())
+				continue;
+
+			const Glyph& glyph = it->second;
+			float glyphX = snap(currentX - glyph.xOffset * scale) - 1;
+			float glyphY = snap(currentY - (glyph.yOffset - 2) * scale) - 1;
+			float glyphW = glyph.rect.w * scale;
+			float glyphH = glyph.rect.h * scale;
+
+			float u0 = glyph.rect.x / texWidth;
+			float v0 = glyph.rect.y / texHeight;
+			float u1 = (glyph.rect.x + glyph.rect.w) / texWidth;
+			float v1 = (glyph.rect.y + glyph.rect.h) / texHeight;
+
+			Text::GlyphInstance inst;
+			inst.position = glm::vec2(glyphX, glyphY);
+			inst.size = glm::vec2(glyphW, glyphH);
+			inst.uv = glm::vec4(u0, v0, u1, v1);
+			inst.color = glyphColor;
+			inst.z = 0.0f;
+			inst.scale = 1.0f;
+			inst.rotation = 0.0f;
+			inst.shadowOffset = glm::vec2(0.0f, 0.0f);
+			inst.shadowColor = Math::Color(0.0f, 0.0f, 0.0f, 0.0f);
+			inst.shadowBlur = 0.0f;
+			inst.shake = shake;
+
+			out.push_back(inst);
+
+			currentX += glyph.xAdvance * scale;
+		}
+
+		currentY += lineHeight * scale;
+	}
+}
+
+BitmapFont::DynamicText BitmapFont::buildDynamic(std::string_view text, float maxWidth, Text::Alignment alignment, bool useMarkup, float scale) {
+	DynamicText result;
+
+	if (!isLoaded() || text.empty())
+		return result;
+
+	std::string plain;
+	std::vector<TextStyle> markupStyles;
+	std::string_view layoutText = text;
+
+	if (useMarkup) {
+		auto m = parseMarkup(text);
+		plain = std::move(m.plainText);
+		markupStyles = std::move(m.charStyles);
+		layoutText = plain;
+	}
+
+	const Layout layout = buildLayout(layoutText, scale, maxWidth);
+	generateInstances(layout, scale, alignment, result.instances, useMarkup ? &markupStyles : nullptr);
+
+	result.width = layout.totalWidth;
+	result.height = layout.totalHeight;
+
+	return result;
+}
+
+void BitmapFont::renderDynamic(const std::vector<Text::GlyphInstance>& instances, const glm::vec2& position, float z, const Math::Color& color) {
+	if (instances.empty())
+		return;
+
+	std::vector<Text::GlyphInstance> ordered = instances;
+	auto shadowEnd = std::partition(ordered.begin(), ordered.end(), [](const Text::GlyphInstance& inst) {
+		return inst.shadowColor.a > 0.01f;
+	});
+
+	const GLsizei shadowCount = static_cast<GLsizei>(std::distance(ordered.begin(), shadowEnd));
+	const GLsizei totalCount = static_cast<GLsizei>(ordered.size());
+
+	shader->bind();
+	shader->setVec3("u_Offset", position.x, position.y, z);
+	shader->setVec4("u_Color", color.r, color.g, color.b, color.a);
+	shader->setBool("u_DynamicMode", true);
+	shader->setInt("u_Texture", 0);
+
+	texture->bind();
+
+	dynVAO->bind();
+	dynVBO->bind();
+
+	dynVBO->waitFence();
+	dynVBO->updateData(ordered);
+
+	if (shadowCount > 0) {
+		shader->setBool("u_ShadowPass", true);
+		glDrawArraysInstanced(GL_TRIANGLE_STRIP, 0, 4, shadowCount);
+	}
+
+	shader->setBool("u_ShadowPass", false);
+	glDrawArraysInstanced(GL_TRIANGLE_STRIP, 0, 4, totalCount);
+	dynVBO->lockRange();
+
+	Graphics::VAO::unbind();
+	Graphics::Shader::unbind();
+}
+
+void BitmapFont::drawDynamic(const DynamicText& dyn, const glm::vec2& position, [[maybe_unused]] float scale, float z, const Math::Color& color) {
+	if (dyn.instances.empty())
+		return;
+
+	renderDynamic(dyn.instances, position, z, color);
+}
+
+void BitmapFont::drawDynamic(std::string_view text, const glm::vec2& position, const Text::DrawParams& params) {
+	if (!isLoaded() || text.empty())
+		return;
+
+	TextCacheKey key { std::string(text), params.scale, params.maxWidth, params.alignment, params.useMarkup };
+
+	DynamicText* cached = dynamicTextCache.get(key);
+	if (!cached) {
+		DynamicText built = buildDynamic(text, params.maxWidth, params.alignment, params.useMarkup, params.scale);
+		dynamicTextCache.put(key, std::move(built));
+		cached = dynamicTextCache.get(key);
+	}
+
+	drawDynamic(*cached, position, params.scale, params.z, params.color);
 }
 
 } // namespace Blackthorn

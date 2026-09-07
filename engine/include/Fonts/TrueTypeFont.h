@@ -51,8 +51,8 @@ public:
 	 */
 	bool loadFromMemory(const U8* data, size_t size, int pointSize);
 
-	void draw(std::string_view text, const glm::vec2& position, float scale = 1.0f, float z = 0.0f, float maxWidth = 0.0f, const Math::Color& color = Math::Colors::White, Text::Alignment alignment = Text::Alignment::Left, bool useMarkup = false) override;
-	void drawCached(std::string_view text, const glm::vec2& position, float scale = 1.0f, float z = 0.0f, float maxWidth = 0.0f, const Math::Color& color = Math::Colors::White, Text::Alignment alignment = Text::Alignment::Left, bool useMarkup = false) override;
+	void draw(std::string_view text, const glm::vec2& position, const Text::DrawParams& params = {}) override;
+	void drawCached(std::string_view text, const glm::vec2& position, const Text::DrawParams& params = {}) override;
 
 	Text::Metrics measure(std::string_view text, float scale, float maxWidth, bool useMarkup = false) override;
 	float getLineHeight() const override;
@@ -64,6 +64,47 @@ public:
 
 	static void initializeShader();
 	static void cleanupShader();
+
+	struct DynamicText {
+		std::vector<Text::GlyphInstance> instances;
+		float width = 0.0f;
+		float height = 0.0f;
+	};
+
+	/**
+	 * @brief Builds the per-glyph instance data for a run of dynamic
+	 * (effects-capable) text, without drawing or caching it.
+	 *
+	 * @details
+	 * Intended for advanced/manual use for procedurally-driven text, or
+	 * callers that want to hold onto the same @c DynamicText across many
+	 * draws on purpose, bypassing the LRU cache entirely. For the common
+	 * case ("draw this string, cache the layout, reuse it next time it's
+	 * drawn"), prefer the `drawDynamic(std::string_view, ...)` overload
+	 * below instead.
+	 *
+	 * @param scale Must match the scale that will be passed to whatever
+	 * draws the result. Used only to convert @p maxWidth into unscaled
+	 * layout-space units for word wrapping, the same way draw()/drawCached()
+	 * do. It is not baked into the returned instance positions.
+	 */
+	DynamicText buildDynamic(std::string_view text, float maxWidth, Text::Alignment alignment, bool useMarkup = false, float scale = 1.0f);
+
+	/**
+	 * @brief Draws a previously-built @c DynamicText.
+	 *
+	 * @details
+	 * Advanced/manual entry point to be paired with buildDynamic(). Most callers
+	 * want the `drawDynamic(std::string_view, ...)` overload below instead,
+	 * which builds and caches this for you.
+	 */
+	void drawDynamic(const DynamicText& dyn, const glm::vec2& position, float scale, float z, const Math::Color& color);
+
+	/**
+	 * @brief Draws dynamic (effects-capable) text, building and caching its
+	 * instance data internally.
+	 */
+	void drawDynamic(std::string_view text, const glm::vec2& position, const Text::DrawParams& params = {}) override;
 
 private:
 	struct Glyph {
@@ -107,6 +148,10 @@ private:
 	std::unique_ptr<Graphics::VBO> vbo;
 	void initBuffers();
 
+	std::unique_ptr<Graphics::VAO> dynVAO;
+	std::unique_ptr<Graphics::VBO> dynVBO;
+	void initDynamicBuffers();
+
 	TTF_Font* font = nullptr;
 
 	std::vector<U8> fontDataBuffer;
@@ -123,6 +168,7 @@ private:
 
 	std::vector<U8> reuseBuffer;
 	Containers::LRUCache<TextCacheKey, CachedText> textCache;
+	Containers::LRUCache<TextCacheKey, DynamicText> dynamicTextCache;
 
 private:
 	/**
@@ -136,7 +182,10 @@ private:
 	const Glyph& getGlyph(char32_t codePoint);
 
 	void generateVertices(std::string_view text, float maxWidth, Text::Alignment alignment,std::vector<Vertex>& outVertices, GLsizei& outIndexCount, const std::vector<TextStyle>* markup);
-	void render(const std::vector<Vertex>& vertices, GLsizei indexCount, const glm::vec2& position, float scale, float z, const Math::Color& color);
+	void renderStatic(const std::vector<Vertex>& vertices, GLsizei indexCount, const glm::vec2& position, float scale, float z, const Math::Color& color);
+
+	void generateInstances(std::string_view text, float maxWidth, Text::Alignment alignment, std::vector<Text::GlyphInstance>& out, float& outWidth, float& outHeight, const std::vector<TextStyle>* markup = nullptr);
+	void renderDynamic(const std::vector<Text::GlyphInstance>& instances, const glm::vec2& position, float scale, float z, const Math::Color& color);
 
 	/**
 	 * @brief Draws a previously-cached glyph run using its own dedicated
