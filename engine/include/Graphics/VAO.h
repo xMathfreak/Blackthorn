@@ -30,6 +30,9 @@ struct BLACKTHORN_API VertexAttribute {
 	/// Byte offset from the start of the vertex
 	size_t offset;
 
+	/// Number of instances between attribute updates
+	GLuint divisor;
+
 	/// Whether fixed-point data should be normalized
 	bool normalized;
 };
@@ -125,12 +128,13 @@ public:
 	 * @param type Component data type.
 	 * @param stride Byte stride offset between vertices.
 	 * @param offset Byte offset of the attribute.
+	 * @param divisor Number of instances between attribute updates. 0 = per vertex, 1 = per instance.
 	 * @param normalized Whether fixed-point values are normalized.
 	 *
 	 * @pre A VBO must be bound to GL_ARRAY_BUFFER.
 	 * @pre This VAO must be bound.
 	 */
-	void enableAttrib(GLuint index, GLint size, GLenum type, GLsizei stride, size_t offset, bool normalized = false);
+	void enableAttrib(GLuint index, GLint size, GLenum type, GLsizei stride, size_t offset, GLuint divisor = 0, bool normalized = false);
 
 	/**
 	 * @brief Disables a vertex attribute.
@@ -149,7 +153,7 @@ public:
 	 */
 	void setLayout(const std::vector<VertexAttribute>& attributes) {
 		for (const auto& attr : attributes)
-			enableAttrib(attr.index, attr.size, attr.type, attr.stride, attr.offset, attr.normalized);
+			enableAttrib(attr.index, attr.size, attr.type, attr.stride, attr.offset, attr.divisor, attr.normalized);
 	}
 
 	/**

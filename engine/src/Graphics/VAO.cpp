@@ -61,7 +61,7 @@ void VAO::unbind() {
 	}
 }
 
-void VAO::enableAttrib(GLuint index, GLint size, GLenum type, GLsizei stride, size_t offset, bool normalized) {
+void VAO::enableAttrib(GLuint index, GLint size, GLenum type, GLsizei stride, size_t offset, GLuint divisor, bool normalized) {
 	if (id == 0) {
 		BT_ERROR("VAO: Cannot configure attributes on uninitialized array object");
 		return;
@@ -74,6 +74,7 @@ void VAO::enableAttrib(GLuint index, GLint size, GLenum type, GLsizei stride, si
 
 	glEnableVertexAttribArray(index);
 	glVertexAttribPointer(index, size, type, normalized ? GL_TRUE : GL_FALSE, stride, reinterpret_cast<const void*>(offset));
+	glVertexAttribDivisor(index, divisor);
 
 	const char* typeStr = "Unknown";
 
@@ -95,8 +96,8 @@ void VAO::enableAttrib(GLuint index, GLint size, GLenum type, GLsizei stride, si
 			break;
 	}
 
-	BT_DEBUG("VAO {}: Enabled attribute {} (size={}, type={}, stride={}, offset={}, normalized={})",
-		id, index, size, typeStr, stride, offset, (normalized ? "true" : "false")
+	BT_DEBUG("VAO {}: Enabled attribute {} (size={}, type={}, stride={}, offset={}, divisor={}, normalized={})",
+		id, index, size, typeStr, stride, offset, divisor, (normalized ? "true" : "false")
 	);
 
 }

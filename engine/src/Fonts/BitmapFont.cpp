@@ -159,26 +159,16 @@ void BitmapFont::initDynamicBuffers() {
 	dynVBO->setData(nullptr, MAX_TEXT_GLYPHS * sizeof(Text::GlyphInstance), GL_DYNAMIC_DRAW);
 	size_t stride = sizeof(Text::GlyphInstance);
 
-	dynVAO->enableAttrib(3, 2, GL_FLOAT, stride, offsetof(Text::GlyphInstance, position));
-	glVertexAttribDivisor(3, 1);
-	dynVAO->enableAttrib(4, 2, GL_FLOAT, stride, offsetof(Text::GlyphInstance, size));
-	glVertexAttribDivisor(4, 1);
-	dynVAO->enableAttrib(5, 4, GL_FLOAT, stride, offsetof(Text::GlyphInstance, uv));
-	glVertexAttribDivisor(5, 1);
-	dynVAO->enableAttrib(6, 4, GL_FLOAT, stride, offsetof(Text::GlyphInstance, color));
-	glVertexAttribDivisor(6, 1);
-	dynVAO->enableAttrib(7, 1, GL_FLOAT, stride, offsetof(Text::GlyphInstance, z));
-	glVertexAttribDivisor(7, 1);
-	dynVAO->enableAttrib(8, 1, GL_FLOAT, stride, offsetof(Text::GlyphInstance, rotation));
-	glVertexAttribDivisor(8, 1);
-	dynVAO->enableAttrib(9, 2, GL_FLOAT, stride, offsetof(Text::GlyphInstance, shadowOffset));
-	glVertexAttribDivisor(9, 1);
-	dynVAO->enableAttrib(10, 4, GL_FLOAT, stride, offsetof(Text::GlyphInstance, shadowColor));
-	glVertexAttribDivisor(10, 1);
-	dynVAO->enableAttrib(11, 1, GL_FLOAT, stride, offsetof(Text::GlyphInstance, shadowBlur));
-	glVertexAttribDivisor(11, 1);
-	dynVAO->enableAttrib(12, 2, GL_FLOAT, stride, offsetof(Text::GlyphInstance, shake));
-	glVertexAttribDivisor(12, 1);
+	dynVAO->enableAttrib(3, 2, GL_FLOAT, stride, offsetof(Text::GlyphInstance, position), 1);
+	dynVAO->enableAttrib(4, 2, GL_FLOAT, stride, offsetof(Text::GlyphInstance, size), 1);
+	dynVAO->enableAttrib(5, 4, GL_FLOAT, stride, offsetof(Text::GlyphInstance, uv), 1);
+	dynVAO->enableAttrib(6, 4, GL_FLOAT, stride, offsetof(Text::GlyphInstance, color), 1);
+	dynVAO->enableAttrib(7, 1, GL_FLOAT, stride, offsetof(Text::GlyphInstance, z), 1);
+	dynVAO->enableAttrib(8, 1, GL_FLOAT, stride, offsetof(Text::GlyphInstance, rotation), 1);
+	dynVAO->enableAttrib(9, 2, GL_FLOAT, stride, offsetof(Text::GlyphInstance, shadowOffset), 1);
+	dynVAO->enableAttrib(10, 4, GL_FLOAT, stride, offsetof(Text::GlyphInstance, shadowColor), 1);
+	dynVAO->enableAttrib(11, 1, GL_FLOAT, stride, offsetof(Text::GlyphInstance, shadowBlur), 1);
+	dynVAO->enableAttrib(12, 2, GL_FLOAT, stride, offsetof(Text::GlyphInstance, shake), 1);
 
 	Graphics::VAO::unbind();
 	Graphics::VBO::unbind();
