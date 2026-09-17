@@ -9,6 +9,14 @@ function(suppress_third_party_warnings target)
 	endif()
 endfunction()
 
+# json
+add_library(nlohmann_json INTERFACE)
+
+target_include_directories(nlohmann_json
+	INTERFACE
+		${CMAKE_CURRENT_SOURCE_DIR}/nlohmann_json
+)
+
 # glm
 set(GLM_BUILD_LIBRARY OFF CACHE BOOL "" FORCE)
 add_subdirectory(glm)
