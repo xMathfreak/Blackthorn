@@ -6,6 +6,7 @@
 
 #include "Core/Export.h"
 #include "Core/Types/Numeric.h"
+#include "Math/Xoshiro256ss.h"
 
 namespace Blackthorn::Math {
 
@@ -100,7 +101,7 @@ public:
 	}
 
 private:
-	std::mt19937_64 randomEngine;
+	Xoshiro256ss randomEngine;
 };
 
 } // namespace Blackthorn::Math
