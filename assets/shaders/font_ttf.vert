@@ -15,7 +15,6 @@ layout (location = 10) in vec4 i_ShadowColor;
 layout (location = 11) in float i_ShadowBlur;
 layout (location = 12) in vec2 i_Shake;
 
-
 layout(std140) uniform GlobalData {
 	mat4 u_ViewProjection;
 	float u_RenderTime;

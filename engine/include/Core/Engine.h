@@ -7,6 +7,7 @@
 #include "Core/Export.h"
 #include "Graphics/Renderer.h"
 #include "Input/InputManager.h"
+#include "Particles/ParticleRenderer.h"
 #include "Scene/ClientSceneManager.h"
 #include "Scene/ISceneContext.h"
 
@@ -47,7 +48,8 @@ public:
 	 *   1. `EngineCore::init()` - settings, logger, SDL events+timer,
 	 *      asset manager, job system.
 	 *   2. SDL video, OpenGL context creation, GLAD loading.
-	 *   3. Renderer construction, FBO, screen shader.
+	 *   3. Renderer construction, FBO, screen shader, ParticleRenderer
+	 *      construction.
 	 *   4. Replaces `simContext` with a `SceneContextImpl` that also
 	 *      exposes the renderer via `ISceneContext`.
 	 *
@@ -92,6 +94,7 @@ public:
 	Audio::AudioManager& getAudioManager() { return *audioManager; }
 	Input::InputManager& getInputManager() { return inputManager; }
 	Graphics::Renderer& getRenderer() { return *renderer; }
+	Particles::ParticleRenderer& getParticleRenderer() { return *particleRenderer; }
 
 protected:
 	void render(float alpha);
@@ -103,6 +106,7 @@ protected:
 
 private:
 	std::unique_ptr<Graphics::Renderer> renderer;
+	std::unique_ptr<Particles::ParticleRenderer> particleRenderer;
 	std::unique_ptr<Audio::AudioManager> audioManager;
 	Input::InputManager inputManager;
 	SDL_Window* window = nullptr;

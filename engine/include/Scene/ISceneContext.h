@@ -8,6 +8,7 @@ namespace Blackthorn {
 namespace Audio { class AudioManager; }
 namespace Graphics { class Renderer; }
 namespace Input { class InputManager; }
+namespace Particles { class ParticleRenderer; }
 
 namespace Scene {
 
@@ -44,6 +45,7 @@ public:
 	virtual Audio::AudioManager& getAudioManager() = 0;
 	virtual Graphics::Renderer& getRenderer() = 0;
 	virtual Input::InputManager& getInputManager() = 0;
+	virtual Particles::ParticleRenderer& getParticleRenderer() = 0;
 };
 
 } // namespace Scene

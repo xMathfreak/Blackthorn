@@ -109,6 +109,8 @@ bool Engine::init(const EngineConfig& cfg) {
 		renderer->setPostProcessingEnabled(
 			Core::Settings::instance().get<bool>("graphics", "post_processing")
 		);
+
+		particleRenderer = std::make_unique<Particles::ParticleRenderer>();
 	} catch (const std::exception& e) {
 		BT_ERROR("Renderer: Failed to initialize - {}", e.what());
 		cleanupGraphics();
@@ -130,6 +132,7 @@ bool Engine::init(const EngineConfig& cfg) {
 		*sceneManager,
 		*simClock,
 		*renderer,
+		*particleRenderer,
 		*saveManager
 	);
 
@@ -281,7 +284,9 @@ void Engine::shutdown() {
 
 	Fonts::TrueTypeFont::cleanupShader();
 	Fonts::BitmapFont::cleanupShader();
+	Particles::ParticleRenderer::cleanupShader();
 
+	particleRenderer.reset();
 	renderer.reset();
 	audioManager.reset();
 

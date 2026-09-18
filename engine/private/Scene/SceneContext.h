@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Graphics/Renderer.h"
+#include "Particles/ParticleRenderer.h"
 #include "Scene/ISceneContext.h"
 
 namespace Blackthorn::Scene {
@@ -21,6 +22,7 @@ class SceneContextImpl : public ISceneContext {
 	SceneManager& scene;
 	Core::SimClock& simClock;
 	Graphics::Renderer& renderer;
+	Particles::ParticleRenderer& particleRenderer;
 	Saves::SaveManager& saves;
 
 public:
@@ -33,6 +35,7 @@ public:
 		SceneManager& sm,
 		Core::SimClock& clock,
 		Graphics::Renderer& ren,
+		Particles::ParticleRenderer& pren,
 		Saves::SaveManager& sv
 	)
 		: audio(au)
@@ -43,6 +46,7 @@ public:
 		, scene(sm)
 		, simClock(clock)
 		, renderer(ren)
+		, particleRenderer(pren)
 		, saves(sv)
 	{}
 
@@ -54,6 +58,7 @@ public:
 	SceneManager& getSceneManager() override { return scene; }
 	Core::SimClock& getSimClock() override { return simClock; }
 	Graphics::Renderer& getRenderer() override { return renderer; }
+	Particles::ParticleRenderer& getParticleRenderer() override { return particleRenderer; }
 	Saves::SaveManager& getSaveManager() override { return saves; }
 };
 
