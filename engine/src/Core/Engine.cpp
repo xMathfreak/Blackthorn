@@ -4,6 +4,7 @@
 
 #include "Assets/Loaders/AudioLoader.h"
 #include "Assets/Loaders/BitmapFontLoader.h"
+#include "Assets/Loaders/ParticleEffectLoader.h"
 #include "Assets/Loaders/ShaderLoader.h"
 #include "Assets/Loaders/SpriteClipLoader.h"
 #include "Assets/Loaders/TextureLoader.h"
@@ -96,6 +97,7 @@ bool Engine::init(const EngineConfig& cfg) {
 	audioManager = std::make_unique<Audio::AudioManager>();
 
 	initAssetLoaders();
+	Particles::BehaviorFactory::instance().registerBuiltins();
 
 	applyEngineSettings();
 
@@ -245,6 +247,11 @@ void Engine::initAssetLoaders() {
 		std::make_unique<Animation::AsyncSpriteClipLoader>(&assetManager->resolver())
 	);
 
+	assetManager->registerPackLoader<Particles::ParticleEffect>(
+		std::make_unique<Particles::ParticleEffectLoader>(*assetManager),
+		std::make_unique<Particles::AsyncParticleEffectLoader>(&assetManager->resolver())
+	);
+
 #else
 	assetManager->registerLoader<Audio::AudioClip>(
 		std::make_unique<Audio::AudioLoader>(),
@@ -274,6 +281,11 @@ void Engine::initAssetLoaders() {
 	assetManager->registerLoader<Animation::SpriteClip>(
 		std::make_unique<Animation::SpriteClipLoader>(),
 		std::make_unique<Animation::AsyncSpriteClipLoader>()
+	);
+
+	assetManager->registerLoader<Particles::ParticleEffect>(
+		std::make_unique<Particles::ParticleEffectLoader>(*assetManager),
+		std::make_unique<Particles::AsyncParticleEffectLoader>()
 	);
 #endif
 }

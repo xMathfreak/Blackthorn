@@ -77,6 +77,7 @@ target_include_directories(BlackthornCore
 
 target_link_libraries(BlackthornCore
 	PUBLIC
+		nlohmann_json
 		glm::glm
 		SDL3::SDL3
 		libzstd_static
