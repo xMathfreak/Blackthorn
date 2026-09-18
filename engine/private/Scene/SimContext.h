@@ -6,7 +6,7 @@
 namespace Blackthorn::Scene {
 
 /**
- * @brief Concrete `ISimContext` implementation owned by `EngineCore`.
+ * @brief Concrete `ISimContext` implementation owned by `Runtime`.
  *
  * Holds references to all simulation services. Passed into `Scene::init()`
  * on both the client and the dedicated server build.

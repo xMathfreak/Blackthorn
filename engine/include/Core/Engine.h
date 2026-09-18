@@ -2,22 +2,28 @@
 
 #include <SDL3/SDL.h>
 
-#include "Audio/AudioManager.h"
-#include "Core/EngineCore.h"
 #include "Core/Export.h"
-#include "Graphics/Renderer.h"
+#include "Core/Runtime.h"
 #include "Input/InputManager.h"
-#include "Particles/ParticleRenderer.h"
-#include "Scene/ClientSceneManager.h"
-#include "Scene/ISceneContext.h"
 
 namespace Blackthorn {
+
+namespace Audio { class AudioManager; }
+namespace Graphics { class Renderer; }
+namespace Particles { class ParticleRenderer; }
+
+namespace Scene {
+
+class ClientSceneManager;
+class ISceneContext;
+
+} // namespace Scene
 
 /**
  * @brief Graphics-enabled engine implementation for the client build.
  *
  * @details
- * Extends `EngineCore` with rendering and presentation capabilities.
+ * Extends `Runtime` with rendering and presentation capabilities.
  * In addition to the core simulation systems, this class initializes
  * SDL video, creates an OpenGL context, and owns the `Renderer`.
  *
@@ -26,26 +32,26 @@ namespace Blackthorn {
  *
  * @section usage Usage
  * The dedicated server links against `BlackthornCore` and uses
- * `EngineCore` directly. Client applications link against
+ * `Runtime` directly. Client applications link against
  * `BlackthornEngine` and use this class.
  *
  * @note
  * Do not define `BLACKTHORN_HEADLESS` when compiling this target, as
  * rendering and windowing functionality are required.
  */
-class BLACKTHORN_API Engine : public EngineCore {
+class BLACKTHORN_API Engine : public Runtime {
 public:
-	Engine() = default;
+	Engine();
 	~Engine() override;
 
 	Engine(const Engine&) = delete;
 	Engine& operator=(const Engine&) = delete;
 
 	/**
-	 * @brief Initializes simulation systems (via EngineCore) then graphics.
+	 * @brief Initializes simulation systems (via Runtime) then graphics.
 	 *
 	 * Call order:
-	 *   1. `EngineCore::init()` - settings, logger, SDL events+timer,
+	 *   1. `Runtime::init()` - settings, logger, SDL events+timer,
 	 *      asset manager, job system.
 	 *   2. SDL video, OpenGL context creation, GLAD loading.
 	 *   3. Renderer construction, FBO, screen shader, ParticleRenderer
@@ -59,21 +65,21 @@ public:
 	bool init(const EngineConfig& cfg = EngineConfig()) override;
 
 	/**
-	 * @brief Shuts down graphics resources then delegates to EngineCore.
+	 * @brief Shuts down graphics resources then delegates to Runtime.
 	 */
 	void shutdown() override;
 
 	/**
 	 * @brief Runs the client loop (simulation + render).
 	 *
-	 * Follows the same fixed-timestep structure as `EngineCore::run()`
+	 * Follows the same fixed-timestep structure as `Runtime::run()`
 	 * (events, fixed updates, update, late update) but adds a render step
 	 * after `lateUpdate()` using the interpolation alpha computed from the
 	 * accumulated fixed-update remainder.
 	 *
-	 * The frame-cap section also differs from `EngineCore::run()`: this
+	 * The frame-cap section also differs from `Runtime::run()`: this
 	 * override additionally skips capping when vsync is enabled, since
-	 * vsync already throttles the loop via the buffer swap. `EngineCore`
+	 * vsync already throttles the loop via the buffer swap. `Runtime`
 	 * has no window/vsync concept, so its own frame cap has no such gate.
 	 */
 	void run() override;
@@ -81,20 +87,15 @@ public:
 	/**
 	 * @brief Returns the full scene context, including renderer access.
 	 */
-	Scene::ISceneContext& getSceneContext() {
-		return static_cast<Scene::ISceneContext&>(*simContext);
-	}
+	Scene::ISceneContext& getSceneContext();
 
-	Scene::ClientSceneManager& getClientSceneManager() {
-		return static_cast<Scene::ClientSceneManager&>(*sceneManager);
-	}
-
+	Scene::ClientSceneManager& getClientSceneManager();
 	void update(float dt) override;
 
-	Audio::AudioManager& getAudioManager() { return *audioManager; }
-	Input::InputManager& getInputManager() { return inputManager; }
-	Graphics::Renderer& getRenderer() { return *renderer; }
-	Particles::ParticleRenderer& getParticleRenderer() { return *particleRenderer; }
+	Audio::AudioManager& getAudioManager();
+	Input::InputManager& getInputManager();
+	Graphics::Renderer& getRenderer();
+	Particles::ParticleRenderer& getParticleRenderer();
 
 protected:
 	void render(float alpha);

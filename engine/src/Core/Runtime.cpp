@@ -1,12 +1,21 @@
-#include "Core/EngineCore.h"
+#include "Core/Runtime.h"
 
 #include <algorithm>
+#include <csignal>
 
+#include "Assets/AssetManager.h"
+#include "Core/Settings.h"
 #include "Core/Settings.h"
 #include "Core/SimClock.h"
+#include "Core/SimClock.h"
+#include "Scene/ISimContext.h"
+#include "Scene/SceneManager.h"
 #include "Debug/Logger.h"
 #include "Debug/Profiler.h"
+#include "Jobs/JobSystem.h"
+#include "Net/ConnectionManager.h"
 #include "Net/Transport/Sockets/SocketFactory.h"
+#include "Saves/SaveManager.h"
 #include "Saves/Sections/ClockSaveSection.h"
 #include "Saves/Sections/MetaSaveSection.h"
 #include "Saves/Sections/WorldSaveSection.h"
@@ -16,22 +25,22 @@
 
 namespace Blackthorn {
 
-void EngineCore::installSignalHandlers() {
-	std::signal(SIGINT, EngineCore::signalHandler);
-	std::signal(SIGTERM, EngineCore::signalHandler);
+void Runtime::installSignalHandlers() {
+	std::signal(SIGINT, Runtime::signalHandler);
+	std::signal(SIGTERM, Runtime::signalHandler);
 }
 
-void EngineCore::signalHandler(int) {
+void Runtime::signalHandler(int) {
 	signalReceived.store(true, std::memory_order::relaxed);
 }
 
-EngineCore::EngineCore() {}
+Runtime::Runtime() {}
 
-EngineCore::~EngineCore() {
+Runtime::~Runtime() {
 	shutdown();
 }
 
-bool EngineCore::init(const EngineConfig& cfg) {
+bool Runtime::init(const EngineConfig& cfg) {
 	if (initialized) {
 		BT_WARN("Engine: Initialization skipped - already initialized");
 		return false;
@@ -122,7 +131,7 @@ bool EngineCore::init(const EngineConfig& cfg) {
 	return true;
 }
 
-void EngineCore::shutdown() {
+void Runtime::shutdown() {
 	if (!initialized)
 		return;
 
@@ -154,7 +163,7 @@ void EngineCore::shutdown() {
 	Debug::Logger::instance().shutdown();
 }
 
-void EngineCore::run() {
+void Runtime::run() {
 	if (!initialized) {
 		BT_ERROR("Engine: Cannot run - not initialized");
 		return;
@@ -264,10 +273,10 @@ void EngineCore::run() {
 	}
 
 	if (signalReceived.load(std::memory_order::relaxed))
-		BT_LOG("EngineCore: signal received, shutting down cleanly");
+		BT_LOG("Runtime: signal received, shutting down cleanly");
 }
 
-void EngineCore::processEvents() {
+void Runtime::processEvents() {
 	SDL_Event event;
 	while (SDL_PollEvent(&event)) {
 		if (event.type == SDL_EVENT_QUIT)
@@ -275,22 +284,22 @@ void EngineCore::processEvents() {
 	}
 }
 
-void EngineCore::fixedUpdate(float dt) {
+void Runtime::fixedUpdate(float dt) {
 	simClock->tick();
 	sceneManager->fixedUpdate(dt, simClock->getCurrentTick());
 }
 
-void EngineCore::update(float dt) {
+void Runtime::update(float dt) {
 	assetManager->flushPendingUploads();
 	connectionManager->poll(jobSystem.get());
 	sceneManager->update(dt);
 }
 
-void EngineCore::lateUpdate(float dt) {
+void Runtime::lateUpdate(float dt) {
 	sceneManager->lateUpdate(dt);
 }
 
-void EngineCore::registerDefaultSettings(Core::Settings& s) {
+void Runtime::registerDefaultSettings(Core::Settings& s) {
 	#ifdef BLACKTHORN_HEADLESS
 		s.setDefault<U64>("simulation", "tick", static_cast<U64>(0));
 		s.setDefault("graphics", "frame_cap", true);
@@ -305,7 +314,7 @@ void EngineCore::registerDefaultSettings(Core::Settings& s) {
 	s.setDefault("saves", "make_backups", true);
 }
 
-void EngineCore::registerEngineCallbacks(Core::Settings& s) {
+void Runtime::registerEngineCallbacks(Core::Settings& s) {
 	frameCapEnabled.attach();
 	targetFPS.attach();
 
@@ -324,7 +333,7 @@ void EngineCore::registerEngineCallbacks(Core::Settings& s) {
 	});
 }
 
-Saves::SaveId EngineCore::getShutdownSaveId() const {
+Saves::SaveId Runtime::getShutdownSaveId() const {
 	Saves::SaveId sid;
 	sid.id = Core::UUID::makeStable("blackthorn.autosave.shutdown");
 	sid.displayName = "autosave_shutdown";
@@ -332,7 +341,7 @@ Saves::SaveId EngineCore::getShutdownSaveId() const {
 	return sid;
 }
 
-void EngineCore::applyCoreSettings() {
+void Runtime::applyCoreSettings() {
 	#ifdef BLACKTHORN_DEBUG
 		auto& s = Core::Settings::instance();
 
@@ -342,11 +351,11 @@ void EngineCore::applyCoreSettings() {
 	#endif
 }
 
-void EngineCore::cleanupInitialization() {
+void Runtime::cleanupInitialization() {
 	SDL_Quit();
 }
 
-void EngineCore::initSaveManager() {
+void Runtime::initSaveManager() {
 	saveManager = std::make_unique<Saves::SaveManager>(config.save);
 
 	Saves::Sections::WorldSaveSection::registerTypes();
@@ -386,7 +395,7 @@ void EngineCore::initSaveManager() {
 }
 
 #ifdef BLACKTHORN_DEBUG
-void EngineCore::logProfilingInfo() {
+void Runtime::logProfilingInfo() {
 	auto& profiler = Debug::Profiler::instance();
 
 	BT_TRACE("Frame Time: {:.2f} ms ({:.1f} FPS)",

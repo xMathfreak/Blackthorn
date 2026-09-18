@@ -19,7 +19,7 @@ class SceneManager;
  * @brief Minimal simulation context shared by both client and headless server.
  *
  * @details
- * `EngineCore` implements this interface and provides access to core
+ * `Runtime` implements this interface and provides access to core
  * simulation services such as ECS, asset management, job system and
  * the simulation clock. It intentionally excludes any rendering or
  * presentation-specific functionality so it can be used in headless builds.

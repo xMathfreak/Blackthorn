@@ -98,7 +98,7 @@ public:
 	 * @brief Sets the simulation context handed to every scene from now on.
 	 *
 	 * Must be called once before the first `pushScene()`/`changeScene()`.
-	 * Called by `EngineCore`/`Engine` immediately after the engine's context
+	 * Called by `Runtime`/`Engine` immediately after the engine's context
 	 * object is constructed. Not intended to be called by game code.
 	 *
 	 * @param ctx Context to inject into scenes. Must outlive this manager.

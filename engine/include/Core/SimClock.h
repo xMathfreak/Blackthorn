@@ -9,7 +9,7 @@ namespace Blackthorn::Core {
  * @brief Authoritative simulation clock for the engine.
  *
  * Tracks the current tick, tick rate, and tick duration. Owned by
- * `EngineCore` and exposed read-only through `ISimContext`.
+ * `Runtime` and exposed read-only through `ISimContext`.
  *
  * @section persistence Persistence
  * Two persistence paths are supported:
@@ -17,13 +17,13 @@ namespace Blackthorn::Core {
  * - @b SaveManager path (default for client builds):
  *   The tick counter is saved and loaded via @c ClockSaveSection as part
  *   of the engine shutdown autosave. @c save() and @c load() are not
- *   called by @c EngineCore when a @c SaveManager is present.
+ *   called by @c Runtime when a @c SaveManager is present.
  *   @c initialTick is used as the starting value on first launch before
  *   any shutdown save exists.
  *
  * - @b INI fallback path (headless / dedicated server builds):
  *   @c save() writes @c currentTick to @c [simulation] tick in the INI
- *   settings file. @c load() restores it. @c EngineCore calls both when
+ *   settings file. @c load() restores it. @c Runtime calls both when
  *   @c BLACKTHORN_HEADLESS is defined and no @c SaveManager is active.
  *
  * @note This class is not thread-safe. All mutation must occur on the

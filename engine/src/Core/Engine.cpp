@@ -15,9 +15,11 @@
 #include "Debug/Profiler.h"
 #include "Fonts/BitmapFont.h"
 #include "Fonts/TrueTypeFont.h"
+#include "Scene/ClientSceneManager.h"
 #include "Scene/SceneContext.h"
 #include "Threads/Relax.h"
 #include "UI/UIManager.h"
+
 
 namespace Blackthorn {
 
@@ -76,12 +78,38 @@ inline std::string getSIMDInfo() {
 
 } // anonymous namespace
 
+Engine::Engine() = default;
+
 Engine::~Engine() {
 	shutdown();
 }
 
+Scene::ISceneContext& Engine::getSceneContext() {
+	return static_cast<Scene::ISceneContext&>(*simContext);
+}
+
+Scene::ClientSceneManager& Engine::getClientSceneManager() {
+	return static_cast<Scene::ClientSceneManager&>(*sceneManager);
+}
+
+Audio::AudioManager& Engine::getAudioManager() {
+	return *audioManager;
+}
+
+Input::InputManager& Engine::getInputManager() {
+	return inputManager;
+}
+
+Graphics::Renderer& Engine::getRenderer() {
+	return *renderer;
+}
+
+Particles::ParticleRenderer& Engine::getParticleRenderer() {
+	return *particleRenderer;
+}
+
 bool Engine::init(const EngineConfig& cfg) {
-	if (!EngineCore::init(cfg))
+	if (!Runtime::init(cfg))
 		return false;
 
 	Fonts::FontConfig::setCurrent(cfg.fonts);
@@ -90,7 +118,7 @@ bool Engine::init(const EngineConfig& cfg) {
 
 	initGraphics(cfg);
 	if (!window || !glContext) {
-		EngineCore::shutdown();
+		Runtime::shutdown();
 		return false;
 	}
 
@@ -102,7 +130,7 @@ bool Engine::init(const EngineConfig& cfg) {
 	applyEngineSettings();
 
 	if (!audioManager->init(cfg.audio)) {
-		EngineCore::shutdown();
+		Runtime::shutdown();
 		return false;
 	}
 
@@ -116,7 +144,7 @@ bool Engine::init(const EngineConfig& cfg) {
 	} catch (const std::exception& e) {
 		BT_ERROR("Renderer: Failed to initialize - {}", e.what());
 		cleanupGraphics();
-		EngineCore::shutdown();
+		Runtime::shutdown();
 		return false;
 	}
 
@@ -306,7 +334,7 @@ void Engine::shutdown() {
 	assetManager.reset();
 	cleanupGraphics();
 
-	EngineCore::shutdown();
+	Runtime::shutdown();
 }
 
 void Engine::cleanupGraphics() {
@@ -466,7 +494,7 @@ void Engine::render(float alpha) {
 }
 
 void Engine::update(float dt) {
-	EngineCore::update(dt);
+	Runtime::update(dt);
 	audioManager->update();
 	inputManager.update(dt);
 }
@@ -552,7 +580,7 @@ void Engine::processEvents() {
 }
 
 void Engine::registerDefaultSettings(Core::Settings& s) {
-	EngineCore::registerDefaultSettings(s);
+	Runtime::registerDefaultSettings(s);
 
 	s.setDefault("window", "width", config.window.width);
 	s.setDefault("window", "height", config.window.height);
@@ -583,7 +611,7 @@ void Engine::registerDefaultSettings(Core::Settings& s) {
 }
 
 void Engine::applyEngineSettings() {
-	EngineCore::applyCoreSettings();
+	Runtime::applyCoreSettings();
 
 	auto& s = Core::Settings::instance();
 
@@ -665,7 +693,7 @@ void Engine::applyPostProcessing() {
 }
 
 void Engine::registerEngineCallbacks(Core::Settings& s) {
-	EngineCore::registerEngineCallbacks(s);
+	Runtime::registerEngineCallbacks(s);
 
 	vsyncEnabled.attach();
 	minimizedFPS.attach();

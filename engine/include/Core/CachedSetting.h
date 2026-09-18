@@ -30,7 +30,7 @@ concept AtomicSettingType = std::same_as<T, bool> || std::integral<T> || std::fl
  * loaded (Settings::loadFromFile() writes directly into its internal map
  * and does *not* fire onChange callbacks, so a CachedSetting attached
  * before the load would never observe values that came from the file).
- * In practice this means calling attach() from an EngineCore/Engine
+ * In practice this means calling attach() from a Runtime/Engine
  * override of registerEngineCallbacks(), alongside other
  * Settings::onChange registrations - exactly where this class's own
  * instances do so.
@@ -48,7 +48,7 @@ concept AtomicSettingType = std::same_as<T, bool> || std::integral<T> || std::fl
  *     Core::CachedSetting<int> targetFPS{"graphics", "target_fps", 60};
  *
  *     void registerEngineCallbacks(Core::Settings& s) override {
- *         EngineCore::registerEngineCallbacks(s);
+ *         Runtime::registerEngineCallbacks(s);
  *         vsyncEnabled.attach();
  *         frameCapEnabled.attach();
  *         targetFPS.attach();
@@ -66,7 +66,7 @@ concept AtomicSettingType = std::same_as<T, bool> || std::integral<T> || std::fl
  * @note Settings::onChange has no matching "unregister" API, and the
  * registered callback captures `this`. CachedSetting is therefore
  * non-copyable and non-movable, and is only safe to use for values with
- * engine/process lifetime (e.g. a member of Engine/EngineCore) that is
+ * engine/process lifetime (e.g. a member of Engine/Runtime) that is
  * attach()'d exactly once - not something constructed and destroyed
  * per-frame, per-scene, or re-attached across a shutdown/re-init cycle.
  */

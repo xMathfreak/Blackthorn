@@ -29,7 +29,7 @@ struct BLACKTHORN_API SaveConfig {
 	/// A warning is logged in debug builds when false.
 	bool encryptionEnabled = false;
 
-	/// Whether to save when EngineCore::shutdown is called.
+	/// Whether to save when Runtime::shutdown is called.
 	bool saveOnShutdown = true;
 
 	/**

@@ -1,22 +1,33 @@
 #pragma once
 
 #include <atomic>
-#include <csignal>
 #include <memory>
 
-#include "Assets/AssetManager.h"
 #include "Core/CachedSetting.h"
 #include "Core/EngineConfig.h"
 #include "Core/Export.h"
-#include "Core/Settings.h"
-#include "Core/SimClock.h"
-#include "Jobs/JobSystem.h"
-#include "Net/ConnectionManager.h"
-#include "Saves/SaveManager.h"
-#include "Scene/ISimContext.h"
-#include "Scene/SceneManager.h"
 
 namespace Blackthorn {
+
+namespace Assets { class AssetManager; }
+
+namespace Core {
+	class SimClock;
+	class Settings;
+} // namespace Core
+
+namespace Jobs { class JobSystem; }
+namespace Net { class ConnectionManager; }
+
+namespace Saves {
+	class SaveManager;
+	struct SaveId;
+} // namespace Saves
+
+namespace Scene {
+	class ISimContext;
+	class SceneManager;
+} // namespace Scene
 
 /**
  * @brief Simulation-only engine core shared by both client and server.
@@ -35,32 +46,32 @@ namespace Blackthorn {
  * for use in dedicated server binaries and headless environments.
  *
  * @section subclassing Subclassing
- * `Engine` (the client build) derives from `EngineCore` and extends it
+ * `Engine` (the client build) derives from `Runtime` and extends it
  * with rendering and presentation systems. Server-side code may either
- * derive from or directly embed `EngineCore`.
+ * derive from or directly embed `Runtime`.
  *
  * @section signals Signal Handling
- * `EngineCore::run()` installs `SIGINT` and `SIGTERM` handlers. These
+ * `Runtime::run()` installs `SIGINT` and `SIGTERM` handlers. These
  * handlers set a static atomic flag, causing the main loop to exit
  * cleanly at the end of the current simulation tick.
  *
  * @section lifecycle Lifecycle
  * Typical usage:
  * @code
- * EngineCore engine;
+ * Runtime engine;
  * engine.init(cfg);
  * engine.getSceneManager().pushScene(...);
  * engine.run();         // blocks until stop() or signal
  * engine.shutdown();    // called automatically by destructor
  * @endcode
  */
-class BLACKTHORN_API EngineCore {
+class BLACKTHORN_API Runtime {
 public:
-	EngineCore();
-	virtual ~EngineCore();
+	Runtime();
+	virtual ~Runtime();
 
-	EngineCore(const EngineCore&) = delete;
-	EngineCore& operator=(const EngineCore&) = delete;
+	Runtime(const Runtime&) = delete;
+	Runtime& operator=(const Runtime&) = delete;
 
 	/**
 	 * @brief Initializes simulation systems.
@@ -70,7 +81,7 @@ public:
 	 * loaders. Does not touch SDL video, OpenGL, or any windowing system.
 	 *
 	 * @param cfg Engine configuration. `cfg.window` and `cfg.render` fields
-	 *            are ignored by `EngineCore` - they are only consumed by
+	 *            are ignored by `Runtime` - they are only consumed by
 	 *            the `Engine` subclass.
 	 * @return true on success, false if any critical system failed to initialize.
 	 */
@@ -157,7 +168,7 @@ public:
 	 * Override to scope the save per-world or per-player:
 	 * @code
 	 * Saves::SaveId MyGame::getShutdownSaveId() const override {
-	 *     Saves::SaveId id = EngineCore::getShutdownSaveId();
+	 *     Saves::SaveId id = Runtime::getShutdownSaveId();
 	 *     id.worldId  = currentWorldId;
 	 *     id.playerId = currentPlayerId;
 	 *     return id;
@@ -191,12 +202,12 @@ protected:
 	 * lock and a string allocation per value, per frame, purely to check
 	 * values that only change when the user changes a setting.
 	 *
-	 * Declared here (rather than duplicated in EngineCore and Engine) since
+	 * Declared here (rather than duplicated in Runtime and Engine) since
 	 * both run() implementations use them. attach()'d once in
 	 * registerEngineCallbacks() - see that method for why attach() can't
 	 * happen at construction time.
 	 *
-	 * @note vsync is deliberately NOT cached here. EngineCore never creates
+	 * @note vsync is deliberately NOT cached here. Runtime never creates
 	 * a window or GL context, so vsync has no meaning for it - that cache
 	 * lives on Engine, the only place it actually applies.
 	 */
