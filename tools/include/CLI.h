@@ -33,18 +33,6 @@
  *     return 0;
  * }
  * @endcode
- *
- * Design notes (see the accompanying design discussion for full rationale):
- *  - No std::expected: this targets C++20, so Result<T> is a small hand-rolled
- *    equivalent with the same operator bool()/operator*()/operator->()/error() shape.
- *  - Declarations + templated glue live here; the actual tokenizing, matching, and
- *    validation engine lives in CLI.cpp and is compiled once into a static library
- *    that every tool links against.
- *  - Naming is deliberately snake_case for the fluent builder surface (value<T>(),
- *    defaultValue(), conflictsWith(), helpRequested(), ...), mirroring the
- *    Rust `clap`-style API this was modeled after. That's a deliberate departure
- *    from BlackthornEngine's usual camelCase convention, scoped to this tool-only
- *    library -- flag it if that's not what you want.
  */
 
 #include <any>

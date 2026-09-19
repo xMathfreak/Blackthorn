@@ -597,7 +597,7 @@ bool Packer::verify(const std::filesystem::path& btpPath, std::ostream& log) {
 	for (const BTPEntry& entry : entries) {
 		if (!seekTo(f, entry.dataOffset)) {
 			std::cerr << "  FAIL  0x" << std::hex << entry.assetID
-					  << " - seek error\n" << std::dec;
+					  << "; seek error\n" << std::dec;
 			++failed;
 			continue;
 		}
@@ -605,7 +605,7 @@ bool Packer::verify(const std::filesystem::path& btpPath, std::ostream& log) {
 		std::vector<uint8_t> compressed(static_cast<size_t>(entry.compressedSize));
 		if (!readExact(f, compressed.data(), compressed.size())) {
 			std::cerr << "  FAIL  0x" << std::hex << entry.assetID
-					  << " - read error\n" << std::dec;
+					  << "; read error\n" << std::dec;
 
 			++failed;
 			continue;
@@ -622,7 +622,7 @@ bool Packer::verify(const std::filesystem::path& btpPath, std::ostream& log) {
 				std::cerr << "0x" << std::hex << entry.assetID << std::dec;
 			}
 
-			std::cerr << " - hash mismatch (expected 0x" << std::hex
+			std::cerr << "; hash mismatch (expected 0x" << std::hex
 					  << entry.xxhash << ", got 0x" << actualHash << ")\n" << std::dec;
 
 			++failed;
@@ -633,7 +633,7 @@ bool Packer::verify(const std::filesystem::path& btpPath, std::ostream& log) {
 			std::vector<uint8_t> raw;
 			if (!decompressZstd(compressed, raw, entry.uncompressedSize)) {
 				std::cerr << "  FAIL  0x" << std::hex << entry.assetID
-						  << " - decompression error\n" << std::dec;
+						  << "; decompression error\n" << std::dec;
 
 				++failed;
 				continue;

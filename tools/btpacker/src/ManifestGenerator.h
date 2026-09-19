@@ -18,7 +18,7 @@ namespace BTPacker {
  * root: slashes become underscores and the extension is dropped, so
  * "assets/shaders/default.vert" becomes "shaders_default_vert".
  *
- * The generated manifest is a starting point — IDs and groupings can be
+ * The generated manifest is a starting point. IDs and groupings can be
  * hand-edited afterward. Re-running gen-manifest over the same directory
  * regenerates the file, so it is safe to use as part of a build step as
  * long as manual edits are tracked separately (e.g. by committing the
@@ -64,6 +64,7 @@ private:
 	 * @brief Derives a stable string ID from a relative file path.
 	 *
 	 * Rules:
+	 *
 	 *   - Extension is stripped.
 	 *   - Path separators ('/' and '\') become underscores.
 	 *   - All characters are lowercased.
@@ -72,7 +73,7 @@ private:
 	 *
 	 * Examples:
 	 *   "shaders/default.vert"          -> "shaders_default_vert"
-	 *   "fonts/Bebas Neue Pro.ttf"      -> "fonts_bebas_neue_pro"
+	 *   "fonts/Times New Roman.ttf"      -> "fonts_times_new_roman"
 	 *   "Ain't It Fun.mp3"              -> "aint_it_fun"
 	 *
 	 * @param relPath Path relative to the scanned asset root.

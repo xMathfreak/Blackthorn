@@ -322,7 +322,7 @@ bool readImageFile(const std::string& path, std::vector<uint8_t>& imageData, con
 bool writeBTF(const FontMetaData& metadata, const std::vector<uint8_t>& imageData, const std::vector<FontGlyph>& glyphs, const CLIOptions& opts) {
 	if (opts.dryRun) {
 		if (opts.verbose && !opts.quiet)
-			std::cout << "Dry run enabled — skipping output file write\n";
+			std::cout << "Dry run enabled; skipping output file write\n";
 
 		return true;
 	}
