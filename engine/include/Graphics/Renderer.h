@@ -24,25 +24,29 @@ namespace Blackthorn::Graphics {
 /**
  * @brief Batched 2D renderer built on OpenGL.
  *
+ * @details
  * Rendering follows a strict begin/end pattern:
  *
- *   beginScene()  - binds the internal FBO, clears color + depth
- *   draw calls
- *   endScene()    - flushes batches, runs the fullscreen pass to the
- *                   default framebuffer
+ * - @c beginScene() - binds the internal frame buffer and clears the color
+ *   and depth buffers.
+ * - Draw calls - accumulate geometry into batches for rendering.
+ * - @c endScene() - flushes the batches, then runs a fullscreen pass that
+ *   presents the rendered image to the default framebuffer.
  *
- * The renderer owns an internal FBO with a color texture and depth
- * renderbuffer. At endScene(), a fullscreen pass draws the FBO color
- * attachment to the default framebuffer using an oversized triangle (no
- * vertex buffer - positions are generated from gl_VertexID in the shader).
+ * The renderer owns an internal frame buffer with a color texture and depth
+ * renderbuffer. At @c endScene(), a fullscreen pass draws the FBO's color
+ * attachment to the default framebuffer using an oversized triangle. No
+ * vertex buffer is required; vertex positions are generated from
+ * @c gl_VertexID in the shader.
  *
- * Post-processing is supported by swapping the screen shader via
- * setScreenShader(). The built-in screen shader supports grayscale, invert,
- * brightness, contrast, saturation, and gamma correction. Disable the
- * fullscreen pass entirely (falling back to glBlitFramebuffer) via
- * setPostProcessingEnabled(false).
+ * Post-processing can be configured by replacing the screen shader with
+ * @c setScreenShader(). The built-in screen shader supports grayscale,
+ * invert, brightness, contrast, saturation, and gamma correction.
+ * The fullscreen pass can be disabled with
+ * @c setPostProcessingEnabled(false), which falls back to
+ * @c glBlitFramebuffer().
  *
- * Copying is disallowed; the renderer owns GPU resources.
+ * Copying is disallowed because the renderer owns GPU resources.
  *
  * @note Requires a valid OpenGL context to be current on the calling thread.
  */
@@ -61,7 +65,7 @@ private:
 	};
 
 private:
-	/// Default number of quads per batch - overridable at construction
+	/// Default number of quads per batch, overridable at construction
 	static constexpr U32 DEFAULT_MAX_QUADS = 1 << 12;
 
 	/// Maximum number of texture slots per batch
@@ -123,7 +127,7 @@ private:
 	/// Whether view frustum culling is enabled
 	bool cullingEnabled = true;
 
-	/// CPU-side vertex buffer - written each batch, uploaded via glBufferSubData
+	/// CPU-side vertex buffer written each batch, uploaded via glBufferSubData
 	std::unique_ptr<Vertex[]> quadBuffer;
 
 	/// Pointer to the current write position within quadBuffer
@@ -354,7 +358,7 @@ public:
 	 *
 	 * When enabled (default), endScene() draws the FBO through the active
 	 * screen shader. When disabled, endScene() falls back to a raw
-	 * glBlitFramebuffer call - marginally faster but no shader effects.
+	 * glBlitFramebuffer call which is marginally faster but no shader effects.
 	 */
 	void setPostProcessingEnabled(bool enabled);
 	bool isPostProcessingEnabled() const { return postProcessingEnabled; }
@@ -363,7 +367,7 @@ public:
 	 * @brief Override the screen shader used for the fullscreen pass.
 	 *
 	 * Pass nullptr to restore the built-in passthrough / post-process shader.
-	 * The renderer does NOT take ownership - the caller must keep the shader
+	 * The renderer does NOT take ownership. The caller must keep the shader
 	 * alive for as long as it is active.
 	 *
 	 * @param customShader Shader to use, or nullptr to reset to built-in.

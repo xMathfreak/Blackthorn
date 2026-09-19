@@ -21,7 +21,7 @@ namespace Net { class ConnectionManager; }
 
 namespace Saves {
 	class SaveManager;
-	struct SaveId;
+	struct SaveID;
 } // namespace Saves
 
 namespace Scene {
@@ -81,8 +81,7 @@ public:
 	 * loaders. Does not touch SDL video, OpenGL, or any windowing system.
 	 *
 	 * @param cfg Engine configuration. `cfg.window` and `cfg.render` fields
-	 *            are ignored by `Runtime` - they are only consumed by
-	 *            the `Engine` subclass.
+	 *            are only consumed by the `Engine` subclass.
 	 * @return true on success, false if any critical system failed to initialize.
 	 */
 	virtual bool init(const EngineConfig& cfg = EngineConfig());
@@ -90,7 +89,7 @@ public:
 	/**
 	 * @brief Shuts down all simulation systems and saves persistent state.
 	 *
-	 * Safe to call multiple times - subsequent calls are no-ops.
+	 * Safe to call multiple times, subsequent calls are no-ops.
 	 * Called automatically by the destructor.
 	 */
 	virtual void shutdown();
@@ -158,7 +157,7 @@ public:
 	virtual void onRegisterSaveSections(Saves::SaveManager& saves) {}
 
 	/**
-	 * @brief Returns the @c SaveId used for the automatic shutdown save.
+	 * @brief Returns the @c SaveID used for the automatic shutdown save.
 	 *
 	 * The default implementation derives a stable, deterministic @c UUID from
 	 * the fixed string @c "blackthorn.autosave.shutdown" using FNV-1a, ensuring
@@ -167,19 +166,19 @@ public:
 	 *
 	 * Override to scope the save per-world or per-player:
 	 * @code
-	 * Saves::SaveId MyGame::getShutdownSaveId() const override {
-	 *     Saves::SaveId id = Runtime::getShutdownSaveId();
-	 *     id.worldId  = currentWorldId;
-	 *     id.playerId = currentPlayerId;
+	 * Saves::SaveID MyGame::getShutdownSaveID() const override {
+	 *     Saves::SaveID id = Runtime::getShutdownSaveID();
+	 *     id.worldID  = currentWorldID;
+	 *     id.playerID = currentPlayerID;
 	 *     return id;
 	 * }
 	 * @endcode
 	 *
-	 * @note The returned @c SaveId::id (UUID) determines the file path via the
+	 * @note The returned @c SaveID::id (UUID) determines the file path via the
 	 * storage backend's path resolver. Changing it means a different file.
 	 * Override the UUID only if you intentionally want separate files.
 	 */
-	virtual Saves::SaveId getShutdownSaveId() const;
+	virtual Saves::SaveID getShutdownSaveID() const;
 
 protected:
 	bool initialized = false;
@@ -195,22 +194,6 @@ protected:
 	std::unique_ptr<Scene::ISimContext> simContext;
 	std::unique_ptr<Scene::SceneManager> sceneManager;
 
-	/**
-	 * @brief Cached mirror of the frame_cap/target_fps settings read by the
-	 * loop-pacing section of run(). See Core::CachedSetting for why these
-	 * exist: reading these via Settings::get<T>() every frame means a mutex
-	 * lock and a string allocation per value, per frame, purely to check
-	 * values that only change when the user changes a setting.
-	 *
-	 * Declared here (rather than duplicated in Runtime and Engine) since
-	 * both run() implementations use them. attach()'d once in
-	 * registerEngineCallbacks() - see that method for why attach() can't
-	 * happen at construction time.
-	 *
-	 * @note vsync is deliberately NOT cached here. Runtime never creates
-	 * a window or GL context, so vsync has no meaning for it - that cache
-	 * lives on Engine, the only place it actually applies.
-	 */
 	Core::CachedSetting<bool> frameCapEnabled{"graphics", "frame_cap", false};
 	Core::CachedSetting<int> targetFPS{"graphics", "target_fps", 60};
 

@@ -14,14 +14,14 @@ namespace Blackthorn::Debug {
 /**
  * @brief Controls which messages the Logger writes.
  *
- * Ordered by verbosity - a message is emitted only when its level is <=
- * the currently configured level:
+ * Levels are ordered by verbosity. A message is emitted only when its
+ * level is less than or equal to the currently configured level.
  *
  *   Silent   - Nothing is written.
- *   Error    - Only errors.
- *   Warning  - Errors + warnings.
- *   Info     - Errors + warnings + informational messages  (Release default).
- *   Trace  - All of the above + verbose trace detail.
+ *   Error    - Errors only.
+ *   Warning  - Errors and warnings.
+ *   Info     - Errors, warnings and informational messages  (Release default).
+ *   Trace    - All of the above plus verbose trace detail.
  *   Debug    - Everything, including fine-grained debug output  (Debug default).
  */
 enum class LogLevel : int {

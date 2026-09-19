@@ -15,7 +15,7 @@ void WorldSaveSection::write(SectionWriteContext& ctx) {
 	const auto& reg = ECS::Serialization::SerializerRegistry::instance();
 	const auto& entityData = pool.getEntities();
 
-	ctx.buffer.writeU64(registry.nextAssignedId());
+	ctx.buffer.writeU64(registry.nextAssignedID());
 
 	const size_t countOffset = ctx.buffer.size();
 	ctx.buffer.writeU32(0);
@@ -47,7 +47,7 @@ void WorldSaveSection::writeEntity(
 	const ECS::Components::Persistent& persistent,
 	const ECS::Serialization::SerializerRegistry& reg
 ) const {
-	buf.writeU64(persistent.saveId);
+	buf.writeU64(persistent.saveID);
 	buf.writeU64(persistent.nameHash);
 
 	const U64 fullMask = pool.getEntities()[ECS::Detail::entityIndex(entity)].componentMask;
@@ -78,10 +78,10 @@ void WorldSaveSection::writeEntity(
 void WorldSaveSection::read(SectionReadContext& ctx) {
 	const auto& reg = ECS::Serialization::SerializerRegistry::instance();
 
-	const U64 nextId = ctx.buffer.readU64();
+	const U64 nextID = ctx.buffer.readU64();
 	const U32 entityCount = ctx.buffer.readU32();
 
-	registry.restoreNextId(nextId);
+	registry.restoreNextID(nextID);
 
 	for (U32 i = 0; i < entityCount; ++i)
 		readEntity(ctx.buffer, reg);
@@ -91,17 +91,17 @@ void WorldSaveSection::readEntity(
 	IO::ByteBuffer& buf,
 	const ECS::Serialization::SerializerRegistry& reg
 ) {
-	const U64 saveId = buf.readU64();
+	const U64 saveID = buf.readU64();
 	const U64 nameHash = buf.readU64();
 	const U64 saveMask = buf.readU64();
 
 	ECS::Entity entity = pool.create();
 
 	auto& persistent = pool.addComponent<ECS::Components::Persistent>(entity);
-	persistent.saveId = saveId;
+	persistent.saveID = saveID;
 	persistent.nameHash = nameHash;
 
-	registry.map(saveId, entity);
+	registry.map(saveID, entity);
 
 	for (size_t i = 0; i < ECS::Detail::MAX_COMPONENTS; ++i) {
 		if (!(saveMask & (1ULL << i)))

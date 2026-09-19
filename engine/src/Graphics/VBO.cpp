@@ -121,13 +121,13 @@ void VBO::allocatePersistent(size_t sizeInBytes) {
 		mapFlags);
 
 	if (!persistentPtr) {
-		BT_ERROR("VBO {}: glMapBufferRange failed — falling back to glBufferSubData", id);
+		BT_ERROR("VBO {}: glMapBufferRange failed; falling back to glBufferSubData", id);
 		stagingBuffer.resize(sizeInBytes);
 	}
 
 	bufferSize = sizeInBytes;
 	BT_DEBUG("VBO {}: Persistent coherent mapping {} ({} bytes)",
-		id, persistentPtr ? "active" : "FAILED — using staging", sizeInBytes);
+		id, persistentPtr ? "active" : "FAILED; using staging", sizeInBytes);
 }
 
 void VBO::allocateMutable(const void* data, size_t sizeInBytes, GLenum usage) {
@@ -150,12 +150,12 @@ void VBO::allocateMutable(const void* data, size_t sizeInBytes, GLenum usage) {
 
 void VBO::setData(const void* data, size_t sizeInBytes, GLenum usage) {
 	if (id == 0) {
-		BT_WARN("VBO::setData: buffer not created — calling create() automatically");
+		BT_WARN("VBO::setData: buffer not created; calling create() automatically");
 		create();
 	}
 
 	if (bufferType == BufferType::Static && bufferSize > 0) {
-		BT_ERROR("VBO {}: setData called on a Static VBO that already has storage — ignored", id);
+		BT_ERROR("VBO {}: setData called on a Static VBO that already has storage; ignored", id);
 		return;
 	}
 
@@ -180,7 +180,7 @@ void VBO::setData(const void* data, size_t sizeInBytes, GLenum usage) {
 
 void VBO::updateData(const void* data, size_t size, size_t offset) {
 	if (bufferType == BufferType::Static) {
-		BT_ERROR("VBO {}: updateData called on a Static VBO — ignored", id);
+		BT_ERROR("VBO {}: updateData called on a Static VBO; ignored", id);
 		return;
 	}
 

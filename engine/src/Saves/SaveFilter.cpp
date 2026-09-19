@@ -2,11 +2,11 @@
 
 namespace Blackthorn::Saves {
 
-bool SaveFilter::matches(const SaveId& id) const noexcept {
-	if (worldId.has_value() && id.worldId != *worldId)
+bool SaveFilter::matches(const SaveID& id) const noexcept {
+	if (worldID.has_value() && id.worldID != *worldID)
 		return false;
 
-	if (playerId.has_value() && id.playerId != *playerId)
+	if (playerID.has_value() && id.playerID != *playerID)
 		return false;
 
 	if (slot.has_value() && id.slot != *slot)

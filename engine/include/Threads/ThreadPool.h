@@ -12,16 +12,18 @@ namespace Blackthorn::Threads {
 /**
  * @brief A fixed size pool of worker threads that execute tasks.
  *
- * Construction:
- *   Pass 0 (default) to use max(1, hardware_concurrency - 1) threads.
+ * @par Construction
  *
- * `enqueue()` accepts any callable - including move-only lambdas that
- * capture unique_ptr, moved structs, etc. - via a forwarding reference
+ * Pass 0 (default) to use max(1, hardware_concurrency - 1) threads.
+ *
+ * `enqueue()` accepts any callable, including move-only lambdas that
+ * capture unique_ptr, moved structs, etc. via a forwarding reference
  * template.
  *
- * Thread safety:
- *   `enqueue()` - safe to call from any thread.
- *   The destructor joins all workers; call it only from the main thread once
+ * @par Thread safety
+ *
+ * - `enqueue()`: safe to call from any thread.
+ * - The destructor joins all workers; call it only from the main thread once
  *   all producers have stopped enqueuing work.
  */
 class BLACKTHORN_API ThreadPool {

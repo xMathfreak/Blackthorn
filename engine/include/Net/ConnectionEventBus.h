@@ -24,7 +24,7 @@ enum class ConnectionEventType : U8 {
  */
 struct ConnectionEvent {
 	ConnectionEventType type;
-	Connection::PeerId peerId = Connection::INVALID_PEER_ID;
+	Connection::PeerID peerID = Connection::INVALID_PEER_ID;
 	Transport::Address address; ///< Populated for Connect; empty for Disconnect.
 };
 

@@ -73,10 +73,10 @@ void Profiler::endScope(const char* name) {
 
 	const ScopeEntry& entry = stack.back();
 
-	// Validate nesting - mismatched names indicate incorrect RAII usage.
+	// Mismatched names indicate incorrect RAII usage.
 	if (std::string_view(entry.name) != std::string_view(name)) {
 		BT_WARN(
-			"Profiler: scope mismatch - expected '{}', got '{}'",
+			"Profiler: scope mismatch: expected '{}', got '{}'",
 			entry.name, name
 		);
 	}
@@ -92,7 +92,7 @@ void Profiler::endScope(const char* name) {
 
 	stack.pop_back();
 
-	// Write into shared history - this is the only place we lock.
+	// Write into shared history
 	{
 		std::lock_guard<std::mutex> lock(historyMutex);
 
@@ -102,9 +102,6 @@ void Profiler::endScope(const char* name) {
 			history.pop_front();
 
 		// Only accumulate into lastFrameSamples for the main thread.
-		// Worker scopes show up in scopeHistory but not in the per-frame list,
-		// keeping the frame profiler readable without per-worker noise.
-		// If you want worker samples in the frame list, remove this check.
 		if (entry.depth >= 0)
 			lastFrameSamples.push_back(sample);
 	}

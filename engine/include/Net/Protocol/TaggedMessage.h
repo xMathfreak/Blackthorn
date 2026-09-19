@@ -32,7 +32,7 @@ namespace Blackthorn::Net::Protocol {
  * @code
  * ByteBuffer buf;
  * MessageWriter writer(buf, 1);   // message schema version 1
- * writer.writeU32(Tags::EntityId, entityId);
+ * writer.writeU32(Tags::EntityID, entityID);
  * writer.writeString(Tags::Name, "PlayerSpawn");
  * writer.writeF32(Tags::PositionX, x);
  * writer.writeF32(Tags::PositionY, y);
@@ -136,7 +136,7 @@ private:
  *
  * reader.read([&](U16 tag, ByteBuffer& field) {
  *     switch (tag) {
- *         case Tags::EntityId:   entityId = field.readU32(); break;
+ *         case Tags::EntityID:   entityID = field.readU32(); break;
  *         case Tags::PositionX:  x        = field.readF32(); break;
  *         // Unknown tags are automatically skipped by the reader.
  *     }
@@ -166,7 +166,7 @@ public:
 	 * The callback receives the field tag and a ByteBuffer scoped to
 	 * exactly the field's bytes. Any bytes not consumed by the callback
 	 * are skipped before moving to the next field. This means partial
-	 * reads of a field are safe - the reader will still advance correctly.
+	 * reads of a field are safe and the reader will still advance correctly.
 	 *
 	 * @param callback Invocable as `void(U16 tag, ByteBuffer& field)`.
 	 */

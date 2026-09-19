@@ -31,7 +31,7 @@ struct BLACKTHORN_API SectionReadContext {
 /**
  * @brief Interface for a named, versioned save file section.
  *
- * Each section serializes one logical slice of game state — ECS entities,
+ * Each section serializes one logical slice of game state; ECS entities,
  * the sim clock, player inventory, etc. The engine provides built-in
  * implementations for @c bt.world, @c bt.clock, and @c bt.meta. Game code
  * implements this interface for custom sections.
@@ -50,7 +50,7 @@ struct BLACKTHORN_API SectionReadContext {
  * @code
  * class InventorySection : public ISaveSection {
  * public:
- *     U64 getId() const override { return "game.inventory"_saveid; }
+ *     U64 getID() const override { return "game.inventory"_saveid; }
  *     std::string_view getName() const override { return "game.inventory"; }
  *     U32 getVersion() const override { return 1; }
  *
@@ -96,7 +96,7 @@ public:
 	 * @brief Returns the 64-bit FNV-1a hash of this section's name.
 	 * This is the ID written into the section table on disk.
 	 */
-	virtual U64 getId() const = 0;
+	virtual U64 getID() const = 0;
 
 	/**
 	 * @brief Returns the human-readable name of this section.

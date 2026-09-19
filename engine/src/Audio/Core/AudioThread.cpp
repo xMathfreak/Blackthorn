@@ -204,7 +204,7 @@ void AudioThread::tickStreaming() {
 				((sstate->format == AL_FORMAT_STEREO16) ? 2u : 1u);
 
 			sstate->recordBufferFrames(alBuf, pendingFrames);
-			voice.source().queueBufferId(alBuf);
+			voice.source().queueBufferID(alBuf);
 			sstate->pendingUpload.clear();
 
 			if (sstate->pendingEndOfStream) {
@@ -717,7 +717,7 @@ void AudioThread::processStreamingPlayback(
 			break;
 		}
 
-		voice.source().queueBufferId(alBuf);
+		voice.source().queueBufferID(alBuf);
 		prefillFrames += frames;
 		++queued;
 	}

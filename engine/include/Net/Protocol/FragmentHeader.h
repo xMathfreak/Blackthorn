@@ -14,8 +14,8 @@ namespace Blackthorn::Net::Protocol {
  * Every UDP datagram after the @c UDPHeader begins with a 1-byte flags value:
  *
  * @code
- * [UDPHeader   8 bytes]     — sequence numbers and ACK bitmask
- * [flags       1 byte ]     — bit 0 = isFragmented; remaining bits reserved
+ * [UDPHeader   8 bytes]     - sequence numbers and ACK bitmask
+ * [flags       1 byte ]     - bit 0 = isFragmented; remaining bits reserved
  * @endcode
  *
  * If @c isFragmented is @b false (flags byte == 0), the datagram is
@@ -25,10 +25,10 @@ namespace Blackthorn::Net::Protocol {
  * If @c isFragmented is @b true, four additional bytes follow the flags:
  *
  * @code
- * [flags       1 byte ]     — 0x01 = fragmented
- * [fragmentId  2 bytes]     — which logical message this belongs to
- * [totalFrags  1 byte ]     — total fragment count (1–255)
- * [fragIndex   1 byte ]     — 0-based index of this fragment (0 to totalFrags-1)
+ * [flags       1 byte ]     - 0x01 = fragmented
+ * [fragmentID  2 bytes]     - which logical message this belongs to
+ * [totalFrags  1 byte ]     - total fragment count (1–255)
+ * [fragIndex   1 byte ]     - 0-based index of this fragment (0 to totalFrags-1)
  * @endcode
  *
  * @c PacketHeader is present only in fragment 0 (the first fragment).
@@ -61,7 +61,7 @@ struct BLACKTHORN_API FragmentHeader {
 	/// Maximum number of fragments per message.
 	static constexpr U8 MAX_FRAGMENTS = 255;
 
-	U16 fragmentId = 0; ///< Logical message ID (per-peer, wrapping).
+	U16 fragmentID = 0; ///< Logical message ID (per-peer, wrapping).
 	U8 flags = 0; ///< Bitmask; bit 0 = isFragmented;
 	U8 totalFrags = 1; ///< Total fragments in this message.
 	U8 fragIndex = 0; ///< 0-based index of this fragment.
@@ -79,7 +79,7 @@ struct BLACKTHORN_API FragmentHeader {
 	void serialize(IO::ByteBuffer& buf) const {
 		buf.writeU8(flags);
 		if (isFragmented()) {
-			buf.writeU16(fragmentId);
+			buf.writeU16(fragmentID);
 			buf.writeU8(totalFrags);
 			buf.writeU8(fragIndex);
 		}
@@ -95,7 +95,7 @@ struct BLACKTHORN_API FragmentHeader {
 	void deserialize(IO::ByteBuffer& buf) {
 		flags = buf.readU8();
 		if (isFragmented()) {
-			fragmentId = buf.readU16();
+			fragmentID = buf.readU16();
 			totalFrags = buf.readU8();
 			fragIndex = buf.readU8();
 		}

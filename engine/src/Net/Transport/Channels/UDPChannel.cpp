@@ -81,7 +81,7 @@ Sockets::SocketResult UDPChannel::send(
 		return Sockets::SocketResult::Error;
 	}
 
-	const U16 msgId = nextFragmentId++;
+	const U16 msgID = nextFragmentID++;
 
 	size_t appOffset = 0;
 
@@ -104,7 +104,7 @@ Sockets::SocketResult UDPChannel::send(
 		// FragmentHeader (5-byte fragmented form)
 		Protocol::FragmentHeader fragHdr;
 		fragHdr.flags = Protocol::FragmentHeader::FLAG_FRAGMENTED;
-		fragHdr.fragmentId = msgId;
+		fragHdr.fragmentID = msgID;
 		fragHdr.totalFrags = static_cast<U8>(totalFrags);
 		fragHdr.fragIndex = static_cast<U8>(fragIdx);
 		fragHdr.serialize(datagram);
@@ -140,7 +140,7 @@ Sockets::SocketResult UDPChannel::sendDatagram(
 
 	if (datagram.size() > PRACTICAL_MTU) {
 		BT_WARN(
-			"UDPChannel: datagram {} bytes exceeds PRACTICAL_MTU {} — "
+			"UDPChannel: datagram {} bytes exceeds PRACTICAL_MTU {}; "
 			"may be dropped on internet paths",
 			datagram.size(), PRACTICAL_MTU
 		);
@@ -222,7 +222,7 @@ void UDPChannel::enqueueRetransmit(
 	}
 
 	BT_WARN(
-		"UDPChannel: retransmit queue full — "
+		"UDPChannel: retransmit queue full, "
 		"reliable packet seq {} dropped",
 		seq
 	);

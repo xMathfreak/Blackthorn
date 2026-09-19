@@ -48,7 +48,7 @@ SaveManager::SaveManager(const SaveConfig& cfg) {
 		if (cfg.keyDeriveFn) {
 			auto opaqueFn = cfg.keyDeriveFn;
 			setKeyDeriveFn(
-				[opaqueFn](std::span<U8, 32> key, const SaveId& id, U16 ver) {
+				[opaqueFn](std::span<U8, 32> key, const SaveID& id, U16 ver) {
 					opaqueFn(key, &id, ver);
 				}
 			);
@@ -83,7 +83,7 @@ void SaveManager::registerSection(std::unique_ptr<ISaveSection> section) {
 		return;
 	}
 
-	const U64 id = section->getId();
+	const U64 id = section->getID();
 
 	if (sectionMap.count(id)) {
 		BT_WARN(
@@ -104,12 +104,12 @@ void SaveManager::registerSection(std::unique_ptr<ISaveSection> section) {
 	);
 }
 
-ISaveSection* SaveManager::getSection(U64 sectionId) const {
-	auto it = sectionMap.find(sectionId);
+ISaveSection* SaveManager::getSection(U64 sectionID) const {
+	auto it = sectionMap.find(sectionID);
 	return it != sectionMap.end() ? it->second : nullptr;
 }
 
-SaveResult SaveManager::save(SaveId& saveId, bool makeBackup) {
+SaveResult SaveManager::save(SaveID& saveID, bool makeBackup) {
 	if (!storage)
 		return SaveResult::failure("No storage backend configured");
 
@@ -118,14 +118,14 @@ SaveResult SaveManager::save(SaveId& saveId, bool makeBackup) {
 		BT_WARN("SaveManager: encryption is disabled, save data will not be encrypted");
 	#endif
 
-	saveId.updatedAt = static_cast<U64>(
+	saveID.updatedAt = static_cast<U64>(
 		std::chrono::duration_cast<std::chrono::milliseconds>(
 			std::chrono::system_clock::now().time_since_epoch()
 		).count()
 	);
 
 	SaveDocument doc;
-	doc.beginWrite(saveId);
+	doc.beginWrite(saveID);
 
 	for (const auto& sectionPtr : sectionOrder) {
 		ISaveSection* section = sectionPtr.get();
@@ -142,7 +142,7 @@ SaveResult SaveManager::save(SaveId& saveId, bool makeBackup) {
 			);
 		}
 
-		doc.addSection(section->getId(), section->getVersion(), sectionBuf);
+		doc.addSection(section->getID(), section->getVersion(), sectionBuf);
 
 		BT_DEBUG(
 			"SaveManager: serialized section '{}' ({} bytes)",
@@ -154,7 +154,7 @@ SaveResult SaveManager::save(SaveId& saveId, bool makeBackup) {
 	const bool useEncryption = encryptor != nullptr;
 
 	if (useEncryption) {
-		if (!deriveKey(key, saveId))
+		if (!deriveKey(key, saveID))
 			return SaveResult::failure(
 				"Encryption is enabled but no key derivation function is set"
 			);
@@ -198,43 +198,43 @@ SaveResult SaveManager::save(SaveId& saveId, bool makeBackup) {
 	}
 
 
-	SaveResult result = storage->write(saveId, bytes);
+	SaveResult result = storage->write(saveID, bytes);
 
 	if (!result)
 		return result;
 
 	BT_LOG(
 		"SaveManager: saved '{}' ({} bytes, {} sections)",
-		saveId.displayName.empty() ? saveId.id.toString() : saveId.displayName,
+		saveID.displayName.empty() ? saveID.id.toString() : saveID.displayName,
 		bytes.size(),
 		sectionOrder.size()
 	);
 
 	if (makeBackup && backupsEnabled && backupStorage)
-		writeBackup(saveId, bytes);
+		writeBackup(saveID, bytes);
 
 	return SaveResult::success();
 }
 
-SaveResult SaveManager::load(const SaveId& saveId) {
-	return loadImpl(saveId, nullptr);
+SaveResult SaveManager::load(const SaveID& saveID) {
+	return loadImpl(saveID, nullptr);
 }
 
 SaveResult SaveManager::loadSections(
-	const SaveId& saveId,
-	const std::vector<U64>& sectionIds
+	const SaveID& saveID,
+	const std::vector<U64>& sectionIDs
 ) {
-	return loadImpl(saveId, &sectionIds);
+	return loadImpl(saveID, &sectionIDs);
 }
 
 SaveResult SaveManager::loadImpl(
-	const SaveId& saveId,
+	const SaveID& saveID,
 	const std::vector<U64>* filter
 ) {
 	if (!storage)
 		return SaveResult::failure("No storage backend configured");
 
-	SaveReadResult readResult = storage->read(saveId);
+	SaveReadResult readResult = storage->read(saveID);
 	if (!readResult)
 		return SaveResult::failure("Storage read failed: " + readResult.error);
 
@@ -263,7 +263,7 @@ SaveResult SaveManager::loadImpl(
 		if (!encryptor)
 			return SaveResult::failure("Save is encrypted but no encryptor is configured");
 
-		if (!deriveKey(key, saveId))
+		if (!deriveKey(key, saveID))
 			return SaveResult::failure("Save is encrypted but no key derivation function is set");
 	}
 
@@ -286,15 +286,15 @@ SaveResult SaveManager::loadImpl(
 	);
 
 	for (const auto& tableEntry : doc.getSectionTable()) {
-		if (filter && !filterSet.count(tableEntry.sectionId))
+		if (filter && !filterSet.count(tableEntry.sectionID))
 			continue;
 
-		ISaveSection* section = getSection(tableEntry.sectionId);
+		ISaveSection* section = getSection(tableEntry.sectionID);
 
 		if (!section) {
 			BT_WARN(
 				"SaveManager: save contains unregistered section {:#x}, skipping",
-				tableEntry.sectionId
+				tableEntry.sectionID
 			);
 
 			continue;
@@ -302,7 +302,7 @@ SaveResult SaveManager::loadImpl(
 
 		U32 savedVersion = 0;
 		IO::ByteBuffer sectionData = doc.getSectionData(
-			tableEntry.sectionId, payload, savedVersion);
+			tableEntry.sectionID, payload, savedVersion);
 
 		SectionReadContext ctx{ sectionData, savedVersion };
 
@@ -327,25 +327,25 @@ SaveResult SaveManager::loadImpl(
 	}
 
 	BT_LOG("SaveManager: loaded '{}' ({} sections)",
-		saveId.displayName.empty() ? saveId.id.toString() : saveId.displayName,
+		saveID.displayName.empty() ? saveID.id.toString() : saveID.displayName,
 		sectionsLoaded
 	);
 
 	return SaveResult::success();
 }
 
-SaveResult SaveManager::remove(const SaveId& saveId) {
+SaveResult SaveManager::remove(const SaveID& saveID) {
 	if (!storage)
 		return SaveResult::failure("No storage backend configured");
 
-	return storage->remove(saveId);
+	return storage->remove(saveID);
 }
 
-bool SaveManager::exists(const SaveId& saveId) {
+bool SaveManager::exists(const SaveID& saveID) {
 	if (!storage)
 		return false;
 
-	return storage->exists(saveId);
+	return storage->exists(saveID);
 }
 
 std::vector<SaveMetadata> SaveManager::list(const SaveFilter& filter) {
@@ -355,7 +355,7 @@ std::vector<SaveMetadata> SaveManager::list(const SaveFilter& filter) {
 	return storage->list(filter);
 }
 
-bool SaveManager::deriveKey(U8 outKey[32], const SaveId& saveId) const {
+bool SaveManager::deriveKey(U8 outKey[32], const SaveID& saveID) const {
 	if (!keyDeriveFn) {
 		BT_ERROR("SaveManager: key derivation function not set");
 		return false;
@@ -363,7 +363,7 @@ bool SaveManager::deriveKey(U8 outKey[32], const SaveId& saveId) const {
 
 	keyDeriveFn(
 		std::span<U8, 32>(outKey, 32),
-		saveId,
+		saveID,
 		SAVE_FORMAT_VERSION
 	);
 
@@ -371,7 +371,7 @@ bool SaveManager::deriveKey(U8 outKey[32], const SaveId& saveId) const {
 }
 
 void SaveManager::writeBackup(
-	const SaveId& saveId,
+	const SaveID& saveID,
 	const IO::ByteBuffer& primaryBytes
 ) {
 	if (!storage) {
@@ -379,20 +379,20 @@ void SaveManager::writeBackup(
 		return;
 	}
 
-	SaveId backupId = saveId;
-	backupId.flags = saveId.flags | SaveFlags::Backup;
+	SaveID backupID = saveID;
+	backupID.flags = saveID.flags | SaveFlags::Backup;
 
-	const auto result = backupStorage->write(backupId, primaryBytes);
+	const auto result = backupStorage->write(backupID, primaryBytes);
 
 	if (result) {
 		BT_DEBUG(
 			"SaveManager: backup written for '{}'",
-			saveId.displayName.empty() ? saveId.id.toString() : saveId.displayName
+			saveID.displayName.empty() ? saveID.id.toString() : saveID.displayName
 		);
 	} else {
 		BT_WARN(
 			"SaveManager: backup write failed for '{}': {}",
-			saveId.displayName.empty() ? saveId.id.toString() : saveId.displayName,
+			saveID.displayName.empty() ? saveID.id.toString() : saveID.displayName,
 			result.error
 		);
 	}

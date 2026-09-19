@@ -30,7 +30,7 @@ enum class DeviceHint : U8 {
  *
  * Implementations subscribe to OS-level device notifications and translate
  * them into @c DeviceHint callbacks. The callback is fired from whatever
- * thread the OS delivers the notification on — it must be thread-safe.
+ * thread the OS delivers the notification on.
  *
  * @section fallback ALC_CONNECTED fallback
  * @c IDeviceNotifier is a hint system only. The audio thread always polls
@@ -72,7 +72,7 @@ public:
 	 * @brief Starts listening for device notifications.
 	 *
 	 * @return true if the subscription was established successfully.
-	 *         Returning false is non-fatal — the audio thread falls back
+	 *         Returning false is non-fatal. The audio thread falls back
 	 *         to @c ALC_CONNECTED polling alone.
 	 */
 	virtual bool start() = 0;

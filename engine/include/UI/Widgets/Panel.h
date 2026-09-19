@@ -15,24 +15,20 @@ namespace Blackthorn::UI {
 /**
  * @brief A Container with an optional visual background.
  *
- * Panel supports three render modes, selected automatically based on what
- * has been configured:
- *
- *   Solid      - no texture set; draws a filled quad in `color`.
- *   Texture    - texture set, borderSize == 0; draws a scaled textured quad,
- *                optionally tinted by `color`.
- *   NineSlice  - texture set, borderSize  > 0; draws a nine-slice textured
- *                quad so corners stay pixel-perfect at any size, optionally
- *                tinted by `color`.
- *
- * As a Container, Panel can hold any child widgets; the background is drawn
- * before children so it always sits behind them.
+ * As a Container, Panel can hold any child widgets. Its background is drawn
+ * before its children so that it always appears behind them.
  */
 class BLACKTHORN_API Panel : public Container {
 public:
 	enum class RenderMode : U8 {
+		/// No texture is set; draws a filled quad using @c color.
 		Solid,
+		/// A texture is set and @c borderSize == 0; draws a scaled textured
+		/// quad, optionally tinted by @c color.
 		Texture,
+		/// a texture is set and @c borderSize > 0; draws a nine-slice
+		/// textured quad, preserving corner sizes at any dimensions, optionally
+		/// tinted by @c color.
 		NineSlice
 	};
 

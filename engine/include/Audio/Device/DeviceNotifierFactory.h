@@ -18,7 +18,7 @@ namespace Blackthorn::Audio {
  *
  * Returns a valid (non-null) notifier on all platforms. On Linux, if
  * neither PipeWire nor PulseAudio is available, the returned notifier
- * starts successfully but fires no callbacks — the audio thread's
+ * starts successfully but fires no callbacks. The audio thread's
  * @c ALC_CONNECTED polling handles detection alone.
  */
 class BLACKTHORN_API DeviceNotifierFactory {

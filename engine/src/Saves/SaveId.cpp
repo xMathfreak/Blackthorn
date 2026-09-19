@@ -1,4 +1,4 @@
-#include "Saves/SaveId.h"
+#include "Saves/SaveID.h"
 
 #include <chrono>
 
@@ -6,8 +6,8 @@
 
 namespace Blackthorn::Saves {
 
-SaveId SaveId::generate() {
-	SaveId id;
+SaveID SaveID::generate() {
+	SaveID id;
 
 	// Generate 16 random bytes via libsodium
 	randombytes_buf(id.id.bytes.data(), 16);

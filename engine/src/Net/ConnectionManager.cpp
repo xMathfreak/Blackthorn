@@ -50,10 +50,10 @@ void ConnectionManager::stop() {
 	BT_LOG("ConnectionManager: Stopped");
 }
 
-Connection::PeerId ConnectionManager::connect(const Transport::Address& address) {
+Connection::PeerID ConnectionManager::connect(const Transport::Address& address) {
 	std::lock_guard<std::mutex> lock(registry.mutex());
 
-	Connection::PeerId id = registry.allocateSlot(address, true);
+	Connection::PeerID id = registry.allocateSlot(address, true);
 	if (id == Connection::INVALID_PEER_ID) {
 		BT_ERROR("ConnectionManager: No free peer slots for {}", address.toString());
 		return Connection::INVALID_PEER_ID;
@@ -73,14 +73,14 @@ Connection::PeerId ConnectionManager::connect(const Transport::Address& address)
 		peer.state = Connection::PeerState::Connecting;
 
 		BT_LOG(
-			"ConnectionManager: TCP connecting to {} (peerId {})",
+			"ConnectionManager: TCP connecting to {} (peerID {})",
 			address.toString(), id
 		);
 	} else {
 		peer.state = Connection::PeerState::Connecting;
 
 		BT_LOG(
-			"ConnectionManager: TCP unavailable for {}; UDP-only (peerId {})",
+			"ConnectionManager: TCP unavailable for {}; UDP-only (peerID {})",
 			address.toString(), id
 		);
 	}
@@ -89,13 +89,13 @@ Connection::PeerId ConnectionManager::connect(const Transport::Address& address)
 	return id;
 }
 
-void ConnectionManager::disconnect(Connection::PeerId peerId) {
+void ConnectionManager::disconnect(Connection::PeerID peerID) {
 	std::lock_guard<std::mutex> lock(registry.mutex());
 
-	if (peerId >= registry.capacity())
+	if (peerID >= registry.capacity())
 		return;
 
-	auto& peer = registry.peerList()[peerId];
+	auto& peer = registry.peerList()[peerID];
 	if (peer.state == Connection::PeerState::Disconnected)
 		return;
 
@@ -120,25 +120,25 @@ void ConnectionManager::disconnect(Connection::PeerId peerId) {
 	registry.tcpMap().erase(peer.tcpAddress);
 	registry.udpMap().erase(peer.udpAddress);
 
-	BT_DEBUG("ConnectionManager: Peer {} disconnected", peerId);
+	BT_DEBUG("ConnectionManager: Peer {} disconnected", peerID);
 }
 
 bool ConnectionManager::sendUDP(
-	Connection::PeerId peerId,
+	Connection::PeerID peerID,
 	const IO::ByteBuffer& payload
 ) {
 	auto* sock = ioWorker.udpSocketPtr();
 	if (!sock)
 		return false;
 
-	return registry.sendUDP(peerId, payload, *sock);
+	return registry.sendUDP(peerID, payload, *sock);
 }
 
 bool ConnectionManager::sendTCP(
-	Connection::PeerId peerId,
+	Connection::PeerID peerID,
 	const IO::ByteBuffer& payload
 ) {
-	return registry.sendTCP(peerId, payload);
+	return registry.sendTCP(peerID, payload);
 }
 
 void ConnectionManager::broadcastUDP(const IO::ByteBuffer& payload) {

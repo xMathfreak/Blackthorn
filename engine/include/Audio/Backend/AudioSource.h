@@ -43,7 +43,7 @@ public:
 	void attachBuffer(const AudioBuffer& buffer);
 	void detachBuffer();
 	void queueBuffer(const AudioBuffer& buffer);
-	void queueBufferId(ALuint bufferId);
+	void queueBufferID(ALuint bufferID);
 	void unqueueProcessedBuffers(std::vector<ALuint>& out);
 	void unqueueAllBuffers();
 

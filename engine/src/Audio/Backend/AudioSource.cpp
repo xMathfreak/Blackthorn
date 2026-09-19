@@ -118,8 +118,8 @@ void AudioSource::queueBuffer(const AudioBuffer& buffer) {
 	alSourceQueueBuffers(source, 1, &id);
 }
 
-void AudioSource::queueBufferId(ALuint bufferId) {
-	alSourceQueueBuffers(source, 1, &bufferId);
+void AudioSource::queueBufferID(ALuint bufferID) {
+	alSourceQueueBuffers(source, 1, &bufferID);
 }
 
 void AudioSource::unqueueProcessedBuffers(std::vector<ALuint>& out) {

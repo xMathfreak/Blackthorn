@@ -78,7 +78,7 @@ ReceiveResult TCPChannel::receive(Sockets::ISocket& socket,	IO::ByteBuffer& outM
 		if (len == 0 || len > MAX_MESSAGE_SIZE) {
 			BT_WARN(
 				"TCPChannel: invalid length prefix {} "
-				"(max {}) - stream desynced, disconnecting",
+				"(max {}); stream desynced, disconnecting",
 				len, MAX_MESSAGE_SIZE
 			);
 

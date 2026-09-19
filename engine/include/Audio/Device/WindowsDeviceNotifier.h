@@ -51,24 +51,24 @@ public:
 	HRESULT STDMETHODCALLTYPE OnDefaultDeviceChanged(
 		EDataFlow flow,
 		ERole role,
-		LPCWSTR pwstrDefaultDeviceId
+		LPCWSTR pwstrDefaultDeviceID
 	) override;
 
 	HRESULT STDMETHODCALLTYPE OnDeviceAdded(
-		LPCWSTR pwstrDeviceId
+		LPCWSTR pwstrDeviceID
 	) override;
 
 	HRESULT STDMETHODCALLTYPE OnDeviceRemoved(
-		LPCWSTR pwstrDeviceId
+		LPCWSTR pwstrDeviceID
 	) override;
 
 	HRESULT STDMETHODCALLTYPE OnDeviceStateChanged(
-		LPCWSTR pwstrDeviceId,
+		LPCWSTR pwstrDeviceID,
 		DWORD dwNewState
 	) override;
 
 	HRESULT STDMETHODCALLTYPE OnPropertyValueChanged(
-		LPCWSTR pwstrDeviceId,
+		LPCWSTR pwstrDeviceID,
 		const PROPERTYKEY key
 	) override;
 

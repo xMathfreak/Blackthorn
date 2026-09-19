@@ -4,7 +4,7 @@
 
 #include "Core/Export.h"
 #include "IO/ByteBuffer.h"
-#include "Saves/SaveId.h"
+#include "Saves/SaveID.h"
 
 namespace Blackthorn::Saves {
 
@@ -47,7 +47,7 @@ inline bool hasFlag(DocumentFlags flags, DocumentFlags flag) {
  *      0     4  magic           (0x424C4B53 "BTSV")
  *      4     2  formatVersion
  *      6     2  flags           (DocumentFlags bitmask)
- *      8     8  saveIdHash      (FNV-1a of SaveId.id.bytes)
+ *      8     8  saveIDHash      (FNV-1a of SaveID.id.bytes)
  *     16     8  createdAt       (unix ms)
  *     24     8  updatedAt       (unix ms)
  *     32     8  payloadSize     (bytes of the compressed+encrypted blob)
@@ -68,7 +68,7 @@ struct BLACKTHORN_API FileHeader {
 	U32 magic = SAVE_MAGIC;
 	U16 formatVersion = SAVE_FORMAT_VERSION;
 	U16 flags = 0;
-	U64 saveIdHash = 0;
+	U64 saveIDHash = 0;
 	U64 createdAt = 0;
 	U64 updatedAt = 0;
 	U64 payloadSize = 0;
@@ -116,7 +116,7 @@ struct BLACKTHORN_API EncryptionHeader {
  * @brief Unencrypted metadata block written immediately after the section
  * table, before the encrypted payload.
  *
- * Stores the @c SaveId fields that are absent from @c FileHeader —
+ * Stores the @c SaveID fields that are absent from @c FileHeader -
  * specifically the variable-length strings and flag/slot values that
  * @c ISaveStorage::list() needs to filter saves without decrypting payloads.
  *
@@ -126,27 +126,27 @@ struct BLACKTHORN_API EncryptionHeader {
  * Wire layout (after the U32 length prefix):
  * @code
  *  [U16 + N bytes]  displayName   (ByteBuffer::writeString)
- *  [U16 + N bytes]  worldId
- *  [U16 + N bytes]  playerId
+ *  [U16 + N bytes]  worldID
+ *  [U16 + N bytes]  playerID
  *  [U32]            slot
  *  [U32]            flags         (SaveFlags bitmask)
  * @endcode
  */
-struct BLACKTHORN_API SaveIdBlock {
+struct BLACKTHORN_API SaveIDBlock {
 	std::string displayName;
-	std::string worldId;
-	std::string playerId;
+	std::string worldID;
+	std::string playerID;
 	U32 slot  = 0;
 	U32 flags = 0;
 
 	void serialize(IO::ByteBuffer& buf) const;
 	void deserialize(IO::ByteBuffer& buf);
 
-	/** @brief Populates this block from a @c SaveId. */
-	void fromSaveId(const SaveId& id);
+	/** @brief Populates this block from a @c SaveID. */
+	void fromSaveID(const SaveID& id);
 
 	/** @brief Applies all fields into @p id, leaving id.id/createdAt/updatedAt untouched. */
-	void applyToSaveId(SaveId& id) const;
+	void applyToSaveID(SaveID& id) const;
 };
 
 /**
@@ -158,7 +158,7 @@ struct BLACKTHORN_API SaveIdBlock {
  *
  * Wire layout per entry:
  * @code
- *  0   8  sectionId   (FNV-1a hash of section name)
+ *  0   8  sectionID   (FNV-1a hash of section name)
  *  8   8  offset      (byte offset into the decrypted+decompressed payload)
  * 16   8  size        (byte count of section data in the payload)
  * 24   4  version     (section schema version)
@@ -169,7 +169,7 @@ struct BLACKTHORN_API SaveIdBlock {
 struct BLACKTHORN_API SectionTableEntry {
 	static constexpr size_t SERIALIZED_SIZE = 32;
 
-	U64 sectionId = 0;
+	U64 sectionID = 0;
 	U64 offset = 0;
 	U64 size = 0;
 	U32 version = 0;
@@ -182,25 +182,25 @@ struct BLACKTHORN_API SectionTableEntry {
 /**
  * @brief Assembles and parses a complete save document binary blob.
  *
- * @c SaveDocument is responsible for the binary layout only — it does not
+ * @c SaveDocument is responsible for the binary layout only. It does not
  * own sections or know what the section data means. @c SaveManager drives
  * the section write/read callbacks and passes the raw bytes here.
  *
  * @par Writing
  * @code
  * SaveDocument doc;
- * doc.beginWrite(saveId);
- * doc.addSection(sectionId, version, payloadBytes);
+ * doc.beginWrite(saveID);
+ * doc.addSection(sectionID, version, payloadBytes);
  * doc.addSection(...);
- * auto bytes = doc.finalize(compressor, encryptor, keyDeriveFn, saveId);
+ * auto bytes = doc.finalize(compressor, encryptor, keyDeriveFn, saveID);
  * @endcode
  *
  * @par Reading
  * @code
  * SaveDocument doc;
  * doc.parse(rawBytes);                              // validates header + section table
- * auto payload = doc.decryptAndDecompress(encryptor, compressor, keyDeriveFn, saveId);
- * auto sectionData = doc.getSectionData(sectionId, payload);
+ * auto payload = doc.decryptAndDecompress(encryptor, compressor, keyDeriveFn, saveID);
+ * auto sectionData = doc.getSectionData(sectionID, payload);
  * @endcode
  */
 class BLACKTHORN_API SaveDocument {
@@ -211,17 +211,17 @@ public:
 	SaveDocument& operator=(const SaveDocument&) = delete;
 
 	/**
-	 * @brief Initializes the document for writing with identity from @p saveId.
+	 * @brief Initializes the document for writing with identity from @p saveID.
 	 */
-	void beginWrite(const SaveId& saveId);
+	void beginWrite(const SaveID& saveID);
 
 	/**
 	 * @brief Appends a section payload to the document.
-	 * @param sectionId FNV-1a hash of the section name.
+	 * @param sectionID FNV-1a hash of the section name.
 	 * @param version   Section schema version.
 	 * @param data      Raw section payload bytes.
 	 */
-	void addSection(U64 sectionId, U32 version, const IO::ByteBuffer& data);
+	void addSection(U64 sectionID, U32 version, const IO::ByteBuffer& data);
 
 	/**
 	 * @brief Compresses, encrypts, and serializes the document to bytes.
@@ -270,13 +270,13 @@ public:
 	/**
 	 * @brief Extracts one section's bytes from an already-decoded payload.
 	 *
-	 * @param sectionId FNV-1a hash of the section name to find.
+	 * @param sectionID FNV-1a hash of the section name to find.
 	 * @param payload   The buffer returned by @c decryptAndDecompress().
 	 * @param outVersion Receives the section schema version on success.
 	 * @return Buffer containing only that section's bytes, or empty if not found.
 	 */
 	IO::ByteBuffer getSectionData(
-		U64 sectionId,
+		U64 sectionID,
 		const IO::ByteBuffer& payload,
 		U32& outVersion
 	) const;
@@ -284,13 +284,13 @@ public:
 	const FileHeader& getHeader() const { return header; }
 
 	/** @brief Returns the save identity block parsed by @c parse(). */
-	const SaveIdBlock& getSaveIdBlock() const { return saveIdBlock; }
+	const SaveIDBlock& getSaveIDBlock() const { return saveIDBlock; }
 
 	/** @brief Returns all section table entries parsed by @c parse(). */
 	const std::vector<SectionTableEntry>& getSectionTable() const { return sectionTable; }
 
 	/** @brief Returns true if the section table contains the given ID. */
-	bool hasSection(U64 sectionId) const noexcept;
+	bool hasSection(U64 sectionID) const noexcept;
 
 private:
 	FileHeader header;
@@ -304,7 +304,7 @@ private:
 	IO::ByteBuffer rawBytes;
 
 	// Save identity metadata read during parse(), used by list().
-	SaveIdBlock saveIdBlock;
+	SaveIDBlock saveIDBlock;
 
 	static U64 computeChecksum(const U8* data, size_t size) noexcept;
 };

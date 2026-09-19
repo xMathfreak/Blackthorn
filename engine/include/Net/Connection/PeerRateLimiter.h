@@ -64,10 +64,11 @@ struct RateLimitConfig {
  * @brief Per-peer rate limiter implementing a three-stage tiered response
  * with score-based escalation and time-based decay.
  *
- * @details Each inbound packet is passed to @c update(), which advances
- * the limiter's internal sliding window and violation scores, then returns
- * the current @c RateLimitStage. The caller decides what to do based on
- * the returned stage - typically drop the packet or disconnect the peer.
+ * @details
+ * Each inbound packet is passed to @c update(), which advances the limiter's
+ * sliding window and violation scores, then returns the current
+ * @c RateLimitStage. The caller is responsible for enforcing the resulting
+ * stage, typically by dropping the packet or disconnecting the peer.
  *
  * @par Stage transitions
  *

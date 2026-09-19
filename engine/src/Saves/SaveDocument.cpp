@@ -12,7 +12,7 @@ void FileHeader::serialize(IO::ByteBuffer& buf) const {
 	buf.writeU32(magic);
 	buf.writeU16(formatVersion);
 	buf.writeU16(flags);
-	buf.writeU64(saveIdHash);
+	buf.writeU64(saveIDHash);
 	buf.writeU64(createdAt);
 	buf.writeU64(updatedAt);
 	buf.writeU64(payloadSize);
@@ -25,7 +25,7 @@ void FileHeader::deserialize(IO::ByteBuffer& buf) {
 	magic = buf.readU32();
 	formatVersion = buf.readU16();
 	flags = buf.readU16();
-	saveIdHash = buf.readU64();
+	saveIDHash = buf.readU64();
 	createdAt = buf.readU64();
 	updatedAt = buf.readU64();
 	payloadSize = buf.readU64();
@@ -45,7 +45,7 @@ void EncryptionHeader::deserialize(IO::ByteBuffer& buf) {
 }
 
 void SectionTableEntry::serialize(IO::ByteBuffer& buf) const {
-	buf.writeU64(sectionId);
+	buf.writeU64(sectionID);
 	buf.writeU64(offset);
 	buf.writeU64(size);
 	buf.writeU32(version);
@@ -53,41 +53,41 @@ void SectionTableEntry::serialize(IO::ByteBuffer& buf) const {
 }
 
 void SectionTableEntry::deserialize(IO::ByteBuffer& buf) {
-	sectionId = buf.readU64();
+	sectionID = buf.readU64();
 	offset = buf.readU64();
 	size = buf.readU64();
 	version = buf.readU32();
 	flags = buf.readU32();
 }
 
-void SaveIdBlock::fromSaveId(const SaveId& id) {
+void SaveIDBlock::fromSaveID(const SaveID& id) {
 	displayName = id.displayName;
-	worldId = id.worldId;
-	playerId = id.playerId;
+	worldID = id.worldID;
+	playerID = id.playerID;
 	slot = id.slot;
 	flags = static_cast<U32>(id.flags);
 }
 
-void SaveIdBlock::applyToSaveId(SaveId& id) const {
+void SaveIDBlock::applyToSaveID(SaveID& id) const {
 	id.displayName = displayName;
-	id.worldId = worldId;
-	id.playerId = playerId;
+	id.worldID = worldID;
+	id.playerID = playerID;
 	id.slot = slot;
 	id.flags = static_cast<SaveFlags>(flags);
 }
 
-void SaveIdBlock::serialize(IO::ByteBuffer& buf) const {
+void SaveIDBlock::serialize(IO::ByteBuffer& buf) const {
 	buf.writeString(displayName);
-	buf.writeString(worldId);
-	buf.writeString(playerId);
+	buf.writeString(worldID);
+	buf.writeString(playerID);
 	buf.writeU32(slot);
 	buf.writeU32(flags);
 }
 
-void SaveIdBlock::deserialize(IO::ByteBuffer& buf) {
+void SaveIDBlock::deserialize(IO::ByteBuffer& buf) {
 	displayName = buf.readString();
-	worldId = buf.readString();
-	playerId = buf.readString();
+	worldID = buf.readString();
+	playerID = buf.readString();
 	slot = buf.readU32();
 	flags = buf.readU32();
 }
@@ -102,29 +102,29 @@ U64 SaveDocument::computeChecksum(const U8* data, size_t size) noexcept {
 	return hash;
 }
 
-void SaveDocument::beginWrite(const SaveId& saveId) {
+void SaveDocument::beginWrite(const SaveID& saveID) {
 	header = FileHeader{};
 	encHeader = EncryptionHeader{};
 	sectionTable.clear();
 	plaintextPayload.clear();
 
-	header.saveIdHash = computeChecksum(
-		saveId.id.bytes.data(), saveId.id.bytes.size()
+	header.saveIDHash = computeChecksum(
+		saveID.id.bytes.data(), saveID.id.bytes.size()
 	);
 
-	header.createdAt = saveId.createdAt;
-	header.updatedAt = saveId.updatedAt;
+	header.createdAt = saveID.createdAt;
+	header.updatedAt = saveID.updatedAt;
 
-	saveIdBlock.fromSaveId(saveId);
+	saveIDBlock.fromSaveID(saveID);
 }
 
 void SaveDocument::addSection(
-	U64 sectionId,
+	U64 sectionID,
 	U32 version,
 	const IO::ByteBuffer& data
 ) {
 	SectionTableEntry entry;
-	entry.sectionId = sectionId;
+	entry.sectionID = sectionID;
 	entry.offset = static_cast<U64>(plaintextPayload.size());
 	entry.size = static_cast<U64>(data.size());
 	entry.version = version;
@@ -193,7 +193,7 @@ IO::ByteBuffer SaveDocument::finalize(
 
 	{
 		IO::ByteBuffer blockBuf;
-		saveIdBlock.serialize(blockBuf);
+		saveIDBlock.serialize(blockBuf);
 		out.writeU32(static_cast<U32>(blockBuf.size()));
 		out.writeBytes(blockBuf.data(), blockBuf.size());
 	}
@@ -256,13 +256,13 @@ bool SaveDocument::parse(const IO::ByteBuffer& raw) {
 		const U32 blockSize = rawBytes.readU32();
 		if (blockSize > 0 && rawBytes.remaining() >= blockSize) {
 			const size_t blockStart = rawBytes.readPosition();
-			saveIdBlock.deserialize(rawBytes);
+			saveIDBlock.deserialize(rawBytes);
 			const size_t consumed = rawBytes.readPosition() - blockStart;
 
 			if (consumed < blockSize)
 				rawBytes.skip(blockSize - consumed);
 		} else if (blockSize > 0) {
-			BT_WARN("SaveDocument: SaveIdBlock truncated in file");
+			BT_WARN("SaveDocument: SaveIDBlock truncated in file");
 			return false;
 		}
 	}
@@ -359,12 +359,12 @@ IO::ByteBuffer SaveDocument::decryptAndDecompress(
 }
 
 IO::ByteBuffer SaveDocument::getSectionData(
-	U64 sectionId,
+	U64 sectionID,
 	const IO::ByteBuffer& payload,
 	U32& outVersion
 ) const {
 	for (const auto& entry : sectionTable) {
-		if (entry.sectionId != sectionId)
+		if (entry.sectionID != sectionID)
 			continue;
 
 		if (entry.offset + entry.size > payload.size()) {
@@ -382,9 +382,9 @@ IO::ByteBuffer SaveDocument::getSectionData(
 	return {};
 }
 
-bool SaveDocument::hasSection(U64 sectionId) const noexcept {
+bool SaveDocument::hasSection(U64 sectionID) const noexcept {
 	for (const auto& entry : sectionTable)
-		if (entry.sectionId == sectionId)
+		if (entry.sectionID == sectionID)
 			return true;
 
 	return false;

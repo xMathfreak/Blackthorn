@@ -10,7 +10,7 @@ namespace Blackthorn::Saves {
  *
  * Uses @c crypto_aead_xchacha20poly1305_ietf_encrypt / @c _decrypt from
  * libsodium. XChaCha20 is chosen over ChaCha20 because the 192-bit nonce
- * allows safe random nonce generation — the probability of nonce collision
+ * allows safe random nonce generation. The probability of nonce collision
  * across any realistic number of save operations is negligible.
  *
  * @par Key size
@@ -22,7 +22,7 @@ namespace Blackthorn::Saves {
  *
  * @par Authentication tag size
  * 128 bits (16 bytes), matching @c crypto_aead_xchacha20poly1305_ietf_ABYTES.
- * The tag provides authenticated encryption — any tampering with the ciphertext
+ * The tag provides authenticated encryption. Any tampering with the ciphertext
  * or the associated data causes decryption to fail.
  *
  * @par Associated data

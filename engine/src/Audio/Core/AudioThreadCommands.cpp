@@ -30,7 +30,7 @@ void uploadAndQueue(
 		((state.format == AL_FORMAT_STEREO16) ? 2u : 1u);
 	state.recordBufferFrames(alBuf, frames);
 
-	voice.source().queueBufferId(alBuf);
+	voice.source().queueBufferID(alBuf);
 }
 
 } // namespace
@@ -311,7 +311,7 @@ void AudioThread::performStreamingSeek(Voice& voice, float seconds) {
 			break;
 		}
 
-		voice.source().queueBufferId(buf);
+		voice.source().queueBufferID(buf);
 		prefillFrames += frames;
 		++queued;
 	}

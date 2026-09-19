@@ -16,7 +16,7 @@ namespace Blackthorn::Scene {
  * and UI.
  *
  * @details
- * `IScene` is the type most game code should subclass - it is the "full"
+ * `IScene` is the type most game code should subclass. It is the "full"
  * scene available in the graphics-enabled client build (`Engine`), adding
  * a `render()` step, a `UI::UIManager`, and a `Particles::ParticleSystem`
  * on top of everything `ISimScene` already provides.

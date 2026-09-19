@@ -6,7 +6,7 @@ namespace Blackthorn::Graphics {
  * @brief Named Z-depth anchors for draw call ordering.
  *
  * These are well-known reference points, not enforced categories. You can
- * pass any float z-value to renderer draw calls - these constants exist so
+ * pass any float z-value to renderer draw calls. These constants exist so
  * common cases have a consistent, readable name instead of magic numbers.
  *
  * Layers are spaced 20 units apart, leaving room for up to 19 distinct
@@ -21,7 +21,7 @@ namespace Blackthorn::Graphics {
  *   Background  (-80)  Skies, tilemaps, static backdrops.
  *   World       (-60)  ECS entities, sprites, world-space objects.
  *   Effects     (-40)  Particles, projectile FX, world-space VFX.
- *   UI          ( 20)  Base UI layer - panels, buttons, labels.
+ *   UI          ( 20)  Base UI layer (panels, buttons, labels, etc).
  *   UIOverlay   ( 40)  Tooltips, dropdowns, modals, anything above base UI.
  *   Debug       ( 60)  Debug overlays, hitboxes, dev tools. Always on top.
  */

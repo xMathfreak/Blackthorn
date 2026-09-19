@@ -32,13 +32,13 @@ public:
 
 	bool bind(const Transport::Address& address) override;
 
-	/// Not applicable to UDP - always returns false.
+	/// UDP does not support this operation; always returns false.
 	bool connect(const Transport::Address&) override { return false; }
 
-	/// Not applicable to UDP - always returns false.
+	/// UDP does not support this operation; always returns false.
 	bool listen(int) override { return false; }
 
-	/// Not applicable to UDP - always returns nullptr.
+	/// UDP does not support this operation; always returns nullptr.
 	std::unique_ptr<ISocket> accept(Transport::Address&) override { return nullptr; }
 
 	SocketResult sendTo(
@@ -46,8 +46,8 @@ public:
 		size_t size,
 		const Transport::Address& address) override;
 
-	/// Equivalent to sendTo with the last address passed to bind().
-	/// Not useful for connectionless UDP - prefer sendTo.
+	/// Equivalent to sendTo() using the last address passed to bind().
+	/// For connectionless UDP, prefer sendTo() to specify the destination explicitly.
 	SocketResult send(const void* data, size_t size, size_t& outBytesSent) override;
 
 	SocketResult recvFrom(

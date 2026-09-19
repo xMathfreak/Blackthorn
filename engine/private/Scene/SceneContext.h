@@ -10,7 +10,7 @@ namespace Blackthorn::Scene {
  * @brief Concrete `ISceneContext` implementation owned by `Engine`.
  *
  * Extends `ISceneContext` (which extends `ISimContext`) with renderer
- * access. Only instantiated in the graphics-enabled client build - the
+ * access. Only instantiated in the graphics-enabled client build. The
  * server uses `SimContextImpl` directly via `ISimContext`.
  */
 class SceneContextImpl : public ISceneContext {

@@ -65,14 +65,13 @@ static_assert(
  *
  * The usable payload per fragment is:
  *   - Fragment 0:    PRACTICAL_MTU - UDPHeader(8) - FragHeader(5) - PacketHeader(12) = 1375 bytes
- *   - Fragment 1..N: PRACTICAL_MTU - UDPHeader(8) - FragHeader(5)                   = 1387 bytes
+ *   - Fragment 1..N: PRACTICAL_MTU - UDPHeader(8) - FragHeader(5)                    = 1387 bytes
  *
  * Reassembly lives in @c FragmentAssembler (one per peer, in @c NetworkPeer).
  *
  * @section Sequence numbers and ACK bitfield
  *
- * See class documentation for ACK bitmask semantics — unchanged from the
- * non-fragmented design.
+ * See class documentation for ACK bitmask semantics.
  *
  * @section Reliability
  *
@@ -207,9 +206,9 @@ private:
 	U16 remoteSeq = 0; ///< Latest inbound sequence number received.
 	U32 ackBits = 0; ///< ACK bitmask for the 32 packets before remoteSeq.
 
-	/// Per-peer fragment message Id counter.
+	/// Per-peer fragment message ID counter.
 	/// Used by send() to tag all datagrams belonging to the same logical message.
-	U16 nextFragmentId = 0;
+	U16 nextFragmentID = 0;
 
 	struct RetransmitEntry {
 		IO::ByteBuffer payload; ///< Full datagram bytes (UDPHeader + PacketHeader + data).

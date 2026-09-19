@@ -15,7 +15,7 @@ namespace Blackthorn::Saves {
  *
  * The interface exposes the nonce and authentication tag as explicit out/in
  * parameters so the caller (SaveDocument) can store them in the file header
- * separately from the encrypted payload — keeping the on-disk format clean
+ * separately from the encrypted payload, keeping the on-disk format clean
  * and ensuring the auth tag can be verified before any decryption work begins.
  */
 class BLACKTHORN_API IEncryptor {

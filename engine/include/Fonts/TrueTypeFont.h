@@ -36,7 +36,7 @@ public:
 	 * @details
 	 * Intended for asset-pipeline use, where font bytes have already been
 	 * read into memory (e.g. decompressed from a `.btp` pack) rather than
-	 * living on disk. Behaves like `loadFromFile()` otherwise - SDF and
+	 * living on disk. Behaves like `loadFromFile()` otherwise, SDF and
 	 * kerning are enabled and the glyph atlas is (re)initialized.
 	 *
 	 * @note SDL_ttf/FreeType keep referencing the font's raw bytes for the

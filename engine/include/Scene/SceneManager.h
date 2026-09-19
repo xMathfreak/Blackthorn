@@ -14,25 +14,30 @@ namespace Blackthorn::Scene {
 /**
  * @brief Simulation-only scene stack manager.
  *
- * Drives `fixedUpdate`, `update`, and `lateUpdate` across the scene stack.
- * No render step - that is provided by `ClientSceneManager` in the client
- * build.
+ * @details
+ * Drives @c fixedUpdate(), @c update(), and @c lateUpdate() across the scene
+ * stack. Rendering is not performed here; client builds provide that through
+ * @c ClientSceneManager.
  *
- * Used directly by `EngineBase` and the dedicated server. `Engine` replaces
- * the `EngineBase` instance with a `ClientSceneManager` at init time.
+ * Used directly by @c Runtime. Client builds replace the @c Runtime scene
+ * manager with a @c ClientSceneManager during initialization.
  *
  * @par Context injection
- * `SceneManager` is responsible for handing every scene its `ISimContext`
- * automatically. Call `setContext()` once, right after the engine's
- * context object exists, before pushing any scenes:
+ * @c SceneManager automatically provides each scene with its @c ISimContext.
+ * Call @c setContext() once, after the engine's context object has been
+ * created and before pushing any scenes:
+ *
  * @code
  * sceneManager = std::make_unique<Scene::SceneManager>();
  * simContext = std::make_unique<Scene::SimContextImpl>(..., *sceneManager, ...);
  * sceneManager->setContext(*simContext);
  * @endcode
- * From then on, `pushScene()` and `changeScene()` inject the context into
- * each scene automatically before calling `init()`. Scene subclasses never
- * need to know about this - see `ISimScene`.
+ *
+ * After the context is set, @c pushScene() and @c changeScene() inject it
+ * into each scene before calling @c init(). Scene subclasses do not need to
+ * manage context injection themselves.
+ *
+ * @see ISimScene.
  */
 class BLACKTHORN_API SceneManager {
 protected:

@@ -11,13 +11,13 @@ namespace Blackthorn::Scene {
  *
  * Only compiled into `BlackthornEngine`. `Engine` constructs one of these
  * and stores it behind the `SceneManager` pointer inherited from
- * `EngineBase`, replacing the plain `SceneManager` created during
- * `EngineBase::init()`.
+ * `Runtime`, replacing the plain `SceneManager` created during
+ * `Runtime::init()`.
  *
  * `render()` walks the scene stack in the same render-visibility order as
  * the update walk, downcasting each scene to `IScene*`. Scenes that are not
  * `IScene` (e.g. a headless `ISimScene` pushed onto a client stack for
- * testing) are silently skipped during render - they still receive all
+ * testing) are silently skipped during render and still receive all
  * simulation updates normally.
  *
  * The transition overlay callback is also dispatched here, so fade effects

@@ -9,7 +9,7 @@
 namespace Blackthorn::Saves {
 
 /**
- * @brief Bitmask flags carried in @c SaveId::flags.
+ * @brief Bitmask flags carried in @c SaveID::flags.
  */
 enum class SaveFlags : U32 {
 	None = 0,
@@ -35,22 +35,24 @@ inline bool hasFlag(SaveFlags flags, SaveFlags flag) {
 }
 
 /**
- * @brief Primary identity and metadata for a save file or save slot.
+ * @brief Canonical identity and metadata for a save file or save slot.
  *
- * The @c id field is the canonical identity - all storage lookups go through
- * it. All other fields are metadata used for display, filtering, and grouping.
- * Storage backends may use @c worldId, @c playerId, and @c slot to construct
- * a directory layout, but the canonical key is always the UUID.
+ * @details
+ * The @c id field is the canonical identity of the save; all storage lookups
+ * use it as the primary key. The remaining fields are metadata used for
+ * display, filtering, and grouping. Storage backends may use @c worldID,
+ * @c playerID, and @c slot to organize their directory layout, but the
+ * canonical storage key is always the UUID in @c id.
  *
- * @par Generating a new SaveId
+ * @par Generating a new SaveID
  * @code
- * SaveId save = SaveId::generate();
+ * SaveID save = SaveID::generate();
  * save.displayName = "Before the final boss";
- * save.worldId     = "overworld";
- * save.playerId    = "player_1";
+ * save.worldID     = "overworld";
+ * save.playerID    = "player_1";
  * @endcode
  */
-struct BLACKTHORN_API SaveId {
+struct BLACKTHORN_API SaveID {
 	/// Canonical identity. Never changes after creation.
 	Core::UUID id;
 
@@ -59,11 +61,11 @@ struct BLACKTHORN_API SaveId {
 
 	/// Game-defined world or level identifier. Used for grouping and
 	/// storage path construction. Empty means globally scoped.
-	std::string worldId;
+	std::string worldID;
 
 	/// Game-defined player identifier. Empty means the save is not
 	/// player-scoped (e.g. a global world state save).
-	std::string playerId;
+	std::string playerID;
 
 	/// Optional slot index for games with a fixed number of save slots.
 	/// 0 means the save is not slot-bound.
@@ -79,13 +81,13 @@ struct BLACKTHORN_API SaveId {
 	U64 updatedAt = 0;
 
 	/**
-	 * @brief Creates a new SaveId with a freshly generated UUID and
+	 * @brief Creates a new SaveID with a freshly generated UUID and
 	 * timestamps set to the current time.
 	 */
-	static SaveId generate();
+	static SaveID generate();
 
-	bool operator==(const SaveId& other) const noexcept { return id == other.id; }
-	bool operator!=(const SaveId& other) const noexcept { return id != other.id; }
+	bool operator==(const SaveID& other) const noexcept { return id == other.id; }
+	bool operator!=(const SaveID& other) const noexcept { return id != other.id; }
 };
 
 } // namespace Blackthorn::Saves
@@ -93,8 +95,8 @@ struct BLACKTHORN_API SaveId {
 namespace std {
 
 template <>
-struct hash<Blackthorn::Saves::SaveId> {
-	size_t operator()(const Blackthorn::Saves::SaveId& id) const noexcept {
+struct hash<Blackthorn::Saves::SaveID> {
+	size_t operator()(const Blackthorn::Saves::SaveID& id) const noexcept {
 		return std::hash<Blackthorn::Core::UUID>{}(id.id);
 	}
 };

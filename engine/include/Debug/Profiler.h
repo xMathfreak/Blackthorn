@@ -14,16 +14,21 @@ namespace Blackthorn::Debug {
 /**
  * @brief Thread-safe hierarchical CPU profiler.
  *
- * Thread safety model:
- *   - scopeStack is thread_local - each thread has its own independent stack.
- *     beginScope / endScope on the hot path acquire no locks.
- *   - scopeHistory and frameTimeHistory are shared state protected by
- *     historyMutex. Only endScope (write) and getStats (read) touch them.
- *   - beginFrame / endFrame are expected to be called only from the main
- *     thread. lastFrameSamples is protected by historyMutex.
+ * @details
+ * Profiling scopes are tracked independently on each thread. The per-thread
+ * scopeStack is thread_local, so beginScope() and endScope() acquire no
+ * locks on the hot path.
  *
- * Worker thread scopes are accumulated into scopeHistory automatically.
- * They do NOT appear in lastFrameSamples (which is main-thread only).
+ * Completed scopes are accumulated in the shared scopeHistory, protected by
+ * historyMutex. frameTimeHistory is protected by the same mutex. Only
+ * endScope() writes to these histories, while getStats() reads them.
+ *
+ * beginFrame() and endFrame() are expected to be called from the main thread.
+ * The resulting lastFrameSamples are protected by historyMutex and contain
+ * only samples from the main thread.
+ *
+ * Worker-thread scopes are accumulated into scopeHistory automatically, but
+ * are not included in lastFrameSamples.
  */
 class BLACKTHORN_API Profiler {
 public:

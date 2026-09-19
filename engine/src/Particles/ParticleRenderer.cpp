@@ -81,7 +81,7 @@ void ParticleRenderer::draw(
 
 	U32 instanceCount = static_cast<U32>(particles.size());
 	if (instanceCount > maxInstances) {
-		BT_WARN("ParticleRenderer: draw() received {} particles, exceeding capacity {} - truncating", instanceCount, maxInstances);
+		BT_WARN("ParticleRenderer: particle count ({}) exceeds renderer capacity ({}), truncating", instanceCount, maxInstances);
 		instanceCount = maxInstances;
 	}
 

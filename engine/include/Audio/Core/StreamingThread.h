@@ -26,7 +26,7 @@ namespace Blackthorn::Audio {
  * - @c submitJob() pushes a job and calls @c notify_one(), or
  * - @c stop() sets @c running = false and calls @c notify_one().
  *
- * There is no periodic timeout — the streaming thread has no maintenance
+ * There is no periodic timeout. The streaming thread has no maintenance
  * work to do between jobs. This eliminates CPU spinning entirely.
  *
  * @section result_notification Result notification
@@ -114,7 +114,7 @@ private:
 
 	std::vector<I16> scratchBuffer;
 
-	/// Pointers to the audio thread's CV and queue — set by start(), valid
+	/// Pointers to the audio thread's CV and queue set by start(), valid
 	/// for the lifetime of the thread.
 	std::condition_variable* audioWakeCv = nullptr;
 	std::mutex* audioWakeMutex = nullptr;

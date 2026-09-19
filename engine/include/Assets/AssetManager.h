@@ -386,7 +386,7 @@ public:
 			: std::vector<std::string>{};
 	}
 
-	void unloadById(const std::string& id) {
+	void unloadByID(const std::string& id) {
 		for (auto& [type, storage] : storages) {
 			if (storage->has(id))
 				storage->remove(id);

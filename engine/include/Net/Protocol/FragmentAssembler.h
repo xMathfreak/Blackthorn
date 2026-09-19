@@ -16,8 +16,8 @@ namespace Blackthorn::Net::Protocol {
  * @brief Holds the in-flight state for a single incomplete fragmented message.
  */
 struct BLACKTHORN_API FragmentSet {
-	/// Unique ID for this message, matching @c FragmentHeader::fragmentId.
-	U16 fragmentId = 0;
+	/// Unique ID for this message, matching @c FragmentHeader::fragmentID.
+	U16 fragmentID = 0;
 
 	/// Expected total number of fragments.
 	U8 totalFrags = 0;
@@ -112,8 +112,8 @@ public:
 	size_t bytesBuffered() const noexcept { return localBytes; }
 
 private:
-	/// Finds the FragmentSet for @p fragmentId or nullptr;
-	FragmentSet* findSet(U16 fragmentId);
+	/// Finds the FragmentSet for @p fragmentID or nullptr;
+	FragmentSet* findSet(U16 fragmentID);
 
 	/// Allocates a new FragmentSet, evicting oldest if the pool
 	/// is full or memory caps would be exceeded.

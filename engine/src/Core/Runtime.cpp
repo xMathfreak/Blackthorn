@@ -42,7 +42,7 @@ Runtime::~Runtime() {
 
 bool Runtime::init(const EngineConfig& cfg) {
 	if (initialized) {
-		BT_WARN("Engine: Initialization skipped - already initialized");
+		BT_WARN("Engine: Initialization skipped, already initialized");
 		return false;
 	}
 
@@ -89,7 +89,7 @@ bool Runtime::init(const EngineConfig& cfg) {
 	#endif
 
 	if (!SDL_Init(SDL_INIT_EVENTS)) {
-		BT_ERROR("SDL: Failed to initialize - {}", SDL_GetError());
+		BT_ERROR("SDL: Failed to initialize: {}", SDL_GetError());
 		cleanupInitialization();
 		return false;
 	}
@@ -121,8 +121,6 @@ bool Runtime::init(const EngineConfig& cfg) {
 		*saveManager
 	);
 
-	// Every scene pushed from here on receives *simContext automatically -
-	// see SceneManager::setContext() and ISimScene.
 	sceneManager->setContext(*simContext);
 
 	initialized = true;
@@ -165,7 +163,7 @@ void Runtime::shutdown() {
 
 void Runtime::run() {
 	if (!initialized) {
-		BT_ERROR("Engine: Cannot run - not initialized");
+		BT_ERROR("Engine: Cannot run, not initialized");
 		return;
 	}
 
@@ -339,8 +337,8 @@ void Runtime::registerEngineCallbacks(Core::Settings& s) {
 	});
 }
 
-Saves::SaveId Runtime::getShutdownSaveId() const {
-	Saves::SaveId sid;
+Saves::SaveID Runtime::getShutdownSaveID() const {
+	Saves::SaveID sid;
 	sid.id = Core::UUID::makeStable("blackthorn.autosave.shutdown");
 	sid.displayName = "autosave_shutdown";
 	sid.flags = Saves::SaveFlags::Autosave;

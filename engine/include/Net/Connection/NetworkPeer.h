@@ -18,9 +18,9 @@
 namespace Blackthorn::Net::Connection {
 
 /** @brief Numeric identifier for a peer, assigned by ConnectionManager. */
-using PeerId = U32;
+using PeerID = U32;
 
-static constexpr PeerId INVALID_PEER_ID = 0xFFFFFFFFu;
+static constexpr PeerID INVALID_PEER_ID = 0xFFFFFFFFu;
 
 /**
  * @brief Connection state of a peer.
@@ -28,7 +28,7 @@ static constexpr PeerId INVALID_PEER_ID = 0xFFFFFFFFu;
 enum class PeerState : U8 {
 	Disconnected, ///< No active connection.
 	Connecting, ///< Handshake in progress (TCP connect or UDP hello).
-	Connected, ///< Fully established - simulation traffic may flow.
+	Connected, ///< Fully established.
 	Disconnecting, ///< Graceful shutdown in progress.
 };
 
@@ -51,7 +51,7 @@ enum class PeerState : U8 {
  */
 struct BLACKTHORN_API NetworkPeer {
 	/// Unique ID assigned by ConnectionManager on slot allocation.
-	PeerId id = INVALID_PEER_ID;
+	PeerID id = INVALID_PEER_ID;
 
 	/// Remote address for TCP connection.
 	Transport::Address tcpAddress;

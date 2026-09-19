@@ -32,8 +32,8 @@ void PacketDispatcher::poll(Jobs::JobSystem* jobs) {
 
 		if (!header.isValid()) {
 			BT_WARN(
-				"PacketDispatcher: Dropped packet from peer {} - bad magic",
-				packet.peerId
+				"PacketDispatcher: Dropped packet from peer {}, bad magic",
+				packet.peerID
 			);
 
 			continue;
@@ -43,17 +43,17 @@ void PacketDispatcher::poll(Jobs::JobSystem* jobs) {
 			std::lock_guard<std::mutex> lock(registry->mutex());
 			const auto* peer = [&]() -> const Connection::NetworkPeer* {
 				const auto& list = registry->peerList();
-				if (packet.peerId >= list.size())
+				if (packet.peerID >= list.size())
 					return nullptr;
 
-				return &list[packet.peerId];
+				return &list[packet.peerID];
 			}();
 
 			if (!peer || peer->negotiatedSchemaVersion != Protocol::CURRENT_SCHEMA_VERSION) {
 				BT_WARN(
-					"PacketDispatcher: Dropped packet from peer {} - "
+					"PacketDispatcher: Dropped packet from peer {}, "
 					"schema version mismatch (peer v{}, local v{})",
-					packet.peerId,
+					packet.peerID,
 					peer ? peer->negotiatedSchemaVersion : 0,
 					Protocol::CURRENT_SCHEMA_VERSION
 				);
@@ -65,15 +65,15 @@ void PacketDispatcher::poll(Jobs::JobSystem* jobs) {
 		const U32 actualBytes = static_cast<U32>(packet.data.remaining());
 		if (header.payloadLength != actualBytes) {
 			BT_WARN(
-				"PacketDispatcher: Dropped packet from peer {} - "
+				"PacketDispatcher: Dropped packet from peer {}, "
 				"payloadLength {} != actual {} bytes",
-				packet.peerId, header.payloadLength, actualBytes
+				packet.peerID, header.payloadLength, actualBytes
 			);
 
 			continue;
 		}
 
-		Connection::PeerId pid = packet.peerId;
+		Connection::PeerID pid = packet.peerID;
 		Protocol::PacketHeader hdr = header;
 		IO::ByteBuffer payload = std::move(packet.data);
 		auto handler = packetHandler;
@@ -105,7 +105,7 @@ void PacketDispatcher::poll(Jobs::JobSystem* jobs) {
 }
 
 void PacketDispatcher::checkTimeouts() {
-	std::vector<Connection::PeerId> timedOut;
+	std::vector<Connection::PeerID> timedOut;
 
 	{
 		std::lock_guard<std::mutex> lock(registry->mutex());
@@ -128,7 +128,7 @@ void PacketDispatcher::checkTimeouts() {
 		}
 	}
 
-	for (Connection::PeerId id : timedOut)
+	for (Connection::PeerID id : timedOut)
 		eventBus->push({ ConnectionEventType::Disconnect, id, {} });
 }
 
@@ -139,13 +139,13 @@ void PacketDispatcher::dispatchEvents() {
 		switch (ev.type) {
 			case ConnectionEventType::Connect:
 				if (connectHandler)
-					connectHandler(ev.peerId, ev.address);
+					connectHandler(ev.peerID, ev.address);
 
 				break;
 
 			case ConnectionEventType::Disconnect:
 				if (disconnectHandler)
-					disconnectHandler(ev.peerId);
+					disconnectHandler(ev.peerID);
 
 				break;
 		}

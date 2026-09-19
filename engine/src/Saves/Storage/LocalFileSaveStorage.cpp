@@ -30,31 +30,31 @@ void LocalFileSaveStorage::setPathResolver(PathResolver r) {
 	resolver = std::move(r);
 }
 
-std::filesystem::path LocalFileSaveStorage::resolvePath(const SaveId& saveId) const {
+std::filesystem::path LocalFileSaveStorage::resolvePath(const SaveID& saveID) const {
 	if (resolver)
-		return resolver(saveId);
+		return resolver(saveID);
 
-	return defaultPath(saveId);
+	return defaultPath(saveID);
 }
 
-std::filesystem::path LocalFileSaveStorage::defaultPath(const SaveId& saveId) const {
+std::filesystem::path LocalFileSaveStorage::defaultPath(const SaveID& saveID) const {
 	std::filesystem::path path = rootDir;
 
-	if (!saveId.worldId.empty())
-		path /= saveId.worldId;
+	if (!saveID.worldID.empty())
+		path /= saveID.worldID;
 
-	if (!saveId.playerId.empty())
-		path /= saveId.playerId;
+	if (!saveID.playerID.empty())
+		path /= saveID.playerID;
 
-	path /= (saveId.id.toString() + extension);
+	path /= (saveID.id.toString() + extension);
 	return path;
 }
 
 SaveResult LocalFileSaveStorage::write(
-	const SaveId& saveId,
+	const SaveID& saveID,
 	const IO::ByteBuffer& data
 ) {
-	const std::filesystem::path path = resolvePath(saveId);
+	const std::filesystem::path path = resolvePath(saveID);
 	const auto dir = path.parent_path().empty()
 		? std::filesystem::current_path()
 		: path.parent_path();
@@ -81,8 +81,8 @@ SaveResult LocalFileSaveStorage::write(
 	return atomicWrite(path, data);
 }
 
-SaveReadResult LocalFileSaveStorage::read(const SaveId& saveId) {
-	const std::filesystem::path path = resolvePath(saveId);
+SaveReadResult LocalFileSaveStorage::read(const SaveID& saveID) {
+	const std::filesystem::path path = resolvePath(saveID);
 
 	std::ifstream file(path, std::ios::in | std::ios::binary);
 	if (!file.is_open()) {
@@ -113,8 +113,8 @@ SaveReadResult LocalFileSaveStorage::read(const SaveId& saveId) {
 	return SaveReadResult::success(IO::ByteBuffer(std::move(buf)));
 }
 
-SaveResult LocalFileSaveStorage::remove(const SaveId& saveId) {
-	const std::filesystem::path path = resolvePath(saveId);
+SaveResult LocalFileSaveStorage::remove(const SaveID& saveID) {
+	const std::filesystem::path path = resolvePath(saveID);
 
 	std::error_code ec;
 	std::filesystem::remove(path, ec);
@@ -128,8 +128,8 @@ SaveResult LocalFileSaveStorage::remove(const SaveId& saveId) {
 	return SaveResult::success();
 }
 
-bool LocalFileSaveStorage::exists(const SaveId& saveId) {
-	return std::filesystem::exists(resolvePath(saveId));
+bool LocalFileSaveStorage::exists(const SaveID& saveID) {
+	return std::filesystem::exists(resolvePath(saveID));
 }
 
 std::vector<SaveMetadata> LocalFileSaveStorage::list(const SaveFilter& filter) {
@@ -143,7 +143,7 @@ std::vector<SaveMetadata> LocalFileSaveStorage::list(const SaveFilter& filter) {
 		std::filesystem::recursive_directory_iterator(rootDir, ec))
 	{
 		if (ec) {
-			BT_WARN("LocalFileSaveStorage: directory iteration error — {}",
+			BT_WARN("LocalFileSaveStorage: directory iteration error: {}",
 				ec.message());
 			break;
 		}
@@ -184,11 +184,11 @@ std::vector<SaveMetadata> LocalFileSaveStorage::list(const SaveFilter& filter) {
 			continue;
 		}
 
-		SaveId sid;
+		SaveID sid;
 		sid.createdAt = doc.getHeader().createdAt;
 		sid.updatedAt = doc.getHeader().updatedAt;
 
-		doc.getSaveIdBlock().applyToSaveId(sid);
+		doc.getSaveIDBlock().applyToSaveID(sid);
 
 		const std::string stem = entry.path().stem().string();
 		sid.id = Core::UUID::fromString(stem);
@@ -204,11 +204,11 @@ std::vector<SaveMetadata> LocalFileSaveStorage::list(const SaveFilter& filter) {
 			continue;
 
 		SaveMetadata meta;
-		meta.saveId = sid;
+		meta.saveID = sid;
 		meta.formatVersion = doc.getHeader().formatVersion;
 
 		for (const auto& tableEntry : doc.getSectionTable())
-			meta.sectionIds.push_back(tableEntry.sectionId);
+			meta.sectionIDs.push_back(tableEntry.sectionID);
 
 		results.push_back(std::move(meta));
 	}

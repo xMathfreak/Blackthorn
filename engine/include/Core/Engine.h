@@ -51,7 +51,7 @@ public:
 	 * @brief Initializes simulation systems (via Runtime) then graphics.
 	 *
 	 * Call order:
-	 *   1. `Runtime::init()` - settings, logger, SDL events+timer,
+	 *   1. `Runtime::init()`: settings, logger, SDL events+timer,
 	 *      asset manager, job system.
 	 *   2. SDL video, OpenGL context creation, GLAD loading.
 	 *   3. Renderer construction, FBO, screen shader, ParticleRenderer

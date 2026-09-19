@@ -165,7 +165,7 @@ public:
 	 * @brief Registers serialize, deserialize, and construct functions for @c T.
 	 *
 	 * Requires a @c ComponentSerializer<T> specialization to be visible at
-	 * the call site. Idempotent — registering the same type twice is a no-op.
+	 * the call site. Registering the same type twice is a no-op.
 	 *
 	 * For components with no serialized payload (e.g. @c Persistent), use
 	 * @c pinType<T>() instead to avoid a compile error from the unspecialized
@@ -209,8 +209,8 @@ public:
 	 * functions.
 	 *
 	 * Calling this ensures @c Detail::componentID<T>() is evaluated from a
-	 * controlled startup path — via the single exported @c nextComponentID()
-	 * counter — before any @c EntityPool operation touches the type. This
+	 * controlled startup path via the single exported @c nextComponentID()
+	 * counter, before any @c EntityPool operation touches the type. This
 	 * prevents the DLL-boundary hazard where @c addComponent and
 	 * @c getComponent independently trigger ID assignment and receive
 	 * different values.
@@ -219,7 +219,7 @@ public:
 	 * but whose payload is handled explicitly by the calling code rather than
 	 * through the @c SerializerRegistry component mask.
 	 *
-	 * Idempotent — safe to call multiple times.
+	 * Safe to call multiple times.
 	 *
 	 * @tparam T Any component type. No @c ComponentSerializer specialization
 	 *           required.
@@ -232,26 +232,26 @@ public:
 
 	/**
 	 * @brief Returns the serializer entry for a component by its ECS ID.
-	 * @param componentId The value returned by Detail::componentID<T>().
+	 * @param componentID The value returned by Detail::componentID<T>().
 	 * @return Pointer to the entry, or nullptr if not registered.
 	 */
-	const Entry* getEntry(size_t componentId) const {
-		auto it = entries.find(componentId);
+	const Entry* getEntry(size_t componentID) const {
+		auto it = entries.find(componentID);
 		return it != entries.end() ? &it->second : nullptr;
 	}
 
 	/**
 	 * @brief Returns true if the given component ID has been registered.
 	 */
-	bool isRegistered(size_t componentId) const {
-		return entries.count(componentId) > 0;
+	bool isRegistered(size_t componentID) const {
+		return entries.count(componentID) > 0;
 	}
 
 	/**
 	 * @brief Returns true if the component is registered for the given context.
 	 */
-	bool isRegisteredFor(size_t componentId, SerializationContext ctx) const {
-		auto it = entries.find(componentId);
+	bool isRegisteredFor(size_t componentID, SerializationContext ctx) const {
+		auto it = entries.find(componentID);
 		return it != entries.end() && hasContext(it->second.context, ctx);
 	}
 

@@ -26,15 +26,14 @@ namespace Net::Connection {
  * @par Peer lifecycle
  *
  * Peers are allocated into a fixed-size flat array by @c allocateSlot().
- * Slots are reused after a peer disconnects - call @c freeSlot() to reset
+ * Slots are reused after a peer disconnects. Call @c freeSlot() to reset
  * a slot and remove its address mappings.
  *
  * @par Sending
  *
  * Send methods live here rather than in a separate sender class because
  * every send touches peer state (@c udpChannel, @c tcpChannel) under
- * @c peerMutex. Separating them would require exposing the lock or passing
- * many references - both worse than co-location.
+ * @c peerMutex.
  */
 class BLACKTHORN_API PeerRegistry {
 public:
@@ -70,21 +69,21 @@ public:
 	 *
 	 * @param address Source address.
 	 * @param tcp True to query the TCP map, false for the UDP map.
-	 * @return PeerId, or @c INVALID_PEER_ID if not found.
+	 * @return PeerID, or @c INVALID_PEER_ID if not found.
 	 */
-	PeerId findPeer(const Transport::Address& address, bool tcp) const;
+	PeerID findPeer(const Transport::Address& address, bool tcp) const;
 
 	/**
 	 * @brief Looks up a peer, allocating a new slot if not found.
 	 *
-	 * For UDP, respects @c allowUDPImplicitPeers - returns
+	 * For UDP, respects @c allowUDPImplicitPeers, returns
 	 * @c INVALID_PEER_ID without allocating if the flag is false.
 	 *
 	 * @param address Source address.
 	 * @param tcp True for TCP map, false for UDP map.
 	 * @param allowImplicitPeers If false, unknown UDP senders are rejected.
 	 */
-	PeerId findOrCreate(
+	PeerID findOrCreate(
 		const Transport::Address& address,
 		bool tcp,
 		bool allowImplicitPeers = true
@@ -98,9 +97,9 @@ public:
 	 *
 	 * @param address Source/remote address.
 	 * @param tcp True if this is a TCP peer; false for UDP-only.
-	 * @return Assigned PeerId, or @c INVALID_PEER_ID if the table is full.
+	 * @return Assigned PeerID, or @c INVALID_PEER_ID if the table is full.
 	 */
-	PeerId allocateSlot(const Transport::Address& address, bool tcp);
+	PeerID allocateSlot(const Transport::Address& address, bool tcp);
 
 	/**
 	 * @brief Resets a peer slot and removes its address mappings.
@@ -110,23 +109,23 @@ public:
 	 *
 	 * Caller must hold @c peerMutex.
 	 */
-	void freeSlot(PeerId id);
+	void freeSlot(PeerID id);
 
 	/**
-	 * @brief Sends @p payload to @p peerId over UDP.
+	 * @brief Sends @p payload to @p peerID over UDP.
 	 * @return true on success.
 	 */
 	bool sendUDP(
-		PeerId peerId,
+		PeerID peerID,
 		const IO::ByteBuffer& payload,
 		Transport::Sockets::UDPSocket& socket
 	);
 
 	/**
-	 * @brief Sends @p payload to @p peerId over TCP.
+	 * @brief Sends @p payload to @p peerID over TCP.
 	 * @return true on success.
 	 */
-	bool sendTCP(PeerId peerId, const IO::ByteBuffer& payload);
+	bool sendTCP(PeerID peerID, const IO::ByteBuffer& payload);
 
 	/**
 	 * @brief Broadcasts @p payload over UDP to all UDP-connected peers.
@@ -142,10 +141,10 @@ public:
 	void broadcastTCP(const IO::ByteBuffer& payload);
 
 	/** Overrides the rate-limit config for a specific peer */
-	void setRateLimit(PeerId peerId, const RateLimitConfig& config);
+	void setRateLimit(PeerID peerID, const RateLimitConfig& config);
 
 	/** @brief Returns a const pointer to a peer or nullptr. */
-	const NetworkPeer* get(PeerId id) const;
+	const NetworkPeer* get(PeerID id) const;
 
 	/**
 	 * @brief Returns a snapshot of all peer slots.
@@ -164,11 +163,11 @@ public:
 	std::vector<NetworkPeer>& peerList() noexcept { return peers; }
 	const std::vector<NetworkPeer>& peerList() const noexcept { return peers; }
 
-	std::unordered_map<Transport::Address, PeerId>& tcpMap() noexcept {
+	std::unordered_map<Transport::Address, PeerID>& tcpMap() noexcept {
 		return addressToPeerTCP;
 	}
 
-	std::unordered_map<Transport::Address, PeerId>& udpMap() noexcept {
+	std::unordered_map<Transport::Address, PeerID>& udpMap() noexcept {
 		return addressToPeerUDP;
 	}
 
@@ -176,8 +175,8 @@ public:
 
 private:
 	std::vector<NetworkPeer> peers;
-	std::unordered_map<Transport::Address, PeerId> addressToPeerTCP;
-	std::unordered_map<Transport::Address, PeerId> addressToPeerUDP;
+	std::unordered_map<Transport::Address, PeerID> addressToPeerTCP;
+	std::unordered_map<Transport::Address, PeerID> addressToPeerUDP;
 	mutable std::mutex peerMutex;
 	RateLimitConfig rateLimitDefaults;
 

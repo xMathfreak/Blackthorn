@@ -182,7 +182,7 @@ private:
 	/**
 	 * @brief Decodes an in-memory encoded image (PNG/JPEG/etc.) via SDL_image.
 	 *
-	 * The bytes from the pack are still an encoded container — zstd decompressed
+	 * The bytes from the pack are still an encoded container, zstd decompress
 	 * them back to their original PNG/JPG bytes. SDL_image reads those bytes
 	 * through an SDL_IOStream without any temporary disk file.
 	 */

@@ -46,7 +46,7 @@ struct BLACKTHORN_API RawSpriteClipData : Assets::IRawAssetData {
 
 /**
  * @brief Shared text-format parser used by both @c SpriteClipLoader and
- * @c AsyncSpriteClipLoader, so the format is defined in exactly one place.
+ * @c AsyncSpriteClipLoader.
  *
  * See @c SpriteClipLoader for the format description.
  */
@@ -141,20 +141,23 @@ private:
 /**
  * @brief Loads a @c SpriteClip from a plain-text `.btclip` file.
  *
- * The format is deliberately minimal (no JSON dependency is vendored in
- * this engine). Lines starting with `#` and blank lines are ignored.
- * Recognized directives:
+ * Blank lines and lines beginning with # are ignored.
  *
+ * Recognized directives:
  * @code
  * loop: once | loop | pingpong      # default: loop
- * duration: 0.1                     # default per-frame seconds, default: 0.1
+ * duration: 0.1                     # default per-frame duration in seconds, default: 0.1
  *
- * # Grid shorthand - slices a texture into a run of equal-size frames:
+ * # Grid shorthand: append `count` equal-sized frames from a texture.
  * grid: originX originY frameW frameH columns count
  *
- * # Explicit frame - appended after any grid frames, for irregular sheets:
+ * # Explicit frame: append an individual frame, optionally with its duration.
  * frame: x y w h [duration]
  * @endcode
+ *
+ * Grid frames are appended first; explicit frame directives are then appended
+ * in file order. This allows regular texture sheets to use the compact grid form
+ * while still supporting irregular frames.
  *
  * @par Example
  * @code
@@ -162,8 +165,9 @@ private:
  * duration: 0.1
  * grid: 0 0 32 32 6 6
  * @endcode
- * Slices a 6-frame run of 32x32 tiles starting at (0,0), 6 columns wide
- * (i.e. a single row), each shown for 0.1s, looping.
+ * This creates six 32x32 frames starting at (0, 0), arranged in six columns
+ * on a single row. Each frame is displayed for 0.1 seconds and the clip loops
+ * continuously.
  */
 class BLACKTHORN_API SpriteClipLoader final : public Assets::IAssetLoader<SpriteClip> {
 public:

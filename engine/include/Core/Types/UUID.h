@@ -12,7 +12,7 @@ namespace Blackthorn::Core {
  * @brief Version-4 UUID stored as 16 raw bytes.
  *
  * No external UUID library is required. Generation is handled by
- * @c SaveId::generate() using libsodium's @c randombytes_buf.
+ * @c SaveID::generate() using libsodium's @c randombytes_buf.
  */
 struct BLACKTHORN_API UUID {
 	std::array<U8, 16> bytes{};

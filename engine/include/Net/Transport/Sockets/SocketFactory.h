@@ -16,7 +16,7 @@ namespace Blackthorn::Net::Transport::Sockets {
  * systems. Call @c init() once at application startup (before any sockets are
  * created) and @c shutdown() once at exit.
  *
- * @c EngineBase::init() calls @c SocketFactory::init() automatically.
+ * @c Runtime::init() calls @c SocketFactory::init() automatically.
  *
  * @section Usage
  *
@@ -41,7 +41,7 @@ public:
 	 * @brief Initializes the socket subsystem.
 	 *
 	 * Must be called before any socket is created. Safe to call multiple
-	 * times - only the first call has any effect.
+	 * times, only the first call has any effect.
 	 *
 	 * @return true on success.
 	 */

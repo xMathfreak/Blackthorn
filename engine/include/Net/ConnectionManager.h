@@ -55,8 +55,8 @@ namespace Net {
  * cm.poll(jobSystem);
  *
  * // Sending (any thread):
- * cm.sendUDP(peerId, buf);
- * cm.sendTCP(peerId, buf);
+ * cm.sendUDP(peerID, buf);
+ * cm.sendTCP(peerID, buf);
  * @endcode
  */
 class BLACKTHORN_API ConnectionManager {
@@ -90,21 +90,21 @@ public:
 	 * @brief Initiates a connection to a server (client role).
 	 *
 	 * @param address Server address (IP + TCP port).
-	 * @return Assigned PeerId, or @c INVALID_PEER_ID on failure.
+	 * @return Assigned PeerID, or @c INVALID_PEER_ID on failure.
 	 */
-	Connection::PeerId connect(const Transport::Address& address);
+	Connection::PeerID connect(const Transport::Address& address);
 
 	/**
 	 * @brief Gracefully disconnects a peer, sending a Disconnect packet
 	 * over TCP before closing the socket.
 	 */
-	void disconnect(Connection::PeerId peerId);
+	void disconnect(Connection::PeerID peerID);
 
-	/** @brief Sends @p payload to @p peerId over UDP. */
-	bool sendUDP(Connection::PeerId peerId, const IO::ByteBuffer& payload);
+	/** @brief Sends @p payload to @p peerID over UDP. */
+	bool sendUDP(Connection::PeerID peerID, const IO::ByteBuffer& payload);
 
-	/** @brief Sends @p payload to @p peerId over TCP. */
-	bool sendTCP(Connection::PeerId peerId, const IO::ByteBuffer& payload);
+	/** @brief Sends @p payload to @p peerID over TCP. */
+	bool sendTCP(Connection::PeerID peerID, const IO::ByteBuffer& payload);
 
 	/** @brief Broadcasts @p payload over UDP to all UDP-connected peers. */
 	void broadcastUDP(const IO::ByteBuffer& payload);
@@ -129,7 +129,7 @@ public:
 	void onDisconnect(DisconnectHandler h) { dispatcher.onDisconnect(std::move(h)); }
 
 	/** @brief Returns a const pointer to a peer by ID, or nullptr. */
-	const Connection::NetworkPeer* getPeer(Connection::PeerId id) const {
+	const Connection::NetworkPeer* getPeer(Connection::PeerID id) const {
 		return registry.get(id);
 	}
 
@@ -150,10 +150,10 @@ public:
 
 	/** @brief Overrides the rate-limit config for a specific peer. */
 	void setPeerRateLimit(
-		Connection::PeerId peerId,
+		Connection::PeerID peerID,
 		const Connection::RateLimitConfig& rconf)
 	{
-		registry.setRateLimit(peerId, rconf);
+		registry.setRateLimit(peerID, rconf);
 	}
 
 private:

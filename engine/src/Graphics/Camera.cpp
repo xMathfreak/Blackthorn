@@ -8,65 +8,65 @@
 
 namespace Blackthorn::Graphics {
 
-Camera2D::Camera2D(const glm::vec2& pos, float zoom, float rotation)
+Camera::Camera(const glm::vec2& pos, float zoom, float rotation)
 	: position(pos)
 	, zoomFactor(zoom)
 	, rotationRad(rotation)
 	, dirty(true)
 {}
 
-void Camera2D::setPosition(const glm::vec2& pos) noexcept {
+void Camera::setPosition(const glm::vec2& pos) noexcept {
 	if (position != pos) {
 		position = pos;
 		dirty = true;
 	}
 }
 
-void Camera2D::move(const glm::vec2& delta) noexcept {
+void Camera::move(const glm::vec2& delta) noexcept {
 	if (delta.x != 0.0f || delta.y != 0.0f) {
 		position += delta;
 		dirty = true;
 	}
 }
 
-void Camera2D::setZoom(float zoom) noexcept {
+void Camera::setZoom(float zoom) noexcept {
 	zoomFactor = zoom;
 	clampZoom();
 	dirty = true;
 }
 
-void Camera2D::zoom(float factor) noexcept {
+void Camera::zoom(float factor) noexcept {
 	zoomFactor *= factor;
 	clampZoom();
 	dirty = true;
 }
 
-void Camera2D::setRotation(float radians) noexcept {
+void Camera::setRotation(float radians) noexcept {
 	if (rotationRad != radians) {
 		rotationRad = radians;
 		dirty = true;
 	}
 }
 
-void Camera2D::rotate(float radians) noexcept {
+void Camera::rotate(float radians) noexcept {
 	if (radians != 0.0f) {
 		rotationRad += radians;
 		dirty = true;
 	}
 }
 
-void Camera2D::setZoomLimits(float min, float max) noexcept {
+void Camera::setZoomLimits(float min, float max) noexcept {
 	minZoom = min;
 	maxZoom = max;
 	clampZoom();
 }
 
-void Camera2D::clearZoomLimits() noexcept {
+void Camera::clearZoomLimits() noexcept {
 	minZoom = 0.0f;
 	maxZoom = 0.0f;
 }
 
-void Camera2D::clampZoom() noexcept {
+void Camera::clampZoom() noexcept {
 	if (minZoom > 0.0f && zoomFactor < minZoom)
 		zoomFactor = minZoom;
 
@@ -77,7 +77,7 @@ void Camera2D::clampZoom() noexcept {
 		zoomFactor = 0.0001f;
 }
 
-void Camera2D::recompute() const noexcept {
+void Camera::recompute() const noexcept {
 	viewMatrix = glm::mat4(1.0f);
 	viewMatrix = glm::translate(viewMatrix, glm::vec3(-position, 0.0f));
 
@@ -92,18 +92,18 @@ void Camera2D::recompute() const noexcept {
 	dirty = false;
 }
 
-const glm::mat4& Camera2D::getViewMatrix() const noexcept {
+const glm::mat4& Camera::getViewMatrix() const noexcept {
 	if (dirty)
 		recompute();
 
 	return viewMatrix;
 }
 
-void Camera2D::applyToRenderer(Renderer& renderer) const {
+void Camera::applyToRenderer(Renderer& renderer) const {
 	renderer.setView(getViewMatrix());
 }
 
-glm::vec2 Camera2D::screenToWorld(const glm::vec2& screenPos, const glm::ivec2& renderSize) const noexcept {
+glm::vec2 Camera::screenToWorld(const glm::vec2& screenPos, const glm::ivec2& renderSize) const noexcept {
 	const float ndcX = (screenPos.x / static_cast<float>(renderSize.x)) * 2.0f - 1.0f;
 	const float ndcY = -(screenPos.y / static_cast<float>(renderSize.y)) * 2.0f + 1.0f;
 
@@ -122,7 +122,7 @@ glm::vec2 Camera2D::screenToWorld(const glm::vec2& screenPos, const glm::ivec2& 
 	return position + glm::vec2(worldOffsetX, worldOffsetY);
 }
 
-glm::vec2 Camera2D::worldToScreen(const glm::vec2& worldPos, const glm::ivec2& renderSize) const noexcept {
+glm::vec2 Camera::worldToScreen(const glm::vec2& worldPos, const glm::ivec2& renderSize) const noexcept {
 	const glm::vec2 delta = worldPos - position;
 
 	const float cosR = std::cos(-rotationRad);

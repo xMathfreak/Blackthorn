@@ -19,7 +19,7 @@ namespace Blackthorn::ECS::Serialization {
  * collection.
  */
 struct SnapshotEntity {
-	NetworkEntityId netId = INVALID_NET_ENTITY;
+	NetworkEntityID netID = INVALID_NET_ENTITY;
 	U64 componentMask = 0;
 
 	/// Byte offset into the source ByteBuffer at which this entity's
@@ -35,7 +35,7 @@ struct SnapshotEntity {
  * [U64  tick]
  * [U32  entityCount]
  * per entity:
- *   [U32  networkId]
+ *   [U32  networkID]
  *   [U64  componentMask]
  *   per set bit i in componentMask (low to high):
  *     [N bytes - fixed layout per ComponentSerializer<T> specialization]
@@ -75,7 +75,7 @@ public:
 	 * @brief Constructs a ComponentSnapshotWriter.
 	 * @param pool     The entity pool to snapshot.
 	 * @param registry The network entity registry used to look up each
-	 *                 entity's NetworkEntityId. Entities not present in
+	 *                 entity's NetworkEntityID. Entities not present in
 	 *                 the registry are silently skipped.
 	 * @param tick     The simulation tick this snapshot represents.
 	 */
@@ -116,15 +116,15 @@ public:
 			if (!pool.isValid(localEntity))
 				continue;
 
-			NetworkEntityId netId = netRegistry.toNetId(localEntity);
-			if (netId == INVALID_NET_ENTITY)
+			NetworkEntityID netID = netRegistry.toNetID(localEntity);
+			if (netID == INVALID_NET_ENTITY)
 				continue;
 
 			U64 writeMask = buildWriteMask(ed.componentMask, serializerReg);
 			if (writeMask == 0)
 				continue;
 
-			buf.writeU64(netId);
+			buf.writeU64(netID);
 			buf.writeU64(writeMask);
 			writeComponents(buf, localEntity, writeMask, serializerReg);
 
@@ -176,7 +176,7 @@ private:
  * @brief Reads a snapshot payload from a ByteBuffer.
  *
  * Iterates entity entries one at a time. The caller maps each
- * `NetworkEntityId` to a local entity and calls `applyComponents()` to
+ * `NetworkEntityID` to a local entity and calls `applyComponents()` to
  * write the received state into the pool.
  *
  * @code
@@ -185,7 +185,7 @@ private:
  *
  * SnapshotEntity entry;
  * while (reader.readNext(entry)) {
- *     Entity local = netIdMap.toLocal(entry.netId);
+ *     Entity local = netIDMap.toLocal(entry.netID);
  *     reader.applyComponents(entry, local, pool);
  * }
  * @endcode
@@ -215,14 +215,14 @@ public:
 	 * @brief Reads the next entity header into `out` and advances past its
 	 * component data.
 	 *
-	 * @param out Receives the netId, componentMask, and componentDataOffset.
+	 * @param out Receives the netID, componentMask, and componentDataOffset.
 	 * @return true if an entity was read, false if the snapshot is exhausted.
 	 */
 	bool readNext(SnapshotEntity& out) {
 		if (entitiesRead >= entityCount || buf.exhausted())
 			return false;
 
-		out.netId = buf.readU64();
+		out.netID = buf.readU64();
 		out.componentMask = buf.readU64();
 		out.componentDataOffset = buf.readPosition();
 
@@ -233,25 +233,25 @@ public:
 	}
 
 	/**
-	 * @brief Applies the component data from `entry` to `entity` in `pool`.
+	 * @brief Applies the component data from @p entry to @p entity in @p pool.
 	 *
 	 * Creates a scoped ByteBuffer view starting at
-	 * `entry.componentDataOffset` and deserializes each component in
-	 * mask order into the matching component arrays in `pool`. Components
+	 * @c entry.componentDataOffset and deserializes each component, in mask
+	 * order, into the corresponding component arrays in @p pool. Components
 	 * not present in the pool are skipped.
 	 *
-	 * Safe to call before the next `readNext()` - it reads from the stored
-	 * offset rather than the live cursor.
+	 * The component data is read from the stored offset rather than the live
+	 * buffer cursor, so this method is safe to call before the next readNext().
 	 *
-	 * Typical usage after `readNext()`:
+	 * Typical usage after readNext():
 	 * @code
-	 * Entity local = netRegistry.toLocal(entry.netId); // O(1) hot path
+	 * Entity local = netRegistry.toLocal(entry.netID); // O(1) hot path
 	 * if (local != INVALID_ENTITY)
 	 *     reader.applyComponents(entry, local, pool);
 	 * @endcode
 	 *
 	 * @param entry  Snapshot entry returned by readNext().
-	 * @param entity Local ECS entity resolved from entry.netId via
+	 * @param entity Local ECS entity resolved from entry.netID via
 	 *               NetworkEntityRegistry::toLocal().
 	 * @param pool   Entity pool that owns the component arrays.
 	 */
@@ -288,18 +288,18 @@ private:
 	U32 entitiesRead = 0;
 
 	/**
-	 * @brief Advances the buffer cursor past all component data for `mask`.
+	 * @brief Advances the buffer cursor past all component data for @p mask.
 	 *
-	 * For fixed-size components (`entry->fixedSize > 0`), the cursor is
-	 * advanced directly via `ByteBuffer::skip()` - O(1), no allocation.
+	 * For fixed-size components (@c entry->fixedSize > 0), the cursor is
+	 * advanced directly with ByteBuffer::skip() in O(1) time without allocation.
 	 *
-	 * For variable-length components (`entry->fixedSize == 0`, e.g. `Tag`
-	 * which contains a string), the data is deserialized into a discard
-	 * buffer constructed over the remaining bytes. This correctly advances
-	 * past the variable-length field by reading its length prefix.
+	 * For variable-length components (@c entry->fixedSize == 0), such as @c Tag
+	 * which contains a string, the data is deserialized into a discard buffer
+	 * backed by the remaining bytes. This correctly advances past the
+	 * variable-length field by reading its length prefix.
 	 *
-	 * Both paths leave the live cursor positioned immediately after the
-	 * component's wire data, ready for the next component or entity.
+	 * Both paths leave the cursor positioned immediately after the component's
+	 * wire data, ready to process the next component or entity.
 	 */
 	void skipComponents(U64 mask) {
 		const auto& registry = SerializerRegistry::instance();

@@ -12,19 +12,19 @@ namespace Blackthorn::Saves {
  * @brief File system storage backend for save documents.
  *
  * Writes each save as a single binary file. The file path for a given
- * @c SaveId is determined by a path resolver callable, which defaults to a
+ * @c SaveID is determined by a path resolver callable, which defaults to a
  * sensible layout but is fully overridable by the game developer:
  *
  * @par Default path layout
  * @code
- * {rootDir}/{worldId}/{playerId}/{uuid}.sav
+ * {rootDir}/{worldID}/{playerID}/{uuid}.sav
  * @endcode
- * If @c worldId or @c playerId are empty they are omitted from the path.
+ * If @c worldID or @c playerID are empty they are omitted from the path.
  * A save with neither becomes @c {rootDir}/{uuid}.sav.
  *
  * @par Custom path layout
  * @code
- * storage.setPathResolver([](const SaveId& id) {
+ * storage.setPathResolver([](const SaveID& id) {
  *		return std::filesystem::path("my_saves") / (id.slot == 0
  *			 ? id.id.toString() + ".sav"
  *			 : "slot_" + std::to_string(id.slot) + ".sav");
@@ -38,7 +38,7 @@ namespace Blackthorn::Saves {
  */
 class BLACKTHORN_API LocalFileSaveStorage final : public ISaveStorage {
 public:
-	using PathResolver = std::function<std::filesystem::path(const SaveId&)>;
+	using PathResolver = std::function<std::filesystem::path(const SaveID&)>;
 
 	/**
 	 * @brief Constructs the storage backend.
@@ -58,13 +58,13 @@ public:
 		PathResolver res = nullptr
 	);
 
-	SaveResult write(const SaveId& saveId, const IO::ByteBuffer& data) override;
+	SaveResult write(const SaveID& saveID, const IO::ByteBuffer& data) override;
 
-	SaveReadResult read(const SaveId& saveId) override;
+	SaveReadResult read(const SaveID& saveID) override;
 
-	SaveResult remove(const SaveId& saveId) override;
+	SaveResult remove(const SaveID& saveID) override;
 
-	bool exists(const SaveId& saveId) override;
+	bool exists(const SaveID& saveID) override;
 
 	std::vector<SaveMetadata> list(const SaveFilter& filter) override;
 
@@ -84,19 +84,19 @@ private:
 	PathResolver resolver;
 
 	/**
-	 * @brief Computes the full filesystem path for @p saveId using the
+	 * @brief Computes the full filesystem path for @p saveID using the
 	 * active resolver (or the default layout if none is set).
 	 */
-	std::filesystem::path resolvePath(const SaveId& saveId) const;
+	std::filesystem::path resolvePath(const SaveID& saveID) const;
 
 	/**
 	 * @brief Default path resolver. Returns:
 	 * @code
-	 * {rootDir}/{worldId}/{playerId}/{uuid}.{extension}
+	 * {rootDir}/{worldID}/{playerID}/{uuid}.{extension}
 	 * @endcode
-	 * with empty worldId/playerId segments omitted.
+	 * with empty worldID/playerID segments omitted.
 	 */
-	std::filesystem::path defaultPath(const SaveId& saveId) const;
+	std::filesystem::path defaultPath(const SaveID& saveID) const;
 
 	/**
 	 * @brief Writes @p data atomically to @p destination.

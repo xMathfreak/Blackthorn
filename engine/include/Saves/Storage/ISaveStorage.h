@@ -6,7 +6,7 @@
 #include "Core/Export.h"
 #include "IO/ByteBuffer.h"
 #include "Saves/SaveFilter.h"
-#include "Saves/SaveId.h"
+#include "Saves/SaveID.h"
 
 namespace Blackthorn::Saves {
 
@@ -63,7 +63,7 @@ struct BLACKTHORN_API SaveReadResult {
  *
  * @par Responsibilities
  * The storage backend is responsible only for reading and writing opaque
- * byte blobs keyed by @c SaveId. It knows nothing about the document
+ * byte blobs keyed by @c SaveID. It knows nothing about the document
  * format, encryption, or compression, those are handled by @c SaveDocument
  * before data reaches the backend.
  *
@@ -82,34 +82,34 @@ public:
 	virtual ~ISaveStorage() = default;
 
 	/**
-	 * @brief Writes the serialized document bytes for @p saveId to storage.
+	 * @brief Writes the serialized document bytes for @p saveID to storage.
 	 *
 	 * Overwrites any existing save with the same UUID.
 	 *
-	 * @param saveId  Identity of the save being written.
+	 * @param saveID  Identity of the save being written.
 	 * @param data    Fully serialized document bytes from @c SaveDocument::finalize().
 	 * @return @c SaveResult::success() on success, or @c ::failure() with reason.
 	 */
-	virtual SaveResult write(const SaveId& saveId, const IO::ByteBuffer& data) = 0;
+	virtual SaveResult write(const SaveID& saveID, const IO::ByteBuffer& data) = 0;
 
 	/**
-	 * @brief Reads the raw document bytes for @p saveId from storage.
+	 * @brief Reads the raw document bytes for @p saveID from storage.
 	 *
-	 * @param saveId Identity of the save to read.
+	 * @param saveID Identity of the save to read.
 	 * @return @c SaveReadResult containing the bytes on success.
 	 */
-	virtual SaveReadResult read(const SaveId& saveId) = 0;
+	virtual SaveReadResult read(const SaveID& saveID) = 0;
 
 	/**
-	 * @brief Removes the save identified by @p saveId from storage.
+	 * @brief Removes the save identified by @p saveID from storage.
 	 * No-op if the save does not exist.
 	 */
-	virtual SaveResult remove(const SaveId& saveId) = 0;
+	virtual SaveResult remove(const SaveID& saveID) = 0;
 
 	/**
-	 * @brief Returns true if a save with @p saveId exists in storage.
+	 * @brief Returns true if a save with @p saveID exists in storage.
 	 */
-	virtual bool exists(const SaveId& saveId) = 0;
+	virtual bool exists(const SaveID& saveID) = 0;
 
 	/**
 	 * @brief Lists saves matching @p filter.

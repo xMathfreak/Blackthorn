@@ -11,9 +11,7 @@ namespace Blackthorn::Core {
 /**
  * @brief Subset of SupportedSettingType that can be stored in a std::atomic.
  *
- * std::string is deliberately excluded - std::atomic<std::string> isn't a
- * thing, and a hot-path setting that's a string is unusual enough that it
- * should be cached by hand rather than forced through this primitive.
+ * Cache std::string by other means, std::atomic<std::string> does not exsit.
  */
 template <typename T>
 concept AtomicSettingType = std::same_as<T, bool> || std::integral<T> || std::floating_point<T>;
@@ -24,16 +22,16 @@ concept AtomicSettingType = std::same_as<T, bool> || std::integral<T> || std::fl
  * and string-normalization cost on every Settings::get<T>() call.
  *
  * @details
- * Construction is cheap and does not touch Settings at all - it only
- * stores the section/key/fallback. The actual sync with Settings happens
- * in attach(), which must be called once the settings file has been
- * loaded (Settings::loadFromFile() writes directly into its internal map
- * and does *not* fire onChange callbacks, so a CachedSetting attached
- * before the load would never observe values that came from the file).
- * In practice this means calling attach() from a Runtime/Engine
- * override of registerEngineCallbacks(), alongside other
- * Settings::onChange registrations - exactly where this class's own
- * instances do so.
+ * Construction is cheap and does not access @c Settings. It only stores
+ * the section, key and fallback value. The actual synchronization with
+ * @c Settings occurs in attach(), which must be called after the settings
+ * file has been loaded. Settings::loadFromFile() writes directly to its
+ * internal map and does not fire `onChange` callbacks, so a CachedSetting
+ * attached before the load would not observe values loaded from the file.
+ *
+ * In practice, attach should be called from a @c Runtime or @c Engine override
+ * of registerEngineCallbacks(), alongisde the other Settings::onChange registrations.
+ * This is also where the CachedSetting instances owned by those classes attach themselves.
  *
  * After attach(), get() is a single relaxed atomic load: no mutex, no
  * string allocation, no map lookup. Safe to call from any thread.
@@ -63,12 +61,13 @@ concept AtomicSettingType = std::same_as<T, bool> || std::integral<T> || std::fl
  * };
  * @endcode
  *
- * @note Settings::onChange has no matching "unregister" API, and the
- * registered callback captures `this`. CachedSetting is therefore
- * non-copyable and non-movable, and is only safe to use for values with
- * engine/process lifetime (e.g. a member of Engine/Runtime) that is
- * attach()'d exactly once - not something constructed and destroyed
- * per-frame, per-scene, or re-attached across a shutdown/re-init cycle.
+ * @note Settings::onChange has no matching unregister API, and the
+ * registered callback captures `this`. CachedSetting is therefore non-copyable
+ * and non-movable and is only safe to use for values with engine/process lifetime.
+ *
+ * A CachedSetting must attach() exactly once and must remain alive for
+ * as long as its callback may be infoked. It not be constructed and destroyed
+ * per-frame or per-scene, nor reattached across a shotdown/reinit cycle.
  */
 template <AtomicSettingType T>
 class CachedSetting {
@@ -87,21 +86,18 @@ public:
 
 	/**
 	 * @brief Performs the initial read from Settings and registers an
-	 * onChange callback that keeps the cache in sync from then on.
+	 * onChange callback that keeps the cache synchronized thereafter.
 	 *
-	 * Must be called once, after Settings::loadFromFile() has already run
-	 * (see class-level note). Calling it more than once on the same
-	 * instance registers a duplicate callback - not guarded against,
-	 * since it's intended to run exactly once during initialization.
+	 * Must be called exactly once, after Settings::loadFromFile() has
+	 * completed (see the class-level note). Calling attach() more than once
+	 * on the same instance registers an additional callback; this is
+	 * intentionally not guarded against because attach() is intended to be
+	 * called exactly once during initialization.
 	 */
 	void attach() {
 		value.store(Settings::instance().get<T>(section, key, fallback), std::memory_order_relaxed);
 
 		Settings::instance().onChange(section, key, [this](const std::string&) {
-			// Re-fetch through the typed getter rather than parsing the raw
-			// string ourselves - by the time onChange fires, Settings has
-			// already committed the new value, so this returns the same
-			// parsed/normalized result Settings::get<T>() would anywhere else.
 			value.store(Settings::instance().get<T>(this->section, this->key), std::memory_order_relaxed);
 		});
 	}

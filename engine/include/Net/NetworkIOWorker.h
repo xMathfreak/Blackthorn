@@ -33,8 +33,9 @@ namespace Connection {
  *
  * @c NetworkIOWorker owns @c udpSocket, @c tcpListenSocket, @c ioThread,
  * and the @c recvScratch buffer. It holds non-owning references to
- * @c PeerRegistry, @c ConnectionEventBus, and the shared @c inboundQueue
- * - all of which are owned by @c ConnectionManager and outlive the worker.
+ * @c PeerRegistry, @c ConnectionEventBus, and the
+ * shared @c inboundQueue, all of which are owned by @c ConnectionManager
+ * and outlive the worker.
  *
  * @par Thread safety
  *

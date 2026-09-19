@@ -19,13 +19,13 @@ namespace Blackthorn::Audio {
  * Attempts to subscribe to device notifications via the best available
  * mechanism at runtime:
  *
- * 1. **PipeWire** — if @c libpipewire-0.3 is available and the PipeWire
+ * 1. **PipeWire** - if @c libpipewire-0.3 is available and the PipeWire
  *    daemon is running, subscribes to @c PW_TYPE_INTERFACE_Node removal
  *    events for sink nodes.
- * 2. **PulseAudio** — if @c libpulse is available and the PulseAudio daemon
+ * 2. **PulseAudio** - if @c libpulse is available and the PulseAudio daemon
  *    is running (or if PipeWire is acting as a PulseAudio drop-in), subscribes
  *    to @c PA_SUBSCRIPTION_MASK_SINK events.
- * 3. **No-op** — if neither is available, the notifier starts successfully
+ * 3. **No-op** - if neither is available, the notifier starts successfully
  *    but fires no callbacks. The audio thread's @c ALC_CONNECTED polling
  *    acts as the sole detection mechanism.
  *

@@ -12,7 +12,7 @@ namespace Blackthorn::Audio {
  *        consumed by @c StreamingThread.
  *
  * @c StreamingJob is a lightweight value type that lives in the SPSC ring
- * queue without heap allocation. The @c decoder pointer is non-owning —
+ * queue without heap allocation. The @c decoder pointer is non-owning -
  * the decoder is owned by @c StreamingVoiceState, which is owned by the
  * @c Voice, which remains active until the audio thread processes the
  * corresponding @c StreamBufferReadyCommand. This guarantees the decoder

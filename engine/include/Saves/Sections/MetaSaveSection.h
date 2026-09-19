@@ -44,7 +44,7 @@ public:
 		, playtimeTicks(playTicks)
 	{}
 
-	U64 getId() const override { return saveHash(SECTION_NAME); }
+	U64 getID() const override { return saveHash(SECTION_NAME); }
 	std::string_view getName() const override { return SECTION_NAME; }
 	U32 getVersion() const override { return CURRENT_VERSION; }
 

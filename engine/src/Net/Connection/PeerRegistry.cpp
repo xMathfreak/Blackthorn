@@ -30,7 +30,7 @@ void PeerRegistry::reset() {
 	addressToPeerUDP.clear();
 }
 
-PeerId PeerRegistry::findPeer(const Transport::Address& address, bool tcp) const {
+PeerID PeerRegistry::findPeer(const Transport::Address& address, bool tcp) const {
 	if (tcp) {
 		auto it = addressToPeerTCP.find(address);
 		return it != addressToPeerTCP.end() ? it->second : INVALID_PEER_ID;
@@ -40,12 +40,12 @@ PeerId PeerRegistry::findPeer(const Transport::Address& address, bool tcp) const
 	}
 }
 
-PeerId PeerRegistry::findOrCreate(
+PeerID PeerRegistry::findOrCreate(
 	const Transport::Address& address,
 	bool tcp,
 	bool allowImplicitPeers
 ) {
-	PeerId id = findPeer(address, tcp);
+	PeerID id = findPeer(address, tcp);
 	if (id != INVALID_PEER_ID)
 		return id;
 
@@ -55,7 +55,7 @@ PeerId PeerRegistry::findOrCreate(
 	return allocateSlot(address, tcp);
 }
 
-PeerId PeerRegistry::allocateSlot(const Transport::Address& address, bool tcp) {
+PeerID PeerRegistry::allocateSlot(const Transport::Address& address, bool tcp) {
 	for (U32 i = 0; i < static_cast<U32>(peers.size()); ++i) {
 		if (peers[i].state != PeerState::Disconnected)
 			continue;
@@ -86,7 +86,7 @@ PeerId PeerRegistry::allocateSlot(const Transport::Address& address, bool tcp) {
 	return INVALID_PEER_ID;
 }
 
-void PeerRegistry::freeSlot(PeerId id) {
+void PeerRegistry::freeSlot(PeerID id) {
 	if (id >= peers.size())
 		return;
 
@@ -108,16 +108,16 @@ void PeerRegistry::freeSlot(PeerId id) {
 }
 
 bool PeerRegistry::sendUDP(
-	PeerId peerId,
+	PeerID peerID,
 	const IO::ByteBuffer& payload,
 	Transport::Sockets::UDPSocket& socket
 ) {
 	std::lock_guard<std::mutex> lock(peerMutex);
 
-	if (peerId >= peers.size())
+	if (peerID >= peers.size())
 		return false;
 
-	auto& peer = peers[peerId];
+	auto& peer = peers[peerID];
 	if (!peer.udpConnected)
 		return false;
 
@@ -129,13 +129,13 @@ bool PeerRegistry::sendUDP(
 	return result == Transport::Sockets::SocketResult::Ok;
 }
 
-bool PeerRegistry::sendTCP(PeerId peerId, const IO::ByteBuffer& payload) {
+bool PeerRegistry::sendTCP(PeerID peerID, const IO::ByteBuffer& payload) {
 	std::lock_guard<std::mutex> lock(peerMutex);
 
-	if (peerId >= peers.size())
+	if (peerID >= peers.size())
 		return false;
 
-	auto& peer = peers[peerId];
+	auto& peer = peers[peerID];
 	if (!peer.isConnected() || !peer.tcpSocket || !peer.tcpChannel)
 		return false;
 
@@ -175,14 +175,14 @@ void PeerRegistry::broadcastTCP(const IO::ByteBuffer& payload) {
 		ch->send(*sock, payload);
 }
 
-void PeerRegistry::setRateLimit(PeerId peerId, const RateLimitConfig& config) {
+void PeerRegistry::setRateLimit(PeerID peerID, const RateLimitConfig& config) {
 	std::lock_guard<std::mutex> lock(peerMutex);
 
-	if (peerId < peers.size())
-		peers[peerId].rateLimiter.cfg = config;
+	if (peerID < peers.size())
+		peers[peerID].rateLimiter.cfg = config;
 }
 
-const NetworkPeer* PeerRegistry::get(PeerId id) const {
+const NetworkPeer* PeerRegistry::get(PeerID id) const {
 	std::lock_guard<std::mutex> lock(peerMutex);
 
 	if (id >= peers.size())

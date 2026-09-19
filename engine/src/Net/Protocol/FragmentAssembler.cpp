@@ -11,15 +11,15 @@ std::optional<IO::ByteBuffer> FragmentAssembler::ingest(
 	if (hdr.totalFrags == 0 || hdr.fragIndex >= hdr.totalFrags) {
 		BT_WARN(
 			"FragmentAssembler: Malformed fragment header "
-			"(id={}, index={}, total={}) — dropped",
-			hdr.fragmentId, hdr.fragIndex, hdr.totalFrags
+			"(id={}, index={}, total={}); dropped",
+			hdr.fragmentID, hdr.fragIndex, hdr.totalFrags
 		);
 
 		return std::nullopt;
 	}
 
 	const size_t incomingBytes = payload.size();
-	FragmentSet* set = findSet(hdr.fragmentId);
+	FragmentSet* set = findSet(hdr.fragmentID);
 
 	if (!set) {
 		set = &allocateSet(hdr, incomingBytes);
@@ -28,8 +28,8 @@ std::optional<IO::ByteBuffer> FragmentAssembler::ingest(
 		if (set->totalFrags != hdr.totalFrags) {
 			BT_WARN(
 				"FragmentAssembler: Fragment count mismatch for id={} "
-				"(expected {}, got {}) — evicting set",
-				hdr.fragmentId, set->totalFrags, hdr.totalFrags
+				"(expected {}, got {}); evicting set",
+				hdr.fragmentID, set->totalFrags, hdr.totalFrags
 			);
 
 			releaseSet(*set);
@@ -71,7 +71,7 @@ void FragmentAssembler::evictExpired() {
 		if (slot->isExpired(EXPIRY_MS)) {
 			BT_DEBUG(
 				"FragmentAssembler: Evicting expired set id={}",
-				slot->fragmentId
+				slot->fragmentID
 			);
 
 			releaseSet(*slot);
@@ -90,9 +90,9 @@ void FragmentAssembler::reset() {
 	localBytes = 0;
 }
 
-FragmentSet* FragmentAssembler::findSet(U16 fragmentId) {
+FragmentSet* FragmentAssembler::findSet(U16 fragmentID) {
 	for (auto& slot : pool) {
-		if (slot.has_value() && slot->fragmentId == fragmentId)
+		if (slot.has_value() && slot->fragmentID == fragmentID)
 			return &slot.value();
 	}
 
@@ -117,7 +117,7 @@ FragmentSet& FragmentAssembler::allocateSet(
 	for (auto& slot : pool) {
 		if (!slot.has_value()) {
 			slot.emplace();
-			slot->fragmentId = hdr.fragmentId;
+			slot->fragmentID = hdr.fragmentID;
 			slot->totalFrags = hdr.totalFrags;
 			slot->receivedCount = 0;
 			slot->firstFragmentMs = SDL_GetTicks();
@@ -137,7 +137,7 @@ void FragmentAssembler::releaseSet(FragmentSet& set) {
 	globalBytes -= (bytes <= globalBytes) ? bytes : globalBytes;
 
 	for (auto& slot : pool) {
-		if (slot.has_value() && slot->fragmentId == set.fragmentId) {
+		if (slot.has_value() && slot->fragmentID == set.fragmentID) {
 			slot.reset();
 			return;
 		}
@@ -158,7 +158,7 @@ void FragmentAssembler::evictOldest() {
 	if (oldest && oldest->has_value()) {
 		BT_DEBUG(
 			"FragmentAssembler: Evicting oldest set id={}",
-			(*oldest)->fragmentId
+			(*oldest)->fragmentID
 		);
 
 		releaseSet(oldest->value());

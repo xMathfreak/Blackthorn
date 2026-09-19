@@ -44,9 +44,9 @@ class Renderer;
  * camera.setPosition(glm::mix(camera.getPosition(), target, dt * followSpeed));
  * @endcode
  */
-class BLACKTHORN_API Camera2D {
+class BLACKTHORN_API Camera {
 public:
-	Camera2D() = default;
+	Camera() = default;
 
 	/**
 	 * @brief Constructs a camera centered at @p position.
@@ -55,7 +55,7 @@ public:
 	 * @param zoom      Initial zoom factor (default 1.0).
 	 * @param rotation  Initial rotation in radians (default 0.0).
 	 */
-	explicit Camera2D(const glm::vec2& position, float zoom = 1.0f, float rotation = 0.0f);
+	explicit Camera(const glm::vec2& position, float zoom = 1.0f, float rotation = 0.0f);
 
 	/**
 	 * @brief Sets the world-space position of the camera centre.

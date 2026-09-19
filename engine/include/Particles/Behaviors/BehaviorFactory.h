@@ -48,7 +48,7 @@ public:
 
 	/**
 	 * @brief Registers factories for the engine's built-in behaviors
-	 * ("gravity", "drag", "wind"). Idempotent; call once during engine
+	 * ("gravity", "drag", "wind"). Call once during engine
 	 * startup before loading any ParticleEffect JSON.
 	 */
 	void registerBuiltins();

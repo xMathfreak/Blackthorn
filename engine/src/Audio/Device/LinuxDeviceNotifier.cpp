@@ -241,7 +241,7 @@ bool LinuxDeviceNotifier::tryStartPulseAudio() {
 		this
 	);
 
-	// State callback — subscribe once the context is ready.
+	// Subscribe once the context is ready.
 	impl->pa_context_set_state_callback(
 		impl->context,
 		[](pa_context* ctx, void* ud) {

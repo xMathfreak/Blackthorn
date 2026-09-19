@@ -72,19 +72,19 @@ struct StreamingVoiceState {
 	void init();
 
 	[[nodiscard]]
-	U64 lookupBufferFrames(ALuint bufferId) const noexcept {
+	U64 lookupBufferFrames(ALuint bufferID) const noexcept {
 		for (const auto& [id, count] : bufferFrameCounts) {
-			if (id == bufferId)
+			if (id == bufferID)
 				return count;
 		}
 
 		return 0;
 	}
 
-	void recordBufferFrames(ALuint bufferId, U64 frames) noexcept {
+	void recordBufferFrames(ALuint bufferID, U64 frames) noexcept {
 		for (auto& [id, count] : bufferFrameCounts) {
-			if (id == bufferId || id == 0) {
-				id = bufferId;
+			if (id == bufferID || id == 0) {
+				id = bufferID;
 				count = frames;
 				return;
 			}

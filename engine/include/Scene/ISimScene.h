@@ -36,10 +36,10 @@ class SceneManager;
  *     MyServerScene() = default;
  * };
  * @endcode
+ *
  * The simulation context is injected automatically by `SceneManager`
- * immediately before `init()` is called - see `SceneManager::pushScene()`
- * and `SceneManager::changeScene()`. Game code never calls `setContext()`
- * directly - it is private and only `SceneManager` is a friend.
+ * immediately before `init()` is called. Game code never calls `setContext()`
+ * directly.
  *
  * @par Accessing engine services
  * Common services are available directly as short forwarding methods (e.g.
@@ -54,7 +54,6 @@ protected:
 	std::unique_ptr<ECS::World> world;
 
 	// Injected automatically by SceneManager via setContext() before init().
-	// Never null once init() runs - see setContext().
 	ISimContext* context = nullptr;
 
 public:

@@ -121,8 +121,7 @@ Shader::~Shader() {
 }
 
 bool Shader::compileFromSource(const std::string& vertexSource, const std::string& fragmentSource) {
-	// Allow re-compiling an existing instance: drop the old program and any
-	// uniform locations cached against it before building the new one.
+	// Allow re-compiling an existing instance.
 	destroy();
 	uniformCache.clear();
 
@@ -135,9 +134,6 @@ bool Shader::compileFromSource(const std::string& vertexSource, const std::strin
 
 		linkProgram(vertexShader, fragmentShader);
 	} catch (const std::exception& e) {
-		// compileShader() already deletes its own shader object internally
-		// when it throws, but a stage that succeeded before a later stage
-		// failed would otherwise leak - clean up whatever we're still holding.
 		if (vertexShader != 0)
 			glDeleteShader(vertexShader);
 

@@ -3,7 +3,7 @@
 #include <string>
 
 #include "Core/Export.h"
-#include "Saves/SaveEntityId.h"
+#include "Saves/SaveEntityID.h"
 
 namespace Blackthorn::ECS::Components {
 
@@ -15,7 +15,7 @@ namespace Blackthorn::ECS::Components {
  * section when writing a save and reconstruct it on load.
  *
  * @par Save identity
- * @c saveId is assigned by @c SaveEntityRegistry::assign() the first time a
+ * @c saveID is assigned by @c SaveEntityRegistry::assign() the first time a
  * persistent entity is registered with the save system. It is @c INVALID_SAVE_ENTITY
  * until then. Do not set it manually.
  *
@@ -36,7 +36,7 @@ struct BLACKTHORN_API Persistent {
 	std::string name;
 
 	/// Save-scoped identity. Assigned by SaveEntityRegistry. Do not set manually.
-	Saves::SaveEntityId saveId = Saves::INVALID_SAVE_ENTITY;
+	Saves::SaveEntityID saveID = Saves::INVALID_SAVE_ENTITY;
 
 	/// Hashed form of name, computed on first registration. Stored on disk.
 	U64 nameHash = 0;

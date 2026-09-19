@@ -163,12 +163,12 @@ void NetworkIOWorker::pollUDP() {
 		fragHdr.deserialize(datagram);
 
 		if (fragHdr.isFragmented() && fragHdr.totalFrags == 0) {
-			BT_WARN("NetworkIOWorker: Malformed fragment header - dropped");
+			BT_WARN("NetworkIOWorker: Malformed fragment header, dropped");
 			continue;
 		}
 
-		Connection::PeerId peerId = Connection::INVALID_PEER_ID;
-		Connection::PeerId kickedId = Connection::INVALID_PEER_ID;
+		Connection::PeerID peerID = Connection::INVALID_PEER_ID;
+		Connection::PeerID kickedID = Connection::INVALID_PEER_ID;
 		bool newUDPPeer = false;
 		bool rateDropped = false;
 
@@ -176,13 +176,13 @@ void NetworkIOWorker::pollUDP() {
 
 		{
 			std::lock_guard<std::mutex> lock(registry->mutex());
-			peerId = registry->findOrCreate(
+			peerID = registry->findOrCreate(
 				srcAddress, false, cfg.allowUDPImplicitPeers);
 
-			if (peerId == Connection::INVALID_PEER_ID)
+			if (peerID == Connection::INVALID_PEER_ID)
 				continue;
 
-			auto& peer = registry->peerList()[peerId];
+			auto& peer = registry->peerList()[peerID];
 
 			if (peer.state == Connection::PeerState::Connecting
 				&& !peer.tcpSocket)
@@ -191,7 +191,7 @@ void NetworkIOWorker::pollUDP() {
 				peer.negotiatedSchemaVersion = Protocol::CURRENT_SCHEMA_VERSION;
 				newUDPPeer = true;
 				BT_DEBUG("NetworkIOWorker: UDP peer {} connected from {}",
-					peerId, srcAddress.toString());
+					peerID, srcAddress.toString());
 			}
 
 			const Connection::RateLimitStage rl =
@@ -201,7 +201,7 @@ void NetworkIOWorker::pollUDP() {
 				case Connection::RateLimitStage::Disconnect:
 					BT_WARN(
 						"NetworkIOWorker: Peer {} force-disconnected (UDP rate "
-						"abuse) - peak {:.0f} pkts/s, {:.0f} KB/s, "
+						"abuse); peak {:.0f} pkts/s, {:.0f} KB/s, "
 						"sustained {}ms",
 						peer.id,
 						peer.rateLimiter.peakPacketRate,
@@ -218,14 +218,14 @@ void NetworkIOWorker::pollUDP() {
 					registry->tcpMap().erase(peer.tcpAddress);
 					registry->udpMap().erase(peer.udpAddress);
 
-					kickedId = peerId;
+					kickedID = peerID;
 					newUDPPeer = false;
 					break;
 
 				case Connection::RateLimitStage::Warn:
 					if (peer.rateLimiter.shouldWarn())
 						BT_WARN(
-							"NetworkIOWorker: Peer {} UDP rate limit - "
+							"NetworkIOWorker: Peer {} UDP rate limit: "
 							"{:.0f} pkts/s, {:.0f} KB/s (dropping)",
 							peer.id,
 							peer.rateLimiter.peakPacketRate,
@@ -261,10 +261,10 @@ void NetworkIOWorker::pollUDP() {
 		}
 
 		if (newUDPPeer)
-			eventBus->push({ ConnectionEventType::Connect, peerId, srcAddress });
+			eventBus->push({ ConnectionEventType::Connect, peerID, srcAddress });
 
-		if (kickedId != Connection::INVALID_PEER_ID) {
-			eventBus->push({ ConnectionEventType::Disconnect, kickedId, {} });
+		if (kickedID != Connection::INVALID_PEER_ID) {
+			eventBus->push({ ConnectionEventType::Disconnect, kickedID, {} });
 			continue;
 		}
 
@@ -279,11 +279,11 @@ void NetworkIOWorker::pollUDP() {
 			pkt.source = srcAddress;
 			pkt.data = std::move(*reassembled);
 			pkt.channel = Transport::InboundPacket::Channel::UDP;
-			pkt.peerId = peerId;
+			pkt.peerID = peerID;
 
 			if (!inboundQueue->push(std::move(pkt)))
 				BT_WARN(
-					"NetworkIOWorker: Inbound queue full - reassembled UDP packet dropped"
+					"NetworkIOWorker: Inbound queue full, reassembled UDP packet dropped"
 				);
 
 			continue;
@@ -298,10 +298,10 @@ void NetworkIOWorker::pollUDP() {
 		pkt.source = srcAddress;
 		pkt.data = std::move(payload);
 		pkt.channel = Transport::InboundPacket::Channel::UDP;
-		pkt.peerId = peerId;
+		pkt.peerID = peerID;
 
 		if (!inboundQueue->push(std::move(pkt)))
-			BT_WARN("NetworkIOWorker: Inbound queue full - UDP packet dropped");
+			BT_WARN("NetworkIOWorker: Inbound queue full, UDP packet dropped");
 	}
 }
 
@@ -314,15 +314,15 @@ void NetworkIOWorker::pollTCPAccept() {
 	if (!clientSocket)
 		return;
 
-	Connection::PeerId peerId = Connection::INVALID_PEER_ID;
+	Connection::PeerID peerID = Connection::INVALID_PEER_ID;
 
 	{
 		std::lock_guard<std::mutex> lock(registry->mutex());
-		peerId = registry->allocateSlot(clientAddr, true);
+		peerID = registry->allocateSlot(clientAddr, true);
 
-		if (peerId == Connection::INVALID_PEER_ID) {
+		if (peerID == Connection::INVALID_PEER_ID) {
 			BT_WARN(
-				"NetworkIOWorker: TCP connection from {} rejected - no free slots",
+				"NetworkIOWorker: TCP connection from {} rejected: no free slots",
 				clientAddr.toString()
 			);
 
@@ -330,22 +330,22 @@ void NetworkIOWorker::pollTCPAccept() {
 			return;
 		}
 
-		auto& peer = registry->peerList()[peerId];
+		auto& peer = registry->peerList()[peerID];
 		peer.tcpSocket = std::move(clientSocket);
 		peer.tcpChannel = std::make_unique<Transport::Channels::TCPChannel>();
 		peer.markAlive();
 	}
 
 	BT_DEBUG(
-		"NetworkIOWorker: TCP accepted from {} (peerId {})",
-		clientAddr.toString(), peerId
+		"NetworkIOWorker: TCP accepted from {} (peerID {})",
+		clientAddr.toString(), peerID
 	);
 }
 
 void NetworkIOWorker::pollTCP() {
 	struct DeferredEvent {
 		ConnectionEventType type;
-		Connection::PeerId peerId;
+		Connection::PeerID peerID;
 		Transport::Address address;
 	};
 
@@ -394,7 +394,7 @@ void NetworkIOWorker::pollTCP() {
 
 				if (rr == Transport::Channels::ReceiveResult::FatalError) {
 					BT_WARN(
-						"NetworkIOWorker: Peer {} TCP framing error - disconnecting",
+						"NetworkIOWorker: Peer {} TCP framing error, disconnecting",
 						peer.id
 					);
 
@@ -429,7 +429,7 @@ void NetworkIOWorker::pollTCP() {
 							if (clientVersion != Protocol::CURRENT_SCHEMA_VERSION) {
 								BT_WARN(
 									"NetworkIOWorker: Peer {} schema mismatch "
-									"(client v{}, server v{}) - disconnecting",
+									"(client v{}, server v{}), disconnecting",
 									peer.id, clientVersion,
 									Protocol::CURRENT_SCHEMA_VERSION
 								);
@@ -553,7 +553,7 @@ void NetworkIOWorker::pollTCP() {
 						if (rl == Connection::RateLimitStage::Disconnect) {
 							BT_WARN(
 								"NetworkIOWorker: Peer {} force-disconnected "
-								"(TCP rate abuse) - peak {:.0f} pkts/s, "
+								"(TCP rate abuse); peak {:.0f} pkts/s, "
 								"{:.0f} KB/s, sustained {}ms",
 								peer.id,
 								peer.rateLimiter.peakPacketRate,
@@ -580,7 +580,7 @@ void NetworkIOWorker::pollTCP() {
 						if (rl == Connection::RateLimitStage::Warn) {
 							if (peer.rateLimiter.shouldWarn())
 								BT_WARN(
-									"NetworkIOWorker: Peer {} TCP rate limit - "
+									"NetworkIOWorker: Peer {} TCP rate limit: "
 									"{:.0f} pkts/s, {:.0f} KB/s (dropping)",
 									peer.id,
 									peer.rateLimiter.peakPacketRate,
@@ -597,10 +597,10 @@ void NetworkIOWorker::pollTCP() {
 						pkt.source = peer.tcpAddress;
 						pkt.data = IO::ByteBuffer(msg.data(), msg.size());
 						pkt.channel = Transport::InboundPacket::Channel::TCP;
-						pkt.peerId = peer.id;
+						pkt.peerID = peer.id;
 
 						if (!inboundQueue->push(std::move(pkt)))
-							BT_WARN("NetworkIOWorker: Inbound queue full - "
+							BT_WARN("NetworkIOWorker: Inbound queue full, "
 								"TCP packet dropped");
 
 						break;
@@ -611,7 +611,7 @@ void NetworkIOWorker::pollTCP() {
 	}
 
 	for (const auto& d : deferred)
-		eventBus->push({ d.type, d.peerId, d.address });
+		eventBus->push({ d.type, d.peerID, d.address });
 }
 
 void NetworkIOWorker::sendHeartbeats() {

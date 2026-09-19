@@ -142,7 +142,7 @@ bool Engine::init(const EngineConfig& cfg) {
 
 		particleRenderer = std::make_unique<Particles::ParticleRenderer>();
 	} catch (const std::exception& e) {
-		BT_ERROR("Renderer: Failed to initialize - {}", e.what());
+		BT_ERROR("Renderer: Failed to initialize: {}", e.what());
 		cleanupGraphics();
 		Runtime::shutdown();
 		return false;
@@ -177,12 +177,12 @@ bool Engine::init(const EngineConfig& cfg) {
 
 void Engine::initGraphics(const EngineConfig& cfg) {
 	if (!SDL_InitSubSystem(SDL_INIT_VIDEO | SDL_INIT_AUDIO)) {
-		BT_ERROR("SDL: Failed to initialize video or audio subsystem(s) - {}", SDL_GetError());
+		BT_ERROR("SDL: Failed to initialize video or audio subsystem(s): {}", SDL_GetError());
 		return;
 	}
 
 	if (!TTF_Init()) {
-		BT_ERROR("SDL_ttf: Failed to initialize font subsystem - {}", SDL_GetError());
+		BT_ERROR("SDL_ttf: Failed to initialize font subsystem: {}", SDL_GetError());
 		return;
 	}
 
@@ -210,7 +210,7 @@ void Engine::initGraphics(const EngineConfig& cfg) {
 	);
 
 	if (!window) {
-		BT_ERROR("Window: Failed to create SDL window - {}", SDL_GetError());
+		BT_ERROR("Window: Failed to create SDL window: {}", SDL_GetError());
 		return;
 	}
 
@@ -220,12 +220,12 @@ void Engine::initGraphics(const EngineConfig& cfg) {
 
 	glContext = SDL_GL_CreateContext(window);
 	if (!glContext) {
-		BT_ERROR("Renderer (OpenGL): Failed to create GL context - {}", SDL_GetError());
+		BT_ERROR("Renderer (OpenGL): Failed to create GL context: {}", SDL_GetError());
 		return;
 	}
 
 	if (!SDL_GL_MakeCurrent(window, glContext)) {
-		BT_ERROR("Renderer (OpenGL): Failed to make context current - {}", SDL_GetError());
+		BT_ERROR("Renderer (OpenGL): Failed to make context current: {}", SDL_GetError());
 		return;
 	}
 

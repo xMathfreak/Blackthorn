@@ -27,7 +27,7 @@ struct BLACKTHORN_API InboundPacket {
 	enum class Channel : U8 { UDP, TCP } channel = Channel::UDP;
 
 	/// The peer that sent this packet, or INVALID_PEER_ID if unknown.
-	Connection::PeerId peerId = Connection::INVALID_PEER_ID;
+	Connection::PeerID peerID = Connection::INVALID_PEER_ID;
 };
 
 /**
