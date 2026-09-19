@@ -1,4 +1,5 @@
 #include "Core/Settings.h"
+#include "Debug/Logger.h"
 
 #include <fstream>
 
@@ -15,6 +16,7 @@ bool Settings::loadFromFile(const std::filesystem::path& path) {
 	groupedValues.clear();
 	sectionOrder.clear();
 	dirty = false;
+	timeSinceDirty = 0.0f;
 
 	std::ifstream file(path);
 	if (!file.is_open())
@@ -91,7 +93,15 @@ bool Settings::saveToFile(const std::filesystem::path& path) {
 	}
 
 	dirty = false;
+	timeSinceDirty = 0.0f;
 	return true;
+}
+
+void Settings::update(float dt) {
+	if (!dirty)
+		return;
+
+	timeSinceDirty += dt;
 }
 
 void Settings::onChange(const std::string& section, const std::string& key, std::function<void(const std::string&)> callback) {
@@ -108,6 +118,7 @@ bool Settings::isDirty() const {
 void Settings::markClean() {
 	std::lock_guard lock(mutex);
 	dirty = false;
+	timeSinceDirty = 0.0f;
 }
 
 bool Settings::hasSection(const std::string& section) const {
@@ -157,6 +168,7 @@ void Settings::clear() {
 	sectionOrder.clear();
 	changeCallbacks.clear();
 	dirty = false;
+	timeSinceDirty = 0.0f;
 }
 
 } // namespace Blackthorn::Core

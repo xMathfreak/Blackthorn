@@ -214,6 +214,12 @@ public:
 	/** Resets the dirty flag without saving */
 	void markClean();
 
+	void update(float dt);
+
+	bool isSaveTimerElapsed() const {
+		return (timeSinceDirty >= saveDelay);
+	}
+
 private:
 	Settings() = default;
 
@@ -231,6 +237,8 @@ private:
 	std::vector<std::string> sectionOrder;
 	mutable std::recursive_mutex mutex;
 	bool dirty = false;
+	float timeSinceDirty = 0.0f;
+	float saveDelay = 1.0f;
 
 	void writeRaw(const std::string& sec, const std::string& k, const std::string& rawValue) {
 		bool changed = false;

@@ -525,7 +525,6 @@ void Engine::processEvents() {
 					if (!(SDL_GetWindowFlags(window) & SDL_WINDOW_MAXIMIZED)) {
 						settings.set<int>("window", "width", pw);
 						settings.set<int>("window", "height", ph);
-						settings.saveToFile(config.settingsFilePath);
 					}
 				}
 				break;
@@ -548,7 +547,6 @@ void Engine::processEvents() {
 
 			case SDL_EVENT_WINDOW_MAXIMIZED:
 				settings.set<bool>("window", "maximized", true);
-				settings.saveToFile(config.settingsFilePath);
 				windowMinimized = false;
 				break;
 
@@ -558,7 +556,6 @@ void Engine::processEvents() {
 
 			case SDL_EVENT_WINDOW_RESTORED:
 				settings.set<bool>("window", "maximized", false);
-				settings.saveToFile(config.settingsFilePath);
 				windowMinimized = false;
 				break;
 
@@ -568,7 +565,6 @@ void Engine::processEvents() {
 					SDL_GetWindowPosition(window, &x, &y);
 					settings.set("window", "pos_x", x);
 					settings.set("window", "pos_y", y);
-					settings.saveToFile(config.settingsFilePath);
 				}
 				break;
 			}

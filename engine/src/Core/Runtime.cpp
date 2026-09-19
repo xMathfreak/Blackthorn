@@ -290,6 +290,12 @@ void Runtime::fixedUpdate(float dt) {
 }
 
 void Runtime::update(float dt) {
+	auto& settings = Core::Settings::instance();
+	settings.update(dt);
+
+	if (settings.isSaveTimerElapsed())
+		settings.saveToFile(config.settingsFilePath);
+
 	assetManager->flushPendingUploads();
 	connectionManager->poll(jobSystem.get());
 	sceneManager->update(dt);
