@@ -22,7 +22,7 @@ if(BLACKTHORN_BUILD_ASSET_PACKER)
 	add_subdirectory(btpacker)
 endif()
 
-if(BLACKTHORN_BUILD_ASSET_PACKER)
+if(BLACKTHORN_BUILD_FONT_PACKER)
 	add_subdirectory(btfpacker)
 endif()
 
