@@ -26,6 +26,9 @@ std::string ManifestGenerator::classifyExtension(const std::string& ext) {
 	static const std::set<std::string> spriteClips = {
 		".btclip"
 	};
+	static const std::set<std::string> effects = {
+		".btfx"
+	};
 
 	if (textures.count(ext))
 		return "Texture";
@@ -41,6 +44,9 @@ std::string ManifestGenerator::classifyExtension(const std::string& ext) {
 
 	if (spriteClips.count(ext))
 		return "SpriteClip";
+
+	if (effects.count(ext))
+		return "ParticleEffect";
 
 	return "Raw";
 }
@@ -220,7 +226,13 @@ bool ManifestGenerator::writeManifest(
 		: opts.btpOutput.generic_string();
 
 	const std::vector<std::string> typeOrder = {
-		"Texture", "Shader", "Audio", "Font", "SpriteClip", "Raw"
+		"Texture",
+		"Shader",
+		"Audio",
+		"Font",
+		"SpriteClip",
+		"ParticleEffect",
+		"Raw"
 	};
 
 	std::map<std::string, std::vector<const ManifestAsset*>> byType;

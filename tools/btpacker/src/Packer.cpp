@@ -156,6 +156,8 @@ PackAssetType resolveAssetType(const std::string& typeStr) {
 		return PackAssetType::Font;
 	if (lower == "spriteclip")
 		return PackAssetType::SpriteClip;
+	if (lower == "particleeffect")
+		return PackAssetType::ParticleEffect;
 	if (lower == "raw")
 		return PackAssetType::Raw;
 
@@ -175,6 +177,8 @@ const char* assetTypeName(PackAssetType t) {
 			return "Font";
 		case PackAssetType::SpriteClip:
 			return "SpriteClip";
+		case PackAssetType::ParticleEffect:
+			return "ParticleEffect";
 		case PackAssetType::Raw:
 			return "Raw";
 		default:
@@ -691,7 +695,7 @@ bool Packer::list(const std::filesystem::path& btpPath, std::ostream& log) {
 
 	log << std::left
 		<< std::setw(20) << "asset ID (hex)"
-		<< std::setw(10) << "type"
+		<< std::setw(16) << "type"
 		<< std::setw(8)  << "codec"
 		<< std::setw(14) << "raw (B)"
 		<< std::setw(14) << "packed (B)"
@@ -704,7 +708,7 @@ bool Packer::list(const std::filesystem::path& btpPath, std::ostream& log) {
 
 		log << std::left << std::setfill(' ')
 			<< std::setw(20) << idHex.str()
-			<< std::setw(10) << assetTypeName(entry.assetType)
+			<< std::setw(16) << assetTypeName(entry.assetType)
 			<< std::setw(8)  << compressionName(entry.compression)
 			<< std::setw(14) << entry.uncompressedSize
 			<< std::setw(14) << entry.compressedSize;

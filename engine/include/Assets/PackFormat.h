@@ -33,6 +33,7 @@ enum class PackAssetType : uint8_t {
 	Shader = 3,
 	Font = 4,
 	SpriteClip = 5,
+	ParticleEffect = 6,
 	Raw = 255,
 };
 
