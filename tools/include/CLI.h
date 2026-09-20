@@ -28,6 +28,11 @@
  *     std::cerr << result.error().message << '\n';
  *     return 2;
  * }
+ * if (result->usageRequested()) {
+ *     // No arguments were given at all.
+ *     std::cout << app.usage();
+ *     return 0;
+ * }
  * if (result->helpRequested()) {
  *     std::cout << app.help();
  *     return 0;
@@ -379,6 +384,15 @@ public:
 	/// @brief A repeatable named positional's collected values.
 	const std::vector<std::string>& positional_all(std::string_view name) const;
 
+	/// @brief True if this command level received zero arguments, e.g. the
+	/// tool was invoked with none at all, or a subcommand was selected and
+	/// then given nothing further. Distinct from helpRequested(): this means
+	/// "show usage()", not "-h/--help was explicitly given". Every option's/
+	/// positional's required() check is skipped at a command level where
+	/// this is true.
+	/// @see helpRequested()
+	bool usageRequested() const;
+
 	/// @brief True if -h/--help was seen at this command level.
 	bool helpRequested() const;
 
@@ -408,6 +422,7 @@ private:
 	std::vector<std::string> positionalTokens_;
 	std::set<std::string> specifiedOptions_;
 	bool helpRequested_ = false;
+	bool usageRequested_ = false;
 	std::string helpTopic_;
 	std::unique_ptr<ParseResult> subResult_;
 };
@@ -450,7 +465,16 @@ public:
 	 */
 	Command& command(std::string name, std::string description = {});
 
-	/// @brief Parses argv (argv[0], the program path, is skipped automatically).
+	/**
+	 * @brief Parses argv (argv[0] is skipped automatically).
+	 *
+	 * @note If this command level receives zero arguments (either no
+	 * arguments at all, or a subcommand selected and then given nothing
+	 * further), parsing succeeds immediately with usageRequested() == true
+	 * on the returned ParseResult, instead of failing on missing required
+	 * options/positionals/subcommands. Every Command behaves this way; see
+	 * ParseResult::usageRequested().
+	 */
 	Result<ParseResult> parse(int argc, char** argv) const;
 
 	/// @brief Full help text for this command: usage, options, positionals,
@@ -461,8 +485,10 @@ public:
 	/// Useful for short error messages that shouldn't dump the full listing.
 	std::string usage() const;
 
-	/// @brief Detailed help text for exactly one option or positional by name.
-	/// Returns a "no such option" message rather than throwing if not found.
+	/// @brief Detailed help text for exactly one option, positional, or
+	/// subcommand by name. A subcommand match returns that subcommand's own
+	/// full help() text. Returns a "no such option" message rather than
+	/// throwing if not found.
 	std::string help(std::string_view name) const;
 
 private:

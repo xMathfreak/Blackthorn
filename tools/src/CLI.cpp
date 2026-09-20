@@ -177,6 +177,10 @@ const std::vector<std::string>& ParseResult::positional_all(std::string_view nam
 	return it->second;
 }
 
+bool ParseResult::usageRequested() const {
+	return usageRequested_;
+}
+
 bool ParseResult::helpRequested() const {
 	return helpRequested_;
 }
@@ -382,6 +386,12 @@ Result<ParseResult> Command::parseArgs(std::span<const std::string_view> args) c
 		}
 	}
 
+	// Treat empty invocation as request to show usage() rather than ParseError
+	if (args.empty()) {
+		result.usageRequested_ = true;
+		return result;
+	}
+
 	for (size_t i = 0; i < args.size(); ++i) {
 		const std::string_view arg = args[i];
 
@@ -566,6 +576,7 @@ Result<ParseResult> Command::parseArgs(std::span<const std::string_view> args) c
 				return subResult.error();
 
 			result.helpRequested_ = subResult->helpRequested();
+			result.usageRequested_ = subResult->usageRequested();
 			result.subResult_ = std::make_unique<ParseResult>(std::move(*subResult));
 			break;
 		}
@@ -747,6 +758,11 @@ std::string Command::usage() const {
 		}
 	}
 
+	for (const auto& opt : options_) {
+		if (opt.required)
+			out += " --" + opt.longName + " <" + opt.metaVar + ">";
+	}
+
 	out += "\n";
 	return out;
 }
@@ -827,7 +843,10 @@ std::string Command::help(std::string_view name) const {
 		}
 	}
 
-	return "no such option or positional: '" + std::string(name) + "'";
+	if (const Command* child = findSubcommand(name))
+		return child->help();
+
+	return "no such option, positional, or subcommand: '" + std::string(name) + "'";
 }
 
 } // namespace Blackthorn::Tools

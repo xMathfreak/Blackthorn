@@ -407,7 +407,7 @@ int main(int argc, char** argv) {
 	app.option("verbose", 'v').flag().help("Show verbose output.");
 	app.option("version").flag().help("Display version information.");
 	app.option("dry-run").flag().help("Validate and parse, but do not write output.");
-	app.option("output", 'o').value<std::string>().help("Output BTF file.");
+	app.option("output", 'o').value<std::string>().help("Output BTF file.").required();
 	app.option("baseline").value<float>().help("Override baseline.");
 	app.option("line-height").value<float>().help("Override line height.");
 	app.option("space-width").value<float>().help("Override space width.");
@@ -419,6 +419,11 @@ int main(int argc, char** argv) {
 	if (!result) {
 		std::cerr << term::colorize("btfpacker: error: ", term::Color::Red, stderr) << result.error().message << '\n';
 		return ExitCodes::BadArgs;
+	}
+
+	if (result->usageRequested()) {
+		std::cout << app.usage();
+		return ExitCodes::Ok;
 	}
 
 	if (result->helpRequested()) {
