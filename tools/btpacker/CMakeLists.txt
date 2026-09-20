@@ -34,6 +34,7 @@ target_include_directories(btpacker
 
 target_link_libraries(btpacker
 	PRIVATE
+		BlackthornCLI
 		libzstd_static
 )
 
