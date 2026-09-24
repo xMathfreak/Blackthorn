@@ -18,19 +18,19 @@ namespace {
 
 /// @brief Supplementary help content with no equivalent in the option/
 /// positional schema, printed after the auto-generated top-level help.
-constexpr const char* kSupplementaryHelp =
-	"Asset ID derivation (generate-manifest):\n"
+inline std::string kSupplementaryHelp =
+	term::colorize("Asset ID derivation (generate-manifest):\n", term::Color::Yellow) +
 	"  IDs are derived from each file's path relative to the scanned root.\n"
 	"  Path separators, spaces, and hyphens become underscores; the extension\n"
 	"  is stripped; all characters are lowercased; other non-alphanumeric\n"
 	"  characters are dropped.\n"
-	"\n"
-	"  Examples:\n"
+	"\n" +
+	term::colorize("  Examples:\n", term::Color::Yellow) +
 	"    assets/shaders/default.vert  ->  shaders_default_vert\n"
 	"    assets/fonts/Bebas Neue.ttf  ->  fonts_bebas_neue\n"
 	"    assets/sound.ogg             ->  sound\n"
-	"\n"
-	"Command examples:\n"
+	"\n" +
+	term::colorize("Command examples:\n", term::Color::Yellow) +
 	"  btpacker generate-manifest --assets assets/ --output data/base.btp --manifest data/base.pack.json\n"
 	"  btpacker generate-manifest --assets assets/ --output data/base.btp --manifest data/base.pack.json --exclude video --exclude tmp\n"
 	"  btpacker pack         --manifest data/base.pack.json\n"

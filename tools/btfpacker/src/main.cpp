@@ -431,7 +431,7 @@ int main(int argc, char** argv) {
 			std::cout << app.help(*topic);
 		} else {
 			std::cout << app.help();
-			std::cout << "\nMetrics Format:\n";
+			std::cout << term::colorize("\nMetrics Format:\n", term::Color::Yellow);
 			std::cout << "  common lineHeight=N [baseline=N]\n";
 			std::cout << "  char id=N x=N y=N width=N height=N xoffset=N yoffset=N xadvance=N\n";
 		}

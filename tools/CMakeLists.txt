@@ -1,5 +1,6 @@
 option(BLACKTHORN_BUILD_ASSET_PACKER "Build Asset Packer" ON)
 option(BLACKTHORN_BUILD_FONT_PACKER "Build Font Packer" ON)
+option(BLACKTHORN_BUILD_LOC_COMPILER "Build Localization Compiler" ON)
 
 add_library(BlackthornCLI STATIC
 	include/CLI.h
@@ -24,6 +25,10 @@ endif()
 
 if(BLACKTHORN_BUILD_FONT_PACKER)
 	add_subdirectory(btfpacker)
+endif()
+
+if(BLACKTHORN_BUILD_LOC_COMPILER)
+	add_subdirectory(btlocc)
 endif()
 
 if(TARGET btpacker)

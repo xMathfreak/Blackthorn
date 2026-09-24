@@ -1,4 +1,5 @@
 #include "CLI.h"
+#include "Terminal.h"
 
 #include <cctype>
 #include <charconv>
@@ -742,7 +743,7 @@ std::string formatOptionUsage(const OptionSpec& spec) {
 } // namespace
 
 std::string Command::usage() const {
-	std::string out = "Usage: " + name_ + " [OPTIONS]";
+	std::string out = Terminal::colorize("Usage: ", Terminal::Color::Yellow) + name_ + " [OPTIONS]";
 
 	if (!subcommands_.empty()) {
 		out += " <SUBCOMMAND> [ARGS...]";
@@ -774,7 +775,7 @@ std::string Command::help() const {
 	if (!description_.empty())
 		out += description_ + "\n\n";
 
-	out += "Options:\n";
+	out += Terminal::colorize("Options:\n", Terminal::Color::Yellow);
 	for (const auto& spec : options_)
 		out += padColumn(formatOptionUsage(spec)) + spec.description + "\n";
 
@@ -782,13 +783,13 @@ std::string Command::help() const {
 		out += padColumn("    -h, --help") + "Show this help message.\n";
 
 	if (!positionals_.empty() && subcommands_.empty()) {
-		out += "\nPositionals:\n";
+		out += Terminal::colorize("\nPositionals:\n", Terminal::Color::Yellow);
 		for (const auto& pos : positionals_)
 			out += padColumn("    <" + pos.name + ">") + pos.description + "\n";
 	}
 
 	if (!subcommands_.empty()) {
-		out += "\nSubcommands:\n";
+		out += Terminal::colorize("\nSubcommands:\n", Terminal::Color::Yellow);
 		for (const auto& child : subcommands_)
 			out += padColumn("    " + child->name_) + child->description_ + "\n";
 
