@@ -9,6 +9,7 @@ namespace Core { class SimClock; }
 namespace Jobs { class JobSystem; }
 namespace Net { class ConnectionManager; }
 namespace Saves { class SaveManager; }
+namespace Localization { class LocalizationManager; }
 
 namespace Scene {
 
@@ -50,6 +51,7 @@ public:
 	virtual Core::SimClock& getSimClock() = 0;
 	virtual Net::ConnectionManager& getConnectionManager() = 0;
 	virtual Saves::SaveManager& getSaveManager() = 0;
+	virtual Localization::LocalizationManager& getLocalizationManager() = 0;
 };
 
 } // namespace Scene

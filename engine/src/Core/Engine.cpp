@@ -9,6 +9,7 @@
 #include "Assets/Loaders/SpriteClipLoader.h"
 #include "Assets/Loaders/TextureLoader.h"
 #include "Assets/Loaders/TrueTypeFontLoader.h"
+#include "Localization/LocalizationLoader.h"
 
 #include "Core/Settings.h"
 #include "Debug/Logger.h"
@@ -163,7 +164,8 @@ bool Engine::init(const EngineConfig& cfg) {
 		*simClock,
 		*renderer,
 		*particleRenderer,
-		*saveManager
+		*saveManager,
+		localizationManager
 	);
 
 	sceneManager->setContext(*simContext);
@@ -280,6 +282,11 @@ void Engine::initAssetLoaders() {
 		std::make_unique<Particles::AsyncParticleEffectLoader>(&assetManager->resolver())
 	);
 
+	assetManager->registerPackLoader<Localization::LocalizationSource>(
+		std::make_unique<Localization::LocalizationSourceLoader>(localizationManager),
+		std::make_unique<Localization::AsyncLocalizationSourceLoader>(localizationManager, &assetManager->resolver())
+	);
+
 #else
 	assetManager->registerLoader<Audio::AudioClip>(
 		std::make_unique<Audio::AudioLoader>(),
@@ -314,6 +321,11 @@ void Engine::initAssetLoaders() {
 	assetManager->registerLoader<Particles::ParticleEffect>(
 		std::make_unique<Particles::ParticleEffectLoader>(*assetManager),
 		std::make_unique<Particles::AsyncParticleEffectLoader>()
+	);
+
+	assetManager->registerLoader<Localization::LocalizationSource>(
+		std::make_unique<Localization::LocalizationSourceLoader>(localizationManager),
+		std::make_unique<Localization::AsyncLocalizationSourceLoader>(localizationManager)
 	);
 #endif
 }

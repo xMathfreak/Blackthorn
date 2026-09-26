@@ -127,6 +127,9 @@ public:
 	/** @brief Shortcut for `getContext().getSaveManager()`. */
 	Saves::SaveManager& saves() { return getContext().getSaveManager(); }
 
+	/** @brief Shortcut for `getContext().getLocalizationManager();`. */
+	Localization::LocalizationManager& locale() { return getContext().getLocalizationManager(); }
+
 private:
 	/**
 	 * @brief Injects the simulation context. Called automatically by

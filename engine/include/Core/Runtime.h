@@ -6,6 +6,7 @@
 #include "Core/CachedSetting.h"
 #include "Core/EngineConfig.h"
 #include "Core/Export.h"
+#include "Localization/LocalizationManager.h"
 
 namespace Blackthorn {
 
@@ -133,6 +134,7 @@ public:
 	const Core::SimClock& getSimClock() const { return *simClock; }
 	Net::ConnectionManager& getConnectionManager() { return *connectionManager; }
 	Saves::SaveManager& getSaveManager() { return *saveManager; }
+	Localization::LocalizationManager& getLocalizationManager() { return localizationManager; }
 
 	/**
 	 * @brief Called during `init()` after engine defaults are registered
@@ -193,6 +195,8 @@ protected:
 	std::unique_ptr<Core::SimClock> simClock;
 	std::unique_ptr<Scene::ISimContext> simContext;
 	std::unique_ptr<Scene::SceneManager> sceneManager;
+
+	Localization::LocalizationManager localizationManager;
 
 	Core::CachedSetting<bool> frameCapEnabled{"graphics", "frame_cap", false};
 	Core::CachedSetting<int> targetFPS{"graphics", "target_fps", 60};

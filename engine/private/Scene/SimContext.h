@@ -18,6 +18,7 @@ class SimContextImpl : public ISimContext {
 	SceneManager& scene;
 	Core::SimClock& simClock;
 	Saves::SaveManager& saves;
+	Localization::LocalizationManager& locale;
 
 public:
 	SimContextImpl(
@@ -26,7 +27,8 @@ public:
 		Jobs::JobSystem& js,
 		SceneManager& sm,
 		Core::SimClock& clock,
-		Saves::SaveManager& sv
+		Saves::SaveManager& sv,
+		Localization::LocalizationManager& lm
 	)
 		: assets(am)
 		, connection(cm)
@@ -34,6 +36,7 @@ public:
 		, scene(sm)
 		, simClock(clock)
 		, saves(sv)
+		, locale(lm)
 	{}
 
 	Assets::AssetManager& getAssetManager() override { return assets; }
@@ -42,6 +45,7 @@ public:
 	SceneManager& getSceneManager() override { return scene; }
 	Core::SimClock& getSimClock() override { return simClock; }
 	Saves::SaveManager& getSaveManager() override { return saves; }
+	Localization::LocalizationManager& getLocalizationManager() override { return locale; }
 };
 
 } // namespace Blackthorn::Scene

@@ -118,7 +118,8 @@ bool Runtime::init(const EngineConfig& cfg) {
 		*jobSystem,
 		*sceneManager,
 		*simClock,
-		*saveManager
+		*saveManager,
+		localizationManager
 	);
 
 	sceneManager->setContext(*simContext);

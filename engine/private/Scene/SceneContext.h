@@ -24,6 +24,7 @@ class SceneContextImpl : public ISceneContext {
 	Graphics::Renderer& renderer;
 	Particles::ParticleRenderer& particleRenderer;
 	Saves::SaveManager& saves;
+	Localization::LocalizationManager& locale;
 
 public:
 	SceneContextImpl(
@@ -36,7 +37,8 @@ public:
 		Core::SimClock& clock,
 		Graphics::Renderer& ren,
 		Particles::ParticleRenderer& pren,
-		Saves::SaveManager& sv
+		Saves::SaveManager& sv,
+		Localization::LocalizationManager& lm
 	)
 		: audio(au)
 		, assets(am)
@@ -48,6 +50,7 @@ public:
 		, renderer(ren)
 		, particleRenderer(pren)
 		, saves(sv)
+		, locale(lm)
 	{}
 
 	Audio::AudioManager& getAudioManager() override { return audio; }
@@ -60,6 +63,7 @@ public:
 	Graphics::Renderer& getRenderer() override { return renderer; }
 	Particles::ParticleRenderer& getParticleRenderer() override { return particleRenderer; }
 	Saves::SaveManager& getSaveManager() override { return saves; }
+	Localization::LocalizationManager& getLocalizationManager() override { return locale; }
 };
 
 } // namespace Blackthorn::Scene
