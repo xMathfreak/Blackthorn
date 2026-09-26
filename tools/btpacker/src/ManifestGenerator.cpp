@@ -29,6 +29,9 @@ std::string ManifestGenerator::classifyExtension(const std::string& ext) {
 	static const std::set<std::string> effects = {
 		".btfx"
 	};
+	static const std::set<std::string> locale = {
+		".btloc"
+	};
 
 	if (textures.count(ext))
 		return "Texture";
@@ -47,6 +50,9 @@ std::string ManifestGenerator::classifyExtension(const std::string& ext) {
 
 	if (effects.count(ext))
 		return "ParticleEffect";
+
+	if (locale.count(ext))
+		return "Localization";
 
 	return "Raw";
 }
@@ -232,6 +238,7 @@ bool ManifestGenerator::writeManifest(
 		"Font",
 		"SpriteClip",
 		"ParticleEffect",
+		"Localization",
 		"Raw"
 	};
 

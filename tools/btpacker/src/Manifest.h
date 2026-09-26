@@ -12,7 +12,7 @@ namespace BTPacker {
 struct ManifestAsset {
 	std::string id; ///< String asset ID (hashed at pack time).
 	std::filesystem::path sourcePath; ///< Absolute path to the source file on disk.
-	std::string typeStr; ///< "Texture" | "Audio" | "Shader" | "Font" | "SpriteClip" | "ParticleEffect" | "Raw"
+	std::string typeStr; ///< "Texture" | "Audio" | "Shader" | "Font" | "SpriteClip" | "ParticleEffect" | "Localization" |"Raw"
 };
 
 /**
