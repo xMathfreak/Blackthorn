@@ -76,7 +76,7 @@ int cmdGenManifest(const cli::ParseResult& args) {
 	BTPacker::ManifestGenerator::Options opts;
 	opts.assetDir = args.get<std::string>("assets");
 	opts.btpOutput = args.get<std::string>("output");
-	opts.manifestOut = args.get<std::string>("out");
+	opts.manifestOut = args.get<std::string>("manifest");
 	opts.compressionLevel = args.get<int>("level");
 	opts.writeSymbolTable = !args.get<bool>("no-symbols");
 
@@ -127,7 +127,7 @@ int cmdList(const cli::ParseResult& args) {
 
 int cmdUnpack(const cli::ParseResult& args) {
 	const std::string& btpPath = args.positional("file");
-	const std::string outDir = args.get<std::string>("out");
+	const std::string outDir = args.positional("output");
 
 	if (!std::filesystem::exists(btpPath)) {
 		std::cerr << term::colorize("btpacker: error: ", term::Color::Red, stderr) << "file not found: '" << btpPath << "'\n";
@@ -206,14 +206,14 @@ int main(int argc, char** argv) {
 	// handler (for dispatch).
 	const std::unordered_map<std::string, cli::Command*> commands = {
 		{"pack", &packCmd},
-		{"gen-manifest", &genManifestCmd},
+		{"generate-manifest", &genManifestCmd},
 		{"verify", &verifyCmd},
 		{"list", &listCmd},
 		{"unpack", &unpackCmd},
 	};
 	const std::unordered_map<std::string, int (*)(const cli::ParseResult&)> handlers = {
 		{"pack", &cmdPack},
-		{"gen-manifest", &cmdGenManifest},
+		{"generate-manifest", &cmdGenManifest},
 		{"verify", &cmdVerify},
 		{"list", &cmdList},
 		{"unpack", &cmdUnpack},
