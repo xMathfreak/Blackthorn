@@ -53,6 +53,25 @@ public:
 	LoadResult loadFromPack(std::filesystem::path path, I32 priority = 0);
 
 	/**
+	 * @brief Removes a previously loaded source, freeing its entries and
+	 * pulling it out of priority resolution.
+	 *
+	 * @warning Not thread-safe like every other mutating call on this
+	 * class. Only call it from the main thread.
+	 *
+	 * @warning Invalidates every std::string_view previously returned by
+	 * getText()/format() for entries that lived only in this source. Do not
+	 * hold on to resolved text across a frame boundary where an unload could
+	 * happen, re-resolve per use instead.
+	 *
+	 * @param handle A handle from any of this class's load methods.
+	 *
+	 * @return true if @P handle was loaded and is now unloaded; false if it
+	 * was already unloaded or never valid. Safe to call on a stale handle.
+	*/
+	bool unloadSource(SourceHandle handle);
+
+	/**
 	 * @brief Resolve a TextID against all loaded sources, honoring priority.
 	 * @return The text for the highest-priority source that defines id, or an
 	 *         empty view if no loaded source defines it.

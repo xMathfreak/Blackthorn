@@ -204,6 +204,20 @@ LoadResult LocalizationManager::loadFromPack(fs::path path, I32 priority) {
 	return { handle, LoadStatus::Success };
 }
 
+bool LocalizationManager::unloadSource(SourceHandle handle) {
+	const auto it = sources.find(handle);
+	if (it == sources.end())
+		return false;
+
+	sources.erase(it);
+
+	const auto orderIt = std::find(priorityOrder.begin(), priorityOrder.end(), handle);
+	if (orderIt != priorityOrder.end())
+		priorityOrder.erase(orderIt);
+
+	return true;
+}
+
 LoadStatus LocalizationManager::parsePackFile(fs::path& path, Source& outSource) {
 	std::error_code ec;
 

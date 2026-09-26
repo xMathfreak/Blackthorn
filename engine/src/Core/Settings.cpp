@@ -1,5 +1,4 @@
 #include "Core/Settings.h"
-#include "Debug/Logger.h"
 
 #include <fstream>
 
