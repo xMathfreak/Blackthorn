@@ -7,6 +7,8 @@
 #include <unordered_map>
 #include <vector>
 
+#include <nlohmann/json.hpp>
+
 #include "Core/Export.h"
 #include "Core/Types/Numeric.h"
 #include "Localization/FormatArg.h"
@@ -33,12 +35,12 @@ struct LoadResult {
 
 class BLACKTHORN_API LocalizationManager {
 public:
-	static LocalizationManager& instance();
+	LocalizationManager();
+	~LocalizationManager();
 
 	void setLocaleCode(std::string_view lc);
 	[[nodiscard]] std::string_view getLocaleCode() const noexcept;
 
-	// Add loading from memory to work with BT_PACK_MODE loading from a packed .btp
 	// Higher priority wins when multiple sources define the same TextID; ties
 	// are broken by load order (earlier-loaded source wins). See Source::priority.
 	LoadResult loadFromFile(std::filesystem::path path, I32 priority = 0);
@@ -51,6 +53,25 @@ public:
 	 * @param priority Same meaning as loadFromFile's.
 	 */
 	LoadResult loadFromPack(std::filesystem::path path, I32 priority = 0);
+
+	/**
+	 * @brief Parses locale JSON already resident in memory.
+	 *
+	 * @warning This mutates manager state and is not thread safe. Only call from the main thread.
+	 *
+	 * @param jsonByte Raw JSON file bytes.
+	 * @param priority Same meaning as loadFromFile's.
+	 * @param label    Used only in diagnosis since there's no std::filesystem::path to log.
+	 */
+	LoadResult loadFromMemory(std::span<const U8> jsonBytes, I32 priority, std::string_view label);
+
+	/**
+	 * @brief Byte-buffer counterpart to loadFromPack, for a `.btloc` blob
+	 * already resolved into memory.
+	 *
+	 * @warning Same thread affinity restriction as loadFromMemory().
+	 */
+	LoadResult loadFromPackBytes(std::span<const U8> btlocBytes, I32 priority, std::string_view label);
 
 	/**
 	 * @brief Removes a previously loaded source, freeing its entries and
@@ -154,14 +175,14 @@ public:
 	}
 
 private:
-	LocalizationManager();
-	~LocalizationManager();
-
 	LoadStatus parseLocaleFile(std::filesystem::path& path, Source& outSource);
 
 	// Reads and validates a .btloc file's header/entries/string blob into
 	// outSource. Mirrors parseLocaleFile's role for the JSON path.
 	LoadStatus parsePackFile(std::filesystem::path& path, Source& outSource);
+
+	LoadStatus parseLocaleJSON(const nlohmann::json& data, std::string_view label, Source& outSource);
+	LoadStatus parsePackBytes(std::span<const U8> bytes, std::string_view label, Source& outSource);
 
 	// Inserts handle into priorityOrder at the position matching priority,
 	// keeping the vector sorted descending by priority (ties keep existing/
