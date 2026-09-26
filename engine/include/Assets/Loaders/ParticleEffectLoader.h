@@ -11,6 +11,7 @@
 #include "Assets/AssetManager.h"
 #include "Assets/IAssetLoader.h"
 #include "Assets/LoadParams.h"
+#include "Assets/Loaders/SpriteClipLoader.h"
 #include "Assets/RawAssetData.h"
 #include "Core/Export.h"
 #include "Debug/Logger.h"
