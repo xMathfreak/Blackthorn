@@ -390,4 +390,8 @@ bool SaveDocument::hasSection(U64 sectionID) const noexcept {
 	return false;
 }
 
+U64 SaveDocument::hashSaveID(const Core::UUID& id) noexcept {
+	return computeChecksum(id.bytes.data(), id.bytes.size());
+}
+
 } // namespace Blackthorn::Saves

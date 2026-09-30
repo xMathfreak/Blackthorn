@@ -57,7 +57,9 @@ using SaveKeyDeriveFn = std::function<void(
  * @par Typical setup (config-driven)
  * @code
  * SaveConfig cfg;
- * cfg.directory        = "saves";
+ * cfg.orgName          = "MyStudio";
+ * cfg.appName          = "MyGame";
+ * cfg.directory        = "saves"; // -> "<pref path>/MyStudio/MyGame/saves/"
  * cfg.extension        = ".sav";
  * cfg.compressionLevel = 3;
  * cfg.encryptionEnabled = true;
@@ -173,10 +175,20 @@ public:
 	/**
 	 * @brief Constructs and fully configures the save system from @p cfg.
 	 *
-	 * Creates a @c LocalFileSaveStorage rooted at @c cfg.directory using
-	 * @c cfg.extension, sets up the compressor and encryptor according to
-	 * the config, and wraps @c cfg.keyDeriveFn into the typed
-	 * @c SaveKeyDeriveFn if one is provided.
+	 * Creates a @c LocalFileSaveStorage using @c cfg.extension, rooted at a
+	 * directory resolved as follows:
+	 *   - If @c cfg.directory is an absolute path, it's used as is.
+	 *   - Otherwise, if @c cfg.orgName and @c cfg.appName are both set,
+	 *     @c SDL_GetPrefPath(orgName, appName) supplies a per-user writable
+	 *     root and @c cfg.directory is appended underneath it as a subfolder.
+	 *   - Otherwise @c cfg.directory is resolved relative to the working
+	 *     directory (a warning is logged, since this can fail to write if
+	 *     the game is installed somewhere read-only).
+	 *
+	 * Also sets up the compressor and encryptor according to the config,
+	 * wraps @c cfg.keyDeriveFn into the typed @c SaveKeyDeriveFn if one is
+	 * provided, and passes @c cfg.recoverRenamedSaves through to both the
+	 * primary and backup storage backends.
 	 *
 	 * @param cfg Engine save configuration. All fields have sensible defaults
 	 *            so @c SaveManager(SaveConfig{}) is a valid minimal setup.

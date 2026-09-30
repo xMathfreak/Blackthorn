@@ -19,11 +19,13 @@ namespace Blackthorn::Saves {
 LocalFileSaveStorage::LocalFileSaveStorage(
 	std::filesystem::path root,
 	const std::string& ext,
-	PathResolver res
+	PathResolver res,
+	bool recoverRenamed
 )
 	: rootDir(std::move(root))
 	, extension(ext)
 	, resolver(std::move(res))
+	, recoverRenamedFiles(recoverRenamed)
 {}
 
 void LocalFileSaveStorage::setPathResolver(PathResolver r) {
@@ -50,11 +52,97 @@ std::filesystem::path LocalFileSaveStorage::defaultPath(const SaveID& saveID) co
 	return path;
 }
 
+std::filesystem::path LocalFileSaveStorage::resolveEffectivePath(
+	const SaveID& saveID
+) const {
+	const std::filesystem::path canonical = resolvePath(saveID);
+
+	if (resolver || !recoverRenamedFiles)
+		return canonical;
+
+	std::error_code ec;
+	if (std::filesystem::exists(canonical, ec))
+		return canonical;
+
+	const std::filesystem::path found = findRenamedFile(
+		canonical.parent_path(), saveID
+	);
+
+	return found.empty() ? canonical : found;
+}
+
+std::filesystem::path LocalFileSaveStorage::findRenamedFile(
+	const std::filesystem::path& dir,
+	const SaveID& saveID
+) const {
+	std::error_code ec;
+	if (!std::filesystem::exists(dir, ec) || ec)
+		return {};
+
+	const U64 targetHash = SaveDocument::hashSaveID(saveID.id);
+
+	for (const auto& entry : std::filesystem::directory_iterator(dir, ec)) {
+		if (ec) {
+			BT_WARN(
+				"LocalFileSaveStorage: directory iteration error while "
+				"recovering renamed save: {}",
+				ec.message()
+			);
+
+			break;
+		}
+
+		if (!entry.is_regular_file())
+			continue;
+
+		if (entry.path().extension() != extension)
+			continue;
+
+		FileHeader header;
+		if (!tryReadHeader(entry.path(), header))
+			continue;
+
+		if (header.saveIDHash == targetHash) {
+			BT_DEBUG(
+				"LocalFileSaveStorage: recovered renamed save '{}' for id '{}'",
+				entry.path().string(), saveID.id.toString()
+			);
+
+			return entry.path();
+		}
+	}
+
+	return {};
+}
+
+bool LocalFileSaveStorage::tryReadHeader(
+	const std::filesystem::path& path,
+	FileHeader& outHeader
+) {
+	std::ifstream file(path, std::ios::in | std::ios::binary);
+	if (!file.is_open())
+		return false;
+
+	std::vector<U8> buf(FileHeader::SERIALIZED_SIZE);
+	file.read(
+		reinterpret_cast<char*>(buf.data()),
+		static_cast<std::streamsize>(buf.size())
+	);
+
+	if (!file || static_cast<size_t>(file.gcount()) < FileHeader::SERIALIZED_SIZE)
+		return false;
+
+	IO::ByteBuffer headerBuf(buf.data(), buf.size());
+	outHeader.deserialize(headerBuf);
+
+	return outHeader.isValid();
+}
+
 SaveResult LocalFileSaveStorage::write(
 	const SaveID& saveID,
 	const IO::ByteBuffer& data
 ) {
-	const std::filesystem::path path = resolvePath(saveID);
+	const std::filesystem::path path = resolveEffectivePath(saveID);
 	const auto dir = path.parent_path().empty()
 		? std::filesystem::current_path()
 		: path.parent_path();
@@ -82,7 +170,7 @@ SaveResult LocalFileSaveStorage::write(
 }
 
 SaveReadResult LocalFileSaveStorage::read(const SaveID& saveID) {
-	const std::filesystem::path path = resolvePath(saveID);
+	const std::filesystem::path path = resolveEffectivePath(saveID);
 
 	std::ifstream file(path, std::ios::in | std::ios::binary);
 	if (!file.is_open()) {
@@ -114,7 +202,7 @@ SaveReadResult LocalFileSaveStorage::read(const SaveID& saveID) {
 }
 
 SaveResult LocalFileSaveStorage::remove(const SaveID& saveID) {
-	const std::filesystem::path path = resolvePath(saveID);
+	const std::filesystem::path path = resolveEffectivePath(saveID);
 
 	std::error_code ec;
 	std::filesystem::remove(path, ec);
@@ -129,7 +217,7 @@ SaveResult LocalFileSaveStorage::remove(const SaveID& saveID) {
 }
 
 bool LocalFileSaveStorage::exists(const SaveID& saveID) {
-	return std::filesystem::exists(resolvePath(saveID));
+	return std::filesystem::exists(resolveEffectivePath(saveID));
 }
 
 std::vector<SaveMetadata> LocalFileSaveStorage::list(const SaveFilter& filter) {

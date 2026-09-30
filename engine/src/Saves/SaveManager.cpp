@@ -1,9 +1,12 @@
 #include "Saves/SaveManager.h"
 
 #include <chrono>
+#include <filesystem>
 #include <unordered_set>
 
 #include <sodium.h>
+
+#include <SDL3/SDL.h>
 
 #include "Debug/Logger.h"
 #include "Saves/Compression/ZstdCompressor.h"
@@ -12,7 +15,67 @@
 
 namespace Blackthorn::Saves {
 
+namespace {
+
+/**
+ * @brief Resolves the on-disk save root directory described by @p cfg.
+ *
+ * If @c cfg.directory is an absolute path, it is returned verbatim and
+ * SDL_GetPrefPath() is never called. This is the portable/CI/unit-test
+ * escape hatch documented on @c SaveConfig::directory.
+ *
+ * Otherwise, if both @c cfg.orgName and @c cfg.appName are set,
+ * @c SDL_GetPrefPath(orgName, appName) supplies a per-user, writable root
+ * (creating it if necessary), and @c cfg.directory is appended underneath
+ * it as a subfolder. This is skipped, falling back to resolving
+ * @c cfg.directory relative to the working directory, with a warning
+ * logged when @c orgName/@c appName are empty or SDL_GetPrefPath() fails.
+ */
+std::filesystem::path resolveRootDir(const SaveConfig& cfg) {
+	const std::filesystem::path dir = cfg.directory;
+
+	if (dir.is_absolute())
+		return dir;
+
+	if (cfg.orgName.empty() || cfg.appName.empty()) {
+		BT_WARN(
+			"SaveManager: orgName/appName not set in SaveConfig, saves will be "
+			"written to '{}' relative to the working directory. This will fail "
+			"if the game is installed somewhere without write permissions (e.g. "
+			"Program Files). Set orgName/appName to resolve saves via "
+			"SDL_GetPrefPath() instead.",
+			cfg.directory
+		);
+
+		return dir;
+	}
+
+	char* prefPath = SDL_GetPrefPath(cfg.orgName.c_str(), cfg.appName.c_str());
+
+	if (!prefPath) {
+		BT_ERROR(
+			"SaveManager: SDL_GetPrefPath('{}', '{}') failed: {}. Falling back "
+			"to '{}' relative to the working directory.",
+			cfg.orgName, cfg.appName, SDL_GetError(), cfg.directory
+		);
+
+		return dir;
+	}
+
+	// SDL_GetPrefPath() returns UTF-8; construct via char8_t so
+	// std::filesystem::path converts it to the native encoding correctly
+	// instead of assuming the narrow/ANSI codepage (relevant on Windows).
+	const std::filesystem::path root(reinterpret_cast<const char8_t*>(prefPath));
+	SDL_free(prefPath);
+
+	return dir.empty() ? root : (root / dir);
+}
+
+} // namespace
+
 SaveManager::SaveManager(const SaveConfig& cfg) {
+	const std::filesystem::path rootDir = resolveRootDir(cfg);
+
 	const std::string& ext = cfg.extension;
 
 	if (ext.empty() || ext[0] != '.') {
@@ -22,15 +85,19 @@ SaveManager::SaveManager(const SaveConfig& cfg) {
 			ext
 		);
 
-		setStorage(std::make_unique<LocalFileSaveStorage>(cfg.directory, ".sav"));
+		setStorage(std::make_unique<LocalFileSaveStorage>(
+			rootDir, ".sav", nullptr, cfg.recoverRenamedSaves
+		));
 	} else {
-		setStorage(std::make_unique<LocalFileSaveStorage>(cfg.directory, ext));
+		setStorage(std::make_unique<LocalFileSaveStorage>(
+			rootDir, ext, nullptr, cfg.recoverRenamedSaves
+		));
 	}
 
 	const std::string& bakExt = cfg.backupExtension;
 	if (!bakExt.empty() && bakExt[0] == '.') {
 		backupStorage = std::make_unique<LocalFileSaveStorage>(
-			cfg.directory, bakExt
+			rootDir, bakExt, nullptr, cfg.recoverRenamedSaves
 		);
 	} else {
 		BT_WARN(

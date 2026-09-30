@@ -292,6 +292,19 @@ public:
 	/** @brief Returns true if the section table contains the given ID. */
 	bool hasSection(U64 sectionID) const noexcept;
 
+	/**
+	 * @brief Computes the same FNV-1a hash written to @c FileHeader::saveIDHash
+	 * for a given save identity's UUID.
+	 *
+	 * Exposed so storage backends can check whether an on-disk file's header
+	 * matches a candidate @c SaveID (e.g. to locate a save that was renamed
+	 * outside the engine) without a full @c parse() and without duplicating
+	 * the hashing scheme.
+	 *
+	 * @param id UUID to hash (typically @c SaveID::id).
+	 */
+	static U64 hashSaveID(const Core::UUID& id) noexcept;
+
 private:
 	FileHeader header;
 	EncryptionHeader encHeader;
