@@ -24,6 +24,7 @@ These are expected to be installed on your system and discoverable via `find_pac
 - openal-soft
 - ogg
 - vorbis
+- nlohmann_json
 
 ## Getting the Source
 Clone the repository with submodules:
