@@ -18,4 +18,5 @@ saves/
 *.sublime-workspace
 *.sublime-project
 .clang-tidy
+.clangd
 compile_commands.json
