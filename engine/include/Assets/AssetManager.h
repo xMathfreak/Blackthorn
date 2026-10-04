@@ -78,7 +78,7 @@ public:
 	 * @param js The engine's JobSystem. Must outlive this AssetManager.
 	 */
 	explicit AssetManager(Jobs::JobSystem& js);
-	~AssetManager() = default;
+	~AssetManager();
 
 	AssetManager(const AssetManager&) = delete;
 	AssetManager& operator=(const AssetManager&) = delete;
@@ -439,6 +439,18 @@ public:
 	 */
 	void unmountPack(const std::filesystem::path& path) {
 		assetResolver.unmount(path);
+	}
+
+	/**
+	 * @brief Returns the metadata (name, author, version, etc.) of the pack
+	 * mounted at @p path.
+	 *
+	 * @param path Path that was previously passed to mountPack().
+	 * @return The pack's PackMetadata, or std::nullopt if no pack is mounted
+	 *         at @p path.
+	 */
+	std::optional<PackMetadata> getPackMetadata(const std::filesystem::path& path) const {
+		return assetResolver.getPackMetadata(path);
 	}
 
 	AssetResolver& resolver() { return assetResolver; }

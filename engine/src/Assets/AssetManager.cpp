@@ -6,6 +6,10 @@ AssetManager::AssetManager(Jobs::JobSystem& js)
 	: jobs(js)
 {}
 
+AssetManager::~AssetManager() {
+	shutdown();
+}
+
 void AssetManager::shutdown() {
 	flushAllPendingUploads();
 }
