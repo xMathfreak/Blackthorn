@@ -9,15 +9,15 @@
 
 namespace Blackthorn::Graphics {
 
-Renderer::Renderer(U32 maxQuads, const RenderConfig& cfg)
-	: MAX_QUADS(maxQuads)
-	, MAX_VERTICES(maxQuads * 4)
-	, MAX_INDICES(maxQuads * 6)
+Renderer::Renderer(const RenderConfig& cfg)
+	: maxQuads(cfg.maxQuads)
+	, maxVertices(maxQuads * 4)
+	, maxIndices(maxQuads * 6)
 	, projectionMatrix(1.0f)
 	, viewMatrix(1.0f)
 	, renderConfig(cfg)
 {
-	quadBuffer = std::make_unique<Vertex[]>(MAX_VERTICES);
+	quadBuffer = std::make_unique<Vertex[]>(maxVertices);
 
 	initQuadBuffers();
 	initShader();
@@ -39,7 +39,7 @@ Renderer::Renderer(U32 maxQuads, const RenderConfig& cfg)
 	textureSlots[0] = whiteTexture.get();
 
 	BT_LOG("Renderer: Initialized (maxQuads={}, resMode={})",
-		MAX_QUADS,
+		maxQuads,
 		[&]{
 			switch (cfg.resolutionMode) {
 				case RenderResolutionMode::FollowWindow:
@@ -65,7 +65,7 @@ void Renderer::initQuadBuffers() {
 	QuadVAO->bind();
 	QuadVBO->bind();
 
-	glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(MAX_VERTICES) * sizeof(Vertex), nullptr, GL_DYNAMIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(maxVertices) * sizeof(Vertex), nullptr, GL_DYNAMIC_DRAW);
 
 	QuadVAO->enableAttrib(0, 3, GL_FLOAT, sizeof(Vertex), offsetof(Vertex, position));
 	QuadVAO->enableAttrib(1, 4, GL_FLOAT, sizeof(Vertex), offsetof(Vertex, color));
@@ -73,10 +73,10 @@ void Renderer::initQuadBuffers() {
 	QuadVAO->enableAttrib(3, 1, GL_FLOAT, sizeof(Vertex), offsetof(Vertex, texIndex));
 
 	std::vector<GLuint> indices;
-	indices.reserve(MAX_INDICES);
+	indices.reserve(maxIndices);
 
 	U32 offset = 0;
-	for (U32 i = 0; i < MAX_INDICES; i += 6) {
+	for (U32 i = 0; i < maxIndices; i += 6) {
 		indices.push_back(offset + 0);
 		indices.push_back(offset + 1);
 		indices.push_back(offset + 2);
@@ -286,7 +286,7 @@ void Renderer::draw(const SDL_FRect& rect, float z, float rotation, const Math::
 	if (!isVisible(rect, rotation))
 		return;
 
-	if (quadIndexCount >= MAX_INDICES)
+	if (quadIndexCount >= maxIndices)
 		nextBatch();
 
 	float texIndex = 0.0f;
@@ -391,7 +391,7 @@ void Renderer::drawNineSlice(const Texture& texture, const SDL_FRect& dest, cons
 	if (!isVisible(dest))
 		return;
 
-	if (quadIndexCount + 54 > MAX_INDICES)
+	if (quadIndexCount + 54 > maxIndices)
 		nextBatch();
 
 	float texIndex = static_cast<float>(findOrAddTexture(&texture));

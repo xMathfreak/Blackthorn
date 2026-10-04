@@ -65,16 +65,13 @@ private:
 	};
 
 private:
-	/// Default number of quads per batch, overridable at construction
-	static constexpr U32 DEFAULT_MAX_QUADS = 1 << 12;
-
 	/// Maximum number of texture slots per batch
-	static constexpr U32 MAX_TEXTURE_SLOTS = 2 << 3;
+	static constexpr U32 MAX_TEXTURE_SLOTS = 16;
 
-	/// Runtime batch limits (set from maxQuads passed to constructor)
-	U32 MAX_QUADS = DEFAULT_MAX_QUADS;
-	U32 MAX_VERTICES = DEFAULT_MAX_QUADS * 4;
-	U32 MAX_INDICES = DEFAULT_MAX_QUADS * 6;
+	/// Batch Limits
+	U32 maxQuads;
+	U32 maxVertices;
+	U32 maxIndices;
 
 	/// Index buffer for quad rendering
 	std::unique_ptr<EBO> QuadEBO;
@@ -222,11 +219,10 @@ private:
 public:
 	/**
 	 * @brief Constructs the renderer and initializes GPU resources.
-	 * @param maxQuads Maximum quads per batch. Defaults to 4096.
 	 * @param cfg Render configuration. Controls FBO resolution mode,
 	 * letterbox color, etc. Defaults to @c RenderConfig{}.
 	 */
-	explicit Renderer(U32 maxQuads = DEFAULT_MAX_QUADS, const RenderConfig& cfg = RenderConfig{});
+	explicit Renderer(const RenderConfig& cfg = RenderConfig{});
 
 	/**
 	 * @brief Destroys the renderer and releases GPU resources.

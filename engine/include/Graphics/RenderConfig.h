@@ -53,8 +53,8 @@ struct BLACKTHORN_API RenderConfig {
 	int stencilBits = 0;
 
 	/// Maximum number of quads per batch.
-	/// Drives MAX_VERTICES `(maxQuads * 4)` and
-	/// MAX_INDICES `(maxQuads * 6)` inside the Renderer.
+	/// Drives maxVertices `(maxQuads * 4)` and
+	/// maxIndices `(maxQuads * 6)` inside the Renderer.
 	U32 maxQuads = 4096;
 
 	static constexpr U32 maxTextureSlots = 16;
