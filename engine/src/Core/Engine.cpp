@@ -119,7 +119,7 @@ bool Engine::init(const EngineConfig& cfg) {
 
 	initGraphics(cfg);
 	if (!window || !glContext) {
-		Runtime::shutdown();
+		shutdown();
 		return false;
 	}
 
@@ -131,7 +131,7 @@ bool Engine::init(const EngineConfig& cfg) {
 	applyEngineSettings();
 
 	if (!audioManager->init(cfg.audio)) {
-		Runtime::shutdown();
+		shutdown();
 		return false;
 	}
 
@@ -144,8 +144,7 @@ bool Engine::init(const EngineConfig& cfg) {
 		particleRenderer = std::make_unique<Particles::ParticleRenderer>();
 	} catch (const std::exception& e) {
 		BT_ERROR("Renderer: Failed to initialize: {}", e.what());
-		cleanupGraphics();
-		Runtime::shutdown();
+		shutdown();
 		return false;
 	}
 
@@ -341,9 +340,8 @@ void Engine::shutdown() {
 	particleRenderer.reset();
 	renderer.reset();
 	audioManager.reset();
-
-	assetManager->shutdown();
 	assetManager.reset();
+
 	cleanupGraphics();
 
 	Runtime::shutdown();
