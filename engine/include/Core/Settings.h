@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <algorithm>
 #include <charconv>
 #include <concepts>
@@ -334,14 +335,27 @@ private:
 
 	template <typename T>
 	static std::string serialize(const T& value) {
-		if constexpr (std::is_same_v<T, bool>) {
+		using U = std::remove_cvref_t<T>;
+
+		if constexpr (std::is_same_v<U, bool>) {
 			return value ? "true" : "false";
-		} else if constexpr (std::is_integral_v<T> || std::is_floating_point_v<T>) {
-			return std::to_string(value);
-		} else if constexpr (std::is_convertible_v<T, std::string>) {
+		} else if constexpr (std::is_integral_v<U> || std::is_floating_point_v<U>) {
+			std::array<char, 64> buffer;
+			auto [ptr, ec] =  std::to_chars(
+				buffer.data(),
+				buffer.data() + buffer.size(),
+				value
+			);
+
+			if (ec != std::errc{})
+				throw std::runtime_error("Settings::serialize: to_chars failed");
+
+			return {buffer.data(), ptr};
+
+		} else if constexpr (std::is_convertible_v<U, std::string>) {
 			return std::string(value);
 		} else {
-			static_assert(Detail::dependentFalse<T>, "Settings::serialize: unsupported type");
+			static_assert(Detail::dependentFalse<U>, "Settings::serialize: unsupported type");
 		}
 	}
 
