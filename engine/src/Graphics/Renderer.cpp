@@ -179,8 +179,10 @@ void Renderer::flush() {
 }
 
 void Renderer::beginScene() {
-	if (fbo)
+	if (fbo && fbo->isValid()) {
 		fbo->bind();
+		glViewport(0, 0, fbo->getWidth(), fbo->getHeight());
+	}
 
 	glClearColor(clearColor.r, clearColor.g, clearColor.b, clearColor.a);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -198,6 +200,7 @@ void Renderer::presentToScreen() {
 		return;
 
 	FBO::unbind();
+	glViewport(0, 0, windowWidth, windowHeight);
 
 	const int fboW = fbo->getWidth();
 	const int fboH = fbo->getHeight();

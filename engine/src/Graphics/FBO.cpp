@@ -12,21 +12,45 @@ void FBO::allocate(GLsizei w, GLsizei h) {
 	width = w;
 	height = h;
 
+	if (w <= 0 || h <= 0) {
+		id = 0;
+		depthRBO = 0;
+		colorAttachment.reset();
+		return;
+	}
+
 	glGenFramebuffers(1, &id);
 	glBindFramebuffer(GL_FRAMEBUFFER, id);
 
-	colorAttachment = std::make_unique<Texture>(width, height);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colorAttachment->getID(), 0);
+	colorAttachment = std::make_unique<Texture>(w, h);
 
-	if (w <= 0 || h <= 0)
-		return;
+	glFramebufferTexture2D(
+		GL_FRAMEBUFFER,
+		GL_COLOR_ATTACHMENT0,
+		GL_TEXTURE_2D,
+		colorAttachment->getID(),
+		0
+	);
 
 	glGenRenderbuffers(1, &depthRBO);
 	glBindRenderbuffer(GL_RENDERBUFFER, depthRBO);
-	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, width, height);
-	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depthRBO);
+
+	glRenderbufferStorage(
+		GL_RENDERBUFFER,
+		GL_DEPTH_COMPONENT24,
+		w,
+		h
+	);
+
+	glFramebufferRenderbuffer(
+		GL_FRAMEBUFFER,
+		GL_DEPTH_ATTACHMENT,
+		GL_RENDERBUFFER,
+		depthRBO
+	);
 
 	GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glBindRenderbuffer(GL_RENDERBUFFER, 0);
 
@@ -37,9 +61,13 @@ void FBO::allocate(GLsizei w, GLsizei h) {
 		depthRBO = 0;
 		id = 0;
 
-		throw std::runtime_error("FBO incomplete (status 0x" + std::to_string(status) + ')');
+		throw std::runtime_error(
+			"FBO incomplete (status 0x" +
+			std::to_string(status) + ')'
+		);
 	}
 }
+
 
 FBO::~FBO() {
 	destroy();
@@ -47,7 +75,6 @@ FBO::~FBO() {
 
 void FBO::bind() const {
 	glBindFramebuffer(GL_FRAMEBUFFER ,id);
-	glViewport(0, 0, width, height);
 }
 
 void FBO::unbind() {

@@ -79,6 +79,8 @@ public:
 	 *
 	 * All subsequent draw calls will render into this frame buffer
 	 * until unbind() is called.
+	 *
+	 * @note Does not call glViewport.
 	 */
 	void bind() const;
 
