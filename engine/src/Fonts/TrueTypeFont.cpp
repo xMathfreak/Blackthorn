@@ -41,8 +41,7 @@ void TrueTypeFont::initializeShader() {
 }
 
 void TrueTypeFont::cleanupShader() {
-	if (shader)
-		shader->destroy();
+	shader.reset();
 }
 
 bool TrueTypeFont::loadFromFile(const std::filesystem::path& filePath, int pointSize) {
