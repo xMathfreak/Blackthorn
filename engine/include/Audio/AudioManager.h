@@ -89,6 +89,9 @@ public:
 	 *
 	 * The handle is valid from the moment this returns until the voice
 	 * is released. @p clip must remain valid for the lifetime of the voice.
+	 *
+	 * @note PlayOptions defaults AudioCategory to SFX which is skipped by
+	 * audio device recovery, see AudioThread::shouldRestoreVoice().
 	 */
 	AudioHandle play(AudioClip& clip, const PlayOptions& options = {});
 
