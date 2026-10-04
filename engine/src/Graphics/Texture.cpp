@@ -95,8 +95,7 @@ Texture& Texture::operator=(Texture&& other) noexcept {
 }
 
 bool Texture::loadFromFile(const std::filesystem::path& path, const TextureParams& parameters) {
-	if (id != 0)
-		glDeleteTextures(1, &id);
+	destroy();
 
 	this->params = parameters;
 
@@ -104,6 +103,7 @@ bool Texture::loadFromFile(const std::filesystem::path& path, const TextureParam
 	SDL_Surface* surface = IMG_Load(pathStr.c_str());
 	if (!surface) {
 		BT_ERROR("Failed to load texture from '{}': {}", pathStr, SDL_GetError());
+		destroy();
 		return false;
 	}
 
@@ -154,8 +154,7 @@ bool Texture::loadFromFile(const std::filesystem::path& path, const TextureParam
 }
 
 bool Texture::loadFromSurface(SDL_Surface* surface, const TextureParams& parameters) {
-	if (id != 0)
-		glDeleteTextures(1, &id);
+	destroy();
 
 	if (!surface)
 		return false;
@@ -179,8 +178,10 @@ bool Texture::loadFromSurface(SDL_Surface* surface, const TextureParams& paramet
 			break;
 		default:
 			uploadSurface = SDL_ConvertSurface(surface, SDL_PIXELFORMAT_RGBA32);
-			if (!uploadSurface)
+			if (!uploadSurface) {
+				destroy();
 				return false;
+			}
 
 			format = GL_RGBA;
 			internalFormat = GL_RGBA8;
