@@ -635,26 +635,30 @@ void Engine::applyEngineSettings() {
 
 	if (posX != SDL_WINDOWPOS_CENTERED && posY != SDL_WINDOWPOS_CENTERED) {
 		int numDisplays;
-		SDL_GetDisplays(&numDisplays);
-		int displayIndex = 0;
 
-		for (int i = 0; i < numDisplays; ++i) {
-			SDL_Rect bounds;
-			if (SDL_GetDisplayBounds(i, &bounds)) {
-				if (posX >= bounds.x && posX < bounds.x + bounds.w &&
-					posY >= bounds.y && posY < bounds.y + bounds.h
-				) {
-					displayIndex = i;
-					break;
+		if (auto* displays = SDL_GetDisplays(&numDisplays)) {
+			int displayIndex = 0;
+
+			for (int i = 0; i < numDisplays; ++i) {
+				SDL_Rect bounds;
+				if (SDL_GetDisplayBounds(i, &bounds)) {
+					if (posX >= bounds.x && posX < bounds.x + bounds.w &&
+						posY >= bounds.y && posY < bounds.y + bounds.h
+					) {
+						displayIndex = i;
+						break;
+					}
 				}
 			}
-		}
 
-		SDL_Rect usable;
-		if (SDL_GetDisplayUsableBounds(displayIndex, &usable)) {
-			const int margin = 50;
-			posX = std::max(usable.x - width + margin, std::min(posX, usable.x + usable.w - margin));
-			posY = std::max(usable.y - height + margin, std::min(posY, usable.y + usable.h - margin));
+			SDL_Rect usable;
+			if (SDL_GetDisplayUsableBounds(displayIndex, &usable)) {
+				const int margin = 50;
+				posX = std::max(usable.x - width + margin, std::min(posX, usable.x + usable.w - margin));
+				posY = std::max(usable.y - height + margin, std::min(posY, usable.y + usable.h - margin));
+			}
+
+			SDL_free(displays);
 		}
 	}
 
