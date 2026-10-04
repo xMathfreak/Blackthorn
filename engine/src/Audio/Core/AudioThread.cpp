@@ -27,6 +27,7 @@ bool AudioThread::start(const AudioConfig& cfg) {
 	config = cfg;
 
 	voiceSnapshots.resize(cfg.maxVoices);
+	viewPool = std::make_unique<VoiceViewPool>(config.maxVoices);
 
 	try {
 		device.emplace();
@@ -63,6 +64,7 @@ void AudioThread::stop() {
 	}
 
 	streamingThread.stop();
+	viewPool.reset();
 
 	wakeCv.notify_all();
 
@@ -86,8 +88,6 @@ void AudioThread::threadLoop() {
 
 	voicePool = std::make_unique<VoicePool>(config.maxVoices);
 	voicePool->initSources();
-
-	viewPool = std::make_unique<VoiceViewPool>(config.maxVoices);
 
 	#if defined(_WIN32)
 		Threads::MmcssScope mmcss;
@@ -152,7 +152,6 @@ void AudioThread::threadLoop() {
 
 	voicePool->stopAll();
 	voicePool.reset();
-	viewPool.reset();
 
 	BT_LOG("AudioThread: stopped");
 	Threads::ThreadRegistry::instance().unregisterCurrent();
