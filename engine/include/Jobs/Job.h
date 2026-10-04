@@ -124,6 +124,7 @@ public:
 
 	Job(Job&& other) noexcept
 		: invoker(other.invoker)
+		, mover(other.mover)
 		, destroyer(other.destroyer)
 		, completionHandle(std::move(other.completionHandle))
 		, dependencyHandle(std::move(other.dependencyHandle))
