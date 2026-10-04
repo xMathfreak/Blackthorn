@@ -3,6 +3,7 @@
 #include <array>
 #include <memory>
 #include <shared_mutex>
+#include <span>
 
 #include "Core/Export.h"
 #include "ECS/ComponentArray.h"
@@ -120,8 +121,7 @@ public:
 		bumpEpoch();
 	}
 
-	const std::vector<EntityData>& getEntities() const { return entities; }
-	std::vector<EntityData>& getEntities() { return entities; }
+	std::span<const EntityData> getEntities() const { return entities; }
 
 	U64 getEpoch() const noexcept {
 		return structuralEpoch.load(std::memory_order::acquire);
