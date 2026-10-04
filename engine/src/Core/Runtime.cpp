@@ -150,7 +150,7 @@ void Runtime::shutdown() {
 
 	connectionManager->stop();
 
-	jobSystem->shutdown();
+	jobSystem.reset();
 
 	Net::Transport::Sockets::SocketFactory::shutdown();
 
