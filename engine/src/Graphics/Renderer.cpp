@@ -407,8 +407,8 @@ void Renderer::drawNineSlice(const Texture& texture, const SDL_FRect& dest, cons
 	const float T = sliceMargins.top;
 	const float B = sliceMargins.bottom;
 
-	// if (dest.w < L + R || dest.h < T + B)
-	// 	return;
+	if (dest.w < L + R || dest.h < T + B)
+		return;
 
 	float dx[4] = { dest.x, dest.x + L, dest.x + dest.w - R, dest.x + dest.w };
 	float dy[4] = { dest.y, dest.y + T, dest.y + dest.h - B, dest.y + dest.h };
