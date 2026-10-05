@@ -7,6 +7,7 @@
 
 #include "Core/Export.h"
 #include "Core/Types/Numeric.h"
+#include "Net/Connection/HandshakeMachine.h"
 #include "Net/ConnectionConfig.h"
 #include "Net/ConnectionEventBus.h"
 #include "Net/Transport/PacketQueue.h"
@@ -28,6 +29,11 @@ namespace Connection {
  * @c inboundQueue for consumption by @c PacketDispatcher::poll() on the
  * simulation thread. Connection lifecycle events (connect, disconnect,
  * rate-kick) are pushed into @c ConnectionEventBus.
+ *
+ * The worker is deliberately a pure I/O pump: the connection handshake
+ * state machine lives in @c Connection::HandshakeMachine. The worker
+ * feeds it received packets and executes the actions it emits (sends,
+ * promotions, rejections).
  *
  * @par Ownership
  *
@@ -86,11 +92,45 @@ public:
 	size_t& getGlobalFragmentBytes() { return globalFragmentBytes; }
 
 private:
+	/// A lifecycle event produced while holding the registry mutex.
+	/// Pushed onto the event bus only after the mutex is released.
+	struct DeferredEvent {
+		ConnectionEventType type;
+		Connection::PeerID peerID;
+		Transport::Address address;
+	};
+
 	void ioThreadLoop();
 	void pollUDP();
 	void pollTCP();
 	void pollTCPAccept();
 	void sendHeartbeats();
+
+	/**
+	 * @brief Executes the actions emitted by the handshake machine.
+	 *
+	 * Sends queued control packets, promotes peers on Established
+	 * (deferring the Connect event), and tears peers down on Reject
+	 * (deferring the Disconnect event).
+	 *
+	 * Caller must hold @c PeerRegistry::mutex().
+	 */
+	void executeHandshakeActions(
+		Connection::NetworkPeer& peer,
+		const std::vector<Connection::HandshakeAction>& actions,
+		std::vector<DeferredEvent>& deferred
+	);
+
+	/**
+	 * @brief Closes a TCP peer's socket, marks it Disconnected, removes
+	 * its address mappings and defers a Disconnect event.
+	 *
+	 * Caller must hold @c PeerRegistry::mutex().
+	 */
+	void closeTCPPeer(
+		Connection::NetworkPeer& peer,
+		std::vector<DeferredEvent>& deferred
+	);
 
 	Connection::PeerRegistry* registry = nullptr;
 	ConnectionEventBus* eventBus = nullptr;
@@ -104,6 +144,11 @@ private:
 	std::atomic<bool> ioRunning { false };
 
 	ConnectionConfig cfg;
+
+	/// Handshake state machine. Driven by pollTCP(); performs no I/O
+	/// itself, only mutates per-peer handshake bookkeeping and emits
+	/// actions for the worker to execute.
+	Connection::HandshakeMachine handshake;
 
 	/// Engine-wide in-flight reassembly byte counter shared across
 	/// all peer @c FragmentAssembler instances. Enforces the 16 MB

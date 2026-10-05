@@ -28,8 +28,29 @@ static constexpr PeerID INVALID_PEER_ID = 0xFFFFFFFFu;
 enum class PeerState : U8 {
 	Disconnected, ///< No active connection.
 	Connecting, ///< Handshake in progress (TCP connect or UDP hello).
+	Authenticating, ///< Unused, for future authentication state.
 	Connected, ///< Fully established.
 	Disconnecting, ///< Graceful shutdown in progress.
+};
+
+/**
+ * @brief Which side of a connection initiated it.
+ *
+ * Stored per-peer so the handshake state machine can enforce role-correct
+ * packet flow.
+ */
+enum class PeerOrigin : U8 {
+	Inbound, ///< Accepted via TCP listen socket or UDP-implicit.
+	Outbound ///< Initiated locally via ConnectionManager::connect().
+};
+
+enum class HandshakePhase : U8 {
+	None,
+	Dialing, ///< Outbound: waiting for the TCP socket to connect.
+	AwaitingRequest, ///< Inbound: waiting for the client's ConnectRequest.
+	AwaitingAck, ///< Outbound: ConnectRequest sent, waiting for ConnectAck.
+	Established, ///< Handshake complete; peer is fully connected.
+	Failed, ///< Handshake failed; the peer is being torn down.
 };
 
 /**
@@ -62,6 +83,16 @@ struct BLACKTHORN_API NetworkPeer {
 	/// Current connection state.
 	PeerState state = PeerState::Disconnected;
 
+	/// Which side intiiated this connection.
+	/// Set byu HandshakeMachine::begin() on slot allocation.
+	PeerOrigin origin = PeerOrigin::Inbound;
+
+	/// Explicit handshake progress, driven by HandshakeMachine.
+	HandshakePhase handshakePhase = HandshakePhase::None;
+
+	/// SDL_GetTicks() timestamp when handshake began.
+	U64 handshakeStartedAtMs = 0;
+
 	/// UDP simulation channel. Always allocated; only used when udpConnected.
 	Transport::Channels::UDPChannel udpChannel;
 
@@ -87,11 +118,6 @@ struct BLACKTHORN_API NetworkPeer {
 	/// Timeout threshold in milliseconds. A peer is considered timed out
 	/// when `SDL_GetTicks() - lastReceivedMs > timeoutMs`.
 	U64 timeoutMs = 10000;
-
-	/// Set to true once the client has sent its ConnectRequest over the
-	/// established TCP socket.  Prevents pollTCP() from re-sending it on
-	/// every subsequent iteration before the server responds.
-	bool sentConnectRequest = false;
 
 	/// Optional human-readable label (e.g. "Player 1", "Server").
 	std::string label;

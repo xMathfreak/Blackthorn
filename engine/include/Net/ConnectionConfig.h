@@ -26,6 +26,11 @@ struct BLACKTHORN_API ConnectionConfig {
 	/// Set to 0 to disable. Default: 5000ms (half the default timeout).
 	U32 heartbeatIntervalMs = 5000;
 
+	/// Time allowed for the TCP handshake to complete before the peer is
+	/// dropped, in milliseconds.
+	/// Set to 0 to disable. Default: 10000ms
+	U32 handshakeTimeoutMs = 10000;
+
 	/// UDP port to bind on (server and client). 0 = OS-assigned ephemeral.
 	U16 udpPort = 7777;
 

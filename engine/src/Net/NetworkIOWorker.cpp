@@ -333,6 +333,7 @@ void NetworkIOWorker::pollTCPAccept() {
 		auto& peer = registry->peerList()[peerID];
 		peer.tcpSocket = std::move(clientSocket);
 		peer.tcpChannel = std::make_unique<Transport::Channels::TCPChannel>();
+		Connection::HandshakeMachine::begin(peer, Connection::PeerOrigin::Inbound);
 		peer.markAlive();
 	}
 
@@ -343,13 +344,11 @@ void NetworkIOWorker::pollTCPAccept() {
 }
 
 void NetworkIOWorker::pollTCP() {
-	struct DeferredEvent {
-		ConnectionEventType type;
-		Connection::PeerID peerID;
-		Transport::Address address;
-	};
-
 	std::vector<DeferredEvent> deferred;
+	std::vector<Connection::HandshakeAction> actions;
+
+	const U64 nowMs = SDL_GetTicks();
+	const U16 localUDPPort = udpSocket ? udpSocket->getLocalAddress().port() : 0;
 
 	{
 		std::lock_guard<std::mutex> lock(registry->mutex());
@@ -362,30 +361,26 @@ void NetworkIOWorker::pollTCP() {
 			if (!peer.tcpSocket || !peer.tcpChannel)
 				continue;
 
-			if (peer.state == Connection::PeerState::Connecting
-				&& !peer.sentConnectRequest
-				&& peer.tcpSocket->isConnected())
-			{
-				IO::ByteBuffer reqBuf;
-				Protocol::PacketHeader reqHdr;
-				reqHdr.packetType = Protocol::PacketType::ConnectRequest;
-				reqHdr.payloadLength = sizeof(U16);
-				reqHdr.serialize(reqBuf);
-				reqBuf.writeU16(Protocol::CURRENT_SCHEMA_VERSION);
-				peer.tcpChannel->send(*peer.tcpSocket, reqBuf);
-				peer.sentConnectRequest = true;
-
-				BT_DEBUG(
-					"NetworkIOWorker: Sent ConnectRequest (schema v{}) to peer {}",
-					Protocol::CURRENT_SCHEMA_VERSION, peer.id
+			if (handshake.isTimedOut(peer, nowMs, cfg.handshakeTimeoutMs)) {
+				BT_WARN(
+					"NetworkIOWorker: Peer {} handshake timed out after {}ms",
+					peer.id, cfg.handshakeTimeoutMs
 				);
-			}
 
-			if (peer.state == Connection::PeerState::Connecting
-				&& !peer.tcpSocket->isConnected()
-			) {
+				closeTCPPeer(peer, deferred);
 				continue;
 			}
+
+			if (peer.state == Connection::PeerState::Connecting
+				&& peer.tcpSocket->isConnected())
+			{
+				actions.clear();
+				handshake.onSocketReady(peer, actions);
+				executeHandshakeActions(peer, actions, deferred);
+			}
+
+			if (!peer.tcpSocket->isConnected())
+				continue;
 
 			IO::ByteBuffer msg;
 			for (;;) {
@@ -398,17 +393,7 @@ void NetworkIOWorker::pollTCP() {
 						peer.id
 					);
 
-					peer.tcpSocket->close();
-					peer.state = Connection::PeerState::Disconnected;
-					peer.tcpConnected = false;
-					peer.udpConnected = false;
-					registry->tcpMap().erase(peer.tcpAddress);
-					registry->udpMap().erase(peer.udpAddress);
-
-					deferred.push_back({
-						ConnectionEventType::Disconnect, peer.id, {}
-					});
-
+					closeTCPPeer(peer, deferred);
 					break;
 				}
 
@@ -420,98 +405,19 @@ void NetworkIOWorker::pollTCP() {
 				Protocol::PacketHeader header;
 				header.deserialize(msg);
 
+				actions.clear();
+				if (handshake.onPacket(
+					peer, header.packetType, msg, localUDPPort, actions))
+				{
+					executeHandshakeActions(peer, actions, deferred);
+
+					if (peer.state == Connection::PeerState::Disconnected)
+						break;
+
+					continue;
+				}
+
 				switch (header.packetType) {
-
-					case Protocol::PacketType::ConnectRequest: {
-						if (peer.state == Connection::PeerState::Connecting) {
-							const U16 clientVersion = msg.readU16();
-
-							if (clientVersion != Protocol::CURRENT_SCHEMA_VERSION) {
-								BT_WARN(
-									"NetworkIOWorker: Peer {} schema mismatch "
-									"(client v{}, server v{}), disconnecting",
-									peer.id, clientVersion,
-									Protocol::CURRENT_SCHEMA_VERSION
-								);
-
-								peer.tcpSocket->close();
-								peer.state = Connection::PeerState::Disconnected;
-								peer.tcpConnected = false;
-								peer.udpConnected = false;
-								registry->tcpMap().erase(peer.tcpAddress);
-								registry->udpMap().erase(peer.udpAddress);
-
-								deferred.push_back({
-									ConnectionEventType::Disconnect, peer.id, {}
-								});
-
-								break;
-							}
-
-							IO::ByteBuffer ackBuf;
-							Protocol::PacketHeader ackHdr;
-							ackHdr.packetType = Protocol::PacketType::ConnectAck;
-							ackHdr.payloadLength = sizeof(U16);
-							ackHdr.serialize(ackBuf);
-							ackBuf.writeU16(Protocol::CURRENT_SCHEMA_VERSION);
-							peer.tcpChannel->send(*peer.tcpSocket, ackBuf);
-
-							peer.state = Connection::PeerState::Connected;
-							peer.tcpConnected = true;
-							peer.negotiatedSchemaVersion = clientVersion;
-
-							IO::ByteBuffer portBuf;
-							Protocol::PacketHeader portHdr;
-							portHdr.packetType = Protocol::PacketType::UDPPortInfo;
-							portHdr.payloadLength = sizeof(U16);
-							portHdr.serialize(portBuf);
-							portBuf.writeU16(udpSocket->getLocalAddress().port());
-							peer.tcpChannel->send(*peer.tcpSocket, portBuf);
-
-							BT_DEBUG(
-								"NetworkIOWorker: Peer {} handshake complete (server, schema v{})",
-								peer.id, clientVersion
-							);
-
-							deferred.push_back({
-								ConnectionEventType::Connect,
-								peer.id,
-								peer.tcpAddress
-							});
-						}
-
-						break;
-					}
-
-					case Protocol::PacketType::ConnectAck: {
-						if (peer.state == Connection::PeerState::Connecting) {
-							const U16 acceptedVersion = msg.readU16();
-							peer.negotiatedSchemaVersion = acceptedVersion;
-							peer.state = Connection::PeerState::Connected;
-							peer.tcpConnected = true;
-
-							IO::ByteBuffer portBuf;
-							Protocol::PacketHeader portHdr;
-							portHdr.packetType = Protocol::PacketType::UDPPortInfo;
-							portHdr.payloadLength = sizeof(U16);
-							portHdr.serialize(portBuf);
-							portBuf.writeU16(udpSocket->getLocalAddress().port());
-							peer.tcpChannel->send(*peer.tcpSocket, portBuf);
-
-							BT_DEBUG(
-								"NetworkIOWorker: Peer {} handshake complete (client, schema v{})",
-								peer.id, acceptedVersion
-							);
-
-							deferred.push_back({
-								ConnectionEventType::Connect,
-								peer.id,
-								peer.tcpAddress
-							});
-						}
-
-						break;
-					}
 
 					case Protocol::PacketType::UDPPortInfo: {
 						const U16 remoteUDPPort = msg.readU16();
@@ -561,19 +467,7 @@ void NetworkIOWorker::pollTCP() {
 								peer.rateLimiter.stageDurationMs()
 							);
 
-							if (peer.tcpSocket)
-								peer.tcpSocket->close();
-
-							peer.state = Connection::PeerState::Disconnected;
-							peer.tcpConnected = false;
-							peer.udpConnected = false;
-							registry->tcpMap().erase(peer.tcpAddress);
-							registry->udpMap().erase(peer.udpAddress);
-
-							deferred.push_back({
-								ConnectionEventType::Disconnect, peer.id, {}
-							});
-
+							closeTCPPeer(peer, deferred);
 							break;
 						}
 
@@ -606,12 +500,79 @@ void NetworkIOWorker::pollTCP() {
 						break;
 					}
 				}
+
+				if (peer.state == Connection::PeerState::Disconnected)
+					break;
 			}
 		}
 	}
 
 	for (const auto& d : deferred)
 		eventBus->push({ d.type, d.peerID, d.address });
+}
+
+void NetworkIOWorker::executeHandshakeActions(
+	Connection::NetworkPeer& peer,
+	const std::vector<Connection::HandshakeAction>& actions,
+	std::vector<DeferredEvent>& deferred
+) {
+	for (const auto& act : actions) {
+		switch (act.type) {
+			case Connection::HandshakeAction::Type::Send:
+				if (peer.tcpSocket && peer.tcpChannel)
+					peer.tcpChannel->send(*peer.tcpSocket, act.bytes);
+				break;
+
+			case Connection::HandshakeAction::Type::Established:
+				peer.state = Connection::PeerState::Connected;
+				peer.tcpConnected = true;
+				peer.negotiatedSchemaVersion = act.schemaVersion;
+
+				BT_DEBUG(
+					"NetworkIOWorker: Peer {} handshake complete ({}, schema v{})",
+					peer.id,
+					peer.origin == Connection::PeerOrigin::Outbound
+						? "client" : "server",
+					act.schemaVersion
+				);
+
+				deferred.push_back({
+					ConnectionEventType::Connect, peer.id, peer.tcpAddress
+				});
+				break;
+
+			case Connection::HandshakeAction::Type::Reject:
+				BT_WARN(
+					"NetworkIOWorker: Peer {} handshake rejected: {} "
+					"(remote schema v{})",
+					peer.id,
+					act.reason ? act.reason : "unknown",
+					act.schemaVersion
+				);
+
+				closeTCPPeer(peer, deferred);
+				return;
+		}
+	}
+}
+
+void NetworkIOWorker::closeTCPPeer(
+	Connection::NetworkPeer& peer,
+	std::vector<DeferredEvent>& deferred
+) {
+	if (peer.tcpSocket)
+		peer.tcpSocket->close();
+
+	peer.state = Connection::PeerState::Disconnected;
+	peer.handshakePhase = Connection::HandshakePhase::Failed;
+	peer.tcpConnected = false;
+	peer.udpConnected = false;
+	registry->tcpMap().erase(peer.tcpAddress);
+	registry->udpMap().erase(peer.udpAddress);
+
+	deferred.push_back({
+		ConnectionEventType::Disconnect, peer.id, {}
+	});
 }
 
 void NetworkIOWorker::sendHeartbeats() {
@@ -632,7 +593,7 @@ void NetworkIOWorker::sendHeartbeats() {
 		peer.tcpChannel->send(*peer.tcpSocket, buf);
 		peer.lastHeartbeatSentMs = SDL_GetTicks();
 
-		BT_DEBUG("NetworkIOWorker: Sent Heartbeat to peer {}", peer.id);
+		BT_TRACE("NetworkIOWorker: Sent Heartbeat to peer {}", peer.id);
 	}
 }
 

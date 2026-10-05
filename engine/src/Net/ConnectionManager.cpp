@@ -72,6 +72,8 @@ Connection::PeerID ConnectionManager::connect(const Transport::Address& address)
 		peer.tcpChannel = std::make_unique<Transport::Channels::TCPChannel>();
 		peer.state = Connection::PeerState::Connecting;
 
+		Connection::HandshakeMachine::begin(peer, Connection::PeerOrigin::Outbound);
+
 		BT_LOG(
 			"ConnectionManager: TCP connecting to {} (peerID {})",
 			address.toString(), id
@@ -103,8 +105,6 @@ void ConnectionManager::disconnect(Connection::PeerID peerID) {
 		IO::ByteBuffer buf;
 		Protocol::PacketHeader hdr;
 		hdr.packetType = Protocol::PacketType::Disconnect;
-		hdr.tick = 0;
-		hdr.payloadLength = 0;
 		hdr.serialize(buf);
 
 		peer.tcpChannel->send(*peer.tcpSocket, buf);
