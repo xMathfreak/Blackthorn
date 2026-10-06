@@ -8,7 +8,7 @@
 #include <SDL3/SDL.h>
 
 #include "Core/Export.h"
-#include "Core/Types/Numeric.h"
+#include "Types/Numeric.h"
 #include "Graphics/EBO.h"
 #include "Graphics/Shader.h"
 #include "Graphics/VAO.h"

@@ -5,7 +5,7 @@
 #include "Audio/Backend/AudioSource.h"
 #include "Audio/Playback/StreamingVoiceState.h"
 #include "Audio/Resources/AudioClip.h"
-#include "Core/Types/Numeric.h"
+#include "Types/Numeric.h"
 
 namespace Blackthorn::Audio {
 

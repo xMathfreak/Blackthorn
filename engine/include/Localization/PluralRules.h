@@ -2,7 +2,7 @@
 
 #include <string_view>
 
-#include "Core/Types/Numeric.h"
+#include "Types/Numeric.h"
 
 namespace Blackthorn::Localization {
 

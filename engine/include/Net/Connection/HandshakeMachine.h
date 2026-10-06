@@ -3,7 +3,7 @@
 #include <vector>
 
 #include "Core/Export.h"
-#include "Core/Types/Numeric.h"
+#include "Types/Numeric.h"
 #include "IO/ByteBuffer.h"
 #include "Net/Connection/NetworkPeer.h"
 #include "Net/Protocol/PacketHeader.h"

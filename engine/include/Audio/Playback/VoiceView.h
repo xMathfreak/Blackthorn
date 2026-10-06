@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Audio/AudioHandle.h"
-#include "Core/Types/Numeric.h"
+#include "Types/Numeric.h"
 
 namespace Blackthorn::Audio {
 

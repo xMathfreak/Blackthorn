@@ -4,7 +4,7 @@
 #include <unordered_map>
 #include <variant>
 
-#include "Core/Types/Numeric.h"
+#include "Types/Numeric.h"
 #include "Localization/PluralRules.h"
 #include "Localization/TextID.h"
 

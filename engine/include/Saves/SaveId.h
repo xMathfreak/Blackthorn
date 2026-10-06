@@ -3,8 +3,8 @@
 #include <string>
 
 #include "Core/Export.h"
-#include "Core/Types/Numeric.h"
-#include "Core/Types/UUID.h"
+#include "Types/Numeric.h"
+#include "Types/UUID.h"
 
 namespace Blackthorn::Saves {
 

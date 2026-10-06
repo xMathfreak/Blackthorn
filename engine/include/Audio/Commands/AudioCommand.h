@@ -8,7 +8,7 @@
 #include "Audio/AudioCategory.h"
 #include "Audio/AudioHandle.h"
 #include "Audio/Resources/AudioClip.h"
-#include "Core/Types/Numeric.h"
+#include "Types/Numeric.h"
 
 namespace Blackthorn::Audio {
 /**

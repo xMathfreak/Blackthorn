@@ -3,7 +3,7 @@
 #include "Assets/AssetManager.h"
 #include "Core/Export.h"
 #include "Core/SimClock.h"
-#include "Core/Types/Numeric.h"
+#include "Types/Numeric.h"
 #include "ECS/World.h"
 #include "Jobs/JobSystem.h"
 #include "Net/ConnectionManager.h"

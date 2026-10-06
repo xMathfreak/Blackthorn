@@ -3,7 +3,7 @@
 #include <cstddef>
 
 #include "Core/Export.h"
-#include "Core/Types/Numeric.h"
+#include "Types/Numeric.h"
 #include "ECS/EntityPool.h"
 #include "ECS/NetworkEntityRegistry.h"
 #include "ECS/Serialization/ComponentSerializer.h"

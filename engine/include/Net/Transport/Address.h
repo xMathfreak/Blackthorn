@@ -15,7 +15,7 @@
 #endif
 
 #include "Core/Export.h"
-#include "Core/Types/Numeric.h"
+#include "Types/Numeric.h"
 #include "IO/ByteBuffer.h"
 
 namespace Blackthorn::Net::Transport {
@@ -303,14 +303,14 @@ namespace std {
 template <>
 struct hash<Blackthorn::Net::Transport::Address> {
 	size_t operator()(const Blackthorn::Net::Transport::Address& addr) const noexcept {
-		size_t h = std::hash<U16>{}(addr.port());
+		size_t h = std::hash<Blackthorn::U16>{}(addr.port());
 
 		if (addr.version() == Blackthorn::Net::Transport::IPVersion::IPv4) {
 			const auto* sa = reinterpret_cast<const sockaddr_in*>(addr.raw());
-			h ^= std::hash<U32>{}(sa->sin_addr.s_addr) * 2654435761ULL;
+			h ^= std::hash<Blackthorn::U32>{}(sa->sin_addr.s_addr) * 2654435761ULL;
 		} else {
 			const auto* sa = reinterpret_cast<const sockaddr_in6*>(addr.raw());
-			const U8* b = reinterpret_cast<const U8*>(&sa->sin6_addr);
+			const Blackthorn::U8* b = reinterpret_cast<const Blackthorn::U8*>(&sa->sin6_addr);
 			for (int i = 0; i < 16; ++i)
 				h ^= size_t(b[i]) << (i % 8);
 		}

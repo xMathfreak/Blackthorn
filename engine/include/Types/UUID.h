@@ -4,7 +4,7 @@
 #include <string>
 
 #include "Core/Export.h"
-#include "Core/Types/Numeric.h"
+#include "Types/Numeric.h"
 
 namespace Blackthorn::Core {
 
@@ -48,9 +48,9 @@ namespace std {
 template <>
 struct hash<Blackthorn::Core::UUID> {
 	size_t operator()(const Blackthorn::Core::UUID& uuid) const noexcept {
-		U64 h = 14695981039346656037ULL;
-		for (U8 b : uuid.bytes) {
-			h ^= static_cast<U64>(b);
+		Blackthorn::U64 h = 14695981039346656037ULL;
+		for (Blackthorn::U8 b : uuid.bytes) {
+			h ^= static_cast<Blackthorn::U64>(b);
 			h *= 1099511628211ULL;
 		}
 

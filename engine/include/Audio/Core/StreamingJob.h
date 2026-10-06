@@ -3,7 +3,7 @@
 #include "Audio/AudioHandle.h"
 #include "Audio/Streaming/IStreamDecoder.h"
 #include "Containers/SPSCRingQueue.h"
-#include "Core/Types/Numeric.h"
+#include "Types/Numeric.h"
 
 namespace Blackthorn::Audio {
 

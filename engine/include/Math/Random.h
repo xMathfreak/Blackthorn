@@ -5,7 +5,7 @@
 #include <vector>
 
 #include "Core/Export.h"
-#include "Core/Types/Numeric.h"
+#include "Types/Numeric.h"
 #include "Math/Xoshiro256ss.h"
 
 namespace Blackthorn::Math {

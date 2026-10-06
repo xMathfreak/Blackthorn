@@ -4,7 +4,7 @@
 #include <string>
 
 #include "Core/Export.h"
-#include "Core/Types/Numeric.h"
+#include "Types/Numeric.h"
 
 #include "Assets/AssetConfig.h"
 #include "Core/MetadataConfig.h"

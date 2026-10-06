@@ -10,7 +10,7 @@
 #include <nlohmann/json.hpp>
 
 #include "Assets/PackFormat.h"
-#include "Core/Types/SemVer.h"
+#include "Types/SemVer.h"
 
 /**
  * @file PackMetadataJson.h

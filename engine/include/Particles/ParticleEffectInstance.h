@@ -7,7 +7,7 @@
 #include <SDL3/SDL.h>
 
 #include "Core/Export.h"
-#include "Core/Types/Numeric.h"
+#include "Types/Numeric.h"
 #include "Math/Random.h"
 #include "Particles/Particle.h"
 #include "Particles/ParticleEffect.h"

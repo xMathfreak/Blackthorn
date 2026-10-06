@@ -3,7 +3,7 @@
 #include <cassert>
 
 #include "Core/Export.h"
-#include "Core/Types/Numeric.h"
+#include "Types/Numeric.h"
 #include "IO/ByteBuffer.h"
 
 namespace Blackthorn::IO {

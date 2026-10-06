@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Core/Export.h"
-#include "Core/Types/Numeric.h"
+#include "Types/Numeric.h"
 #include "Net/Connection/PeerRateLimiter.h"
 
 namespace Blackthorn::Net {

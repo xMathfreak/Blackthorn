@@ -7,7 +7,7 @@
 #include "Audio/Decoding/AudioDecoder.h"
 #include "Audio/Resources/AudioData.h"
 #include "Core/Export.h"
-#include "Core/Types/Numeric.h"
+#include "Types/Numeric.h"
 
 namespace Blackthorn::Audio {
 

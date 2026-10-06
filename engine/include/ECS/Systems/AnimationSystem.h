@@ -2,7 +2,7 @@
 
 #include "Animation/SpriteClip.h"
 #include "Animation/SpriteClipPlayback.h"
-#include "Core/Types/Numeric.h"
+#include "Types/Numeric.h"
 #include "ECS/Components/Sprite.h"
 #include "ECS/Components/SpriteAnimation.h"
 #include "ECS/ISystem.h"

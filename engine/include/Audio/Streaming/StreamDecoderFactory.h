@@ -5,7 +5,7 @@
 
 #include "Audio/Streaming/IStreamDecoder.h"
 #include "Core/Export.h"
-#include "Core/Types/Numeric.h"
+#include "Types/Numeric.h"
 
 namespace Blackthorn::Audio::Streaming {
 

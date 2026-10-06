@@ -7,22 +7,23 @@
 #include "Threads/ThreadRegistry.h"
 #include "Threads/Relax.h"
 
+namespace Blackthorn::Jobs {
+
 namespace {
-	thread_local int workerIndex = -1;
 
-	thread_local U32 stealRNG = 0x9E3779B9u;
+thread_local int workerIndex = -1;
 
-	inline U32 nextRand() {
-		stealRNG ^= stealRNG << 13;
-		stealRNG ^= stealRNG >> 17;
-		stealRNG ^= stealRNG << 5;
+thread_local U32 stealRNG = 0x9E3779B9u;
 
-		return stealRNG;
-	};
+inline U32 nextRand() {
+	stealRNG ^= stealRNG << 13;
+	stealRNG ^= stealRNG >> 17;
+	stealRNG ^= stealRNG << 5;
+
+	return stealRNG;
+};
 
 }
-
-namespace Blackthorn::Jobs {
 
 JobSystem::JobSystem(size_t workerCount) {
 	if (workerCount == 0) {

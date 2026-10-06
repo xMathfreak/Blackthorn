@@ -7,7 +7,7 @@
 #include <glad/gl.h>
 
 #include "Core/Export.h"
-#include "Core/Types/StringHash.h"
+#include "Types/StringHash.h"
 
 namespace Blackthorn::Graphics {
 

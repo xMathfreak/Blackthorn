@@ -10,7 +10,7 @@
 #include <nlohmann/json.hpp>
 
 #include "Core/Export.h"
-#include "Core/Types/Numeric.h"
+#include "Types/Numeric.h"
 #include "Localization/FormatArg.h"
 #include "Localization/LocalizationSource.h"
 #include "Localization/LocalizedString.h"

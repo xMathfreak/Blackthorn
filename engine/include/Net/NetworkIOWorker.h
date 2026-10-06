@@ -6,7 +6,7 @@
 #include <vector>
 
 #include "Core/Export.h"
-#include "Core/Types/Numeric.h"
+#include "Types/Numeric.h"
 #include "Net/Connection/HandshakeMachine.h"
 #include "Net/ConnectionConfig.h"
 #include "Net/ConnectionEventBus.h"

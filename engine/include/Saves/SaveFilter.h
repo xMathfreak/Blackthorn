@@ -5,7 +5,7 @@
 #include <vector>
 
 #include "Core/Export.h"
-#include "Core/Types/Numeric.h"
+#include "Types/Numeric.h"
 #include "Saves/SaveID.h"
 
 namespace Blackthorn::Saves {

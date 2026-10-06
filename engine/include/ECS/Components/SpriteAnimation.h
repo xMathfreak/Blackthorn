@@ -2,7 +2,7 @@
 
 #include "Animation/SpriteClip.h"
 #include "Core/Export.h"
-#include "Core/Types/Numeric.h"
+#include "Types/Numeric.h"
 
 namespace Blackthorn::ECS::Components {
 

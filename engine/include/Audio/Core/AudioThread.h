@@ -18,7 +18,7 @@
 #include "Audio/Playback/VoiceViewPool.h"
 #include "Audio/Playback/VoiceSnapshot.h"
 #include "Core/Export.h"
-#include "Core/Types/Numeric.h"
+#include "Types/Numeric.h"
 
 namespace Blackthorn::Audio {
 

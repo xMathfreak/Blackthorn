@@ -3,6 +3,8 @@
 #include <cstdint>
 #include <limits>
 
+namespace Blackthorn {
+
 using U8  = uint8_t;
 using I8  = int8_t;
 
@@ -40,3 +42,5 @@ constexpr I64 I64_MIN = std::numeric_limits<I64>::min();
 constexpr UMAX UMAX_MAX = std::numeric_limits<UMAX>::max();
 constexpr IMAX IMAX_MAX = std::numeric_limits<IMAX>::max();
 constexpr IMAX IMAX_MIN = std::numeric_limits<IMAX>::min();
+
+} // namespace Blackthorn
