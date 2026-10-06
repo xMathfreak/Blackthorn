@@ -2,15 +2,6 @@
 
 #include <SDL3_ttf/SDL_ttf.h>
 
-#include "Assets/Loaders/AudioLoader.h"
-#include "Assets/Loaders/BitmapFontLoader.h"
-#include "Assets/Loaders/ParticleEffectLoader.h"
-#include "Assets/Loaders/ShaderLoader.h"
-#include "Assets/Loaders/SpriteClipLoader.h"
-#include "Assets/Loaders/TextureLoader.h"
-#include "Assets/Loaders/TrueTypeFontLoader.h"
-#include "Localization/LocalizationLoader.h"
-
 #include "Core/Settings.h"
 #include "Debug/Logger.h"
 #include "Debug/Profiler.h"
@@ -21,6 +12,14 @@
 #include "Threads/Relax.h"
 #include "UI/UIManager.h"
 
+#include "Animation/SpriteClipLoader.h"
+#include "Audio/AudioLoader.h"
+#include "Fonts/BitmapFontLoader.h"
+#include "Fonts/TrueTypeFontLoader.h"
+#include "Graphics/ShaderLoader.h"
+#include "Graphics/TextureLoader.h"
+#include "Localization/LocalizationLoader.h"
+#include "Particles/ParticleEffectLoader.h"
 
 namespace Blackthorn {
 
