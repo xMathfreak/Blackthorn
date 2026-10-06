@@ -90,9 +90,10 @@ private:
 	 * @return true on success.
 	 */
 	static bool writeManifest(
-		const Options&                  opts,
+		const Options&                    opts,
 		const std::vector<ManifestAsset>& assets,
-		std::ostream&                   log
+		std::ostream&                     log,
+		std::filesystem::path             metadataPath
 	);
 };
 

@@ -4,11 +4,13 @@
 #include <cstring>
 #include <vector>
 
+#include <nlohmann/json.hpp>
 #include <zstd.h>
 
 #define XXH_INLINE_ALL
 #include <xxhash.h>
 
+#include "Assets/PackMetadataJson.h"
 #include "Debug/Logger.h"
 
 namespace Blackthorn::Assets {
@@ -96,6 +98,9 @@ bool PackMount::mount(const std::filesystem::path& path, U32 priority) {
 	if (header.symbolTableOff != 0 && header.symbolTableSize != 0)
 		loadSymbolTable(file, header);
 #endif
+
+	const std::string metadataBytes = readMetadataBytes(file, header);
+	loadMetadata(metadataBytes);
 
 	std::fclose(file);
 	mounted = true;
@@ -292,5 +297,44 @@ std::optional<PackedAssetData> PackMount::read(U64 assetID) const {
 
 	return result;
 }
+
+void PackMount::loadMetadata(const std::string& metadataBytes) {
+	if (metadataBytes.empty())
+		return;
+
+	const nlohmann::json json = nlohmann::json::parse(metadataBytes, nullptr, false);
+	if (json.is_discarded() || !json.is_object()) {
+		BT_WARN("PackMount: '{}': metadata block is not valid JSON, ignoring", packPath.string());
+		return;
+	}
+
+	metadata = parsePackMetadata(json, [this](const std::string& warning) {
+		BT_WARN("PackMount: '{}': metadata: {}", packPath.string(), warning);
+	});
+
+	BT_DEBUG(
+		"PackMount: '{}': loaded metadata (id='{}', name='{}', version='{}')",
+		packPath.string(), metadata.id, metadata.name, metadata.version
+	);
+}
+
+std::string PackMount::readMetadataBytes(std::FILE* file, const BTPHeader& header) {
+	if (header.metadataOff == 0 || header.metadataSize == 0)
+		return {};
+
+	if (!seekTo(file, header.metadataOff)) {
+		BT_WARN("PackMount: '{}': seek to metadata block failed", packPath.string());
+		return {};
+	}
+
+	std::string text(static_cast<size_t>(header.metadataSize), '\0');
+	if (!readExact(file, text.data(), text.size())) {
+		BT_WARN("PackMount: '{}': could not read metadata block", packPath.string());
+		return {};
+	}
+
+	return text;
+}
+
 
 } // namespace Blackthorn::Assets

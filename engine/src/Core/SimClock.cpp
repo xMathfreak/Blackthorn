@@ -1,4 +1,3 @@
-// engine/src/Core/SimClock.cpp
 #include "Core/SimClock.h"
 
 #include "Core/Settings.h"

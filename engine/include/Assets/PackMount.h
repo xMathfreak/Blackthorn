@@ -46,6 +46,11 @@ struct BLACKTHORN_API PackedAssetData {
  * each U64 assetID back to its original string ID and source path for
  * logging.
  *
+ * If present, the pack's metadata block (see PackMetadata) is also loaded
+ * at mount time in all build configurations. Unlike the symbol table,
+ * it's meant to be readable by game code (e.g. to show a mod its name,
+ * author, and version in a mod browser UI), not just for debug logging.
+ *
  * @note read() opens the file, seeks, reads, and closes per call. This is
  * intentional: pack files are typically on an SSD, asset loads are already
  * async (JobSystem), and avoiding a persistent file handle sidesteps
@@ -106,6 +111,14 @@ public:
 	/// Returns true if mount() has been called successfully.
 	bool isMounted() const { return mounted; }
 
+	/**
+	 * @brief Returns this pack's metadata (name, author, version, etc.).
+	 *
+	 * Empty (PackMetadata::empty() == true) if the pack was built without a
+	 * metadata block, or if mount() hasn't been called successfully yet.
+	 */
+	const PackMetadata& getMetadata() const { return metadata; }
+
 private:
 	// AssetResolver re-assigns priorities after an unmount to keep the
 	// last-mounted-wins invariant intact. Granting friend access avoids
@@ -120,6 +133,31 @@ private:
 	 * @return true on success.
 	 */
 	bool loadTOC(std::FILE* file, const BTPHeader& header);
+
+	/**
+	 * @brief Reads and parses the pack metadata block if present.
+	 *
+	 * Populates @c metadata. No-op (leaving @c metadata default-constructed,
+	 * i.e. empty) if @p metadataBytes is empty or isn't valid JSON. A corrupt
+	 * metadata block is treated as "absent" rather than a mount failure.
+	 *
+	 * @param metadataBytes Exactly the bytes of the metadata block as
+	 *                      embedded (see readMetadataBytes()).
+	 */
+	void loadMetadata(const std::string& metadataBytes);
+
+	/**
+	 * @brief Reads the metadata block's raw bytes exactly as embedded.
+	 *
+	 * These are the bytes the pack digest is computed over, so this must
+	 * return the same bytes the packer wrote - not a re-serialization of
+	 * the parsed PackMetadata, which could disagree in edge cases.
+	 *
+	 * @return The bytes, or an empty string if there is no metadata block or
+	 *         it could not be read (logged as a warning; treated as "absent"
+	 *         for both parsing and the digest, same as an absent block).
+	 */
+	std::string readMetadataBytes(std::FILE* file, const BTPHeader& header);
 
 #ifdef BLACKTHORN_DEBUG
 	/**
@@ -139,6 +177,9 @@ private:
 
 	/// TOC indexed by assetID (xxHash64) for O(1) lookup.
 	std::unordered_map<U64, BTPEntry> contentMap;
+
+	/// This pack's metadata (name, author, version, etc.), if it has any.
+	PackMetadata metadata;
 
 #ifdef BLACKTHORN_DEBUG
 	/// assetID → original string ID (e.g. "player_texture").

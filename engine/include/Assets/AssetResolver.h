@@ -108,6 +108,22 @@ public:
 	/// Number of currently mounted packs.
 	size_t mountCount() const;
 
+	/**
+	 * @brief Returns the metadata (name, author, version, etc.) of the pack
+	 * mounted at @p path.
+	 *
+	 * Thread-safe (shared lock). This is how game code queries a mounted
+	 * pack's identity, e.g. to list installed mods by name in a UI without
+	 * needing direct access to the underlying PackMount.
+	 *
+	 * @param path Path that was previously passed to mount().
+	 * @return The pack's PackMetadata, or std::nullopt if no pack is mounted
+	 *         at @p path. Note this is distinct from an empty-but-present
+	 *         PackMetadata (PackMetadata::empty() == true), which means the
+	 *         pack is mounted but was built without a metadata block.
+	 */
+	std::optional<PackMetadata> getPackMetadata(const std::filesystem::path& path) const;
+
 private:
 	/**
 	 * @brief Computes the xxHash64 of a string asset ID.

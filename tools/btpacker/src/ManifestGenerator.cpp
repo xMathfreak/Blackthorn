@@ -101,6 +101,8 @@ bool ManifestGenerator::generate(const Options& opts, std::ostream& log) {
 
 	std::map<std::string, std::string> idToRelPath;
 
+	std::vector<std::filesystem::path> metadataPaths;
+
 	std::error_code ec;
 	for (const auto& entry : std::filesystem::recursive_directory_iterator(
 		opts.assetDir,
@@ -133,6 +135,11 @@ bool ManifestGenerator::generate(const Options& opts, std::ostream& log) {
 		std::transform(ext.begin(), ext.end(), ext.begin(),
 			[](unsigned char c){ return static_cast<char>(std::tolower(c)); }
 		);
+
+		if (ext == ".metadata") {
+			metadataPaths.push_back(entry.path());
+			continue;
+		}
 
 		const std::string typeStr = classifyExtension(ext);
 
@@ -192,13 +199,24 @@ bool ManifestGenerator::generate(const Options& opts, std::ostream& log) {
 	for (auto& [key, asset] : collected)
 		assets.push_back(std::move(asset));
 
-	return writeManifest(opts, assets, log);
+	std::filesystem::path metadataPath;
+	metadataPath = metadataPaths.size() > 0
+		? metadataPaths.front()
+		: std::filesystem::path{};
+
+	if (metadataPaths.size() > 1)
+		std::cerr << "btpacker: warning: found multiple .metadata files in '"
+			<< opts.assetDir.string() << "', using '" << metadataPath.string()
+			<< "'\n";
+
+	return writeManifest(opts, assets, log, metadataPath);
 }
 
 bool ManifestGenerator::writeManifest(
 	const Options& opts,
 	const std::vector<ManifestAsset>& assets,
-	std::ostream& log
+	std::ostream& log,
+	std::filesystem::path metadataPath
 ) {
 	const auto outDir = opts.manifestOut.parent_path();
 	if (!outDir.empty()) {
@@ -257,6 +275,7 @@ bool ManifestGenerator::writeManifest(
 	out << "\t\"output\": \"" << btpOutputStr << "\",\n";
 	out << "\t\"compression_level\": " << opts.compressionLevel << ",\n";
 	out << "\t\"symbol_table\": " << (opts.writeSymbolTable ? "true" : "false") << ",\n";
+	out << "\t\"metadata\": \"" << (metadataPath.empty() ? "" : metadataPath.string()) << "\",\n";
 	out << "\n";
 	out << "\t\"assets\": [\n";
 
@@ -296,7 +315,8 @@ bool ManifestGenerator::writeManifest(
 
 	log << "\n"
 		<< "  manifest: " << opts.manifestOut.string() << "\n"
-		<< "  assets:   " << assets.size() << "\n";
+		<< "  assets:   " << assets.size() << "\n"
+		<< "  metadata: " << (metadataPath.empty() ? "no" : '\'' + metadataPath.string() + '\'');
 
 	return true;
 }

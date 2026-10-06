@@ -98,4 +98,20 @@ size_t AssetResolver::mountCount() const {
 	return mounts.size();
 }
 
+std::optional<PackMetadata> AssetResolver::getPackMetadata(
+	const std::filesystem::path& path
+) const {
+	std::shared_lock lock(mutex);
+
+	const auto it = std::find_if(
+		mounts.begin(), mounts.end(),
+		[&path](const PackMount& m) { return m.path() == path; }
+	);
+
+	if (it == mounts.end())
+		return std::nullopt;
+
+	return it->getMetadata();
+}
+
 } // namespace Blackthorn::Assets

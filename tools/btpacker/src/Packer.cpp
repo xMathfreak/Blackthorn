@@ -4,19 +4,23 @@
 #include <cstdio>
 #include <cstring>
 #include <filesystem>
+#include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <optional>
 #include <sstream>
 #include <string>
 #include <unordered_map>
 #include <vector>
 
+#include <nlohmann/json.hpp>
 #include <zstd.h>
 
 #define XXH_INLINE_ALL
 #include <xxhash.h>
 
 #include "Assets/PackFormat.h"
+#include "Assets/PackMetadataJson.h"
 
 using namespace Blackthorn::Assets;
 
@@ -385,9 +389,91 @@ void appendSymbolEntry(
 	buf[pathStart + relPath.size()] = '\0';
 }
 
+std::optional<PackMetadata> loadPackMetadata(
+	const std::filesystem::path& metadataPath,
+	std::ostream& log
+) {
+	if (metadataPath.empty())
+		return std::nullopt;
+
+	std::ifstream file(metadataPath, std::ios::in);
+	if (!file.is_open()) {
+		std::cerr << "btpacker: warning: cannot open '" << metadataPath.string() << "', skipping pack metadata\n";
+		return std::nullopt;
+	}
+
+	std::ostringstream ss;
+	ss << file.rdbuf();
+
+	const nlohmann::json json = nlohmann::json::parse(ss.str(), nullptr, false);
+
+	if (json.is_discarded() || !json.is_object()) {
+		std::cerr << "btpacker: warning: '" << metadataPath.string() << "' is not valid JSON, skipping pack metadata\n";
+		return std::nullopt;
+	}
+
+	const PackMetadata metadata = parsePackMetadata(json, [&metadataPath](const std::string& warning) {
+		std::cerr << "btpacker: warning: '" << metadataPath.string() << "': " << warning << "\n";
+	});
+
+	if (metadata.empty()) {
+		std::cerr << "btpacker: warning: '" << metadataPath.string() << "' has no usable fields, skipping pack metadata\n";
+		return std::nullopt;
+	}
+
+	log << "  metadata   " << metadataPath.string() << "\n\n";
+	return metadata;
+}
+
+/**
+ * @brief Reads and parses the pack metadata block from an open file.
+ * No-op (returns std::nullopt) if header.metadataOff is 0, the block can't
+ * be read, or it isn't valid JSON - readers should treat a corrupt
+ * metadata block as "absent", not as a reason to fail the whole operation.
+ */
+std::optional<PackMetadata> readPackMetadata(std::FILE* f, const BTPHeader& header) {
+	if (header.metadataOff == 0 || header.metadataSize == 0)
+		return std::nullopt;
+
+	if (!seekTo(f, header.metadataOff))
+		return std::nullopt;
+
+	std::string text(static_cast<size_t>(header.metadataSize), '\0');
+	if (!readExact(f, text.data(), text.size()))
+		return std::nullopt;
+
+	const nlohmann::json json = nlohmann::json::parse(text, nullptr, false);
+	if (json.is_discarded() || !json.is_object())
+		return std::nullopt;
+
+	return parsePackMetadata(json);
+}
+
+/**
+ * @brief Reads the metadata block exactly as embedded; these are the bytes
+ * the pack digest covers.
+ *
+ * @return The bytes (empty if the pack has no metadata block), or
+ *         std::nullopt if a block is declared but cannot be read.
+ */
+std::optional<std::string> readMetadataBytes(std::FILE* f, const BTPHeader& header) {
+	if (header.metadataOff == 0 || header.metadataSize == 0)
+		return std::string();
+
+	if (!seekTo(f, header.metadataOff))
+		return std::nullopt;
+
+	std::string text(static_cast<size_t>(header.metadataSize), '\0');
+	if (!readExact(f, text.data(), text.size()))
+		return std::nullopt;
+
+	return text;
+}
+
 } // anonymous namespace
 
 bool Packer::pack(const PackManifest& manifest, std::ostream& log) {
+	const std::optional<PackMetadata> packMetadata = loadPackMetadata(manifest.metadataPath, log);
 	const auto outDir = manifest.outputPath.parent_path();
 
 	if (!outDir.empty() && !std::filesystem::exists(outDir)) {
@@ -536,6 +622,24 @@ bool Packer::pack(const PackManifest& manifest, std::ostream& log) {
 		}
 	}
 
+	std::string metaText;
+	uint64_t metadataOff = 0;
+	uint64_t metadataSize = 0;
+
+	if (packMetadata) {
+		metaText = serializePackMetadata(*packMetadata);
+
+		metadataOff = static_cast<uint64_t>(fileTell(out));
+		metadataSize = static_cast<uint64_t>(metaText.size());
+
+		if (!writeExact(out, metaText.data(), metaText.size())) {
+			std::cerr << "btpacker: error: write failed for pack metadata\n";
+			std::fclose(out);
+			std::filesystem::remove(manifest.outputPath);
+			return false;
+		}
+	}
+
 	header.magic = BTP_MAGIC;
 	header.version = BTP_VERSION;
 	header.flags = 0;
@@ -545,7 +649,8 @@ bool Packer::pack(const PackManifest& manifest, std::ostream& log) {
 	header.tocUncompSize = static_cast<uint64_t>(tocRawSize);
 	header.symbolTableOff = symbolTableOff;
 	header.symbolTableSize = symbolTableSize;
-	std::memset(header.reserved, 0, sizeof(header.reserved));
+	header.metadataOff = metadataOff;
+	header.metadataSize = metadataSize;
 
 	if (!seekTo(out, 0) || !writeExact(out, &header, sizeof(BTPHeader))) {
 		std::cerr << "btpacker: error: failed to patch header\n";
@@ -569,7 +674,8 @@ bool Packer::pack(const PackManifest& manifest, std::ostream& log) {
 		<< "  pack size:    " << fileSize << " B\n"
 		<< "  reduction:    " << std::fixed << std::setprecision(1)
 		<< overallRatio << "%\n"
-		<< "  symbol table: " << (manifest.writeSymbolTable ? "yes" : "no")     << "\n";
+		<< "  symbol table: " << (manifest.writeSymbolTable ? "yes" : "no")     << "\n"
+		<< "  metadata:     " << (packMetadata ? "yes" : "no")                 << "\n";
 
 	return true;
 }
@@ -657,11 +763,19 @@ bool Packer::verify(const std::filesystem::path& btpPath, std::ostream& log) {
 		++passed;
 	}
 
+	bool integrityOk = true;
+
+	const std::optional<std::string> metadataBytes = readMetadataBytes(f, header);
+	if (!metadataBytes) {
+		std::cerr << "  FAIL  pack metadata block cannot be read\n";
+		integrityOk = false;
+	}
+
 	std::fclose(f);
 
 	log << "\n  passed: " << passed << " / " << (passed + failed) << "\n";
 
-	return failed == 0;
+	return failed == 0 && integrityOk;
 }
 
 bool Packer::list(const std::filesystem::path& btpPath, std::ostream& log) {
@@ -686,6 +800,10 @@ bool Packer::list(const std::filesystem::path& btpPath, std::ostream& log) {
 
 	std::unordered_map<uint64_t, std::string> symbols, sources;
 	readSymbolTable(f, header, symbols, sources);
+
+	const std::optional<PackMetadata> packMetadata = readPackMetadata(f, header);
+	const std::optional<std::string> metadataBytes = readMetadataBytes(f, header);
+
 	std::fclose(f);
 
 	const auto fileSize = std::filesystem::file_size(btpPath);
@@ -696,6 +814,61 @@ bool Packer::list(const std::filesystem::path& btpPath, std::ostream& log) {
 		<< "  file size:    " << fileSize << " B\n"
 		<< "  symbol table: " << (header.symbolTableOff != 0 ? "yes" : "no") << "\n"
 		<< "\n";
+
+	if (packMetadata) {
+		log << "  metadata:\n";
+
+		if (!packMetadata->id.empty())
+			log << "    id:                 " << packMetadata->id << "\n";
+
+		if (!packMetadata->name.empty())
+			log << "    name:               " << packMetadata->name << "\n";
+
+		if (!packMetadata->version.empty())
+			log << "    version:            " << packMetadata->version << "\n";
+
+		if (!packMetadata->author.empty())
+			log << "    author:             " << packMetadata->author << "\n";
+
+		if (!packMetadata->shortDescription.empty())
+			log << "    short description:  " << packMetadata->shortDescription << "\n";
+
+		if (!packMetadata->longDescription.empty())
+			log << "    long description:   " << packMetadata->longDescription << "\n";
+
+		if (!packMetadata->dependencies.empty()) {
+			log << "    dependencies:       ";
+
+			for (size_t i = 0; i < packMetadata->dependencies.size(); ++i) {
+				const PackDependency& dep = packMetadata->dependencies[i];
+				log << (i ? ", " : "") << dep.id;
+
+				if (!dep.versionRange.empty())
+					log << " " << dep.versionRange;
+			}
+
+			log << "\n";
+		}
+
+		const auto printIDs = [&log](const char* label, const std::vector<std::string>& ids) {
+			if (ids.empty())
+				return;
+
+			log << "    " << label;
+			for (size_t i = 0; i < ids.size(); ++i)
+				log << (i ? ", " : "") << ids[i];
+
+			log << "\n";
+		};
+
+		printIDs("load before:        ", packMetadata->loadBefore);
+		printIDs("load after:         ", packMetadata->loadAfter);
+		printIDs("conflicts:          ", packMetadata->conflicts);
+	} else {
+		log << "  metadata:     no\n";
+	}
+
+	log << "\n";
 
 	log << std::left
 		<< std::setw(20) << "asset ID (hex)"

@@ -214,7 +214,12 @@ bool ManifestParser::parseTopLevel() {
 				return false;
 			}
 			manifest.compressionLevel = val;
+		} else if (key == "metadata") {
+			std::string val;
+			if (!parseString(val))
+				return false;
 
+			manifest.metadataPath = std::filesystem::path(val);
 		} else if (key == "symbol_table") {
 			bool val = true;
 			if (!parseBool(val))

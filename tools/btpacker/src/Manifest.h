@@ -24,6 +24,7 @@ struct ManifestAsset {
  *     "output": "data/base.btp",
  *     "compression_level": 3,
  *     "symbol_table": true,
+ *     "metadata": "assets/assets.metadata",
  *     "assets": [
  *         { "id": "player_tex",  "path": "assets/textures/player.png", "type": "Texture" },
  *         { "id": "bg_music",    "path": "assets/audio/bgm.ogg",       "type": "Audio"   },
@@ -35,6 +36,7 @@ struct ManifestAsset {
  * Fields:
  *   output            - path to the .btp file to create (required)
  *   compression_level - zstd level 1–22; default 3
+ *   metadata          - path to the metadata file (optional)
  *   symbol_table      - write a debug symbol table; default true
  *   assets            - array of asset objects (required, must be non-empty)
  *
@@ -46,6 +48,7 @@ struct ManifestAsset {
 struct PackManifest {
 	std::filesystem::path outputPath;
 	std::filesystem::path manifestDir; ///< Directory of the manifest file; asset paths are resolved relative to this.
+	std::filesystem::path metadataPath;
 	int compressionLevel = 3;
 	bool writeSymbolTable = true;
 	std::vector<ManifestAsset> assets;

@@ -36,6 +36,7 @@ target_link_libraries(btpacker
 	PRIVATE
 		BlackthornCLI
 		libzstd_static
+		nlohmann_json
 )
 
 target_compile_definitions(btpacker

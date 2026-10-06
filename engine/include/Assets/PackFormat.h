@@ -1,12 +1,18 @@
 #pragma once
 
+#include <array>
+#include <cstddef>
 #include <cstdint>
+#include <string>
+#include <vector>
+
+#include "Core/Export.h"
 
 namespace Blackthorn::Assets {
 
 /// Four-byte magic identifier: "BTP\0" (Blackthorn Pack).
 constexpr uint32_t BTP_MAGIC = 0x00505442u;
-constexpr uint32_t BTP_VERSION = 1u;
+constexpr uint32_t BTP_VERSION = 2u;
 
 /**
  * @brief Compression codec tag stored per BTPEntry.
@@ -56,7 +62,8 @@ enum class PackAssetType : uint8_t {
  * 32   tocUncompSize    uint64   Byte size of TOC after decompression
  * 40   symbolTableOff   uint64   Byte offset of symbol table (0 = absent)
  * 48   symbolTableSize  uint64   Byte size of symbol table (0 = absent)
- * 56   reserved         uint8[8]
+ * 56   metadataOff      uint64   Byte offset of pack metadata JSON (0 = absent)
+ * 64   metadataSize     uint64   Byte size of pack metadata JSON (0 = absent)
  * @endcode
  */
 #pragma pack(push, 1)
@@ -70,9 +77,10 @@ struct BTPHeader {
 	uint64_t tocUncompSize; ///< Byte size of the TOC block after decompression.
 	uint64_t symbolTableOff; ///< Byte offset of the debug symbol table. 0 = not present.
 	uint64_t symbolTableSize; ///< Byte size of the debug symbol table. 0 = not present.
-	uint8_t reserved[8];
+	uint64_t metadataOff; ///< Byte offset of the pack metadata JSON block. 0 = not present.
+	uint64_t metadataSize; ///< Byte size of the pack metadata JSON block. 0 = not present.
 };
-static_assert(sizeof(BTPHeader) == 64, "BTPHeader must be exactly 64 bytes");
+static_assert(sizeof(BTPHeader) == 72, "BTPHeader must be exactly 72 bytes");
 
 /**
  * @brief One entry in the table of contents (TOC).
@@ -106,5 +114,108 @@ struct BTPEntry {
 };
 static_assert(sizeof(BTPEntry) == 48, "BTPEntry must be exactly 48 bytes");
 #pragma pack(pop)
+
+
+/**
+ * @brief One entry of a pack's "dependencies" list: another pack that must be
+ * present, and the version range of it that is acceptable.
+ */
+struct PackDependency {
+	/// Stable ID of the required pack (see PackMetadata::id).
+	std::string id;
+
+	/// npm-style semver range (see SemVerRange). Empty means any version.
+	std::string versionRange;
+
+	bool operator==(const PackDependency& other) const noexcept {
+		return id == other.id && versionRange == other.versionRange;
+	}
+
+	bool operator<(const PackDependency& other) const noexcept {
+		if (id != other.id)
+			return id < other.id;
+
+		return versionRange < other.versionRange;
+	}
+};
+
+/**
+ * @brief Optional, free-form metadata describing a pack as a whole (its
+ * name, author, version, etc.), as opposed to any single asset within it.
+ *
+ * Populated by the packer from an optional "*.metadata" JSON file found at
+ * the root of the manifest's asset directory (e.g. "assets/mymod.metadata").
+ * Every field is independently optional; an empty string (or empty list) means
+ * the field was absent from the source file (or the source file itself was
+ * absent).
+ *
+ * Stored as a small, uncompressed JSON blob in the pack itself (see
+ * BTPHeader::metadataOff / metadataSize), so it can be read back by
+ * PackMount at mount time, by btpacker's list command, or by any other
+ * tool without decompressing or even reading the TOC.
+ *
+ * @par Identity and ordering
+ * @c id is the pack's stable identity (reverse-domain style, e.g.
+ * "com.example.mod") and is what dependencies, ordering hints and conflicts
+ * refer to. @c name is display text only. @c version should be valid SemVer
+ * 2.0.0 for the pack to satisfy anyone's dependency range. A pack without an
+ * @c id can still be mounted, but cannot take part in load-order resolution
+ * or content manifests.
+ *
+ * @par Source file format
+ * @code{.json}
+ * {
+ *     "id": "com.example.mod",
+ *     "name": "modname",
+ *     "shortDescription": "Short description of the mod",
+ *     "longDescription": "A more elaborate description of the functions of the mod",
+ *     "author": "Mod Creator",
+ *     "version": "3.2.1",
+ *     "dependencies": [ { "id": "com.other.mod", "version": "^1.2.3" } ],
+ *     "loadBefore": [ "com.some.mod" ],
+ *     "loadAfter": [ "com.other.mod" ],
+ *     "conflicts": [ "com.conflicting.mod" ]
+ * }
+ * @endcode
+ *
+ * The list fields are sets: the packer sorts and de-duplicates them so the
+ * embedded block (and therefore the pack digest) does not depend on the order
+ * they were written in.
+ */
+struct BLACKTHORN_API PackMetadata {
+	std::string id;
+	std::string name;
+	std::string shortDescription;
+	std::string longDescription;
+	std::string author;
+	std::string version;
+
+	/// Packs that must be present (and in an acceptable version range).
+	/// Each dependency is also implicitly loaded before this pack.
+	std::vector<PackDependency> dependencies;
+
+	/// Pack IDs that, if present, should be loaded after this pack.
+	std::vector<std::string> loadBefore;
+
+	/// Pack IDs that, if present, should be loaded before this pack.
+	std::vector<std::string> loadAfter;
+
+	/// Pack IDs that cannot be present at the same time as this pack.
+	std::vector<std::string> conflicts;
+
+	/** @brief Returns true if every field is empty (no metadata was found/embedded). */
+	bool empty() const noexcept {
+		return id.empty()
+			&& name.empty()
+			&& shortDescription.empty()
+			&& longDescription.empty()
+			&& author.empty()
+			&& version.empty()
+			&& dependencies.empty()
+			&& loadBefore.empty()
+			&& loadAfter.empty()
+			&& conflicts.empty();
+	}
+};
 
 } // namespace Blackthorn::Assets
