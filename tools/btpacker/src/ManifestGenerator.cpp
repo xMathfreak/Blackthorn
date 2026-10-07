@@ -245,7 +245,7 @@ bool ManifestGenerator::writeManifest(
 	nlohmann::ordered_json json;
 	json["output"] = btpOutput;
 	json["source_root"] = sourceRoot;
-	json["compressionLevel"] = opts.compressionLevel;
+	json["compression_level"] = opts.compressionLevel;
 	json["symbol_table"] = opts.writeSymbolTable;
 	json["metadata"] = metadataPath.generic_string();
 	json["assets"] = nlohmann::json::array();
