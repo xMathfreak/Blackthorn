@@ -377,15 +377,6 @@ public:
 		return total;
 	}
 
-	template <typename AssetType>
-	std::vector<std::string> getSupportedExtensions() const {
-		const auto type = std::type_index(typeid(AssetType));
-		auto it = loaders.find(type);
-		return (it != loaders.end())
-			? it->second->getSupportedExtensions()
-			: std::vector<std::string>{};
-	}
-
 	void unloadByID(const std::string& id) {
 		for (auto& [type, storage] : storages) {
 			if (storage->has(id))
@@ -487,7 +478,6 @@ private:
 		virtual ~ILoaderWrapper() = default;
 		virtual std::unique_ptr<IRawAssetData> loadRaw(const LoadParams&) = 0;
 		virtual void upload(IRawAssetData&, AssetManager&) = 0;
-		virtual std::vector<std::string> getSupportedExtensions() const = 0;
 	};
 
 	template <typename AssetType>
@@ -506,10 +496,6 @@ private:
 		void upload(IRawAssetData& raw, AssetManager& manager) override {
 			if (asyncLoader)
 				asyncLoader->upload(raw, manager);
-		}
-
-		std::vector<std::string> getSupportedExtensions() const override {
-			return syncLoader->getSupportedExtensions();
 		}
 
 		std::unique_ptr<IAssetLoader<AssetType>> syncLoader;

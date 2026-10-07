@@ -63,10 +63,6 @@ public:
 
 		return std::make_unique<Texture>(filePath, texParams);
 	}
-
-	std::vector<std::string> getSupportedExtensions() const override {
-		return { ".png", ".bmp", ".jpg", ".jpeg", ".tga" };
-	}
 };
 
 class BLACKTHORN_API AsyncTextureLoader final : public Assets::IAsyncAssetLoader<Texture> {
@@ -102,10 +98,6 @@ public:
 
 		BT_DEBUG("AsyncTextureLoader: '{}' ready: {}x{} RGBA (src: '{}')",
 			raw.assetID, raw.width, raw.height, raw.srcPath);
-	}
-
-	std::vector<std::string> getSupportedExtensions() const override {
-		return { ".png", ".bmp", ".jpg", ".jpeg", ".tga" };
 	}
 
 private:

@@ -269,10 +269,6 @@ public:
 		return effect;
 	}
 
-	std::vector<std::string> getSupportedExtensions() const override {
-		return { ".btfx" };
-	}
-
 private:
 	Assets::AssetManager& assetManager;
 };
@@ -328,10 +324,6 @@ public:
 
 		manager.add<ParticleEffect>(raw.assetID, std::move(effect));
 		BT_DEBUG("AsyncParticleEffectLoader: '{}' ready", raw.assetID);
-	}
-
-	std::vector<std::string> getSupportedExtensions() const override {
-		return { ".btfx" };
 	}
 
 private:

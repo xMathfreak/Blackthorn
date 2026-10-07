@@ -61,10 +61,6 @@ public:
 
 		return nullptr;
 	}
-
-	std::vector<std::string> getSupportedExtensions() const override {
-		return { ".glsl", ".frag", ".vert" };
-	}
 };
 
 class BLACKTHORN_API AsyncShaderLoader final : public Assets::IAsyncAssetLoader<Shader> {
@@ -96,10 +92,6 @@ public:
 
 		manager.add<Shader>(raw.assetID, std::move(shader));
 		BT_DEBUG("AsyncShaderLoader: '{}' compiled and linked", raw.assetID);
-	}
-
-	std::vector<std::string> getSupportedExtensions() const override {
-		return { ".glsl", ".frag", ".vert" };
 	}
 
 private:

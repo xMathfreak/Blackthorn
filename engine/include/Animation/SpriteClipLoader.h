@@ -190,10 +190,6 @@ public:
 
 		return clip;
 	}
-
-	std::vector<std::string> getSupportedExtensions() const override {
-		return { ".btclip" };
-	}
 };
 
 /**
@@ -240,10 +236,6 @@ public:
 
 		manager.add<SpriteClip>(raw.assetID, std::move(clip));
 		BT_DEBUG("AsyncSpriteClipLoader: '{}' ready", raw.assetID);
-	}
-
-	std::vector<std::string> getSupportedExtensions() const override {
-		return { ".btclip" };
 	}
 
 private:

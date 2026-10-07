@@ -62,10 +62,6 @@ public:
 		font->loadFromFile(p.path, p.size);
 		return font;
 	}
-
-	std::vector<std::string> getSupportedExtensions() const override {
-		return { ".ttf", ".otf" };
-	}
 };
 
 class BLACKTHORN_API AsyncTrueTypeFontLoader final : public Assets::IAsyncAssetLoader<TrueTypeFont> {
@@ -99,12 +95,7 @@ public:
 		BT_DEBUG("AsyncTrueTypeFontLoader: '{}' ready at {}pt", raw.assetID, raw.pointSize);
 	}
 
-	std::vector<std::string> getSupportedExtensions() const override {
-		return { ".ttf", ".otf" };
-	}
-
 private:
-
 #ifdef BT_PACK_MODE
 	std::unique_ptr<Assets::IRawAssetData> loadRawFromPack(const Assets::LoadParams& params) {
 		const auto* pp = dynamic_cast<const PackTTFParams*>(&params);

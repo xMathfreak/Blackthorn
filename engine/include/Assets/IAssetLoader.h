@@ -15,7 +15,6 @@ class IAssetLoader {
 public:
 	virtual ~IAssetLoader() = default;
 	virtual std::unique_ptr<AssetType> load(const LoadParams& params) = 0;
-	virtual std::vector<std::string> getSupportedExtensions() const = 0;
 };
 
 template <typename AssetType>
@@ -25,7 +24,6 @@ public:
 
 	virtual std::unique_ptr<IRawAssetData> loadRaw(const LoadParams& params) = 0;
 	virtual void upload(IRawAssetData& raw, AssetManager& manager) = 0;
-	virtual std::vector<std::string> getSupportedExtensions() const = 0;
 };
 
 } // namespace Blackthorn::Assets

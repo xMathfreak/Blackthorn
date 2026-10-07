@@ -82,10 +82,6 @@ public:
 
 		return nullptr;
 	}
-
-	std::vector<std::string> getSupportedExtensions() const override {
-		return { ".btf", ".fnt" };
-	}
 };
 
 class BLACKTHORN_API AsyncBitmapFontLoader final : public Assets::IAsyncAssetLoader<BitmapFont> {
@@ -129,12 +125,7 @@ public:
 		BT_DEBUG("AsyncBitmapFontLoader: '{}' ready", raw.assetID);
 	}
 
-	std::vector<std::string> getSupportedExtensions() const override {
-		return { ".btf", ".fnt" };
-	}
-
 private:
-
 #ifdef BT_PACK_MODE
 	std::unique_ptr<Assets::IRawAssetData> loadRawFromPack(const Assets::LoadParams& params) {
 		const auto* pp = dynamic_cast<const PackBitmapParams*>(&params);

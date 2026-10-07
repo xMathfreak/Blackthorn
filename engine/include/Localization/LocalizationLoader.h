@@ -105,10 +105,6 @@ public:
 		return std::make_unique<LocalizationSource>(*result.handle, locMan);
 	}
 
-	std::vector<std::string> getSupportedExtensions() const override {
-		return { ".btloc", ".json" };
-	}
-
 private:
 	LocalizationManager& locMan;
 };
@@ -160,9 +156,6 @@ public:
 		);
 	}
 
-	std::vector<std::string> getSupportedExtensions() const override {
-		return { ".btloc", ".json" };
-	}
 private:
 	LocalizationManager& locMan;
 

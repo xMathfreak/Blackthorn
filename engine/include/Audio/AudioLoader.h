@@ -66,10 +66,6 @@ public:
 
 		return nullptr;
 	}
-
-	std::vector<std::string> getSupportedExtensions() const override {
-		return { ".wav", ".mp3", ".ogg", ".flac" };
-	}
 };
 
 class BLACKTHORN_API AsyncAudioLoader final : public Assets::IAsyncAssetLoader<AudioClip> {
@@ -95,10 +91,6 @@ public:
 		auto clip = std::make_unique<AudioClip>();
 		clip->loadFromMemory(raw.srcPath, raw.metadata, raw.data, std::move(raw.compressedBytes));
 		manager.add<AudioClip>(raw.assetID, std::move(clip));
-	}
-
-	std::vector<std::string> getSupportedExtensions() const override {
-		return { ".wav", ".mp3", ".ogg", ".flac" };
 	}
 
 private:
