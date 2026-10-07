@@ -14,32 +14,6 @@
 
 namespace BTPacker {
 
-namespace {
-
-std::string escapeJsonString(const std::string& value) {
-	std::string escaped;
-	escaped.reserve(value.size());
-
-	for (const char c : value) {
-		switch (c) {
-			case '"':  escaped += "\\\""; break;
-			case '\\': escaped += "\\\\"; break;
-			case '\b': escaped += "\\b";  break;
-			case '\f': escaped += "\\f";  break;
-			case '\n': escaped += "\\n";  break;
-			case '\r': escaped += "\\r";  break;
-			case '\t': escaped += "\\t";  break;
-			default:
-				escaped += c;
-				break;
-		}
-	}
-
-	return escaped;
-}
-
-} // namespace
-
 std::string ManifestGenerator::classifyExtension(const std::string& ext) {
 	static const std::set<std::string> textures = {
 		".png", ".jpg", ".jpeg", ".bmp", ".tga", ".hdr", ".webp"

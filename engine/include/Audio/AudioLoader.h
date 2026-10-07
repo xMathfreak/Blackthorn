@@ -21,12 +21,11 @@
 
 namespace Blackthorn::Audio {
 
-struct BLACKTHORN_API AudioParams : Assets::LoadParams {
-	std::filesystem::path path;
+struct BLACKTHORN_API AudioParams : public Assets::AssetLoadParams {
 	bool isPCM = false;
 
 	AudioParams(const std::filesystem::path& filePath, bool loadPCM = false)
-		: path(filePath)
+		: Assets::AssetLoadParams(filePath)
 		, isPCM(loadPCM)
 	{}
 
@@ -45,26 +44,19 @@ struct BLACKTHORN_API RawAudioData : Assets::IRawAssetData {
 class BLACKTHORN_API AudioLoader final : public Assets::IAssetLoader<AudioClip> {
 public:
 	std::unique_ptr<AudioClip> load(const Assets::LoadParams& params) override {
+		const auto* pp = dynamic_cast<const Assets::AssetLoadParams*>(&params);
+		if (!pp)
+			return nullptr;
+
 		auto clip = std::make_unique<AudioClip>();
+		if (!clip->load(pp->source))
+			return nullptr;
 
-		if (const auto* ap = dynamic_cast<const AudioParams*>(&params)) {
-			if (!clip->load(ap->path))
-				return nullptr;
-
-			if (ap->isPCM)
-				clip->loadPCM();
-
-			return clip;
+		if (const auto* ap = dynamic_cast<const AudioParams*>(&params); ap && ap->isPCM) {
+			clip->loadPCM();
 		}
 
-		if (const auto* pp = dynamic_cast<const Assets::PathLoadParams*>(&params)) {
-			if (!clip->load(pp->path))
-				return nullptr;
-
-			return clip;
-		}
-
-		return nullptr;
+		return clip;
 	}
 };
 
@@ -97,53 +89,40 @@ private:
 
 #ifdef BT_PACK_MODE
 	std::unique_ptr<Assets::IRawAssetData> loadRawFromPack(const Assets::LoadParams& params) {
-		const auto* pp = dynamic_cast<const Assets::PackLoadParams*>(&params);
-		if (!pp) {
-			BT_ERROR("AsyncAudioLoader: BT_PACK_MODE requires PackLoadParams. "
-			 "Use PackLoadParams(\"pack_id\") instead of PathLoadParams.");
-			return nullptr;
-		}
-
 		if (!m_resolver) {
 			BT_ERROR("AsyncAudioLoader: resolver is null, was registerPackLoader() used?");
 			return nullptr;
 		}
 
-		auto packed = m_resolver->resolve(pp->assetID);
-		if (!packed) {
-			BT_ERROR("AsyncAudioLoader: '{}' not found in any mounted pack", pp->assetID);
+		const auto* pp = dynamic_cast<const Assets::AssetLoadParams*>(&params);
+		if (!pp)
 			return nullptr;
-		}
 
-		return decodeAudioFromMemory(pp->assetID, std::move(packed->bytes), packed->sourcePath, false);
+		auto packed = m_resolver->resolve(pp->source);
+		if (!packed)
+			return nullptr;
+
+		return decodeAudioFromMemory(pp->source.string(), std::move(packed->bytes), packed->sourcePath, false);
 	}
 
 	Assets::AssetResolver* m_resolver = nullptr;
 #endif
 
 	std::unique_ptr<Assets::IRawAssetData> loadRawFromDisk(const Assets::LoadParams& params) {
-		std::filesystem::path filePath;
-		bool loadPCM = false;
-
-		if (const auto* ap = dynamic_cast<const AudioParams*>(&params)) {
-			filePath = ap->path;
-			loadPCM = ap->isPCM;
-		} else if (const auto* pp = dynamic_cast<const Assets::PathLoadParams*>(&params)) {
-			filePath = pp->path;
-		} else {
-			BT_ERROR("AsyncAudioLoader: unrecognized LoadParams type");
-			return nullptr;
-		}
-
 		auto raw = std::make_unique<RawAudioData>();
-		raw->srcPath = filePath.string();
 
-		if (!Decoding::AudioDecoder::getInfo(filePath, raw->metadata))
+		const auto* pp = dynamic_cast<const Assets::AssetLoadParams*>(&params);
+		if (!pp)
 			return nullptr;
 
-		if (loadPCM) {
+		raw->srcPath = pp->source.string();
+
+		if (!Decoding::AudioDecoder::getInfo(pp->source, raw->metadata))
+			return nullptr;
+
+		if (const auto* ap = dynamic_cast<const AudioParams*>(&params); ap && ap->isPCM) {
 			AudioData data;
-			if (!Decoding::AudioDecoder::decode(filePath, data))
+			if (!Decoding::AudioDecoder::decode(pp->source, data))
 				return nullptr;
 
 			raw->data = std::move(data);

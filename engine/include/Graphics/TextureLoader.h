@@ -54,8 +54,8 @@ public:
 		if (const auto* tp = dynamic_cast<const TextureLoadParams*>(&params)) {
 			filePath = tp->path;
 			texParams = tp->textureParams;
-		} else if (const auto* pp = dynamic_cast<const Assets::PathLoadParams*>(&params)) {
-			filePath = pp->path;
+		} else if (const auto* pp = dynamic_cast<const Assets::AssetLoadParams*>(&params)) {
+			filePath = pp->source;
 		} else {
 			BT_ERROR("TextureLoader: unrecognized LoadParams type");
 			return nullptr;
@@ -105,13 +105,7 @@ private:
 #ifdef BT_PACK_MODE
 
 	std::unique_ptr<Assets::IRawAssetData> loadRawFromPack(const Assets::LoadParams& params) {
-		const auto* pp = dynamic_cast<const Assets::PackLoadParams*>(&params);
-		if (!pp) {
-			BT_ERROR("AsyncTextureLoader: BT_PACK_MODE requires PackLoadParams, "
-			 "got a different LoadParams type. Use manager.loadAsync<Texture>("
-			 "\"runtime_id\", PackLoadParams(\"pack_id\")) instead of PathLoadParams.");
-			return nullptr;
-		}
+		const auto* pp = dynamic_cast<const Assets::AssetLoadParams*>(&params);
 
 		if (!m_resolver) {
 			BT_ERROR("AsyncTextureLoader: resolver is null, was registerPackLoader() used?");
@@ -127,17 +121,15 @@ private:
 						return 0;
 					}()
 				);
-			packed = m_resolver->resolve(pp->assetID);
+			packed = m_resolver->resolve(pp->source);
 		} else {
-			packed = m_resolver->resolve(pp->assetID);
+			packed = m_resolver->resolve(pp->source);
 		}
 
-		if (!packed) {
-			BT_ERROR("AsyncTextureLoader: '{}' not found in any mounted pack", pp->assetID);
+		if (!packed)
 			return nullptr;
-		}
 
-		return decodeImageFromMemory(pp->assetID, packed->bytes, packed->sourcePath);
+		return decodeImageFromMemory(pp->source.string(), packed->bytes, packed->sourcePath);
 	}
 
 	Assets::AssetResolver* m_resolver = nullptr;
@@ -150,8 +142,8 @@ private:
 		if (const auto* tp = dynamic_cast<const TextureLoadParams*>(&params)) {
 			filePath = tp->path;
 			texParams = tp->textureParams;
-		} else if (const auto* pp = dynamic_cast<const Assets::PathLoadParams*>(&params)) {
-			filePath = pp->path;
+		} else if (const auto* pp = dynamic_cast<const Assets::AssetLoadParams*>(&params)) {
+			filePath = pp->source;
 		} else {
 			BT_ERROR("AsyncTextureLoader: unrecognized LoadParams type");
 			return nullptr;

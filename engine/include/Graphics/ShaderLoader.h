@@ -32,20 +32,6 @@ struct BLACKTHORN_API ShaderParams : Assets::LoadParams {
 	}
 };
 
-struct BLACKTHORN_API PackShaderParams final : Assets::LoadParams {
-	std::string vertID;
-	std::string fragID;
-
-	PackShaderParams(std::string vert, std::string frag)
-		: vertID(std::move(vert))
-		, fragID(std::move(frag))
-	{}
-
-	std::unique_ptr<Assets::LoadParams> clone() const override {
-		return std::make_unique<PackShaderParams>(*this);
-	}
-};
-
 struct BLACKTHORN_API RawShaderData : Assets::IRawAssetData {
 	std::string vertSource;
 	std::string fragSource;
@@ -98,7 +84,7 @@ private:
 
 #ifdef BT_PACK_MODE
 	std::unique_ptr<Assets::IRawAssetData> loadRawFromPack(const Assets::LoadParams& params) {
-		const auto* pp = dynamic_cast<const PackShaderParams*>(&params);
+		const auto* pp = dynamic_cast<const ShaderParams*>(&params);
 		if (!pp) {
 			BT_ERROR("AsyncShaderLoader: BT_PACK_MODE requires PackShaderParams "
 				"(vertID + fragID). Got a different LoadParams type.");
@@ -110,19 +96,13 @@ private:
 			return nullptr;
 		}
 
-		auto vertData = m_resolver->resolve(pp->vertID);
-		if (!vertData) {
-			BT_ERROR("AsyncShaderLoader: vertex shader '{}' not found in any mounted pack",
-				pp->vertID);
+		auto vertData = m_resolver->resolve(pp->vertexPath);
+		if (!vertData)
 			return nullptr;
-		}
 
-		auto fragData = m_resolver->resolve(pp->fragID);
-		if (!fragData) {
-			BT_ERROR("AsyncShaderLoader: fragment shader '{}' not found in any mounted pack",
-				pp->fragID);
+		auto fragData = m_resolver->resolve(pp->fragmentPath);
+		if (!fragData)
 			return nullptr;
-		}
 
 		auto raw = std::make_unique<RawShaderData>();
 

@@ -96,6 +96,9 @@ public:
 	 */
 	std::optional<PackedAssetData> resolve(const std::string& id) const;
 
+	/** @brief Convinience overload for callers holding a std::filesystem::path */
+	std::optional<PackedAssetData> resolve(const std::filesystem::path& p) const;
+
 	/**
 	 * @brief Returns true if any mounted pack contains the given asset ID.
 	 *

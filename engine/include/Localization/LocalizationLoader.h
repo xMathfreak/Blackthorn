@@ -175,10 +175,8 @@ private:
 		}
 
 		auto packed = m_resolver->resolve(pp->assetID);
-		if (!packed) {
-			BT_ERROR("AsyncLocalizationSourceLoader: '{}' not found in any mounted pack", pp->assetID);
+		if (!packed)
 			return nullptr;
-		}
 
 		auto raw = std::make_unique<RawLocalizationSourceData>();
 		raw->bytes = std::move(packed->bytes);

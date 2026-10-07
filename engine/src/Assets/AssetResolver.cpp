@@ -93,6 +93,10 @@ bool AssetResolver::has(const std::string& id) const {
 	return false;
 }
 
+std::optional<PackedAssetData> AssetResolver::resolve(const std::filesystem::path& path) const {
+	return resolve(path.string());
+}
+
 size_t AssetResolver::mountCount() const {
 	std::shared_lock lock(mutex);
 	return mounts.size();

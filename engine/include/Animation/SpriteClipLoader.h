@@ -19,22 +19,6 @@
 namespace Blackthorn::Animation {
 
 /**
- * @brief Identifies a `.btclip` asset by its pack ID, for use with
- * @c AsyncSpriteClipLoader under @c BT_PACK_MODE.
- */
-struct BLACKTHORN_API PackSpriteClipParams final : Assets::LoadParams {
-	std::string assetID;
-
-	explicit PackSpriteClipParams(std::string id)
-		: assetID(std::move(id))
-	{}
-
-	std::unique_ptr<Assets::LoadParams> clone() const override {
-		return std::make_unique<PackSpriteClipParams>(*this);
-	}
-};
-
-/**
  * @brief Raw, not-yet-parsed bytes of a `.btclip` file, produced by
  * @c AsyncSpriteClipLoader::loadRaw on a worker thread.
  */
@@ -172,21 +156,19 @@ private:
 class BLACKTHORN_API SpriteClipLoader final : public Assets::IAssetLoader<SpriteClip> {
 public:
 	std::unique_ptr<SpriteClip> load(const Assets::LoadParams& params) override {
-		const auto* pp = dynamic_cast<const Assets::PathLoadParams*>(&params);
-		if (!pp) {
-			BT_ERROR("SpriteClipLoader: expected PathLoadParams");
+		const auto* pp = dynamic_cast<const Assets::AssetLoadParams*>(&params);
+		if (!pp)
 			return nullptr;
-		}
 
-		std::ifstream file(pp->path);
+		std::ifstream file(pp->source);
 		if (!file.is_open()) {
-			BT_ERROR("SpriteClipLoader: cannot open '{}'", pp->path.string());
+			BT_ERROR("SpriteClipLoader: cannot open '{}'", pp->source.string());
 			return nullptr;
 		}
 
 		auto clip = SpriteClipParser::parse(file);
 		if (!clip)
-			BT_ERROR("SpriteClipLoader: '{}' produced no frames", pp->path.string());
+			BT_ERROR("SpriteClipLoader: '{}' produced no frames", pp->source.string());
 
 		return clip;
 	}
@@ -241,22 +223,18 @@ public:
 private:
 #ifdef BT_PACK_MODE
 	std::unique_ptr<Assets::IRawAssetData> loadRawFromPack(const Assets::LoadParams& params) {
-		const auto* pp = dynamic_cast<const PackSpriteClipParams*>(&params);
-		if (!pp) {
-			BT_ERROR("AsyncSpriteClipLoader: BT_PACK_MODE requires PackSpriteClipParams");
-			return nullptr;
-		}
-
 		if (!m_resolver) {
 			BT_ERROR("AsyncSpriteClipLoader: resolver is null, was registerPackLoader() used?");
 			return nullptr;
 		}
 
-		auto packed = m_resolver->resolve(pp->assetID);
-		if (!packed) {
-			BT_ERROR("AsyncSpriteClipLoader: '{}' not found in any mounted pack", pp->assetID);
+		const auto* pp = dynamic_cast<const Assets::AssetLoadParams*>(&params);
+		if (!pp)
 			return nullptr;
-		}
+
+		auto packed = m_resolver->resolve(pp->source);
+		if (!packed)
+			return nullptr;
 
 		auto raw = std::make_unique<RawSpriteClipData>();
 		raw->bytes = std::move(packed->bytes);
@@ -268,14 +246,13 @@ private:
 #endif
 
 	std::unique_ptr<Assets::IRawAssetData> loadRawFromDisk(const Assets::LoadParams& params) {
-		const auto* pp = dynamic_cast<const Assets::PathLoadParams*>(&params);
-		if (!pp) {
-			BT_ERROR("AsyncSpriteClipLoader: expected PathLoadParams");
-			return nullptr;
-		}
-
 		auto raw = std::make_unique<RawSpriteClipData>();
-		if (!readFile(pp->path.string(), raw->bytes))
+
+		const auto* pp = dynamic_cast<const Assets::AssetLoadParams*>(&params);
+		if (!pp)
+			return nullptr;
+
+		if (!readFile(pp->source.string(), raw->bytes))
 			return nullptr;
 
 		raw->valid = true;

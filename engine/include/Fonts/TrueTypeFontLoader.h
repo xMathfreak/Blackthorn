@@ -110,10 +110,8 @@ private:
 		}
 
 		auto packed = m_resolver->resolve(pp->packID);
-		if (!packed) {
-			BT_ERROR("AsyncTrueTypeFontLoader: '{}' not found in any mounted pack", pp->packID);
+		if (!packed)
 			return nullptr;
-		}
 
 		auto raw = std::make_unique<RawTTFData>();
 		raw->fontBytes = std::move(packed->bytes);

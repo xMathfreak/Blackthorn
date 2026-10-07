@@ -53,11 +53,8 @@ namespace Blackthorn::Assets {
  *
  * @section loading Loading
  * @code
- * // Debug mode: identify by path
- * AssetHandle<Texture> h1 = manager.load<Texture>("player", PathLoadParams("assets/player.png"));
- *
- * // Pack mode: identify by pack ID
- * AssetHandle<Texture> h2 = manager.loadAsync<Texture>("player", PackLoadParams("player_png"));
+ * // Debug and Pack mode both use AssetLoadParams
+ * AssetHandle<Texture> h1 = manager.load<Texture>("player", AssetLoadParams("assets/player.png"));
  * @endcode
  *
  * @section flushing Flushing
@@ -145,11 +142,8 @@ public:
 	 * Returns immediately with a ready handle. Prefer loadAsync() for assets
 	 * loaded during gameplay to avoid stalling the frame.
 	 *
-	 * In BT_PACK_MODE, pass PackLoadParams to identify the asset by its
-	 * pack ID. PathLoadParams is only meaningful in debug (loose-file) builds.
-	 *
 	 * @param id     Runtime identifier stored in AssetStorage.
-	 * @param params Load parameters (PathLoadParams or PackLoadParams).
+	 * @param params Load parameters.
 	 */
 	template <typename AssetType>
 	AssetHandle<AssetType> load(const std::string& id, const LoadParams& params) {
@@ -179,13 +173,13 @@ public:
 
 	template <typename AssetType>
 	AssetHandle<AssetType> load(const std::string& id, std::filesystem::path path) {
-		return load<AssetType>(id, PathLoadParams(std::move(path)));
+		return load<AssetType>(id, AssetLoadParams(path.string()));
 	}
 
 	template <typename AssetType>
 	AssetHandle<AssetType> load(std::filesystem::path path) {
 		std::string id = path.stem().string();
-		return load<AssetType>(id, PathLoadParams(std::move(path)));
+		return load<AssetType>(id, AssetLoadParams(path.string()));
 	}
 
 	/**
@@ -195,12 +189,8 @@ public:
 	 * chained to it. The upload runs the next time flushPendingUploads() is
 	 * called (once per frame).
 	 *
-	 * In BT_PACK_MODE, @p params must be PackLoadParams. PathLoadParams will
-	 * cause the async loader to fail silently because the ID derivation from
-	 * a file path does not match the ID written by gen-manifest/btpacker.
-	 *
 	 * @param id     Runtime identifier stored in AssetStorage.
-	 * @param params Load parameters (PackLoadParams in pack mode).
+	 * @param params Load parameters.
 	 */
 	template <typename AssetType>
 	AssetHandle<AssetType> loadAsync(const std::string& id, const LoadParams& params) {
@@ -298,13 +288,13 @@ public:
 
 	template <typename AssetType>
 	AssetHandle<AssetType> loadAsync(const std::string& id, std::filesystem::path path) {
-		return loadAsync<AssetType>(id, PathLoadParams(std::move(path)));
+		return loadAsync<AssetType>(id, AssetLoadParams(path.string()));
 	}
 
 	template <typename AssetType>
 	AssetHandle<AssetType> loadAsync(std::filesystem::path path) {
 		std::string id = path.stem().string();
-		return loadAsync<AssetType>(id, PathLoadParams(std::move(path)));
+		return loadAsync<AssetType>(id, AssetLoadParams(path.string()));
 	}
 
 	template <typename AssetType>
@@ -504,7 +494,7 @@ private:
 
 	std::unordered_map<std::type_index, std::unique_ptr<ILoaderWrapper>> loaders;
 	std::unordered_map<std::type_index, std::unique_ptr<IAssetStorage>> storages;
-	std::unordered_map<std::string, std::unique_ptr<LoadParams>> assetParams;
+	std::unordered_map<std::string, std::unique_ptr<LoadParams>> assetParams; ///< Asset parameters for reloading.
 
 #ifdef BT_PACK_MODE
 	AssetResolver assetResolver;

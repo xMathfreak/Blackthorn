@@ -28,22 +28,6 @@
 namespace Blackthorn::Particles {
 
 /**
- * @brief Identifies a `.btfx` asset by its pack ID, for use with
- * AsyncParticleEffectLoader under BT_PACK_MODE.
- */
-struct BLACKTHORN_API PackParticleEffectParams final : Assets::LoadParams {
-	std::string assetID;
-
-	explicit PackParticleEffectParams(std::string id)
-		: assetID(std::move(id))
-	{}
-
-	std::unique_ptr<Assets::LoadParams> clone() const override {
-		return std::make_unique<PackParticleEffectParams>(*this);
-	}
-};
-
-/**
  * @brief Raw, not-yet-parsed bytes of a `.btfx` file, produced by
  * AsyncParticleEffectLoader::loadRaw on a worker thread.
  */
@@ -96,11 +80,6 @@ struct BLACKTHORN_API RawParticleEffectData : Assets::IRawAssetData {
  *   is a cheap has<T>() lookup in the common case where the asset was
  *   already loaded elsewhere (e.g. scene/level preloading); it only pays a
  *   real synchronous load as a fallback if it wasn't.
- * - BT_PACK_MODE treats the string directly as the pack asset id (paths
- *   aren't meaningful once packed), loaded via PackLoadParams/
- *   PackSpriteClipParams. The packer pipeline is expected to keep this id
- *   stable (e.g. filename stem) so it matches whatever id other assets
- *   packed from the same source file were given.
  */
 class ParticleEffectParser {
 public:
@@ -195,11 +174,8 @@ private:
 	}
 
 	static Graphics::Texture* resolveTexture(const std::string& ref, Assets::AssetManager& assetManager) {
-#ifdef BT_PACK_MODE
-		auto handle = assetManager.load<Graphics::Texture>(ref, Assets::PackLoadParams(ref));
-#else
-		auto handle = assetManager.load<Graphics::Texture>(std::filesystem::path(ref));
-#endif
+		auto handle = assetManager.load<Graphics::Texture>(ref);
+
 		if (!handle) {
 			BT_ERROR("ParticleEffectParser: failed to resolve texture '{}'", ref);
 			return nullptr;
@@ -209,11 +185,8 @@ private:
 	}
 
 	static const Animation::SpriteClip* resolveClip(const std::string& ref, Assets::AssetManager& assetManager) {
-#ifdef BT_PACK_MODE
-		auto handle = assetManager.load<Animation::SpriteClip>(ref, Animation::PackSpriteClipParams(ref));
-#else
-		auto handle = assetManager.load<Animation::SpriteClip>(std::filesystem::path(ref));
-#endif
+		auto handle = assetManager.load<Animation::SpriteClip>(ref);
+
 		if (!handle) {
 			BT_ERROR("ParticleEffectParser: failed to resolve clip '{}'", ref);
 			return nullptr;
@@ -242,15 +215,13 @@ public:
 	{}
 
 	std::unique_ptr<ParticleEffect> load(const Assets::LoadParams& params) override {
-		const auto* pp = dynamic_cast<const Assets::PathLoadParams*>(&params);
-		if (!pp) {
-			BT_ERROR("ParticleEffectLoader: expected PathLoadParams");
+		const auto* pp = dynamic_cast<const Assets::AssetLoadParams*>(&params);
+		if (!pp)
 			return nullptr;
-		}
 
-		std::ifstream file(pp->path);
+		std::ifstream file(pp->source);
 		if (!file.is_open()) {
-			BT_ERROR("ParticleEffectLoader: cannot open '{}'", pp->path.string());
+			BT_ERROR("ParticleEffectLoader: cannot open '{}'", pp->source.string());
 			return nullptr;
 		}
 
@@ -258,13 +229,13 @@ public:
 		try {
 			file >> root;
 		} catch (const nlohmann::json::parse_error& e) {
-			BT_ERROR("ParticleEffectLoader: failed to parse '{}': {}", pp->path.string(), e.what());
+			BT_ERROR("ParticleEffectLoader: failed to parse '{}': {}", pp->source.string(), e.what());
 			return nullptr;
 		}
 
-		auto effect = ParticleEffectParser::parse(root, assetManager, pp->path.string());
+		auto effect = ParticleEffectParser::parse(root, assetManager, pp->source.string());
 		if (!effect)
-			BT_ERROR("ParticleEffectLoader: '{}' produced no emitters", pp->path.string());
+			BT_ERROR("ParticleEffectLoader: '{}' produced no emitters", pp->source.string());
 
 		return effect;
 	}
@@ -329,7 +300,7 @@ public:
 private:
 #ifdef BT_PACK_MODE
 	std::unique_ptr<Assets::IRawAssetData> loadRawFromPack(const Assets::LoadParams& params) {
-		const auto* pp = dynamic_cast<const PackParticleEffectParams*>(&params);
+		const auto* pp = dynamic_cast<const Assets::AssetLoadParams*>(&params);
 		if (!pp) {
 			BT_ERROR("AsyncParticleEffectLoader: BT_PACK_MODE requires PackParticleEffectParams");
 			return nullptr;
@@ -340,11 +311,9 @@ private:
 			return nullptr;
 		}
 
-		auto packed = m_resolver->resolve(pp->assetID);
-		if (!packed) {
-			BT_ERROR("AsyncParticleEffectLoader: '{}' not found in any mounted pack", pp->assetID);
+		auto packed = m_resolver->resolve(pp->source);
+		if (!packed)
 			return nullptr;
-		}
 
 		auto raw = std::make_unique<RawParticleEffectData>();
 		raw->bytes = std::move(packed->bytes);
@@ -356,14 +325,12 @@ private:
 #endif
 
 	std::unique_ptr<Assets::IRawAssetData> loadRawFromDisk(const Assets::LoadParams& params) {
-		const auto* pp = dynamic_cast<const Assets::PathLoadParams*>(&params);
-		if (!pp) {
-			BT_ERROR("AsyncParticleEffectLoader: expected PathLoadParams");
+		const auto* pp = dynamic_cast<const Assets::AssetLoadParams*>(&params);
+		if (!pp)
 			return nullptr;
-		}
 
 		auto raw = std::make_unique<RawParticleEffectData>();
-		if (!readFile(pp->path.string(), raw->bytes))
+		if (!readFile(pp->source.string(), raw->bytes))
 			return nullptr;
 
 		raw->valid = true;
