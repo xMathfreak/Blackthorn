@@ -10,7 +10,6 @@ namespace BTPacker {
  * @brief Describes a single asset entry inside a pack manifest.
  */
 struct ManifestAsset {
-	std::string id; ///< String asset ID (hashed at pack time).
 	std::filesystem::path sourcePath; ///< Absolute path to the source file on disk.
 	std::string typeStr; ///< "Texture" | "Audio" | "Shader" | "Font" | "SpriteClip" | "ParticleEffect" | "Localization" |"Raw"
 };
@@ -26,9 +25,9 @@ struct ManifestAsset {
  *     "symbol_table": true,
  *     "metadata": "assets/assets.metadata",
  *     "assets": [
- *         { "id": "player_tex",  "path": "assets/textures/player.png", "type": "Texture" },
- *         { "id": "bg_music",    "path": "assets/audio/bgm.ogg",       "type": "Audio"   },
- *         { "id": "main_shader", "path": "assets/shaders/main.glsl",   "type": "Shader"  }
+ *         { "path": "assets/textures/player.png", "type": "Texture" },
+ *         { "path": "assets/audio/bgm.ogg",       "type": "Audio"   },
+ *         { "path": "assets/shaders/main.glsl",   "type": "Shader"  }
  *     ]
  * }
  * @endcode
@@ -41,11 +40,11 @@ struct ManifestAsset {
  *   assets            - array of asset objects (required, must be non-empty)
  *
  * Each asset object:
- *   id   - string ID used at runtime to look up the asset (required)
  *   path - source file path, relative to the manifest file or absolute (required)
  *   type - "Texture" | "Audio" | "Shader" | "Font" | "SpriteClip" | "ParticleEffect" | "Raw" (required)
  */
 struct PackManifest {
+	std::filesystem::path sourcePath; ///< Absolute directory for the packed asset.
 	std::filesystem::path outputPath;
 	std::filesystem::path manifestDir; ///< Directory of the manifest file; asset paths are resolved relative to this.
 	std::filesystem::path metadataPath;

@@ -281,7 +281,6 @@ bool readTOC(
 void readSymbolTable(
 	std::FILE* f,
 	const BTPHeader& header,
-	std::unordered_map<uint64_t, std::string>& symbols,
 	std::unordered_map<uint64_t, std::string>& sources
 ) {
 	if (header.symbolTableOff == 0 || header.symbolTableSize == 0)
@@ -305,16 +304,6 @@ void readSymbolTable(
 		std::memcpy(&assetID, cursor, sizeof(uint64_t));
 		cursor += sizeof(uint64_t);
 
-		uint16_t idLen = 0;
-		std::memcpy(&idLen, cursor, sizeof(uint16_t));
-		cursor += sizeof(uint16_t);
-
-		if (cursor + idLen > end)
-			break;
-
-		std::string idStr(reinterpret_cast<const char*>(cursor), idLen);
-		cursor += idLen;
-
 		const uint8_t* pathStart = cursor;
 		while (cursor < end && *cursor != '\0')
 			++cursor;
@@ -325,7 +314,6 @@ void readSymbolTable(
 		if (cursor < end)
 			++cursor;
 
-		symbols[assetID] = std::move(idStr);
 		sources[assetID] = std::move(srcPath);
 	}
 }
@@ -345,48 +333,25 @@ void readSymbolTable(
  * @param buf         Buffer to append to.
  * @param assetID     xxHash64 of the asset string ID.
  * @param id          The asset string ID (e.g. "player_tex").
- * @param absPath     Absolute path to the source file on disk.
+ * @param path        ID string for the asset.
  * @param manifestDir Directory of the manifest; used to compute the relative path.
  */
 void appendSymbolEntry(
 	std::vector<uint8_t>& buf,
 	uint64_t assetID,
-	const std::string& id,
-	const std::filesystem::path& absPath,
+	const std::string& path,
 	const std::filesystem::path& manifestDir
 ) {
-	std::string relPath;
-	std::error_code ec;
-	const auto rel = std::filesystem::relative(absPath, manifestDir, ec);
-
-	if (!ec && !rel.empty()) {
-		std::string raw = rel.generic_string();
-		relPath = std::move(raw);
-	} else {
-		relPath = absPath.generic_string();
-	}
-
 	// -- assetID (8 bytes) --
 	const size_t idStart = buf.size();
 	buf.resize(idStart + sizeof(uint64_t));
 	std::memcpy(buf.data() + idStart, &assetID, sizeof(uint64_t));
 
-	// -- idLen (2 bytes) --
-	const uint16_t idLen = static_cast<uint16_t>(id.size());
-	const size_t   idLenStart = buf.size();
-	buf.resize(idLenStart + sizeof(uint16_t));
-	std::memcpy(buf.data() + idLenStart, &idLen, sizeof(uint16_t));
-
-	// -- id string (idLen bytes) --
-	const size_t idStrStart = buf.size();
-	buf.resize(idStrStart + idLen);
-	std::memcpy(buf.data() + idStrStart, id.data(), idLen);
-
 	// -- relative source path (null-terminated) --
 	const size_t pathStart = buf.size();
-	buf.resize(pathStart + relPath.size() + 1);
-	std::memcpy(buf.data() + pathStart, relPath.data(), relPath.size());
-	buf[pathStart + relPath.size()] = '\0';
+	buf.resize(pathStart + path.size() + 1);
+	std::memcpy(buf.data() + pathStart, path.data(), path.size());
+	buf[pathStart + path.size()] = '\0';
 }
 
 std::optional<PackMetadata> loadPackMetadata(
@@ -473,7 +438,7 @@ std::optional<std::string> readMetadataBytes(std::FILE* f, const BTPHeader& head
 } // anonymous namespace
 
 bool Packer::pack(const PackManifest& manifest, std::ostream& log) {
-	const std::optional<PackMetadata> packMetadata = loadPackMetadata(manifest.metadataPath, log);
+	const std::optional<PackMetadata> packMetadata = loadPackMetadata(manifest.sourcePath / manifest.metadataPath, log);
 	const auto outDir = manifest.outputPath.parent_path();
 
 	if (!outDir.empty() && !std::filesystem::exists(outDir)) {
@@ -513,9 +478,10 @@ bool Packer::pack(const PackManifest& manifest, std::ostream& log) {
 	uint64_t totalCompressedBytes = 0;
 
 	for (const ManifestAsset& asset : manifest.assets) {
-		if (!std::filesystem::exists(asset.sourcePath)) {
+		const std::filesystem::path assetSource = manifest.sourcePath / asset.sourcePath;
+		if (!std::filesystem::exists(assetSource)) {
 			std::cerr << "btpacker: error: source file not found: '"
-					  << asset.sourcePath.string() << "' (asset '" << asset.id << "')\n";
+					  << assetSource.string() << "' (asset '" << assetSource << "')\n";
 
 			std::fclose(out);
 			std::filesystem::remove(manifest.outputPath);
@@ -523,7 +489,7 @@ bool Packer::pack(const PackManifest& manifest, std::ostream& log) {
 		}
 
 		std::vector<uint8_t> raw;
-		if (!readFile(asset.sourcePath, raw)) {
+		if (!readFile(assetSource, raw)) {
 			std::fclose(out);
 			std::filesystem::remove(manifest.outputPath);
 			return false;
@@ -537,18 +503,19 @@ bool Packer::pack(const PackManifest& manifest, std::ostream& log) {
 		}
 
 		const uint64_t blobHash = XXH64(compressed.data(), compressed.size(), 0);
-		const uint64_t assetID = XXH64(asset.id.data(), asset.id.size(), 0);
+		std::string idPath = manifest.sourcePath.parent_path().filename().generic_string() + '/' + asset.sourcePath.generic_string();
+		const uint64_t assetID = XXH64(idPath.data(), idPath.size(), 0);
 
 		const int64_t dataOffset = fileTell(out);
 		if (dataOffset < 0) {
-			std::cerr << "btpacker: error: ftell failed while writing '" << asset.id << "'\n";
+			std::cerr << "btpacker: error: ftell failed while writing '" << assetSource << "'\n";
 			std::fclose(out);
 			std::filesystem::remove(manifest.outputPath);
 			return false;
 		}
 
 		if (!writeExact(out, compressed.data(), compressed.size())) {
-			std::cerr << "btpacker: error: write failed for asset '" << asset.id << "'\n";
+			std::cerr << "btpacker: error: write failed for asset '" << assetSource << "'\n";
 			std::fclose(out);
 			std::filesystem::remove(manifest.outputPath);
 			return false;
@@ -568,8 +535,7 @@ bool Packer::pack(const PackManifest& manifest, std::ostream& log) {
 			appendSymbolEntry(
 				symbolTableBytes,
 				assetID,
-				asset.id,
-				asset.sourcePath,
+				asset.sourcePath.generic_string(),
 				manifest.manifestDir
 			);
 		}
@@ -578,7 +544,7 @@ bool Packer::pack(const PackManifest& manifest, std::ostream& log) {
 			: (1.0f - static_cast<float>(compressed.size())
 				/ static_cast<float>(raw.size())) * 100.0f;
 
-		log << "  packed  " << asset.id
+		log << "  packed  " << asset.sourcePath.generic_string()
 			<< "  [" << assetTypeName(entry.assetType) << "]"
 			<< "  " << raw.size() << " B  ->  " << compressed.size() << " B"
 			<< "  (" << std::fixed << std::setprecision(1) << ratio << "% smaller)\n";
@@ -700,8 +666,8 @@ bool Packer::verify(const std::filesystem::path& btpPath, std::ostream& log) {
 		return false;
 	}
 
-	std::unordered_map<uint64_t, std::string> symbols, sources;
-	readSymbolTable(f, header, symbols, sources);
+	std::unordered_map<uint64_t, std::string> sources;
+	readSymbolTable(f, header, sources);
 
 	log << "verifying '" << pathStr << "' (" << entries.size() << " entries)...\n";
 
@@ -728,9 +694,9 @@ bool Packer::verify(const std::filesystem::path& btpPath, std::ostream& log) {
 		const uint64_t actualHash = XXH64(compressed.data(), compressed.size(), 0);
 		if (actualHash != entry.xxhash) {
 			std::cerr << "  FAIL  ";
-			auto it = symbols.find(entry.assetID);
+			auto it = sources.find(entry.assetID);
 
-			if (it != symbols.end()) {
+			if (it != sources.end()) {
 				std::cerr << it->second;
 			} else {
 				std::cerr << "0x" << std::hex << entry.assetID << std::dec;
@@ -754,8 +720,8 @@ bool Packer::verify(const std::filesystem::path& btpPath, std::ostream& log) {
 			}
 		}
 
-		auto it = symbols.find(entry.assetID);
-		const std::string label = (it != symbols.end())
+		auto it = sources.find(entry.assetID);
+		const std::string label = (it != sources.end())
 			? it->second
 			: [&]{ std::ostringstream ss; ss << "0x" << std::hex << entry.assetID; return ss.str(); }();
 
@@ -798,8 +764,8 @@ bool Packer::list(const std::filesystem::path& btpPath, std::ostream& log) {
 		return false;
 	}
 
-	std::unordered_map<uint64_t, std::string> symbols, sources;
-	readSymbolTable(f, header, symbols, sources);
+	std::unordered_map<uint64_t, std::string> sources;
+	readSymbolTable(f, header, sources);
 
 	const std::optional<PackMetadata> packMetadata = readPackMetadata(f, header);
 	const std::optional<std::string> metadataBytes = readMetadataBytes(f, header);
@@ -890,14 +856,10 @@ bool Packer::list(const std::filesystem::path& btpPath, std::ostream& log) {
 			<< std::setw(14) << entry.uncompressedSize
 			<< std::setw(14) << entry.compressedSize;
 
-		auto symIt = symbols.find(entry.assetID);
 		auto srcIt = sources.find(entry.assetID);
 
-		if (symIt != symbols.end())
-			log << symIt->second;
-
 		if (srcIt != sources.end() && !srcIt->second.empty())
-			log << "  (" << srcIt->second << ")";
+			log << srcIt->second;
 
 		log << "\n";
 	}
@@ -929,8 +891,8 @@ bool Packer::unpack(
 		return false;
 	}
 
-	std::unordered_map<uint64_t, std::string> symbols, sources;
-	readSymbolTable(f, header, symbols, sources);
+	std::unordered_map<uint64_t, std::string> sources;
+	readSymbolTable(f, header, sources);
 
 	std::error_code ec;
 	std::filesystem::create_directories(destDir, ec);
@@ -1007,9 +969,8 @@ bool Packer::unpack(
 			continue;
 		}
 
-		auto symIt = symbols.find(entry.assetID);
-		const std::string label = (symIt != symbols.end())
-			? symIt->second
+		const std::string label = (srcIt != sources.end())
+			? srcIt->second
 			: [&]{ std::ostringstream s; s << "0x" << std::hex << entry.assetID; return s.str(); }();
 
 		log << "  unpacked  " << label << "  ->  " << outFile.string() << "\n";

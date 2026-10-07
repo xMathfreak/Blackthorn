@@ -214,6 +214,12 @@ bool ManifestParser::parseTopLevel() {
 				return false;
 			}
 			manifest.compressionLevel = val;
+		} else if (key == "source_root") {
+			std::string val;
+			if (!parseString(val))
+				return false;
+
+			manifest.sourcePath = val;
 		} else if (key == "metadata") {
 			std::string val;
 			if (!parseString(val))
@@ -319,17 +325,12 @@ bool ManifestParser::parseAssetObject(ManifestAsset& out) {
 
 		skipWS();
 
-		if (key == "id") {
-			if (!parseString(out.id))
-				return false;
-
-		} else if (key == "path") {
+		if (key == "path") {
 			std::string pathStr;
 			if (!parseString(pathStr))
 				return false;
 
-			std::filesystem::path p(pathStr);
-			out.sourcePath = p.is_relative() ? (manifestDir / p) : p;
+			out.sourcePath = pathStr;
 
 		} else if (key == "type") {
 			if (!parseString(out.typeStr))
@@ -358,18 +359,13 @@ bool ManifestParser::parseAssetObject(ManifestAsset& out) {
 	if (!expect('}'))
 		return false;
 
-	if (out.id.empty()) {
-		error("asset object missing required field 'id'");
-		return false;
-	}
-
 	if (out.sourcePath.empty()) {
-		error("asset '" + out.id + "' missing required field 'path'");
+		error("asset object missing required field 'path'");
 		return false;
 	}
 
 	if (out.typeStr.empty()) {
-		error("asset '" + out.id + "' missing required field 'type'");
+		error("asset '" + out.sourcePath.string() + "' missing required field 'type'");
 		return false;
 	}
 

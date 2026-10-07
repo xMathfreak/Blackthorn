@@ -82,12 +82,8 @@ bool PackMount::mount(const std::filesystem::path& path, U32 priority) {
 		return false;
 	}
 
-	if (header.entryCount == 0) {
+	if (header.entryCount == 0)
 		BT_WARN("PackMount: '{}': pack is empty (entryCount == 0)", path.string());
-		std::fclose(file);
-		mounted = true;
-		return true;
-	}
 
 	if (!loadTOC(file, header)) {
 		std::fclose(file);
@@ -139,6 +135,14 @@ bool PackMount::loadTOC(std::FILE* file, const BTPHeader& header) {
 		return false;
 	}
 
+	if (result != rawTOC.size()) {
+		BT_ERROR(
+			"PackMount: '{}': TOC decompressed size mismatch: expected {}, got {}",
+			packPath.string(), rawTOC.size(), result
+		);
+		return false;
+	}
+
 	if (result % sizeof(BTPEntry) != 0) {
 		BT_ERROR(
 			"PackMount: '{}': decompressed TOC size {} is not a multiple of BTPEntry ({})",
@@ -156,9 +160,22 @@ bool PackMount::loadTOC(std::FILE* file, const BTPHeader& header) {
 	}
 
 	contentMap.reserve(count);
-	const BTPEntry* entries = reinterpret_cast<const BTPEntry*>(rawTOC.data());
-	for (size_t i = 0; i < count; ++i)
-		contentMap.emplace(entries[i].assetID, entries[i]);
+	for (size_t i = 0; i < count; ++i) {
+		BTPEntry entry{};
+		std::memcpy(
+			&entry,
+			rawTOC.data() + i * sizeof(BTPEntry),
+			sizeof(BTPEntry)
+		);
+
+		if (!contentMap.emplace(entry.assetID, entry).second) {
+			BT_ERROR(
+				"PackMount: '{}': duplicate asset ID 0x{:016X} in TOC",
+				packPath.string(), entry.assetID
+			);
+			return false;
+		}
+	}
 
 	return true;
 }
@@ -187,16 +204,6 @@ void PackMount::loadSymbolTable(std::FILE* file, const BTPHeader& header) {
 		std::memcpy(&assetID, cursor, sizeof(U64));
 		cursor += sizeof(U64);
 
-		U16 idStrLen = 0;
-		std::memcpy(&idStrLen, cursor, sizeof(U16));
-		cursor += sizeof(U16);
-
-		if (cursor + idStrLen > end)
-			break;
-
-		std::string idStr(reinterpret_cast<const char*>(cursor), idStrLen);
-		cursor += idStrLen;
-
 		const U8* pathStart = cursor;
 		while (cursor < end && *cursor != '\0')
 			++cursor;
@@ -207,11 +214,10 @@ void PackMount::loadSymbolTable(std::FILE* file, const BTPHeader& header) {
 		if (cursor < end)
 			++cursor;
 
-		symbols.emplace(assetID, std::move(idStr));
 		sources.emplace(assetID, std::move(srcPath));
 	}
 
-	BT_DEBUG("PackMount: '{}': loaded {} symbol(s)", packPath.string(), symbols.size());
+	BT_DEBUG("PackMount: '{}': loaded {} symbol(s)", packPath.string(), sources.size());
 }
 #endif
 
@@ -285,7 +291,25 @@ std::optional<PackedAssetData> PackMount::read(U64 assetID) const {
 			);
 			return std::nullopt;
 		}
+
+		if (decompResult != result.bytes.size()) {
+			BT_ERROR(
+				"PackMount: decompressed size mismatch for asset 0x{:016X} in '{}': "
+				"expected {}, got {}",
+				assetID, packPath.string(), result.bytes.size(), decompResult
+			);
+			return std::nullopt;
+		}
 	} else {
+		if (compressed.size() != result.bytes.size()) {
+			BT_ERROR(
+				"PackMount: uncompressed asset 0x{:016X} in '{}' has size mismatch: "
+				"expected {}, got {}",
+				assetID, packPath.string(), result.bytes.size(), compressed.size()
+			);
+			return std::nullopt;
+		}
+
 		std::memcpy(result.bytes.data(), compressed.data(), compressed.size());
 	}
 

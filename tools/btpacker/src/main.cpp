@@ -85,6 +85,9 @@ int cmdGenManifest(const cli::ParseResult& args) {
 
 	std::cout << "scanning '" << opts.assetDir.string() << "'...\n";
 
+	if (opts.btpOutput.empty())
+		opts.btpOutput = opts.assetDir.parent_path().filename().string() + ".btp";
+
 	const bool ok = BTPacker::ManifestGenerator::generate(opts, std::cout);
 	if (ok) {
 		std::cout << "\ndone.\n";
@@ -171,8 +174,8 @@ int main(int argc, char** argv) {
 		.required();
 	genManifestCmd.option("output", 'o')
 		.value<std::string>()
-		.help("Path to the .btp file to record in the manifest.")
-		.required();
+		.help("Path to the .btp file to record in the manifest. Defaults to '<asset-directory-name>.btp' if this option is not specified.")
+		.defaultValue("");
 	genManifestCmd.option("manifest", 'm')
 		.value<std::string>()
 		.help("Path to write the generated manifest.")

@@ -2,12 +2,43 @@
 
 #include <algorithm>
 #include <cctype>
+#include <filesystem>
 #include <fstream>
+#include <iomanip>
 #include <iostream>
 #include <map>
 #include <set>
+#include <vector>
+
+#include <nlohmann/json.hpp>
 
 namespace BTPacker {
+
+namespace {
+
+std::string escapeJsonString(const std::string& value) {
+	std::string escaped;
+	escaped.reserve(value.size());
+
+	for (const char c : value) {
+		switch (c) {
+			case '"':  escaped += "\\\""; break;
+			case '\\': escaped += "\\\\"; break;
+			case '\b': escaped += "\\b";  break;
+			case '\f': escaped += "\\f";  break;
+			case '\n': escaped += "\\n";  break;
+			case '\r': escaped += "\\r";  break;
+			case '\t': escaped += "\\t";  break;
+			default:
+				escaped += c;
+				break;
+		}
+	}
+
+	return escaped;
+}
+
+} // namespace
 
 std::string ManifestGenerator::classifyExtension(const std::string& ext) {
 	static const std::set<std::string> textures = {
@@ -33,52 +64,31 @@ std::string ManifestGenerator::classifyExtension(const std::string& ext) {
 		".btloc"
 	};
 
-	if (textures.count(ext))
+	if (ext == ".metadata")
+		return "Metadata";
+
+	if (textures.contains(ext))
 		return "Texture";
 
-	if (audio.count(ext))
+	if (audio.contains(ext))
 		return "Audio";
 
-	if (shaders.count(ext))
+	if (shaders.contains(ext))
 		return "Shader";
 
-	if (fonts.count(ext))
+	if (fonts.contains(ext))
 		return "Font";
 
-	if (spriteClips.count(ext))
+	if (spriteClips.contains(ext))
 		return "SpriteClip";
 
-	if (effects.count(ext))
+	if (effects.contains(ext))
 		return "ParticleEffect";
 
-	if (locale.count(ext))
+	if (locale.contains(ext))
 		return "Localization";
 
 	return "Raw";
-}
-
-std::string ManifestGenerator::deriveID(const std::filesystem::path& relPath) {
-	const std::filesystem::path withExt =
-		relPath.parent_path() / (relPath.stem().string() + relPath.extension().string());
-
-	std::string raw = withExt.generic_string();
-
-	std::string id;
-	id.reserve(raw.size());
-
-	for (char c : raw) {
-		if (c == '/' || c == '\\' || c == ' ' || c == '-' || c == '.') {
-			if (!id.empty() && id.back() != '_')
-				id += '_';
-		} else if (std::isalnum(static_cast<unsigned char>(c))) {
-			id += static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
-		}
-	}
-
-	while (!id.empty() && id.back() == '_')
-		id.pop_back();
-
-	return id;
 }
 
 bool ManifestGenerator::generate(const Options& opts, std::ostream& log) {
@@ -96,11 +106,12 @@ bool ManifestGenerator::generate(const Options& opts, std::ostream& log) {
 		return false;
 	}
 
-	std::set<std::string> excludeSet(opts.excludeDirs.begin(), opts.excludeDirs.end());
+	const std::set<std::string> excludeSet(
+		opts.excludeDirs.begin(),
+		opts.excludeDirs.end()
+	);
+
 	std::map<std::string, ManifestAsset> collected;
-
-	std::map<std::string, std::string> idToRelPath;
-
 	std::vector<std::filesystem::path> metadataPaths;
 
 	std::error_code ec;
@@ -110,7 +121,8 @@ bool ManifestGenerator::generate(const Options& opts, std::ostream& log) {
 		ec
 	)) {
 		if (ec) {
-			std::cerr << "btpacker: warning: iteration error: " << ec.message() << "\n";
+			std::cerr << "btpacker: warning: iteration error: "
+					  << ec.message() << "\n";
 			ec.clear();
 			continue;
 		}
@@ -118,11 +130,11 @@ bool ManifestGenerator::generate(const Options& opts, std::ostream& log) {
 		if (!entry.is_regular_file())
 			continue;
 
-		const std::filesystem::path absPath = entry.path();
+		const auto path = entry.path();
 
 		bool excluded = false;
-		for (const auto& part : absPath) {
-			if (excludeSet.count(part.string())) {
+		for (const auto& part : path) {
+			if (excludeSet.contains(part.string())) {
 				excluded = true;
 				break;
 			}
@@ -131,64 +143,48 @@ bool ManifestGenerator::generate(const Options& opts, std::ostream& log) {
 		if (excluded)
 			continue;
 
-		std::string ext = absPath.extension().string();
+		std::string ext = path.extension().string();
 		std::transform(ext.begin(), ext.end(), ext.begin(),
-			[](unsigned char c){ return static_cast<char>(std::tolower(c)); }
+			[](unsigned char c) {
+				return static_cast<char>(std::tolower(c));
+			}
 		);
 
-		if (ext == ".metadata") {
-			metadataPaths.push_back(entry.path());
+		const std::string type = classifyExtension(ext);
+		if (type == "Raw") {
+			log << "  skip  '" << path.filename().string()
+				<< "'  (unrecognised extension '" << ext << "')\n";
 			continue;
 		}
 
-		const std::string typeStr = classifyExtension(ext);
-
-		if (typeStr == "Raw") {
-			log << "  skip    " << absPath.filename().string()
-				<< "  (unrecognised extension '" << ext << "')\n";
-			continue;
-		}
-
-		const auto relPath = std::filesystem::relative(absPath, opts.assetDir, ec);
-		if (ec || relPath.empty()) {
+		const auto relativePath = std::filesystem::relative(path, opts.assetDir, ec);
+		if (ec || relativePath.empty()) {
 			std::cerr << "btpacker: warning: cannot compute relative path for '"
-					  << absPath.string() << "', skipping\n";
+					  << path.string() << "', skipping\n";
 			ec.clear();
 			continue;
 		}
 
-		const std::string id = deriveID(relPath);
-		if (id.empty()) {
-			std::cerr << "btpacker: warning: could not derive ID for '"
-					  << relPath.string() << "', skipping\n";
+		if (ext == ".metadata") {
+			metadataPaths.push_back(relativePath);
 			continue;
 		}
 
-		const std::string key = relPath.generic_string();
-		auto idIt = idToRelPath.find(id);
-		if (idIt != idToRelPath.end()) {
-			std::cerr << "btpacker: warning: ID collision \n'"
-					  << key << "' and '" << idIt->second
-					  << "' both map to id '" << id
-					  << "'. Rename one or edit the manifest manually.\n";
-		} else {
-			idToRelPath.emplace(id, key);
-		}
-
-		if (collected.count(key)) {
+		const std::string key = relativePath.generic_string();
+		if (collected.contains(key)) {
 			std::cerr << "btpacker: warning: duplicate path '" << key
 					  << "', keeping first\n";
 			continue;
 		}
 
 		ManifestAsset asset;
-		asset.id = id;
-		asset.sourcePath = absPath;
-		asset.typeStr = typeStr;
+		asset.sourcePath = key;
+		asset.typeStr = type;
 
 		collected.emplace(key, std::move(asset));
-		log << "  found   " << key
-			<< "  [" << typeStr << "]  ->  id: " << id << "\n";
+		log << "  found "
+			<< std::left << std::setw(17) << ('[' + type + ']')
+			<< key << "\n";
 	}
 
 	if (collected.empty())
@@ -199,15 +195,17 @@ bool ManifestGenerator::generate(const Options& opts, std::ostream& log) {
 	for (auto& [key, asset] : collected)
 		assets.push_back(std::move(asset));
 
-	std::filesystem::path metadataPath;
-	metadataPath = metadataPaths.size() > 0
-		? metadataPaths.front()
-		: std::filesystem::path{};
+	std::sort(metadataPaths.begin(), metadataPaths.end());
 
-	if (metadataPaths.size() > 1)
+	std::filesystem::path metadataPath;
+	if (!metadataPaths.empty())
+		metadataPath = metadataPaths.front();
+
+	if (metadataPaths.size() > 1) {
 		std::cerr << "btpacker: warning: found multiple .metadata files in '"
-			<< opts.assetDir.string() << "', using '" << metadataPath.string()
-			<< "'\n";
+				  << opts.assetDir.string() << "', using '"
+				  << metadataPath.generic_string() << "'\n";
+	}
 
 	return writeManifest(opts, assets, log, metadataPath);
 }
@@ -236,17 +234,18 @@ bool ManifestGenerator::writeManifest(
 		return false;
 	}
 
-	const std::filesystem::path manifestDir =
-		opts.manifestOut.parent_path().empty()
+	const auto manifestDir = opts.manifestOut.parent_path().empty()
 		? std::filesystem::current_path()
 		: std::filesystem::absolute(opts.manifestOut.parent_path());
 
 	std::error_code ec;
-	const auto relBtp = std::filesystem::relative(
-		std::filesystem::absolute(opts.btpOutput), manifestDir, ec
+	const auto relativeBtp = std::filesystem::relative(
+		std::filesystem::absolute(opts.btpOutput),
+		manifestDir,
+		ec
 	);
-	const std::string btpOutputStr = (!ec && !relBtp.empty())
-		? relBtp.generic_string()
+	const std::string btpOutput = (!ec && !relativeBtp.empty())
+		? relativeBtp.generic_string()
 		: opts.btpOutput.generic_string();
 
 	const std::vector<std::string> typeOrder = {
@@ -261,62 +260,42 @@ bool ManifestGenerator::writeManifest(
 	};
 
 	std::map<std::string, std::vector<const ManifestAsset*>> byType;
-	for (const auto& a : assets)
-		byType[a.typeStr].push_back(&a);
+	for (const auto& asset : assets)
+		byType[asset.typeStr].push_back(&asset);
 
-	std::vector<std::vector<const ManifestAsset*>*> activeGroups;
-	for (const std::string& type : typeOrder) {
-		auto it = byType.find(type);
-		if (it != byType.end() && !it->second.empty())
-			activeGroups.push_back(&it->second);
-	}
+	const auto absoluteAssetDir = std::filesystem::absolute(opts.assetDir, ec);
+	const std::string sourceRoot = (!ec && !absoluteAssetDir.empty())
+		? absoluteAssetDir.generic_string()
+		: opts.assetDir.generic_string();
 
-	out << "{\n";
-	out << "\t\"output\": \"" << btpOutputStr << "\",\n";
-	out << "\t\"compression_level\": " << opts.compressionLevel << ",\n";
-	out << "\t\"symbol_table\": " << (opts.writeSymbolTable ? "true" : "false") << ",\n";
-	out << "\t\"metadata\": \"" << (metadataPath.empty() ? "" : metadataPath.string()) << "\",\n";
-	out << "\n";
-	out << "\t\"assets\": [\n";
+	nlohmann::ordered_json json;
+	json["output"] = btpOutput;
+	json["source_root"] = sourceRoot;
+	json["compressionLevel"] = opts.compressionLevel;
+	json["symbol_table"] = opts.writeSymbolTable;
+	json["metadata"] = metadataPath.generic_string();
+	json["assets"] = nlohmann::json::array();
 
-	for (size_t gi = 0; gi < activeGroups.size(); ++gi) {
-		const auto& group = *activeGroups[gi];
-		const bool isLast = (gi == activeGroups.size() - 1);
+	for (const auto& type : typeOrder) {
+		const auto it = byType.find(type);
+		if (it == byType.end() || it->second.empty())
+			continue;
 
-		out << "\t\t// ---- " << group[0]->typeStr << " ----\n";
-
-		for (size_t ai = 0; ai < group.size(); ++ai) {
-			const ManifestAsset* asset = group[ai];
-
-			const auto relSrc = std::filesystem::relative(
-				asset->sourcePath, manifestDir, ec
-			);
-			const std::string pathStr = (!ec && !relSrc.empty())
-				? relSrc.generic_string()
-				: asset->sourcePath.generic_string();
-
-			const bool needsComma = !(isLast && ai == group.size() - 1);
-
-			out << "\t\t{ \"id\": \"" << asset->id << "\","
-				<< " \"path\": \"" << pathStr << "\","
-				<< " \"type\": \"" << asset->typeStr << "\" }"
-				<< (needsComma ? "," : "")
-				<< "\n";
+		for (const ManifestAsset* asset : it->second) {
+			json["assets"].push_back({
+				{"path", asset->sourcePath.generic_string()},
+				{"type", asset->typeStr}
+			});
 		}
-
-		if (!isLast)
-			out << "\n";
 	}
 
-	out << "\t]\n";
-	out << "}\n";
-
-	out.close();
+	out << json.dump(2);
 
 	log << "\n"
 		<< "  manifest: " << opts.manifestOut.string() << "\n"
 		<< "  assets:   " << assets.size() << "\n"
-		<< "  metadata: " << (metadataPath.empty() ? "no" : '\'' + metadataPath.string() + '\'');
+		<< "  metadata: "
+		<< (metadataPath.empty() ? "no" : '\'' + metadataPath.string() + '\'');
 
 	return true;
 }
