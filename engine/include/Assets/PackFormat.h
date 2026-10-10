@@ -45,7 +45,7 @@ enum class PackAssetType : uint8_t {
 };
 
 /**
- * @brief Fixed 64-byte file header. Always located at byte offset 0.
+ * @brief Fixed 72-byte file header. Always located at byte offset 0.
  *
  * Written last by the packer (after all blobs and the TOC are on disk) by
  * seeking back to offset 0. The reader seeks to tocOffset to load the TOC

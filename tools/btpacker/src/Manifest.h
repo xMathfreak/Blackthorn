@@ -7,47 +7,51 @@
 namespace BTPacker {
 
 /**
- * @brief Describes a single asset entry inside a pack manifest.
+ * @brief One asset entry inside a pack manifest.
  */
 struct ManifestAsset {
-	std::filesystem::path sourcePath; ///< Absolute path to the source file on disk.
-	std::string typeStr; ///< "Texture" | "Audio" | "Shader" | "Font" | "SpriteClip" | "ParticleEffect" | "Localization" |"Raw"
+	std::filesystem::path sourcePath; ///< Path relative to the input directory. Required.
+	std::string typeStr;              ///< One of the type names listed on PackManifest. Required.
 };
 
 /**
- * @brief Parsed representation of a .pack.json manifest file.
+ * @brief Parsed representation of a .pack.json manifest.
  *
- * Example manifest:
+ * A manifest lists the assets of one project, relative to that project's input
+ * directory. It doesn't say where the pack will be written. The pack step
+ * supplies the input directory and output path.
+ *
  * @code{.json}
  * {
- *     "output": "data/base.btp",
+ *     "root": "assets",
  *     "compression_level": 3,
  *     "symbol_table": true,
- *     "metadata": "assets/assets.metadata",
+ *     "metadata": "assets.metadata",
  *     "assets": [
- *         { "path": "assets/textures/player.png", "type": "Texture" },
- *         { "path": "assets/audio/bgm.ogg",       "type": "Audio"   },
- *         { "path": "assets/shaders/main.glsl",   "type": "Shader"  }
+ *         { "path": "textures/player.png", "type": "Texture" },
+ *         { "path": "audio/bgm.ogg",       "type": "Audio"   }
  *     ]
  * }
  * @endcode
  *
  * Fields:
- *   output            - path to the .btp file to create (required)
- *   compression_level - zstd level 1–22; default 3
- *   metadata          - path to the metadata file (optional)
+ *   root              - virtual root name, prefixed to every asset ID. Defaults to the input
+ *                       directory's name. Must be a single name: no '/', '\', ':', or '@', not
+ *                       "." or "..", and not "root" (reserved for references).
+ *   compression_level - zstd level 1-22; default 3
+ *   metadata          - metadata file, relative to the input directory (optional)
  *   symbol_table      - write a debug symbol table; default true
- *   assets            - array of asset objects (required, must be non-empty)
+ *   assets            - non-empty array of asset objects (required)
  *
  * Each asset object:
- *   path - source file path, relative to the manifest file or absolute (required)
- *   type - "Texture" | "Audio" | "Shader" | "Font" | "SpriteClip" | "ParticleEffect" | "Raw" (required)
+ *   path - path relative to the input directory. The asset ID is root + "/" + path,
+ *          for example "assets/textures/player.png". (required)
+ *   type - "Texture" | "Audio" | "Shader" | "Font" | "SpriteClip" | "ParticleEffect" |
+ *          "Localization" | "Raw" (required)
  */
 struct PackManifest {
-	std::filesystem::path sourcePath; ///< Absolute directory for the packed asset.
-	std::filesystem::path outputPath;
-	std::filesystem::path manifestDir; ///< Directory of the manifest file; asset paths are resolved relative to this.
-	std::filesystem::path metadataPath;
+	std::string virtualRoot;          ///< Prefix for every asset ID. Validated by isValidRootName().
+	std::filesystem::path metadataPath; ///< Relative to the input directory. Empty if none.
 	int compressionLevel = 3;
 	bool writeSymbolTable = true;
 	std::vector<ManifestAsset> assets;

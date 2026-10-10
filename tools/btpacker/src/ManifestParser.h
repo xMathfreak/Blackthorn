@@ -36,7 +36,6 @@ public:
 private:
 	explicit ManifestParser(std::string src, std::filesystem::path dir)
 		: source(std::move(src))
-		, manifestDir(std::move(dir))
 	{}
 
 	/// Entry point: parses source and fills manifest.
@@ -73,7 +72,6 @@ private:
 	bool parseAssetObject(ManifestAsset& out);
 
 	std::string source;
-	std::filesystem::path manifestDir;
 	size_t position = 0;
 	int line = 1;
 	PackManifest manifest;

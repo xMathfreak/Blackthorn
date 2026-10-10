@@ -5,6 +5,8 @@
 #include <iostream>
 #include <sstream>
 
+#include "AssetReference.h"
+
 namespace BTPacker {
 
 std::optional<PackManifest> ManifestParser::parse(const std::filesystem::path& path) {
@@ -20,7 +22,6 @@ std::optional<PackManifest> ManifestParser::parse(const std::filesystem::path& p
 	const std::filesystem::path manifestDir = path.parent_path();
 
 	ManifestParser parser(ss.str(), manifestDir.empty() ? std::filesystem::current_path() : manifestDir);
-	parser.manifest.manifestDir = parser.manifestDir;
 
 	if (!parser.run())
 		return std::nullopt;
@@ -195,17 +196,7 @@ bool ManifestParser::parseTopLevel() {
 
 		skipWS();
 
-		if (key == "output") {
-			std::string val;
-			if (!parseString(val))
-				return false;
-
-			manifest.outputPath = std::filesystem::path(val);
-
-			if (manifest.outputPath.is_relative())
-				manifest.outputPath = manifestDir / manifest.outputPath;
-
-		} else if (key == "compression_level") {
+		if (key == "compression_level") {
 			int val = 3;
 			if (!parseInt(val))
 				return false;
@@ -214,12 +205,17 @@ bool ManifestParser::parseTopLevel() {
 				return false;
 			}
 			manifest.compressionLevel = val;
-		} else if (key == "source_root") {
+		} else if (key == "root") {
 			std::string val;
 			if (!parseString(val))
 				return false;
 
-			manifest.sourcePath = val;
+			if (!Blackthorn::isValidRootName(val)) {
+				error("invalid root name '" + val + "': must be a single name, not 'root', with no '/', '\\', ':' or '@'");
+				return false;
+			}
+
+			manifest.virtualRoot = val;
 		} else if (key == "metadata") {
 			std::string val;
 			if (!parseString(val))
@@ -272,11 +268,6 @@ bool ManifestParser::parseTopLevel() {
 
 	if (!expect('}'))
 		return false;
-
-	if (manifest.outputPath.empty()) {
-		error("missing required field 'output'");
-		return false;
-	}
 
 	if (manifest.assets.empty()) {
 		error("'assets' array is missing or empty");

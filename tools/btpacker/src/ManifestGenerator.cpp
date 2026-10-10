@@ -12,7 +12,22 @@
 
 #include <nlohmann/json.hpp>
 
+#include "AssetNormalize.h"
+#include "AssetReference.h"
+
 namespace BTPacker {
+
+namespace {
+
+void error(std::string_view message) {
+	std::cerr << "btpacker: error: " << message << '\n';
+}
+
+void warn(std::string_view message) {
+	std::cerr << "btpacker: warning: " << message << '\n';
+}
+
+} // namespace
 
 std::string ManifestGenerator::classifyExtension(const std::string& ext) {
 	static const std::set<std::string> textures = {
@@ -66,17 +81,11 @@ std::string ManifestGenerator::classifyExtension(const std::string& ext) {
 }
 
 bool ManifestGenerator::generate(const Options& opts, std::ostream& log) {
-	if (!std::filesystem::exists(opts.assetDir)) {
-		std::cerr << "btpacker: error: asset directory not found: '"
-				  << opts.assetDir.string() << "'\n";
+	std::error_code ec;
 
-		return false;
-	}
-
-	if (!std::filesystem::is_directory(opts.assetDir)) {
-		std::cerr << "btpacker: error: '" << opts.assetDir.string()
-				  << "' is not a directory\n";
-
+	const auto assetsDirectory = std::filesystem::absolute(opts.input, ec).lexically_normal();
+	if (ec || !std::filesystem::is_directory(assetsDirectory)) {
+		error("asset directory '" + opts.input.string() + "' not found");
 		return false;
 	}
 
@@ -86,17 +95,15 @@ bool ManifestGenerator::generate(const Options& opts, std::ostream& log) {
 	);
 
 	std::map<std::string, ManifestAsset> collected;
-	std::vector<std::filesystem::path> metadataPaths;
+	std::vector<std::string> metadataPaths;
 
-	std::error_code ec;
 	for (const auto& entry : std::filesystem::recursive_directory_iterator(
-		opts.assetDir,
+		assetsDirectory,
 		std::filesystem::directory_options::skip_permission_denied,
 		ec
 	)) {
 		if (ec) {
-			std::cerr << "btpacker: warning: iteration error: "
-					  << ec.message() << "\n";
+			warn("iteration error: " + ec.message());
 			ec.clear();
 			continue;
 		}
@@ -104,9 +111,9 @@ bool ManifestGenerator::generate(const Options& opts, std::ostream& log) {
 		if (!entry.is_regular_file())
 			continue;
 
-		const auto path = entry.path();
-
+		const auto& path = entry.path();
 		bool excluded = false;
+
 		for (const auto& part : path) {
 			if (excludeSet.contains(part.string())) {
 				excluded = true;
@@ -131,23 +138,28 @@ bool ManifestGenerator::generate(const Options& opts, std::ostream& log) {
 			continue;
 		}
 
-		const auto relativePath = std::filesystem::relative(path, opts.assetDir, ec);
-		if (ec || relativePath.empty()) {
-			std::cerr << "btpacker: warning: cannot compute relative path for '"
-					  << path.string() << "', skipping\n";
+		const auto relativePath = std::filesystem::relative(path, assetsDirectory, ec);
+		if (ec) {
+			warn("cannot compute path for '" + path.string() + "', skipping");
 			ec.clear();
 			continue;
 		}
 
-		if (ext == ".metadata") {
-			metadataPaths.push_back(relativePath);
+		const auto normalizedKey = Blackthorn::normalizeAssetPath(relativePath.generic_string());
+		if (!normalizedKey) {
+			warn("'" + relativePath.generic_string() + "' is not a valid asset path, skipping");
 			continue;
 		}
 
-		const std::string key = relativePath.generic_string();
+		const std::string key = *normalizedKey;
+
+		if (ext == ".metadata") {
+			metadataPaths.push_back(key);
+			continue;
+		}
+
 		if (collected.contains(key)) {
-			std::cerr << "btpacker: warning: duplicate path '" << key
-					  << "', keeping first\n";
+			warn("duplicate path '" + key + "', keeping first");
 			continue;
 		}
 
@@ -162,24 +174,20 @@ bool ManifestGenerator::generate(const Options& opts, std::ostream& log) {
 	}
 
 	if (collected.empty())
-		std::cerr << "btpacker: warning: no recognised assets found\n";
+		warn("no recognized assets found");
 
 	std::vector<ManifestAsset> assets;
 	assets.reserve(collected.size());
-	for (auto& [key, asset] : collected)
-		assets.push_back(std::move(asset));
+	for (auto& [k, v] : collected)
+		assets.push_back(std::move(v));
 
 	std::sort(metadataPaths.begin(), metadataPaths.end());
-
-	std::filesystem::path metadataPath;
+	std::string metadataPath;
 	if (!metadataPaths.empty())
 		metadataPath = metadataPaths.front();
 
-	if (metadataPaths.size() > 1) {
-		std::cerr << "btpacker: warning: found multiple .metadata files in '"
-				  << opts.assetDir.string() << "', using '"
-				  << metadataPath.generic_string() << "'\n";
-	}
+	if (metadataPaths.size() > 1)
+		warn("found multiple .metadata files, using '" + metadataPath + '\'');
 
 	return writeManifest(opts, assets, log, metadataPath);
 }
@@ -188,39 +196,44 @@ bool ManifestGenerator::writeManifest(
 	const Options& opts,
 	const std::vector<ManifestAsset>& assets,
 	std::ostream& log,
-	std::filesystem::path metadataPath
+	const std::string& metadataPath
 ) {
-	const auto outDir = opts.manifestOut.parent_path();
-	if (!outDir.empty()) {
-		std::error_code ec;
-		std::filesystem::create_directories(outDir, ec);
+	std::string rootDirectory = opts.root;
+	if (rootDirectory.empty()) {
+		std::filesystem::path input(opts.input);
+		if (input.filename().empty())
+			input = input.parent_path();
+
+		rootDirectory = input.filename().generic_string();
+	}
+
+	if (!Blackthorn::isValidRootName(rootDirectory)) {
+		error("root name '" + rootDirectory + "' is invalid: use a single name that isn't 'root', with no '/', '\\', ':' or '@'");
+		return false;
+	}
+
+	std::error_code ec;
+
+	const auto outputDirectory = opts.output.parent_path();
+	if (!outputDirectory.empty()) {
+		std::filesystem::create_directories(outputDirectory, ec);
 		if (ec) {
-			std::cerr << "btpacker: error: cannot create manifest directory '"
-					  << outDir.string() << "': " << ec.message() << "\n";
+			error("cannot create manifest directory '" + outputDirectory.string() + "': " + ec.message());
 			return false;
 		}
 	}
 
-	std::ofstream out(opts.manifestOut);
+	std::ofstream out(opts.output);
 	if (!out.is_open()) {
-		std::cerr << "btpacker: error: cannot write manifest to '"
-				  << opts.manifestOut.string() << "'\n";
+		error("cannot write manifest to '" + opts.output.string() + "'");
 		return false;
 	}
 
-	const auto manifestDir = opts.manifestOut.parent_path().empty()
-		? std::filesystem::current_path()
-		: std::filesystem::absolute(opts.manifestOut.parent_path());
-
-	std::error_code ec;
-	const auto relativeBtp = std::filesystem::relative(
-		std::filesystem::absolute(opts.btpOutput),
-		manifestDir,
+	const auto manifestDirectory = std::filesystem::absolute(
+		outputDirectory.empty() ? std::filesystem::path(".") : outputDirectory,
 		ec
-	);
-	const std::string btpOutput = (!ec && !relativeBtp.empty())
-		? relativeBtp.generic_string()
-		: opts.btpOutput.generic_string();
+	).lexically_normal();
+
 
 	const std::vector<std::string> typeOrder = {
 		"Texture",
@@ -237,17 +250,14 @@ bool ManifestGenerator::writeManifest(
 	for (const auto& asset : assets)
 		byType[asset.typeStr].push_back(&asset);
 
-	const auto absoluteAssetDir = std::filesystem::absolute(opts.assetDir, ec);
-	const std::string sourceRoot = (!ec && !absoluteAssetDir.empty())
-		? absoluteAssetDir.generic_string()
-		: opts.assetDir.generic_string();
-
 	nlohmann::ordered_json json;
-	json["output"] = btpOutput;
-	json["source_root"] = sourceRoot;
+	json["root"] = rootDirectory;
 	json["compression_level"] = opts.compressionLevel;
 	json["symbol_table"] = opts.writeSymbolTable;
-	json["metadata"] = metadataPath.generic_string();
+
+	if (!metadataPath.empty())
+		json["metadata"] = metadataPath;
+
 	json["assets"] = nlohmann::json::array();
 
 	for (const auto& type : typeOrder) {
@@ -265,12 +275,7 @@ bool ManifestGenerator::writeManifest(
 
 	out << json.dump(2);
 
-	log << "\n"
-		<< "  manifest: " << opts.manifestOut.string() << "\n"
-		<< "  assets:   " << assets.size() << "\n"
-		<< "  metadata: "
-		<< (metadataPath.empty() ? "no" : '\'' + metadataPath.string() + '\'');
-
+	out.close();
 	return true;
 }
 

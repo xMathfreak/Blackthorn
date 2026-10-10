@@ -1,6 +1,8 @@
 #include "Packer.h"
+#include "AssetNormalize.h"
 
 #include <algorithm>
+#include <cctype>
 #include <cstdio>
 #include <cstring>
 #include <filesystem>
@@ -22,39 +24,13 @@
 #include "Assets/PackFormat.h"
 #include "Assets/PackMetadataJson.h"
 
+#include "FileIO.h"
+
 using namespace Blackthorn::Assets;
 
 namespace BTPacker {
 
 namespace {
-
-/// Seeks an open FILE* to an absolute byte offset. Returns false on failure.
-bool seekTo(std::FILE* f, uint64_t offset) {
-#ifdef _WIN32
-	return _fseeki64(f, static_cast<__int64>(offset), SEEK_SET) == 0;
-#else
-	return std::fseek(f, static_cast<long>(offset), SEEK_SET) == 0;
-#endif
-}
-
-/// Returns the current byte position of an open FILE*. Returns -1 on failure.
-int64_t fileTell(std::FILE* f) {
-#ifdef _WIN32
-	return _ftelli64(f);
-#else
-	return static_cast<int64_t>(std::ftell(f));
-#endif
-}
-
-/// Reads exactly @p count bytes from @p f into @p dst. Returns false on short read.
-bool readExact(std::FILE* f, void* dst, size_t count) {
-	return std::fread(dst, 1, count, f) == count;
-}
-
-/// Writes exactly @p count bytes from @p src into @p f. Returns false on error.
-bool writeExact(std::FILE* f, const void* src, size_t count) {
-	return std::fwrite(src, 1, count, f) == count;
-}
 
 /**
  * @brief Reads the entire contents of a file into a vector.
@@ -67,9 +43,17 @@ bool readFile(const std::filesystem::path& path, std::vector<uint8_t>& out) {
 		return false;
 	}
 
-	std::fseek(f, 0, SEEK_END);
-	const long size = std::ftell(f);
-	std::fseek(f, 0, SEEK_SET);
+	if (!Blackthorn::seekTo(f, 0, SEEK_END)) {
+		std::fclose(f);
+		return false;
+	}
+
+	const int64_t size = Blackthorn::fileTell(f);
+
+	if (!Blackthorn::seekTo(f, 0, SEEK_SET)) {
+		std::fclose(f);
+		return false;
+	}
 
 	if (size < 0) {
 		std::fclose(f);
@@ -78,7 +62,7 @@ bool readFile(const std::filesystem::path& path, std::vector<uint8_t>& out) {
 	}
 
 	out.resize(static_cast<size_t>(size));
-	const bool ok = readExact(f, out.data(), out.size());
+	const bool ok = Blackthorn::readExact(f, out.data(), out.size());
 	std::fclose(f);
 
 	if (!ok) {
@@ -210,12 +194,12 @@ const char* compressionName(PackCompression c) {
  * @return true on success; emits errors to stderr on failure.
  */
 bool readHeader(std::FILE* f, BTPHeader& header, const std::string& filePath) {
-	if (!seekTo(f, 0)) {
+	if (!Blackthorn::seekTo(f, 0)) {
 		std::cerr << "btpacker: error: seek failed in '" << filePath << "'\n";
 		return false;
 	}
 
-	if (!readExact(f, &header, sizeof(BTPHeader))) {
+	if (!Blackthorn::readExact(f, &header, sizeof(BTPHeader))) {
 		std::cerr << "btpacker: error: cannot read header from '" << filePath << "'\n";
 		return false;
 	}
@@ -246,13 +230,13 @@ bool readTOC(
 	const std::string& filePath,
 	std::vector<BTPEntry>& entries
 ) {
-	if (!seekTo(f, header.tocOffset)) {
+	if (!Blackthorn::seekTo(f, header.tocOffset)) {
 		std::cerr << "btpacker: error: seek to TOC failed in '" << filePath << "'\n";
 		return false;
 	}
 
 	std::vector<uint8_t> compressedTOC(static_cast<size_t>(header.tocCompSize));
-	if (!readExact(f, compressedTOC.data(), compressedTOC.size())) {
+	if (!Blackthorn::readExact(f, compressedTOC.data(), compressedTOC.size())) {
 		std::cerr << "btpacker: error: cannot read TOC from '" << filePath << "'\n";
 		return false;
 	}
@@ -286,18 +270,18 @@ void readSymbolTable(
 	if (header.symbolTableOff == 0 || header.symbolTableSize == 0)
 		return;
 
-	if (!seekTo(f, header.symbolTableOff))
+	if (!Blackthorn::seekTo(f, header.symbolTableOff))
 		return;
 
 	std::vector<uint8_t> block(static_cast<size_t>(header.symbolTableSize));
-	if (!readExact(f, block.data(), block.size()))
+	if (!Blackthorn::readExact(f, block.data(), block.size()))
 		return;
 
 	const uint8_t* cursor = block.data();
 	const uint8_t* end = block.data() + block.size();
 
 	while (cursor < end) {
-		if (cursor + sizeof(uint64_t) + sizeof(uint16_t) > end)
+		if (cursor + sizeof(uint64_t) > end)
 			break;
 
 		uint64_t assetID = 0;
@@ -323,24 +307,18 @@ void readSymbolTable(
  *
  * Binary layout per entry:
  *   uint64_t  assetID
- *   uint16_t  idLen
- *   char      id[idLen]          (not null-terminated)
- *   char      relSourcePath[]    (null-terminated, relative to manifest dir)
+ *   char      assetPath[]     (null-terminated canonical ID, e.g. "assets/textures/player.png")
  *
- * Storing a relative path means the symbol table is portable across machines
- * and does not leak local directory structure into shipped binaries.
+ * The reader in readSymbolTable() expects exactly this layout.
  *
  * @param buf         Buffer to append to.
- * @param assetID     xxHash64 of the asset string ID.
- * @param id          The asset string ID (e.g. "player_tex").
- * @param path        ID string for the asset.
- * @param manifestDir Directory of the manifest; used to compute the relative path.
+ * @param assetID     xxHash64 of the canonical ID.
+ * @param path        The canonical ID. Same string the engine passes to load().
  */
 void appendSymbolEntry(
 	std::vector<uint8_t>& buf,
 	uint64_t assetID,
-	const std::string& path,
-	const std::filesystem::path& manifestDir
+	const std::string& path
 ) {
 	// -- assetID (8 bytes) --
 	const size_t idStart = buf.size();
@@ -393,18 +371,18 @@ std::optional<PackMetadata> loadPackMetadata(
 /**
  * @brief Reads and parses the pack metadata block from an open file.
  * No-op (returns std::nullopt) if header.metadataOff is 0, the block can't
- * be read, or it isn't valid JSON - readers should treat a corrupt
+ * be read, or it isn't valid JSON. Readers should treat a corrupt
  * metadata block as "absent", not as a reason to fail the whole operation.
  */
 std::optional<PackMetadata> readPackMetadata(std::FILE* f, const BTPHeader& header) {
 	if (header.metadataOff == 0 || header.metadataSize == 0)
 		return std::nullopt;
 
-	if (!seekTo(f, header.metadataOff))
+	if (!Blackthorn::seekTo(f, header.metadataOff))
 		return std::nullopt;
 
 	std::string text(static_cast<size_t>(header.metadataSize), '\0');
-	if (!readExact(f, text.data(), text.size()))
+	if (!Blackthorn::readExact(f, text.data(), text.size()))
 		return std::nullopt;
 
 	const nlohmann::json json = nlohmann::json::parse(text, nullptr, false);
@@ -425,11 +403,11 @@ std::optional<std::string> readMetadataBytes(std::FILE* f, const BTPHeader& head
 	if (header.metadataOff == 0 || header.metadataSize == 0)
 		return std::string();
 
-	if (!seekTo(f, header.metadataOff))
+	if (!Blackthorn::seekTo(f, header.metadataOff))
 		return std::nullopt;
 
 	std::string text(static_cast<size_t>(header.metadataSize), '\0');
-	if (!readExact(f, text.data(), text.size()))
+	if (!Blackthorn::readExact(f, text.data(), text.size()))
 		return std::nullopt;
 
 	return text;
@@ -437,9 +415,11 @@ std::optional<std::string> readMetadataBytes(std::FILE* f, const BTPHeader& head
 
 } // anonymous namespace
 
-bool Packer::pack(const PackManifest& manifest, std::ostream& log) {
-	const std::optional<PackMetadata> packMetadata = loadPackMetadata(manifest.sourcePath / manifest.metadataPath, log);
-	const auto outDir = manifest.outputPath.parent_path();
+bool Packer::pack(const PackManifest& manifest, const PackOptions& opts, std::ostream& log) {
+	const std::optional<PackMetadata> packMetadata = manifest.metadataPath.empty()
+		? std::nullopt
+		: loadPackMetadata(opts.input / manifest.metadataPath, log);
+	const auto outDir = opts.output.parent_path();
 
 	if (!outDir.empty() && !std::filesystem::exists(outDir)) {
 		std::error_code ec;
@@ -453,7 +433,7 @@ bool Packer::pack(const PackManifest& manifest, std::ostream& log) {
 		}
 	}
 
-	const std::string outPathStr = manifest.outputPath.string();
+	const std::string outPathStr = opts.output.string();
 	std::FILE* out = std::fopen(outPathStr.c_str(), "wb");
 
 	if (!out) {
@@ -462,10 +442,10 @@ bool Packer::pack(const PackManifest& manifest, std::ostream& log) {
 	}
 
 	BTPHeader header{};
-	if (!writeExact(out, &header, sizeof(BTPHeader))) {
+	if (!Blackthorn::writeExact(out, &header, sizeof(BTPHeader))) {
 		std::cerr << "btpacker: error: cannot write header placeholder\n";
 		std::fclose(out);
-		std::filesystem::remove(manifest.outputPath);
+		std::filesystem::remove(opts.output);
 		return false;
 	}
 
@@ -477,47 +457,59 @@ bool Packer::pack(const PackManifest& manifest, std::ostream& log) {
 	uint64_t totalSourceBytes = 0;
 	uint64_t totalCompressedBytes = 0;
 
-	for (const ManifestAsset& asset : manifest.assets) {
-		const std::filesystem::path assetSource = manifest.sourcePath / asset.sourcePath;
-		if (!std::filesystem::exists(assetSource)) {
-			std::cerr << "btpacker: error: source file not found: '"
-					  << assetSource.string() << "' (asset '" << assetSource << "')\n";
+	std::unordered_map<uint64_t, std::string> seenIDs;
 
+	for (const ManifestAsset& asset : manifest.assets) {
+		const auto normalized = Blackthorn::normalizeAssetPath(asset.sourcePath.generic_string());
+		if (!normalized) {
+			std::cerr << "btpacker: error: invalid asset path '" << asset.sourcePath.generic_string() << "'\n";
 			std::fclose(out);
-			std::filesystem::remove(manifest.outputPath);
+			std::filesystem::remove(opts.output);
 			return false;
 		}
+
+		const std::string forHash = manifest.virtualRoot + "/" + *normalized;
+
+		const uint64_t assetID = XXH64(forHash.data(), forHash.size(), 0);
+
+		if (auto [it, inserted] = seenIDs.emplace(assetID, *normalized); !inserted) {
+			std::cerr << "btpacker: error: '" << *normalized << "' collides with '"
+					  << it->second << "' (hash 0x" << std::hex << assetID << std::dec << ")\n";
+			std::fclose(out);
+			std::filesystem::remove(opts.output);
+			return false;
+		}
+
+		const std::filesystem::path assetSource = opts.input / *normalized;
 
 		std::vector<uint8_t> raw;
 		if (!readFile(assetSource, raw)) {
 			std::fclose(out);
-			std::filesystem::remove(manifest.outputPath);
+			std::filesystem::remove(opts.output);
 			return false;
 		}
 
 		std::vector<uint8_t> compressed;
 		if (!compressZstd(raw, compressed, manifest.compressionLevel)) {
 			std::fclose(out);
-			std::filesystem::remove(manifest.outputPath);
+			std::filesystem::remove(opts.output);
 			return false;
 		}
 
 		const uint64_t blobHash = XXH64(compressed.data(), compressed.size(), 0);
-		std::string idPath = manifest.sourcePath.parent_path().filename().generic_string() + '/' + asset.sourcePath.generic_string();
-		const uint64_t assetID = XXH64(idPath.data(), idPath.size(), 0);
 
-		const int64_t dataOffset = fileTell(out);
+		const int64_t dataOffset = Blackthorn::fileTell(out);
 		if (dataOffset < 0) {
 			std::cerr << "btpacker: error: ftell failed while writing '" << assetSource << "'\n";
 			std::fclose(out);
-			std::filesystem::remove(manifest.outputPath);
+			std::filesystem::remove(opts.output);
 			return false;
 		}
 
-		if (!writeExact(out, compressed.data(), compressed.size())) {
+		if (!Blackthorn::writeExact(out, compressed.data(), compressed.size())) {
 			std::cerr << "btpacker: error: write failed for asset '" << assetSource << "'\n";
 			std::fclose(out);
-			std::filesystem::remove(manifest.outputPath);
+			std::filesystem::remove(opts.output);
 			return false;
 		}
 
@@ -535,8 +527,7 @@ bool Packer::pack(const PackManifest& manifest, std::ostream& log) {
 			appendSymbolEntry(
 				symbolTableBytes,
 				assetID,
-				asset.sourcePath.generic_string(),
-				manifest.manifestDir
+				forHash
 			);
 		}
 
@@ -544,7 +535,7 @@ bool Packer::pack(const PackManifest& manifest, std::ostream& log) {
 			: (1.0f - static_cast<float>(compressed.size())
 				/ static_cast<float>(raw.size())) * 100.0f;
 
-		log << "  packed  " << asset.sourcePath.generic_string()
+		log << "  packed  " << *normalized
 			<< "  [" << assetTypeName(entry.assetType) << "]"
 			<< "  " << raw.size() << " B  ->  " << compressed.size() << " B"
 			<< "  (" << std::fixed << std::setprecision(1) << ratio << "% smaller)\n";
@@ -553,7 +544,7 @@ bool Packer::pack(const PackManifest& manifest, std::ostream& log) {
 		totalCompressedBytes += compressed.size();
 	}
 
-	const uint64_t tocOffset = static_cast<uint64_t>(fileTell(out));
+	const uint64_t tocOffset = static_cast<uint64_t>(Blackthorn::fileTell(out));
 
 	const size_t tocRawSize = toc.size() * sizeof(BTPEntry);
 	std::vector<uint8_t> tocRaw(tocRawSize);
@@ -562,14 +553,14 @@ bool Packer::pack(const PackManifest& manifest, std::ostream& log) {
 	std::vector<uint8_t> tocCompressed;
 	if (!compressZstd(tocRaw, tocCompressed, manifest.compressionLevel)) {
 		std::fclose(out);
-		std::filesystem::remove(manifest.outputPath);
+		std::filesystem::remove(opts.output);
 		return false;
 	}
 
-	if (!writeExact(out, tocCompressed.data(), tocCompressed.size())) {
+	if (!Blackthorn::writeExact(out, tocCompressed.data(), tocCompressed.size())) {
 		std::cerr << "btpacker: error: write failed for TOC\n";
 		std::fclose(out);
-		std::filesystem::remove(manifest.outputPath);
+		std::filesystem::remove(opts.output);
 		return false;
 	}
 
@@ -577,13 +568,13 @@ bool Packer::pack(const PackManifest& manifest, std::ostream& log) {
 	uint64_t symbolTableSize = 0;
 
 	if (manifest.writeSymbolTable && !symbolTableBytes.empty()) {
-		symbolTableOff = static_cast<uint64_t>(fileTell(out));
+		symbolTableOff = static_cast<uint64_t>(Blackthorn::fileTell(out));
 		symbolTableSize = static_cast<uint64_t>(symbolTableBytes.size());
 
-		if (!writeExact(out, symbolTableBytes.data(), symbolTableBytes.size())) {
+		if (!Blackthorn::writeExact(out, symbolTableBytes.data(), symbolTableBytes.size())) {
 			std::cerr << "btpacker: error: write failed for symbol table\n";
 			std::fclose(out);
-			std::filesystem::remove(manifest.outputPath);
+			std::filesystem::remove(opts.output);
 			return false;
 		}
 	}
@@ -595,13 +586,13 @@ bool Packer::pack(const PackManifest& manifest, std::ostream& log) {
 	if (packMetadata) {
 		metaText = serializePackMetadata(*packMetadata);
 
-		metadataOff = static_cast<uint64_t>(fileTell(out));
+		metadataOff = static_cast<uint64_t>(Blackthorn::fileTell(out));
 		metadataSize = static_cast<uint64_t>(metaText.size());
 
-		if (!writeExact(out, metaText.data(), metaText.size())) {
+		if (!Blackthorn::writeExact(out, metaText.data(), metaText.size())) {
 			std::cerr << "btpacker: error: write failed for pack metadata\n";
 			std::fclose(out);
-			std::filesystem::remove(manifest.outputPath);
+			std::filesystem::remove(opts.output);
 			return false;
 		}
 	}
@@ -618,10 +609,10 @@ bool Packer::pack(const PackManifest& manifest, std::ostream& log) {
 	header.metadataOff = metadataOff;
 	header.metadataSize = metadataSize;
 
-	if (!seekTo(out, 0) || !writeExact(out, &header, sizeof(BTPHeader))) {
+	if (!Blackthorn::seekTo(out, 0) || !Blackthorn::writeExact(out, &header, sizeof(BTPHeader))) {
 		std::cerr << "btpacker: error: failed to patch header\n";
 		std::fclose(out);
-		std::filesystem::remove(manifest.outputPath);
+		std::filesystem::remove(opts.output);
 		return false;
 	}
 
@@ -631,7 +622,7 @@ bool Packer::pack(const PackManifest& manifest, std::ostream& log) {
 		: (1.0f - static_cast<float>(totalCompressedBytes)
 			/ static_cast<float>(totalSourceBytes)) * 100.0f;
 
-	const auto fileSize = std::filesystem::file_size(manifest.outputPath);
+	const auto fileSize = std::filesystem::file_size(opts.output);
 
 	log << "\n"
 		<< "  output:       " << outPathStr << "\n"
@@ -675,7 +666,7 @@ bool Packer::verify(const std::filesystem::path& btpPath, std::ostream& log) {
 	int failed = 0;
 
 	for (const BTPEntry& entry : entries) {
-		if (!seekTo(f, entry.dataOffset)) {
+		if (!Blackthorn::seekTo(f, entry.dataOffset)) {
 			std::cerr << "  FAIL  0x" << std::hex << entry.assetID
 					  << "; seek error\n" << std::dec;
 			++failed;
@@ -683,7 +674,7 @@ bool Packer::verify(const std::filesystem::path& btpPath, std::ostream& log) {
 		}
 
 		std::vector<uint8_t> compressed(static_cast<size_t>(entry.compressedSize));
-		if (!readExact(f, compressed.data(), compressed.size())) {
+		if (!Blackthorn::readExact(f, compressed.data(), compressed.size())) {
 			std::cerr << "  FAIL  0x" << std::hex << entry.assetID
 					  << "; read error\n" << std::dec;
 
@@ -908,7 +899,7 @@ bool Packer::unpack(
 	bool anyFailed = false;
 
 	for (const BTPEntry& entry : entries) {
-		if (!seekTo(f, entry.dataOffset)) {
+		if (!Blackthorn::seekTo(f, entry.dataOffset)) {
 			std::cerr << "btpacker: error: seek failed for entry 0x"
 					  << std::hex << entry.assetID << std::dec << "\n";
 			anyFailed = true;
@@ -916,7 +907,7 @@ bool Packer::unpack(
 		}
 
 		std::vector<uint8_t> compressed(static_cast<size_t>(entry.compressedSize));
-		if (!readExact(f, compressed.data(), compressed.size())) {
+		if (!Blackthorn::readExact(f, compressed.data(), compressed.size())) {
 			std::cerr << "btpacker: error: read failed for entry 0x"
 					  << std::hex << entry.assetID << std::dec << "\n";
 
@@ -926,8 +917,9 @@ bool Packer::unpack(
 
 		std::filesystem::path outFile;
 		auto srcIt = sources.find(entry.assetID);
-		if (srcIt != sources.end() && !srcIt->second.empty()) {
-			outFile = destDir / srcIt->second;
+		const auto safeName = (srcIt != sources.end()) ? Blackthorn::normalizeAssetPath(srcIt->second) : std::nullopt;
+		if (safeName) {
+			outFile = destDir / *safeName;
 		} else {
 			std::ostringstream name;
 			name << std::hex << std::setw(16) << std::setfill('0') << entry.assetID << ".bin";
@@ -960,7 +952,7 @@ bool Packer::unpack(
 			continue;
 		}
 
-		const bool wrote = writeExact(outF, raw.data(), raw.size());
+		const bool wrote = Blackthorn::writeExact(outF, raw.data(), raw.size());
 		std::fclose(outF);
 
 		if (!wrote) {

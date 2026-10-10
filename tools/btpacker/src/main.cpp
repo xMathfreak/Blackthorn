@@ -21,14 +21,6 @@ namespace {
 inline std::string kSupplementaryHelp =
 	term::colorize("Asset ID derivation (generate-manifest):\n", term::Color::Yellow) +
 	"  IDs are derived from each file's path relative to the scanned root.\n"
-	"  Path separators, spaces, and hyphens become underscores; the extension\n"
-	"  is stripped; all characters are lowercased; other non-alphanumeric\n"
-	"  characters are dropped.\n"
-	"\n" +
-	term::colorize("  Examples:\n", term::Color::Yellow) +
-	"    assets/shaders/default.vert  ->  shaders_default_vert\n"
-	"    assets/fonts/Bebas Neue.ttf  ->  fonts_bebas_neue\n"
-	"    assets/sound.ogg             ->  sound\n"
 	"\n" +
 	term::colorize("Command examples:\n", term::Color::Yellow) +
 	"  btpacker generate-manifest --assets assets/ --output data/base.btp --manifest data/base.pack.json\n"
@@ -49,6 +41,8 @@ void printCommandHelp(const cli::Command& command, const cli::ParseResult& resul
 
 int cmdPack(const cli::ParseResult& args) {
 	const std::string manifestPath = args.get<std::string>("manifest");
+	const std::string inputPath = args.positional("input");
+	const std::string outputPath = args.positional("output");
 
 	auto manifest = BTPacker::ManifestParser::parse(manifestPath);
 	if (!manifest)
@@ -60,9 +54,9 @@ int cmdPack(const cli::ParseResult& args) {
 	if (args.get<bool>("no-symbols"))
 		manifest->writeSymbolTable = false;
 
-	std::cout << "packing '" << manifest->outputPath.string() << "'...\n";
+	std::cout << "packing '" << outputPath << "'...\n";
 
-	const bool ok = BTPacker::Packer::pack(*manifest, std::cout);
+	const bool ok = BTPacker::Packer::pack(*manifest, {inputPath, outputPath}, std::cout);
 	if (ok) {
 		std::cout << "\ndone.\n";
 	} else {
@@ -74,25 +68,24 @@ int cmdPack(const cli::ParseResult& args) {
 
 int cmdGenManifest(const cli::ParseResult& args) {
 	BTPacker::ManifestGenerator::Options opts;
-	opts.assetDir = args.get<std::string>("assets");
-	opts.btpOutput = args.get<std::string>("output");
-	opts.manifestOut = args.get<std::string>("manifest");
 	opts.compressionLevel = args.get<int>("level");
 	opts.writeSymbolTable = !args.get<bool>("no-symbols");
+	opts.input = args.positional("input");
+	opts.output = args.positional("output");
+
+	if (args.specified("root"))
+		opts.root = args.get<std::string>("root");
 
 	if (args.specified("exclude"))
 		opts.excludeDirs = args.get_all<std::string>("exclude");
 
-	std::cout << "scanning '" << opts.assetDir.string() << "'...\n";
-
-	if (opts.btpOutput.empty())
-		opts.btpOutput = opts.assetDir.parent_path().filename().string() + ".btp";
+	std::cout << "scanning " << opts.input << "...\n";
 
 	const bool ok = BTPacker::ManifestGenerator::generate(opts, std::cout);
 	if (ok) {
 		std::cout << "\ndone.\n";
 	} else {
-		std::cerr << "\nbtpacker: gen-manifest failed.\n";
+		std::cerr << "\nbtpacker: generate-manifest failed.\n";
 	}
 
 	return ok ? 0 : 1;
@@ -166,32 +159,35 @@ int main(int argc, char** argv) {
 	packCmd.option("no-symbols")
 		.flag()
 		.help("Do not write a debug symbol table.");
+	packCmd.positional("input")
+		.help("Asset directory to be packed using the manifest.")
+		.required();
+	packCmd.positional("output")
+		.help("Path to output the packed asset file to.")
+		.required();
 
 	cli::Command& genManifestCmd = app.command("generate-manifest", "Scan an asset directory and auto-generate a manifest.");
-	genManifestCmd.option("assets", 'a')
+	genManifestCmd.option("root", 'r')
 		.value<std::string>()
-		.help("Asset directory to scan recursively.")
-		.required();
-	genManifestCmd.option("output", 'o')
-		.value<std::string>()
-		.help("Path to the .btp file to record in the manifest. Defaults to '<asset-directory-name>.btp' if this option is not specified.")
-		.defaultValue("");
-	genManifestCmd.option("manifest", 'm')
-		.value<std::string>()
-		.help("Path to write the generated manifest.")
-		.required();
+		.help("Name to use as the virtual root directory in the pack.");
 	genManifestCmd.option("exclude", 'x')
 		.value<std::string>()
 		.help("Skip a subdirectory by name. May be repeated, e.g. --exclude video --exclude tmp.")
 		.repeatable();
+	genManifestCmd.option("no-symbols")
+		.flag()
+		.help("Write 'symbol_table: false' into the manifest.");
 	genManifestCmd.option("level", 'l')
 		.value<int>()
 		.help("Compression level written into the manifest.")
 		.defaultValue(3)
 		.range(1, 22);
-	genManifestCmd.option("no-symbols")
-		.flag()
-		.help("Write 'symbol_table: false' into the manifest.");
+	genManifestCmd.positional("input")
+		.required()
+		.help("Directory to scan for assets.");
+	genManifestCmd.positional("output")
+		.required()
+		.help("Path to write the generated manifest.");
 
 	cli::Command& verifyCmd = app.command("verify", "Check every entry in a .btp file for corruption.");
 	verifyCmd.positional("file").help("Path to the .btp file.").required();

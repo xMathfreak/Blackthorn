@@ -7,6 +7,11 @@
 
 namespace BTPacker {
 
+struct PackOptions {
+	std::filesystem::path input;
+	std::filesystem::path output;
+};
+
 /**
  * @class Packer
  * @brief Core .btp file operations: pack, verify, list, and unpack.
@@ -16,7 +21,7 @@ namespace BTPacker {
  * redirect output trivially.
  *
  * @section pack_order Pack write order
- * 1. Reserve 64 bytes for the BTPHeader (written last at offset 0).
+ * 1. Reserve 72 bytes for the BTPHeader (written last at offset 0).
  * 2. For each asset: read source file, compress with zstd, xxHash the
  *    compressed blob, write the blob. Record a BTPEntry.
  * 3. Serialize the BTPEntry array into a flat byte buffer, compress it as a
@@ -39,7 +44,7 @@ public:
 	 * @param out       Stream to write progress messages to.
 	 * @return true on success.
 	 */
-	static bool pack(const PackManifest& manifest, std::ostream& out);
+	static bool pack(const PackManifest& manifest, const PackOptions& opts, std::ostream& out);
 
 	/**
 	 * @brief Verifies every entry in a .btp file by decompressing it and

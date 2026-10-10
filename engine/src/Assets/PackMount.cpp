@@ -12,33 +12,9 @@
 
 #include "Assets/PackMetadataJson.h"
 #include "Debug/Logger.h"
+#include "FileIO.h"
 
 namespace Blackthorn::Assets {
-
-namespace {
-
-/**
- * @brief Reads exactly @p count bytes from @p file into @p dst.
- * @return true on success; false on short read or error.
- */
-bool readExact(std::FILE* file, void* dst, size_t count) {
-	return std::fread(dst, 1, count, file) == count;
-}
-
-/**
- * @brief Seeks @p file to an absolute byte offset.
- * @return true on success.
- */
-bool seekTo(std::FILE* file, U64 offset) {
-#ifdef _WIN32
-	return _fseeki64(file, static_cast<__int64>(offset), SEEK_SET) == 0;
-#else
-	return std::fseek(file, static_cast<long>(offset), SEEK_SET) == 0;
-#endif
-}
-
-} // anonymous namespace
-
 
 bool PackMount::mount(const std::filesystem::path& path, U32 priority) {
 	packPath = path;
@@ -197,7 +173,7 @@ void PackMount::loadSymbolTable(std::FILE* file, const BTPHeader& header) {
 	const U8* end = block.data() + block.size();
 
 	while (cursor < end) {
-		if (cursor + sizeof(U64) + sizeof(U16) > end)
+		if (cursor + sizeof(U64) > end)
 			break;
 
 		U64 assetID = 0;
