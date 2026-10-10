@@ -83,11 +83,7 @@ public:
 	/**
 	 * @brief Registers a synchronous loader and optionally an async loader.
 	 *
-	 * Use in debug/loose-file builds. The async loader, if provided, is
-	 * responsible for sourcing the resolver itself in BT_PACK_MODE (use
-	 * registerPackLoader instead to have the manager inject it automatically).
-	 *
-	 * @tparam AssetType  The asset type both loaders produce.
+	 * @tparam AssetType The asset type both loaders produce.
 	 */
 	template <typename AssetType>
 	void registerLoader(
@@ -95,6 +91,11 @@ public:
 		std::unique_ptr<IAsyncAssetLoader<AssetType>> asyncLoader = nullptr
 	) {
 		const auto type = std::type_index(typeid(AssetType));
+
+		if (syncLoader)
+			syncLoader->setResolver(&assetResolver);
+		if (asyncLoader)
+			asyncLoader->setResolver(&assetResolver);
 
 		loaders[type] = std::make_unique<LoaderWrapper<AssetType>>(
 			std::move(syncLoader),
