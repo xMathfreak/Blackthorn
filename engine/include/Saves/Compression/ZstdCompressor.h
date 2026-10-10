@@ -13,7 +13,7 @@ namespace Blackthorn::Saves {
  *
  * @par Compression levels
  * zstd compression levels range from 1 (fastest, lowest ratio) to 22
- * (slowest, highest ratio). For save files the recommended range is 1–6:
+ * (slowest, highest ratio). For save files the recommended range is 1-6:
  *
  * - Level 1: Suitable for autosaves where write latency matters.
  * - Level 3: Good default for manual saves (default).

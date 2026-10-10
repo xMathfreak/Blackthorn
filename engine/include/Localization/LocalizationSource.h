@@ -1,5 +1,6 @@
 #pragma once
 
+#include <functional>
 #include <string>
 #include <unordered_map>
 #include <variant>
@@ -15,7 +16,7 @@ using LocaleCode = std::string;
 struct SourceHandle {
 	U32 value = 0;
 
-	constexpr bool operator<=>(const SourceHandle&) const = default;
+	constexpr auto operator<=>(const SourceHandle&) const = default;
 
 	constexpr SourceHandle& operator++() {
 		++value;
@@ -105,8 +106,6 @@ struct Source {
 	 *          earlier-loaded source wins.
 	 */
 	I32 priority = 0;
-
-
 
 	/**
 	 * @brief Localization entries keyed by their hashed TextID.

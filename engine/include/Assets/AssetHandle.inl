@@ -6,11 +6,19 @@
 namespace Blackthorn::Assets {
 
 template <typename AssetType>
+AssetStatus AssetHandle<AssetType>::status() const {
+	if (!manager)
+		return AssetStatus::Missing;
+
+	return manager->statusOf<AssetType>(id);
+}
+
+template <typename AssetType>
 AssetType* AssetHandle<AssetType>::get() const {
-	if (!isReady())
+	if (!manager)
 		return nullptr;
 
-	return manager->get<AssetType>(id);
+	return manager->peek<AssetType>(id);
 }
 
 } // namespace Blackthorn::Assets

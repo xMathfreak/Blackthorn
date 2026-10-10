@@ -66,7 +66,7 @@ struct FormatArg {
 	std::string (*formatFn)(const void* valuePtr, std::string_view spec);
 };
 
-namespace detail {
+namespace Detail {
 
 	template<typename T>
 	std::string formatValue(const void* valuePtr, std::string_view spec) {
@@ -82,11 +82,11 @@ namespace detail {
 		return std::vformat(fmtStr, std::make_format_args(value));
 	}
 
-} // namespace detail
+} // namespace Detail
 
 template<typename T>
 constexpr FormatArg makeFormatArg(const NamedArg<T>& named) {
-	return FormatArg{named.name, &named.value, &detail::formatValue<T>};
+	return FormatArg{named.name, &named.value, &Detail::formatValue<T>};
 }
 
 /// @brief Same erasure as the NamedArg overload. Lets format() build one
@@ -94,7 +94,7 @@ constexpr FormatArg makeFormatArg(const NamedArg<T>& named) {
 ///        plain arg() or the pluralArg() driving category selection.
 template<typename T>
 constexpr FormatArg makeFormatArg(const PluralArg<T>& named) {
-	return FormatArg{named.name, &named.value, &detail::formatValue<T>};
+	return FormatArg{named.name, &named.value, &Detail::formatValue<T>};
 }
 
 } // namespace Blackthorn::Localization

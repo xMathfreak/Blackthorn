@@ -1,26 +1,26 @@
 #pragma once
 
-#include <fstream>
+#include <cstdio>
+#include <istream>
+#include <memory>
 #include <sstream>
 #include <string>
+#include <vector>
 
 #include "Animation/SpriteClip.h"
 #include "Assets/AssetManager.h"
+#include "Assets/AssetResolver.h"
 #include "Assets/IAssetLoader.h"
 #include "Assets/LoadParams.h"
 #include "Assets/RawAssetData.h"
+#include "AssetNormalize.h"
 #include "Core/Export.h"
 #include "Debug/Logger.h"
-
-#ifdef BT_PACK_MODE
-	#include "Assets/AssetResolver.h"
-#endif
 
 namespace Blackthorn::Animation {
 
 /**
- * @brief Raw, not-yet-parsed bytes of a `.btclip` file, produced by
- * @c AsyncSpriteClipLoader::loadRaw on a worker thread.
+ * @brief Raw bytes of a `.btclip` file, produced by AsyncSpriteClipLoader::loadRaw.
  */
 struct BLACKTHORN_API RawSpriteClipData : Assets::IRawAssetData {
 	std::vector<U8> bytes;
@@ -29,13 +29,16 @@ struct BLACKTHORN_API RawSpriteClipData : Assets::IRawAssetData {
 };
 
 /**
- * @brief Shared text-format parser used by both @c SpriteClipLoader and
- * @c AsyncSpriteClipLoader.
+ * @brief Text-format parser shared by both sprite clip loaders.
  *
- * See @c SpriteClipLoader for the format description.
+ * Lines are applied in file order. Blank lines and lines starting with '#' are
+ * ignored, and CRLF line endings are accepted.
  */
 class SpriteClipParser {
 public:
+	/**
+	 * @return The parsed clip, or nullptr if it contains no frames.
+	 */
 	static std::unique_ptr<SpriteClip> parse(std::istream& in) {
 		auto clip = std::make_unique<SpriteClip>();
 		float defaultDuration = 0.1f;
@@ -65,11 +68,19 @@ private:
 			args >> mode;
 			clip.loopMode = parseLoopMode(mode);
 		} else if (key == "duration") {
-			args >> defaultDuration;
+			float value = 0.0f;
+			if (args >> value)
+				defaultDuration = value;
+			else
+				BT_ERROR("SpriteClipParser: 'duration' needs a number, got '{}'", trim(line.substr(colon + 1)));
 		} else if (key == "grid") {
-			float originX, originY, frameW, frameH;
-			U32 columns, count;
-			args >> originX >> originY >> frameW >> frameH >> columns >> count;
+			float originX = 0.0f, originY = 0.0f, frameW = 0.0f, frameH = 0.0f;
+			U32 columns = 0, count = 0;
+
+			if (!(args >> originX >> originY >> frameW >> frameH >> columns >> count)) {
+				BT_ERROR("SpriteClipParser: malformed 'grid' line '{}'", line);
+				return;
+			}
 
 			if (columns == 0) {
 				BT_ERROR("SpriteClipParser: 'grid' columns must be non-zero");
@@ -94,10 +105,15 @@ private:
 		} else if (key == "frame") {
 			Frame frame;
 			frame.duration = defaultDuration;
-			args >> frame.sourceRect.x >> frame.sourceRect.y >> frame.sourceRect.w >> frame.sourceRect.h;
 
-			if (!args.eof())
-				args >> frame.duration;
+			if (!(args >> frame.sourceRect.x >> frame.sourceRect.y >> frame.sourceRect.w >> frame.sourceRect.h)) {
+				BT_ERROR("SpriteClipParser: malformed 'frame' line '{}'", line);
+				return;
+			}
+
+			float duration = 0.0f;
+			if (args >> duration)
+				frame.duration = duration;
 
 			clip.frames.push_back(frame);
 		}
@@ -123,25 +139,22 @@ private:
 };
 
 /**
- * @brief Loads a @c SpriteClip from a plain-text `.btclip` file.
+ * @brief Loads a SpriteClip from a plain-text `.btclip` file through the resolver.
  *
- * Blank lines and lines beginning with # are ignored.
- *
- * Recognized directives:
  * @code
  * loop: once | loop | pingpong      # default: loop
- * duration: 0.1                     # default per-frame duration in seconds, default: 0.1
+ * duration: 0.1                     # default per-frame duration, in seconds
  *
- * # Grid shorthand: append `count` equal-sized frames from a texture.
+ * # Grid shorthand: append `count` equal-sized frames, left to right, top to bottom.
  * grid: originX originY frameW frameH columns count
  *
- * # Explicit frame: append an individual frame, optionally with its duration.
+ * # Single frame: x y w h [duration]
  * frame: x y w h [duration]
  * @endcode
  *
- * Grid frames are appended first; explicit frame directives are then appended
- * in file order. This allows regular texture sheets to use the compact grid form
- * while still supporting irregular frames.
+ * Directives are applied in file order, so a `duration:` line affects only the
+ * grid and frame lines that follow it. A clip has no texture reference: the
+ * emitter or sprite that uses it supplies the texture.
  *
  * @par Example
  * @code
@@ -149,66 +162,80 @@ private:
  * duration: 0.1
  * grid: 0 0 32 32 6 6
  * @endcode
- * This creates six 32x32 frames starting at (0, 0), arranged in six columns
- * on a single row. Each frame is displayed for 0.1 seconds and the clip loops
- * continuously.
  */
 class BLACKTHORN_API SpriteClipLoader final : public Assets::IAssetLoader<SpriteClip> {
 public:
 	std::unique_ptr<SpriteClip> load(const Assets::LoadParams& params) override {
-		const auto* pp = dynamic_cast<const Assets::AssetLoadParams*>(&params);
-		if (!pp)
-			return nullptr;
-
-		std::ifstream file(pp->source);
-		if (!file.is_open()) {
-			BT_ERROR("SpriteClipLoader: cannot open '{}'", pp->source.string());
+		if (!resolver) {
+			BT_ERROR("SpriteClipLoader: no resolver, loader was not registered");
 			return nullptr;
 		}
 
-		auto clip = SpriteClipParser::parse(file);
+		const auto* pp = dynamic_cast<const Assets::AssetLoadParams*>(&params);
+		if (!pp) {
+			BT_ERROR("SpriteClipLoader: unrecognized LoadParams type");
+			return nullptr;
+		}
+
+		const auto id = Blackthorn::normalizeAssetPath(pp->source.generic_string());
+		if (!id) {
+			BT_ERROR("SpriteClipLoader: invalid asset path '{}'", pp->source.generic_string());
+			return nullptr;
+		}
+
+		const auto bytes = resolver->resolve(*id);
+		if (!bytes)
+			return nullptr;
+
+		std::istringstream in(std::string(reinterpret_cast<const char*>(bytes->bytes.data()), bytes->bytes.size()));
+
+		auto clip = SpriteClipParser::parse(in);
 		if (!clip)
-			BT_ERROR("SpriteClipLoader: '{}' produced no frames", pp->source.string());
+			BT_ERROR("SpriteClipLoader: '{}' produced no frames", *id);
 
 		return clip;
 	}
 };
 
 /**
- * @brief Async loader for @c SpriteClip.
- * Decodes on a worker thread via @c loadRaw, then parses and installs
- * the asset on the main thread via @c upload, matching the @c AsyncBitmapFontLoader pattern.
+ * @brief Async sprite clip loader.
  *
- * `.btclip` files are tiny plain text, so "decode" here is just a file
- * read; the actual parse happens in @c upload since it's cheap enough not
- * to need a separate worker-thread step, and keeping parsing on the main
- * thread avoids duplicating @c SpriteClipParser::parse behind two entry
- * points that could drift.
+ * loadRaw reads the bytes through the resolver on a worker thread. The parse
+ * runs in upload on the main thread, since a `.btclip` is small and keeping
+ * the parser in one place avoids drift between two entry points.
  */
 class BLACKTHORN_API AsyncSpriteClipLoader final : public Assets::IAsyncAssetLoader<SpriteClip> {
 public:
-#ifdef BT_PACK_MODE
-	explicit AsyncSpriteClipLoader(Assets::AssetResolver* resolver)
-		: m_resolver(resolver)
-	{}
-#else
 	AsyncSpriteClipLoader() = default;
-#endif
 
 	std::unique_ptr<Assets::IRawAssetData> loadRaw(const Assets::LoadParams& params) override {
-#ifdef BT_PACK_MODE
-		return loadRawFromPack(params);
-#else
-		return loadRawFromDisk(params);
-#endif
+		if (!resolver) {
+			BT_ERROR("AsyncSpriteClipLoader: no resolver, loader was not registered");
+			return nullptr;
+		}
+
+		const auto* pp = dynamic_cast<const Assets::AssetLoadParams*>(&params);
+		if (!pp)
+			return nullptr;
+
+		const auto id = Blackthorn::normalizeAssetPath(pp->source.generic_string());
+		if (!id)
+			return nullptr;
+
+		auto bytes = resolver->resolve(*id);
+		if (!bytes)
+			return nullptr;
+
+		auto raw = std::make_unique<RawSpriteClipData>();
+		raw->bytes = std::move(bytes->bytes);
+		raw->valid = true;
+		return raw;
 	}
 
 	void upload(Assets::IRawAssetData& rawBase, Assets::AssetManager& manager) override {
 		auto& raw = static_cast<RawSpriteClipData&>(rawBase);
 
-		std::istringstream in(std::string(
-			reinterpret_cast<const char*>(raw.bytes.data()), raw.bytes.size()
-		));
+		std::istringstream in(std::string(reinterpret_cast<const char*>(raw.bytes.data()), raw.bytes.size()));
 
 		auto clip = SpriteClipParser::parse(in);
 		if (!clip) {
@@ -218,71 +245,6 @@ public:
 
 		manager.add<SpriteClip>(raw.assetID, std::move(clip));
 		BT_DEBUG("AsyncSpriteClipLoader: '{}' ready", raw.assetID);
-	}
-
-private:
-#ifdef BT_PACK_MODE
-	std::unique_ptr<Assets::IRawAssetData> loadRawFromPack(const Assets::LoadParams& params) {
-		if (!m_resolver) {
-			BT_ERROR("AsyncSpriteClipLoader: resolver is null, was registerPackLoader() used?");
-			return nullptr;
-		}
-
-		const auto* pp = dynamic_cast<const Assets::AssetLoadParams*>(&params);
-		if (!pp)
-			return nullptr;
-
-		auto packed = m_resolver->resolve(pp->source);
-		if (!packed)
-			return nullptr;
-
-		auto raw = std::make_unique<RawSpriteClipData>();
-		raw->bytes = std::move(packed->bytes);
-		raw->valid = true;
-		return raw;
-	}
-
-	Assets::AssetResolver* m_resolver = nullptr;
-#endif
-
-	std::unique_ptr<Assets::IRawAssetData> loadRawFromDisk(const Assets::LoadParams& params) {
-		auto raw = std::make_unique<RawSpriteClipData>();
-
-		const auto* pp = dynamic_cast<const Assets::AssetLoadParams*>(&params);
-		if (!pp)
-			return nullptr;
-
-		if (!readFile(pp->source.string(), raw->bytes))
-			return nullptr;
-
-		raw->valid = true;
-		return raw;
-	}
-
-	static bool readFile(const std::string& path, std::vector<U8>& out) {
-		std::FILE* f = std::fopen(path.c_str(), "rb");
-		if (!f) {
-			BT_ERROR("AsyncSpriteClipLoader: cannot open '{}'", path);
-			return false;
-		}
-
-		std::fseek(f, 0, SEEK_END);
-		const long size = std::ftell(f);
-		std::fseek(f, 0, SEEK_SET);
-
-		if (size < 0) {
-			std::fclose(f);
-			return false;
-		}
-
-		out.resize(static_cast<size_t>(size));
-		const bool ok = std::fread(out.data(), 1, out.size(), f) == out.size();
-		std::fclose(f);
-
-		if (!ok)
-			BT_ERROR("AsyncSpriteClipLoader: short read from '{}'", path);
-
-		return ok;
 	}
 };
 

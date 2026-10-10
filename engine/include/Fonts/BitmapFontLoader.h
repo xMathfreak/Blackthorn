@@ -1,31 +1,36 @@
 #pragma once
 
-#include <cstdio>
+#include <filesystem>
+#include <memory>
+#include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "Assets/AssetManager.h"
+#include "Assets/AssetResolver.h"
 #include "Assets/IAssetLoader.h"
 #include "Assets/LoadParams.h"
 #include "Assets/RawAssetData.h"
+#include "AssetNormalize.h"
 #include "Core/Export.h"
 #include "Debug/Logger.h"
 #include "Fonts/BitmapFont.h"
 
-#ifdef BT_PACK_MODE
-	#include "Assets/AssetResolver.h"
-	#include "Assets/PackMount.h"
-#endif
-
 namespace Blackthorn::Fonts {
 
-struct BLACKTHORN_API BitmapParams : Assets::LoadParams {
-	std::filesystem::path texturePath;
+/**
+ * @brief Load parameters for a bitmap font split into a texture and a metrics file.
+ *
+ * The texture is the asset's source path. The metrics file is a second canonical ID.
+ * For a single packed `.btf` file, use plain AssetLoadParams instead.
+ */
+struct BLACKTHORN_API BitmapParams final : Assets::AssetLoadParams {
 	std::filesystem::path metricsPath;
 
-	BitmapParams(const std::filesystem::path& texture, const std::filesystem::path& metrics)
-		: texturePath(texture)
-		, metricsPath(metrics)
+	BitmapParams(std::filesystem::path texture, std::filesystem::path metrics)
+		: Assets::AssetLoadParams(std::move(texture))
+		, metricsPath(std::move(metrics))
 	{}
 
 	std::unique_ptr<Assets::LoadParams> clone() const override {
@@ -34,166 +39,161 @@ struct BLACKTHORN_API BitmapParams : Assets::LoadParams {
 };
 
 struct BLACKTHORN_API RawBitmapFontData : Assets::IRawAssetData {
-	std::vector<U8> btfBytes;
-
-	std::vector<U8> textureBytes;
-	std::vector<U8> metricsBytes;
+	std::vector<U8> btfBytes;      ///< Single-file `.btf` content.
+	std::vector<U8> textureBytes;  ///< Texture content, for the split form.
+	std::vector<U8> metricsBytes;  ///< Metrics content, for the split form.
 
 	bool isSingleFile = false;
 
 	RawBitmapFontData() = default;
 };
 
+namespace Detail {
+
+/**
+ * @brief Canonical IDs for a bitmap font request.
+ *
+ * singleFile is true for plain AssetLoadParams (one `.btf`). Otherwise the
+ * request is a texture plus a metrics file.
+ */
+struct BitmapRequest {
+	bool        singleFile = false;
+	std::string primaryID;   ///< The `.btf` file, or the texture.
+	std::string metricsID;   ///< Metrics file, if not singleFile.
+};
+
+inline std::optional<BitmapRequest> bitmapRequest(const Assets::LoadParams& params) {
+	if (const auto* bp = dynamic_cast<const BitmapParams*>(&params)) {
+		const auto texture = Blackthorn::normalizeAssetPath(bp->source.generic_string());
+		const auto metrics = Blackthorn::normalizeAssetPath(bp->metricsPath.generic_string());
+		if (!texture || !metrics) {
+			BT_ERROR("BitmapFontLoader: invalid path (texture '{}', metrics '{}')",
+				bp->source.generic_string(), bp->metricsPath.generic_string());
+			return std::nullopt;
+		}
+
+		return BitmapRequest{ false, *texture, *metrics };
+	}
+
+	if (const auto* pp = dynamic_cast<const Assets::AssetLoadParams*>(&params)) {
+		const auto id = Blackthorn::normalizeAssetPath(pp->source.generic_string());
+		if (!id) {
+			BT_ERROR("BitmapFontLoader: invalid asset path '{}'", pp->source.generic_string());
+			return std::nullopt;
+		}
+
+		return BitmapRequest{ true, *id, {} };
+	}
+
+	BT_ERROR("BitmapFontLoader: unrecognized LoadParams type");
+	return std::nullopt;
+}
+
+/**
+ * @brief Fetches the bytes for a request into @p raw through the resolver.
+ */
+inline bool fetchBitmapBytes(Assets::AssetResolver& resolver, const BitmapRequest& req, RawBitmapFontData& raw) {
+	raw.isSingleFile = req.singleFile;
+
+	auto primary = resolver.resolve(req.primaryID);
+	if (!primary)
+		return false;
+
+	if (req.singleFile) {
+		raw.btfBytes = std::move(primary->bytes);
+		return true;
+	}
+
+	auto metrics = resolver.resolve(req.metricsID);
+	if (!metrics)
+		return false;
+
+	raw.textureBytes = std::move(primary->bytes);
+	raw.metricsBytes = std::move(metrics->bytes);
+	return true;
+}
+
+/**
+ * @brief Builds a BitmapFont from fetched bytes. Used by both loaders.
+ */
+inline std::unique_ptr<BitmapFont> buildBitmapFont(const RawBitmapFontData& raw) {
+	auto font = std::make_unique<BitmapFont>();
+
+	const bool ok = raw.isSingleFile
+		? font->loadFromBTFontMemory(raw.btfBytes.data(), raw.btfBytes.size())
+		: font->loadFromMemory(
+			raw.textureBytes.data(), raw.textureBytes.size(),
+			raw.metricsBytes.data(), raw.metricsBytes.size()
+		);
+
+	return ok ? std::move(font) : nullptr;
+}
+
+} // namespace Detail
+
+/**
+ * @brief Synchronous bitmap font loader. Reads bytes through the resolver.
+ */
 class BLACKTHORN_API BitmapFontLoader final : public Assets::IAssetLoader<BitmapFont> {
 public:
 	std::unique_ptr<BitmapFont> load(const Assets::LoadParams& params) override {
-		auto font = std::make_unique<BitmapFont>();
-
-		if (const auto* bp = dynamic_cast<const BitmapParams*>(&params)) {
-			font->loadFromFile(bp->texturePath, bp->metricsPath);
-			return font;
+		if (!resolver) {
+			BT_ERROR("BitmapFontLoader: no resolver, loader was not registered");
+			return nullptr;
 		}
 
-		if (const auto* pp = dynamic_cast<const Assets::AssetLoadParams*>(&params)) {
-			font->loadFromBTFont(pp->source);
-			return font;
-		}
+		const auto req = Detail::bitmapRequest(params);
+		if (!req)
+			return nullptr;
 
-		return nullptr;
+		RawBitmapFontData raw;
+		if (!Detail::fetchBitmapBytes(*resolver, *req, raw))
+			return nullptr;
+
+		auto font = Detail::buildBitmapFont(raw);
+		if (!font)
+			BT_ERROR("BitmapFontLoader: failed to parse '{}'", req->primaryID);
+
+		return font;
 	}
 };
 
+/**
+ * @brief Asynchronous bitmap font loader. Reads on a worker, builds on the main thread.
+ */
 class BLACKTHORN_API AsyncBitmapFontLoader final : public Assets::IAsyncAssetLoader<BitmapFont> {
 public:
-#ifdef BT_PACK_MODE
-	explicit AsyncBitmapFontLoader(Assets::AssetResolver* resolver)
-		: m_resolver(resolver)
-	{}
-#else
 	AsyncBitmapFontLoader() = default;
-#endif
 
 	std::unique_ptr<Assets::IRawAssetData> loadRaw(const Assets::LoadParams& params) override {
-#ifdef BT_PACK_MODE
-		return loadRawFromPack(params);
-#else
-		return loadRawFromDisk(params);
-#endif
-	}
-
-	void upload(Assets::IRawAssetData& rawBase, Assets::AssetManager& manager) override {
-		auto& raw = static_cast<RawBitmapFontData&>(rawBase);
-		auto font = std::make_unique<BitmapFont>();
-		bool ok = false;
-
-		if (raw.isSingleFile) {
-			ok = font->loadFromBTFontMemory(raw.btfBytes.data(), raw.btfBytes.size());
-		} else {
-			ok = font->loadFromMemory(
-				raw.textureBytes.data(), raw.textureBytes.size(),
-				raw.metricsBytes.data(), raw.metricsBytes.size()
-			);
-		}
-
-		if (!ok) {
-			BT_ERROR("AsyncBitmapFontLoader: loadFromMemory failed for '{}'", raw.assetID);
-			return;
-		}
-
-		manager.add<BitmapFont>(raw.assetID, std::move(font));
-		BT_DEBUG("AsyncBitmapFontLoader: '{}' ready", raw.assetID);
-	}
-
-private:
-#ifdef BT_PACK_MODE
-	std::unique_ptr<Assets::IRawAssetData> loadRawFromPack(const Assets::LoadParams& params) {
-		if (!m_resolver) {
-			BT_ERROR("AsyncBitmapFontLoader: resolver is null, was registerPackLoader() used?");
+		if (!resolver) {
+			BT_ERROR("AsyncBitmapFontLoader: no resolver, loader was not registered");
 			return nullptr;
 		}
+
+		const auto req = Detail::bitmapRequest(params);
+		if (!req)
+			return nullptr;
 
 		auto raw = std::make_unique<RawBitmapFontData>();
-
-		if (const auto* bp = dynamic_cast<const BitmapParams*>(&params)) {
-			auto texPacked = m_resolver->resolve(bp->texturePath);
-			if (!texPacked)
-				return nullptr;
-
-			auto metPacked = m_resolver->resolve(bp->metricsPath);
-			if (!metPacked)
-				return nullptr;
-
-			raw->textureBytes = std::move(texPacked->bytes);
-			raw->metricsBytes = std::move(metPacked->bytes);
-			raw->isSingleFile = false;
-		} else if (const auto* pp = dynamic_cast<const Assets::AssetLoadParams*>(&params)) {
-			auto packed = m_resolver->resolve(pp->source);
-			if (!packed)
-				return nullptr;
-
-			raw->btfBytes = std::move(packed->bytes);
-			raw->isSingleFile = true;
-		} else {
+		if (!Detail::fetchBitmapBytes(*resolver, *req, *raw))
 			return nullptr;
-		}
 
 		raw->valid = true;
 		return raw;
 	}
 
-	Assets::AssetResolver* m_resolver = nullptr;
-#endif
+	void upload(Assets::IRawAssetData& rawBase, Assets::AssetManager& manager) override {
+		auto& raw = static_cast<RawBitmapFontData&>(rawBase);
 
-	std::unique_ptr<Assets::IRawAssetData> loadRawFromDisk(const Assets::LoadParams& params) {
-		auto raw = std::make_unique<RawBitmapFontData>();
-
-		if (const auto* bp = dynamic_cast<const BitmapParams*>(&params)) {
-			if (!readFile(bp->texturePath.string(), raw->textureBytes) ||
-			 !readFile(bp->metricsPath.string(), raw->metricsBytes))
-				return nullptr;
-
-			raw->isSingleFile = false;
-			raw->valid = true;
-			return raw;
+		auto font = Detail::buildBitmapFont(raw);
+		if (!font) {
+			BT_ERROR("AsyncBitmapFontLoader: failed to parse '{}'", raw.assetID);
+			return;
 		}
 
-		if (const auto* pp = dynamic_cast<const Assets::AssetLoadParams*>(&params)) {
-			if (!readFile(pp->source.string(), raw->btfBytes))
-				return nullptr;
-
-			raw->isSingleFile = true;
-			raw->valid = true;
-			return raw;
-		}
-
-		BT_ERROR("AsyncBitmapFontLoader: unrecognized LoadParams type");
-		return nullptr;
-	}
-
-	static bool readFile(const std::string& path, std::vector<U8>& out) {
-		std::FILE* f = std::fopen(path.c_str(), "rb");
-		if (!f) {
-			BT_ERROR("AsyncBitmapFontLoader: cannot open '{}'", path);
-			return false;
-		}
-
-		std::fseek(f, 0, SEEK_END);
-		const long size = std::ftell(f);
-		std::fseek(f, 0, SEEK_SET);
-
-		if (size < 0) {
-			std::fclose(f);
-			return false;
-		}
-
-		out.resize(static_cast<size_t>(size));
-		const bool ok = std::fread(out.data(), 1, out.size(), f) == out.size();
-		std::fclose(f);
-
-		if (!ok)
-			BT_ERROR("AsyncBitmapFontLoader: short read from '{}'", path);
-
-		return ok;
+		manager.add<BitmapFont>(raw.assetID, std::move(font));
+		BT_DEBUG("AsyncBitmapFontLoader: '{}' ready", raw.assetID);
 	}
 };
 

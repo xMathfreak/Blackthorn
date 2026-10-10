@@ -1,18 +1,21 @@
 #pragma once
 
 #include <cstdio>
-#include <fstream>
+#include <numbers>
 #include <string>
 #include <vector>
 
+#include <glm/glm.hpp>
 #include <nlohmann/json.hpp>
 
 #include "Animation/SpriteClip.h"
 #include "Animation/SpriteClipLoader.h"
 #include "Assets/AssetManager.h"
+#include "Assets/AssetResolver.h"
 #include "Assets/IAssetLoader.h"
 #include "Assets/LoadParams.h"
 #include "Assets/RawAssetData.h"
+#include "AssetNormalize.h"
 #include "Core/Export.h"
 #include "Debug/Logger.h"
 #include "Graphics/Texture.h"
@@ -21,25 +24,23 @@
 #include "Particles/EmitterConfig.h"
 #include "Particles/ParticleEffect.h"
 
-#ifdef BT_PACK_MODE
-	#include "Assets/AssetResolver.h"
-#endif
-
 namespace Blackthorn::Particles {
 
 /**
- * @brief Raw, not-yet-parsed bytes of a `.btfx` file, produced by
- * AsyncParticleEffectLoader::loadRaw on a worker thread.
+ * @brief Raw bytes of a `.btfx` file plus its canonical ID.
+ *
+ * baseID is what nested references resolve against. It's the normalized
+ * path the effect was requested under, not the caller's load ID.
  */
 struct BLACKTHORN_API RawParticleEffectData : Assets::IRawAssetData {
 	std::vector<U8> bytes;
+	std::string     baseID;
 
 	RawParticleEffectData() = default;
 };
 
 /**
- * @brief Shared JSON parser used by both ParticleEffectLoader and
- * AsyncParticleEffectLoader, so the format is defined in exactly one place.
+ * @brief Shared JSON parser used by both particle effect loaders.
  *
  * @par Format
  * @code
@@ -53,10 +54,10 @@ struct BLACKTHORN_API RawParticleEffectData : Assets::IRawAssetData {
  *       "speed": [2.0, 6.0],                       // [min, max] units/second, or a single number. Default: 1
  *       "size": [40, 80],                          // [min, max] pixels, or a single number. Default: 50
  *       "rotation": 0.0,                           // [min, max] radians. Default: [0, 2 * PI]
- *       "position": [0.0, 0.0],                    // emitter-local offset, relative to wherever this effect is spawned in the world. default [0, 0]
- *       "maxParticles": 0,                         // 0 = auto-derive, see EmitterConfig::resolveCapacity(). Default: 0
- *       "texture": "assets/particles/spark.png",   // optional
- *       "clip": "assets/particles/spark.btclip",   // optional
+ *       "offset": [0.0, 0.0],                      // emitter-local offset from the spawn point. Default: [0, 0]
+ *       "maxParticles": 0,                         // 0 = auto-derive. Default: 0
+ *       "texture": "smoke.png",                    // optional, relative to this file
+ *       "clip": "spark1.btclip",                   // optional, relative to this file
  *       "behaviors": [                             // optional, see BehaviorFactory
  *         { "type": "gravity", "acceleration": [0, 9.81] },
  *         { "type": "drag", "coefficient": 0.5 },
@@ -67,26 +68,25 @@ struct BLACKTHORN_API RawParticleEffectData : Assets::IRawAssetData {
  * }
  * @endcode
  *
- * "shape" sub-fields by type:
- * - line -> "length";
- * - box/rectangle -> "size": [w, h];
- * - circle -> "radius".
- * - point has none.
- *
- * @note "texture"/"clip" resolution differs by build mode:
- * - Loose-file builds treat the string as a filesystem path and derive the
- *   asset id from its filename stem using AssetManager::load<T>(path)'s own
- *   convention then synchronously load it if not already resident. This
- *   is a cheap has<T>() lookup in the common case where the asset was
- *   already loaded elsewhere (e.g. scene/level preloading); it only pays a
- *   real synchronous load as a fallback if it wasn't.
+ * @note References are resolved with Assets::AssetResolver::resolveReference
+ * against the effect's canonical ID, so the same file works in loose and
+ * pack builds, under any root name. See AssetReference.h for the grammar.
  */
 class ParticleEffectParser {
 public:
-	static std::unique_ptr<ParticleEffect> parse(const nlohmann::json& root, Assets::AssetManager& assetManager, const std::string& filename) {
+	/**
+	 * @param root    Parsed JSON document.
+	 * @param manager Used to load nested textures and clips, and for resolution.
+	 * @param baseID  Canonical ID of the `.btfx` file, for resolving references.
+	 */
+	static std::unique_ptr<ParticleEffect> parse(
+		const nlohmann::json& root,
+		Assets::AssetManager& manager,
+		const std::string& baseID
+	) {
 		const auto emittersIt = root.find("emitters");
 		if (emittersIt == root.end() || !emittersIt->is_array()) {
-			BT_ERROR("ParticleEffectParser: missing 'emitters' array");
+			BT_ERROR("ParticleEffectParser: '{}' is missing an 'emitters' array", baseID);
 			return nullptr;
 		}
 
@@ -94,13 +94,17 @@ public:
 		emitters.reserve(emittersIt->size());
 
 		for (const auto& emitterJson : *emittersIt)
-			emitters.push_back(parseEmitter(emitterJson, assetManager, filename));
+			emitters.push_back(parseEmitter(emitterJson, manager, baseID));
 
 		return std::make_unique<ParticleEffect>(std::move(emitters));
 	}
 
 private:
-	static EmitterConfig parseEmitter(const nlohmann::json& j, Assets::AssetManager& assetManager, const std::string& name) {
+	static EmitterConfig parseEmitter(
+		const nlohmann::json& j,
+		Assets::AssetManager& manager,
+		const std::string& baseID
+	) {
 		EmitterConfig config;
 
 		config.distribution = j.value("distribution", std::string("random")) == "boundary"
@@ -117,13 +121,13 @@ private:
 		config.maxParticles = j.value("maxParticles", 0u);
 
 		if (j.contains("texture"))
-			config.texture = resolveTexture(j.at("texture").get<std::string>(), assetManager);
+			config.texture = resolveTexture(j.at("texture").get<std::string>(), manager, baseID);
 
 		if (j.contains("clip")) {
 			if (!config.texture)
-				BT_WARN("ParticleEffectParser: emitter in '{}' has a clip set but no texture", name);
+				BT_WARN("ParticleEffectParser: emitter in '{}' has a clip set but no texture", baseID);
 
-			config.clip = resolveClip(j.at("clip").get<std::string>(), assetManager);
+			config.clip = resolveClip(j.at("clip").get<std::string>(), manager, baseID);
 		}
 
 		if (const auto behaviorsIt = j.find("behaviors"); behaviorsIt != j.end() && behaviorsIt->is_array()) {
@@ -173,22 +177,40 @@ private:
 		return { it->at(0).get<float>(), it->at(1).get<float>() };
 	}
 
-	static Graphics::Texture* resolveTexture(const std::string& ref, Assets::AssetManager& assetManager) {
-		auto handle = assetManager.load<Graphics::Texture>(ref);
+	static Graphics::Texture* resolveTexture(
+		const std::string& ref,
+		Assets::AssetManager& manager,
+		const std::string& baseID
+	) {
+		const auto id = manager.resolver().resolveReference(baseID, ref);
+		if (!id) {
+			BT_ERROR("ParticleEffectParser: invalid texture reference '{}' in '{}'", ref, baseID);
+			return nullptr;
+		}
 
+		auto handle = manager.load<Graphics::Texture>(*id);
 		if (!handle) {
-			BT_ERROR("ParticleEffectParser: failed to resolve texture '{}'", ref);
+			BT_ERROR("ParticleEffectParser: failed to load texture '{}' (from '{}')", *id, baseID);
 			return nullptr;
 		}
 
 		return handle.get();
 	}
 
-	static const Animation::SpriteClip* resolveClip(const std::string& ref, Assets::AssetManager& assetManager) {
-		auto handle = assetManager.load<Animation::SpriteClip>(ref);
+	static const Animation::SpriteClip* resolveClip(
+		const std::string& ref,
+		Assets::AssetManager& manager,
+		const std::string& baseID
+	) {
+		const auto id = manager.resolver().resolveReference(baseID, ref);
+		if (!id) {
+			BT_ERROR("ParticleEffectParser: invalid clip reference '{}' in '{}'", ref, baseID);
+			return nullptr;
+		}
 
+		auto handle = manager.load<Animation::SpriteClip>(*id);
 		if (!handle) {
-			BT_ERROR("ParticleEffectParser: failed to resolve clip '{}'", ref);
+			BT_ERROR("ParticleEffectParser: failed to load clip '{}' (from '{}')", *id, baseID);
 			return nullptr;
 		}
 
@@ -197,47 +219,45 @@ private:
 };
 
 /**
- * @brief Loads a ParticleEffect from a `.btfx` JSON file.
+ * @brief Loads a ParticleEffect synchronously from the resolver.
  *
- * Nested texture/clip references are resolved synchronously against
- * @c assetManager.
- *
- * @see ParticleEffectParser
+ * Works in loose and pack builds alike. The load ID must be a canonical path,
+ * for example "assets/particles/spark.btfx".
  */
 class BLACKTHORN_API ParticleEffectLoader final : public Assets::IAssetLoader<ParticleEffect> {
 public:
-	/**
-	 * @param assetManager Manager used to resolve nested texture/clip
-	 * references.
-	 */
 	explicit ParticleEffectLoader(Assets::AssetManager& am)
 		: assetManager(am)
 	{}
 
 	std::unique_ptr<ParticleEffect> load(const Assets::LoadParams& params) override {
 		const auto* pp = dynamic_cast<const Assets::AssetLoadParams*>(&params);
-		if (!pp)
-			return nullptr;
-
-		std::ifstream file(pp->source);
-		if (!file.is_open()) {
-			BT_ERROR("ParticleEffectLoader: cannot open '{}'", pp->source.string());
+		if (!pp) {
+			BT_ERROR("ParticleEffectLoader: unrecognized LoadParams type");
 			return nullptr;
 		}
+
+		const auto id = Blackthorn::normalizeAssetPath(pp->source.generic_string());
+		if (!id) {
+			BT_ERROR("ParticleEffectLoader: invalid asset path '{}'", pp->source.generic_string());
+			return nullptr;
+		}
+
+		const auto bytes = assetManager.resolver().resolve(*id);
+		if (!bytes)
+			return nullptr;
+
+		const std::string text(reinterpret_cast<const char*>(bytes->bytes.data()), bytes->bytes.size());
 
 		nlohmann::json root;
 		try {
-			file >> root;
+			root = nlohmann::json::parse(text);
 		} catch (const nlohmann::json::parse_error& e) {
-			BT_ERROR("ParticleEffectLoader: failed to parse '{}': {}", pp->source.string(), e.what());
+			BT_ERROR("ParticleEffectLoader: failed to parse '{}': {}", *id, e.what());
 			return nullptr;
 		}
 
-		auto effect = ParticleEffectParser::parse(root, assetManager, pp->source.string());
-		if (!effect)
-			BT_ERROR("ParticleEffectLoader: '{}' produced no emitters", pp->source.string());
-
-		return effect;
+		return ParticleEffectParser::parse(root, assetManager, *id);
 	}
 
 private:
@@ -245,51 +265,56 @@ private:
 };
 
 /**
- * @brief Async loader for ParticleEffect.
+ * @brief Asynchronous loader for ParticleEffect.
  *
- * Decodes on a worker thread via loadRaw (just a file/pack read. `.btfx`
- * is plain JSON text, cheap to parse), then parses and resolves nested
- * texture/clip references on the main thread via upload, matching the
- * AsyncSpriteClipLoader pattern. Nested resolution uses AssetManager's
- * synchronous load() even here, since upload() already runs on the main
- * thread as the second stage of the async pipeline.
- *
- * @see ParticleEffectParser
+ * loadRaw reads the bytes through the resolver on a worker thread. upload parses
+ * the JSON and resolves nested references on the main thread.
  */
 class BLACKTHORN_API AsyncParticleEffectLoader final : public Assets::IAsyncAssetLoader<ParticleEffect> {
 public:
-#ifdef BT_PACK_MODE
-	explicit AsyncParticleEffectLoader(Assets::AssetResolver* resolver)
-		: m_resolver(resolver)
-	{}
-#else
 	AsyncParticleEffectLoader() = default;
-#endif
 
 	std::unique_ptr<Assets::IRawAssetData> loadRaw(const Assets::LoadParams& params) override {
-#ifdef BT_PACK_MODE
-		return loadRawFromPack(params);
-#else
-		return loadRawFromDisk(params);
-#endif
+		const auto* pp = dynamic_cast<const Assets::AssetLoadParams*>(&params);
+		if (!pp)
+			return nullptr;
+
+		const auto id = Blackthorn::normalizeAssetPath(pp->source.generic_string());
+		if (!id)
+			return nullptr;
+
+		if (!resolver) {
+			BT_ERROR("AsyncParticleEffectLoader: no resolver, loader was not registered");
+			return nullptr;
+		}
+
+		auto bytes = resolver->resolve(*id);
+		if (!bytes)
+			return nullptr;
+
+		auto raw = std::make_unique<RawParticleEffectData>();
+		raw->bytes = std::move(bytes->bytes);
+		raw->baseID = *id;
+		raw->valid = true;
+		return raw;
 	}
 
 	void upload(Assets::IRawAssetData& rawBase, Assets::AssetManager& manager) override {
 		auto& raw = static_cast<RawParticleEffectData&>(rawBase);
 
+		const std::string text(reinterpret_cast<const char*>(raw.bytes.data()), raw.bytes.size());
+
 		nlohmann::json root;
 		try {
-			root = nlohmann::json::parse(std::string(
-				reinterpret_cast<const char*>(raw.bytes.data()), raw.bytes.size()
-			));
+			root = nlohmann::json::parse(text);
 		} catch (const nlohmann::json::parse_error& e) {
-			BT_ERROR("AsyncParticleEffectLoader: failed to parse '{}': {}", raw.assetID, e.what());
+			BT_ERROR("AsyncParticleEffectLoader: failed to parse '{}': {}", raw.baseID, e.what());
 			return;
 		}
 
-		auto effect = ParticleEffectParser::parse(root, manager, raw.assetID);
+		auto effect = ParticleEffectParser::parse(root, manager, raw.baseID);
 		if (!effect) {
-			BT_ERROR("AsyncParticleEffectLoader: '{}' produced no emitters", raw.assetID);
+			BT_ERROR("AsyncParticleEffectLoader: '{}' produced no effect", raw.baseID);
 			return;
 		}
 
@@ -297,71 +322,6 @@ public:
 		BT_DEBUG("AsyncParticleEffectLoader: '{}' ready", raw.assetID);
 	}
 
-private:
-#ifdef BT_PACK_MODE
-	std::unique_ptr<Assets::IRawAssetData> loadRawFromPack(const Assets::LoadParams& params) {
-		const auto* pp = dynamic_cast<const Assets::AssetLoadParams*>(&params);
-		if (!pp) {
-			BT_ERROR("AsyncParticleEffectLoader: BT_PACK_MODE requires PackParticleEffectParams");
-			return nullptr;
-		}
-
-		if (!m_resolver) {
-			BT_ERROR("AsyncParticleEffectLoader: resolver is null, was registerPackLoader() used?");
-			return nullptr;
-		}
-
-		auto packed = m_resolver->resolve(pp->source);
-		if (!packed)
-			return nullptr;
-
-		auto raw = std::make_unique<RawParticleEffectData>();
-		raw->bytes = std::move(packed->bytes);
-		raw->valid = true;
-		return raw;
-	}
-
-	Assets::AssetResolver* m_resolver = nullptr;
-#endif
-
-	std::unique_ptr<Assets::IRawAssetData> loadRawFromDisk(const Assets::LoadParams& params) {
-		const auto* pp = dynamic_cast<const Assets::AssetLoadParams*>(&params);
-		if (!pp)
-			return nullptr;
-
-		auto raw = std::make_unique<RawParticleEffectData>();
-		if (!readFile(pp->source.string(), raw->bytes))
-			return nullptr;
-
-		raw->valid = true;
-		return raw;
-	}
-
-	static bool readFile(const std::string& path, std::vector<U8>& out) {
-		std::FILE* f = std::fopen(path.c_str(), "rb");
-		if (!f) {
-			BT_ERROR("AsyncParticleEffectLoader: cannot open '{}'", path);
-			return false;
-		}
-
-		std::fseek(f, 0, SEEK_END);
-		const long size = std::ftell(f);
-		std::fseek(f, 0, SEEK_SET);
-
-		if (size < 0) {
-			std::fclose(f);
-			return false;
-		}
-
-		out.resize(static_cast<size_t>(size));
-		const bool ok = std::fread(out.data(), 1, out.size(), f) == out.size();
-		std::fclose(f);
-
-		if (!ok)
-			BT_ERROR("AsyncParticleEffectLoader: short read from '{}'", path);
-
-		return ok;
-	}
 };
 
 } // namespace Blackthorn::Particles

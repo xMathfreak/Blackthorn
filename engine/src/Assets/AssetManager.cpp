@@ -1,5 +1,8 @@
 #include "Assets/AssetManager.h"
 
+#include <chrono>
+#include <thread>
+
 namespace Blackthorn::Assets {
 
 AssetManager::AssetManager(Jobs::JobSystem& js)

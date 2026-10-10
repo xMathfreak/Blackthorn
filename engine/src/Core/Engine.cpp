@@ -244,48 +244,6 @@ void Engine::initGraphics(const EngineConfig& cfg) {
 }
 
 void Engine::initAssetLoaders() {
-#ifdef BT_PACK_MODE
-	assetManager->registerPackLoader<Audio::AudioClip>(
-		std::make_unique<Audio::AudioLoader>(),
-		std::make_unique<Audio::AsyncAudioLoader>(&assetManager->resolver())
-	);
-
-	assetManager->registerPackLoader<Graphics::Texture>(
-		std::make_unique<Graphics::TextureLoader>(),
-		std::make_unique<Graphics::AsyncTextureLoader>(&assetManager->resolver())
-	);
-
-	assetManager->registerPackLoader<Graphics::Shader>(
-		std::make_unique<Graphics::ShaderLoader>(),
-		std::make_unique<Graphics::AsyncShaderLoader>(&assetManager->resolver())
-	);
-
-	assetManager->registerPackLoader<Fonts::BitmapFont>(
-		std::make_unique<Fonts::BitmapFontLoader>(),
-		std::make_unique<Fonts::AsyncBitmapFontLoader>(&assetManager->resolver())
-	);
-
-	assetManager->registerPackLoader<Fonts::TrueTypeFont>(
-		std::make_unique<Fonts::TrueTypeFontLoader>(),
-		std::make_unique<Fonts::AsyncTrueTypeFontLoader>(&assetManager->resolver())
-	);
-
-	assetManager->registerPackLoader<Animation::SpriteClip>(
-		std::make_unique<Animation::SpriteClipLoader>(),
-		std::make_unique<Animation::AsyncSpriteClipLoader>(&assetManager->resolver())
-	);
-
-	assetManager->registerPackLoader<Particles::ParticleEffect>(
-		std::make_unique<Particles::ParticleEffectLoader>(*assetManager),
-		std::make_unique<Particles::AsyncParticleEffectLoader>(&assetManager->resolver())
-	);
-
-	assetManager->registerPackLoader<Localization::LocalizationSource>(
-		std::make_unique<Localization::LocalizationSourceLoader>(localizationManager),
-		std::make_unique<Localization::AsyncLocalizationSourceLoader>(localizationManager, &assetManager->resolver())
-	);
-
-#else
 	assetManager->registerLoader<Audio::AudioClip>(
 		std::make_unique<Audio::AudioLoader>(),
 		std::make_unique<Audio::AsyncAudioLoader>()
@@ -325,7 +283,6 @@ void Engine::initAssetLoaders() {
 		std::make_unique<Localization::LocalizationSourceLoader>(localizationManager),
 		std::make_unique<Localization::AsyncLocalizationSourceLoader>(localizationManager)
 	);
-#endif
 }
 
 void Engine::shutdown() {

@@ -1,30 +1,40 @@
 #pragma once
 
+#include <filesystem>
+#include <memory>
+#include <optional>
 #include <string>
-#include <vector>
+#include <utility>
 
 #include "Assets/AssetManager.h"
+#include "Assets/AssetResolver.h"
 #include "Assets/IAssetLoader.h"
 #include "Assets/LoadParams.h"
 #include "Assets/RawAssetData.h"
+#include "AssetNormalize.h"
 #include "Core/Export.h"
 #include "Debug/Logger.h"
 #include "Graphics/Shader.h"
 
-#ifdef BT_PACK_MODE
-	#include "Assets/AssetResolver.h"
-	#include "Assets/PackMount.h"
-#endif
-
 namespace Blackthorn::Graphics {
 
-struct BLACKTHORN_API ShaderParams : Assets::LoadParams {
-	std::string vertexPath;
-	std::string fragmentPath;
+/**
+ * @brief Load parameters for a shader program.
+ *
+ * The vertex shader is the asset's source path, so the program is addressed by
+ * its vertex shader's ID. The fragment shader is a second canonical ID.
+ *
+ * @code
+ * manager.load<Shader>("assets/shaders/sprite.vert", ShaderParams{
+ *     "assets/shaders/sprite.vert", "assets/shaders/sprite.frag" });
+ * @endcode
+ */
+struct BLACKTHORN_API ShaderParams final : Assets::AssetLoadParams {
+	std::filesystem::path fragmentPath;
 
-	ShaderParams(const std::string& vertex, const std::string& fragment)
-		: vertexPath(vertex)
-		, fragmentPath(fragment)
+	ShaderParams(std::filesystem::path vertex, std::filesystem::path fragment)
+		: Assets::AssetLoadParams(std::move(vertex))
+		, fragmentPath(std::move(fragment))
 	{}
 
 	std::unique_ptr<Assets::LoadParams> clone() const override {
@@ -39,32 +49,99 @@ struct BLACKTHORN_API RawShaderData : Assets::IRawAssetData {
 	RawShaderData() = default;
 };
 
+namespace Detail {
+
+/**
+ * @brief Canonical IDs for the vertex and fragment shaders in @p params.
+ */
+inline std::optional<std::pair<std::string, std::string>> shaderRequest(const Assets::LoadParams& params) {
+	const auto* sp = dynamic_cast<const ShaderParams*>(&params);
+	if (!sp) {
+		BT_ERROR("ShaderLoader: expected ShaderParams");
+		return std::nullopt;
+	}
+
+	const auto vertex = Blackthorn::normalizeAssetPath(sp->source.generic_string());
+	const auto fragment = Blackthorn::normalizeAssetPath(sp->fragmentPath.generic_string());
+	if (!vertex || !fragment) {
+		BT_ERROR("ShaderLoader: invalid shader path (vertex '{}', fragment '{}')",
+			sp->source.generic_string(), sp->fragmentPath.generic_string());
+		return std::nullopt;
+	}
+
+	return std::make_pair(*vertex, *fragment);
+}
+
+/**
+ * @brief Reads one shader source through the resolver as text.
+ */
+inline std::optional<std::string> readShaderSource(Assets::AssetResolver& resolver, const std::string& id) {
+	const auto bytes = resolver.resolve(id);
+	if (!bytes)
+		return std::nullopt;
+
+	return std::string(reinterpret_cast<const char*>(bytes->bytes.data()), bytes->bytes.size());
+}
+
+} // namespace Detail
+
+/**
+ * @brief Synchronous shader loader. Reads sources through the resolver and compiles them.
+ */
 class BLACKTHORN_API ShaderLoader final : public Assets::IAssetLoader<Shader> {
 public:
 	std::unique_ptr<Shader> load(const Assets::LoadParams& params) override {
-		if (const auto* p = dynamic_cast<const ShaderParams*>(&params))
-			return std::make_unique<Shader>(p->vertexPath, p->fragmentPath);
+		if (!resolver) {
+			BT_ERROR("ShaderLoader: no resolver, loader was not registered");
+			return nullptr;
+		}
 
-		return nullptr;
+		const auto request = Detail::shaderRequest(params);
+		if (!request)
+			return nullptr;
+
+		const auto vert = Detail::readShaderSource(*resolver, request->first);
+		const auto frag = Detail::readShaderSource(*resolver, request->second);
+		if (!vert || !frag)
+			return nullptr;
+
+		auto shader = std::make_unique<Shader>();
+		if (!shader->compileFromSource(*vert, *frag)) {
+			BT_ERROR("ShaderLoader: compilation failed for '{}'", request->first);
+			return nullptr;
+		}
+
+		return shader;
 	}
 };
 
+/**
+ * @brief Asynchronous shader loader. Reads sources on a worker, compiles on the main thread.
+ */
 class BLACKTHORN_API AsyncShaderLoader final : public Assets::IAsyncAssetLoader<Shader> {
 public:
-#ifdef BT_PACK_MODE
-	explicit AsyncShaderLoader(Assets::AssetResolver* resolver)
-		: m_resolver(resolver)
-	{}
-#else
 	AsyncShaderLoader() = default;
-#endif
 
 	std::unique_ptr<Assets::IRawAssetData> loadRaw(const Assets::LoadParams& params) override {
-#ifdef BT_PACK_MODE
-		return loadRawFromPack(params);
-#else
-		return loadRawFromDisk(params);
-#endif
+		if (!resolver) {
+			BT_ERROR("AsyncShaderLoader: no resolver, loader was not registered");
+			return nullptr;
+		}
+
+		const auto request = Detail::shaderRequest(params);
+		if (!request)
+			return nullptr;
+
+		const auto vert = Detail::readShaderSource(*resolver, request->first);
+		const auto frag = Detail::readShaderSource(*resolver, request->second);
+		if (!vert || !frag)
+			return nullptr;
+
+		auto raw = std::make_unique<RawShaderData>();
+		raw->vertSource = *vert;
+		raw->fragSource = *frag;
+		raw->valid = true;
+		return raw;
 	}
 
 	void upload(Assets::IRawAssetData& rawBase, Assets::AssetManager& manager) override {
@@ -78,91 +155,6 @@ public:
 
 		manager.add<Shader>(raw.assetID, std::move(shader));
 		BT_DEBUG("AsyncShaderLoader: '{}' compiled and linked", raw.assetID);
-	}
-
-private:
-
-#ifdef BT_PACK_MODE
-	std::unique_ptr<Assets::IRawAssetData> loadRawFromPack(const Assets::LoadParams& params) {
-		const auto* pp = dynamic_cast<const ShaderParams*>(&params);
-		if (!pp) {
-			BT_ERROR("AsyncShaderLoader: BT_PACK_MODE requires PackShaderParams "
-				"(vertID + fragID). Got a different LoadParams type.");
-			return nullptr;
-		}
-
-		if (!m_resolver) {
-			BT_ERROR("AsyncShaderLoader: resolver is null, was registerPackLoader() used?");
-			return nullptr;
-		}
-
-		auto vertData = m_resolver->resolve(pp->vertexPath);
-		if (!vertData)
-			return nullptr;
-
-		auto fragData = m_resolver->resolve(pp->fragmentPath);
-		if (!fragData)
-			return nullptr;
-
-		auto raw = std::make_unique<RawShaderData>();
-
-		raw->vertSource.assign(
-			reinterpret_cast<const char*>(vertData->bytes.data()),
-			vertData->bytes.size()
-		);
-		raw->fragSource.assign(
-			reinterpret_cast<const char*>(fragData->bytes.data()),
-			fragData->bytes.size()
-		);
-
-		raw->valid = true;
-		return raw;
-	}
-
-	Assets::AssetResolver* m_resolver = nullptr;
-#endif
-
-	std::unique_ptr<Assets::IRawAssetData> loadRawFromDisk(const Assets::LoadParams& params) {
-		const ShaderParams* sp = dynamic_cast<const ShaderParams*>(&params);
-		if (!sp) {
-			BT_ERROR("AsyncShaderLoader: expected ShaderParams in debug mode");
-			return nullptr;
-		}
-
-		auto raw = std::make_unique<RawShaderData>();
-
-		if (!readTextFile(sp->vertexPath, raw->vertSource)) {
-			BT_ERROR("AsyncShaderLoader: failed to read vertex shader '{}'", sp->vertexPath);
-			return nullptr;
-		}
-
-		if (!readTextFile(sp->fragmentPath, raw->fragSource)) {
-			BT_ERROR("AsyncShaderLoader: failed to read fragment shader '{}'", sp->fragmentPath);
-			return nullptr;
-		}
-
-		raw->valid = true;
-		return raw;
-	}
-
-	static bool readTextFile(const std::string& path, std::string& out) {
-		std::FILE* f = std::fopen(path.c_str(), "rb");
-		if (!f)
-			return false;
-
-		std::fseek(f, 0, SEEK_END);
-		const long size = std::ftell(f);
-		std::fseek(f, 0, SEEK_SET);
-
-		if (size < 0) {
-			std::fclose(f);
-			return false;
-		}
-
-		out.resize(static_cast<size_t>(size));
-		const bool ok = std::fread(out.data(), 1, out.size(), f) == out.size();
-		std::fclose(f);
-		return ok;
 	}
 };
 

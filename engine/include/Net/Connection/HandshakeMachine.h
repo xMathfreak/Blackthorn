@@ -41,13 +41,13 @@ struct HandshakeAction {
  *
  * The machine is driven by three entry points:
  *
- * - @c begin() — called once when a peer slot is allocated, tagging the
+ * - @c begin(): called once when a peer slot is allocated, tagging the
  *   peer with its @c PeerOrigin and entering the initial phase
  *   (Dialing for outbound, AwaitingRequest for inbound).
- * - @c onSocketReady() — called by the I/O thread each poll while an
+ * - @c onSocketReady(): called by the I/O thread each poll while an
  *   outbound peer's socket is connecting; emits the ConnectRequest
  *   exactly once.
- * - @c onPacket() — fed every received TCP packet; consumes
+ * - @c onPacket(): fed every received TCP packet; consumes
  *   ConnectRequest / ConnectAck and validates them against the peer's
  *   current phase and origin.
  *

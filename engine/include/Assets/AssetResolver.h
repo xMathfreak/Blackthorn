@@ -5,46 +5,55 @@
 #include <optional>
 #include <shared_mutex>
 #include <string>
+#include <string_view>
 #include <vector>
 
+#include "AssetNormalize.h"
+#include "AssetReference.h"
 #include "Assets/PackMount.h"
 #include "Core/Export.h"
 
 namespace Blackthorn::Assets {
 
 /**
+ * @brief Bytes for one asset, plus the canonical ID they were requested under.
+ *
+ * The canonical ID is what loaders use as the base for resolving references
+ * inside the asset's data. sourcePath is for diagnostics only.
+ */
+struct BLACKTHORN_API AssetBytes {
+	std::vector<U8> bytes;
+	std::string     id;
+	std::string     sourcePath;
+};
+
+/**
  * @class AssetResolver
- * @brief Priority-ordered stack of PackMount instances.
+ * @brief Single entry point for reading asset bytes and expanding references.
  *
- * The resolver is the single point through which all pack-mode asset reads
- * flow. It maintains an ordered list of PackMount objects and searches them
- * from highest priority to lowest (last-mounted wins) when resolve() is
- * called.
+ * Every asset ID is a canonical path of the form root/path/to/file, where the
+ * first segment is a top-level folder under the loose root. The same ID works
+ * in both build modes:
  *
- * @section mount_order Mount order and priority
- * Mounts are assigned a monotonically increasing priority equal to their
- * insertion index. The search in resolve() iterates the vector in reverse,
- * so the last mounted pack wins any ID conflict. This matches Steam Workshop
- * semantics: base game packs are mounted first, DLC on top of those, and
- * user mod packs last.
+ * - Loose builds read `looseRoot() / id` from disk.
+ * - BT_PACK_MODE builds search mounted packs, highest priority first. A miss
+ *   is an error. There is no loose-file fallback, so missing content fails
+ *   loudly instead of hiding a packing mistake.
  *
- * @code
- * // Engine startup
- * resolver.mount("data/base.btp");       // priority 0 (lowest)
- * resolver.mount("data/chapter1.btp");   // priority 1
+ * @section references References inside data files
+ * Data files reference other assets using resolveReference():
+ *   smoke.png              relative to the containing file's directory
+ *   ../textures/x.png      relative, climbing up but never past the root
+ *   @root/particles/x.png  absolute within the containing file's own root
+ *   @engine/particles/x.png absolute in the named root "engine"
  *
- * // DLC installed
- * resolver.mount("dlc/skin_pack.btp");   // priority 2 (wins over base/chapter1)
- *
- * // User mod loaded at runtime
- * resolver.mount("mods/my_mod.btp");     // priority 3 (highest, wins everything)
- * @endcode
+ * @section mount_order Mount order (pack mode)
+ * Mounts are searched in reverse insertion order, so the last pack mounted
+ * wins any ID conflict. Base game packs mount first, DLC and mods mount last.
  *
  * @section thread_safety Thread safety
- * resolve() and has() acquire a shared lock and are safe to call from any
- * thread concurrently (e.g. from decode jobs on the JobSystem).
- * mount() and unmount() acquire an exclusive lock and may block briefly while
- * readers finish, but do not stall the job system for long.
+ * resolve(), has(), and resolveReference() are safe to call from any thread.
+ * mount(), unmount(), and setLooseRoot() take an exclusive lock.
  */
 class BLACKTHORN_API AssetResolver {
 public:
@@ -55,94 +64,83 @@ public:
 	AssetResolver& operator=(const AssetResolver&) = delete;
 
 	/**
+	 * @brief Sets the directory that loose-mode IDs are relative to.
+	 *
+	 * Defaults to the working directory at construction. Thread-safe.
+	 *
+	 * @param root Directory containing the top-level asset folders.
+	 */
+	void setLooseRoot(const std::filesystem::path& root);
+
+	/// Current loose root.
+	std::filesystem::path looseRoot() const;
+
+	/**
 	 * @brief Mounts a .btp file onto the top of the priority stack.
 	 *
-	 * Thread-safe. Safe to call at any time, including after game startup
-	 * for runtime mod or DLC support. If the same path is already mounted,
-	 * this is a no-op and returns true.
+	 * Thread-safe. If the same path is already mounted, this is a no-op and
+	 * returns true.
 	 *
-	 * @param path Absolute or relative path to the .btp file.
-	 * @return true if the pack was mounted (or was already mounted);
-	 *         false if the file could not be opened or validated.
+	 * @return true if the pack was mounted (or was already mounted).
 	 */
 	bool mount(const std::filesystem::path& path);
 
 	/**
 	 * @brief Unmounts a previously mounted pack file.
 	 *
-	 * Thread-safe. Removes the PackMount from the stack and frees its TOC
-	 * memory. Assets already loaded from this pack remain alive in
-	 * AssetStorage, they are not evicted. If @p path is not currently
-	 * mounted, this is a no-op.
-	 *
-	 * Typical use: unmounting a chapter pack after the player has left that
-	 * area to recover the TOC RAM.
-	 *
-	 * @param path Path that was previously passed to mount().
+	 * Thread-safe. Assets already loaded from this pack stay in AssetStorage.
+	 * If @p path is not mounted, this is a no-op.
 	 */
 	void unmount(const std::filesystem::path& path);
 
 	/**
-	 * @brief Resolves a string asset ID to decompressed bytes.
+	 * @brief Reads the bytes for a canonical asset ID.
 	 *
-	 * Hashes @p id with xxHash64, then searches the mount stack from highest
-	 * priority to lowest, returning the first hit. Returns std::nullopt if no
-	 * mounted pack contains the asset.
-	 *
-	 * Thread-safe (shared lock).
-	 *
-	 * @param id The asset string ID (e.g. "player_texture").
-	 * @return Decompressed PackedAssetData, or std::nullopt if not found.
+	 * @param id A canonical ID such as "assets/particles/smoke.png". The ID is
+	 *           normalized before use, so "assets\\particles\\smoke.png" is
+	 *           accepted and refers to the same asset.
+	 * @return The bytes and canonical ID, or std::nullopt if the asset is not
+	 *         found (not in any mounted pack in BT_PACK_MODE, not on disk
+	 *         otherwise). Misses are logged.
 	 */
-	std::optional<PackedAssetData> resolve(const std::string& id) const;
-
-	/** @brief Convinience overload for callers holding a std::filesystem::path */
-	std::optional<PackedAssetData> resolve(const std::filesystem::path& p) const;
+	std::optional<AssetBytes> resolve(std::string_view id) const;
 
 	/**
-	 * @brief Returns true if any mounted pack contains the given asset ID.
+	 * @brief Resolves a reference written inside the asset with ID @p baseID.
 	 *
-	 * Thread-safe (shared lock). Does NOT decompress, only checks the TOC.
+	 * See the class documentation for the reference forms. This does not check
+	 * that the target exists; resolve() does that.
 	 *
-	 * @param id The asset string ID.
+	 * @return The canonical ID, or std::nullopt if the reference is invalid.
 	 */
-	bool has(const std::string& id) const;
+	std::optional<std::string> resolveReference(std::string_view baseID, std::string_view ref) const;
+
+	/**
+	 * @brief Returns true if the asset exists in the active mode's storage.
+	 *
+	 * Does not read or decompress the asset.
+	 */
+	bool has(std::string_view id) const;
 
 	/// Number of currently mounted packs.
 	size_t mountCount() const;
 
 	/**
-	 * @brief Returns the metadata (name, author, version, etc.) of the pack
-	 * mounted at @p path.
+	 * @brief Returns the metadata of the pack mounted at @p path.
 	 *
-	 * Thread-safe (shared lock). This is how game code queries a mounted
-	 * pack's identity, e.g. to list installed mods by name in a UI without
-	 * needing direct access to the underlying PackMount.
-	 *
-	 * @param path Path that was previously passed to mount().
 	 * @return The pack's PackMetadata, or std::nullopt if no pack is mounted
-	 *         at @p path. Note this is distinct from an empty-but-present
-	 *         PackMetadata (PackMetadata::empty() == true), which means the
-	 *         pack is mounted but was built without a metadata block.
+	 *         at @p path.
 	 */
 	std::optional<PackMetadata> getPackMetadata(const std::filesystem::path& path) const;
 
 private:
-	/**
-	 * @brief Computes the xxHash64 of a string asset ID.
-	 *
-	 * Deterministic across platforms and build configurations. Both the packer
-	 * and the resolver must use the same seed (0) so IDs match.
-	 *
-	 * @param id The asset string ID.
-	 * @return 64-bit hash used as the binary key in BTPEntry::assetID.
-	 */
-	static uint64_t hashID(const std::string& id);
-
 	/// Mounts in insertion order. resolve() iterates in reverse for last-wins.
 	std::vector<PackMount> mounts;
 
-	/// Guards mounts. resolve()/has() take shared; mount()/unmount() take exclusive.
+	/// Loose-mode root directory.
+	std::filesystem::path looseRootPath = std::filesystem::current_path();
+
+	/// Guards mounts and looseRootPath.
 	mutable std::shared_mutex mutex;
 };
 

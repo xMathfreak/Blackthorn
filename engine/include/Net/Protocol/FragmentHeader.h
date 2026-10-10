@@ -27,7 +27,7 @@ namespace Blackthorn::Net::Protocol {
  * @code
  * [flags       1 byte ]     - 0x01 = fragmented
  * [fragmentID  2 bytes]     - which logical message this belongs to
- * [totalFrags  1 byte ]     - total fragment count (1–255)
+ * [totalFrags  1 byte ]     - total fragment count (1-255)
  * [fragIndex   1 byte ]     - 0-based index of this fragment (0 to totalFrags-1)
  * @endcode
  *
@@ -42,7 +42,7 @@ namespace Blackthorn::Net::Protocol {
  * message is approximately:
  *
  *   fragment 0:      1400 - 25 = 1375 bytes of payload
- *   fragments 1–254: 1400 - 13 = 1387 bytes of payload each
+ *   fragments 1-254: 1400 - 13 = 1387 bytes of payload each
  *   total:           1375 + 254 * 1387 ≈ 353 KB
  *
  * If larger messages are needed, TCP should be used instead.
