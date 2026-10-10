@@ -13,32 +13,31 @@ namespace BTPacker {
  * @class ManifestGenerator
  * @brief Scans an asset directory and generates a .pack.json manifest.
  *
- * Re-running gen-manifest over the same directory regenerates the
- * file, so it is safe to use as part of a build step as long as
- * manual edits are tracked separately (e.g. by committing the
- * generated manifest to version control and editing it there).
+ * Every asset path in the generated manifest is relative to @c projectRoot,
+ * which is also the engine's runtime working directory. The path string is
+ * the asset ID, so a path that loads in loose-file mode is exactly the path
+ * that packs under the same ID.
  *
  * @section usage Usage
  * @code
  * btpacker generate-manifest
- *     --assets   assets/
- *     --output   assets.btp
- *     --manifest manifest.json
+ *     [--root my_mod]
  *     [--exclude video]
- *     [--exclude fonts]
  *     [--level 3]
  *     [--no-symbols]
+ *     <input>
+ *     <output>
  * @endcode
  */
 class ManifestGenerator {
 public:
 	struct Options {
-		std::filesystem::path assetDir;       ///< Root directory to scan (required).
-		std::filesystem::path manifestOut;    ///< Path to write the generated .pack.json (required).
-		std::filesystem::path btpOutput;      ///< Value of "output" in the manifest (required).
+		std::filesystem::path input;        ///< Path to scan for assets.
+		std::filesystem::path output;       ///< Path to write the generated .pack.json.
+		std::string root;                   ///< Virtual root path written into the packer.
 		int                   compressionLevel = 3;
 		bool                  writeSymbolTable = true;
-		std::vector<std::string> excludeDirs;  ///< Subdirectory names to skip entirely (e.g. "video").
+		std::vector<std::string> excludeDirs;    ///< Subdirectory names to skip entirely (e.g. "video").
 	};
 
 	/**
@@ -57,16 +56,17 @@ private:
 	/**
 	 * @brief Writes the collected asset list as a formatted JSON manifest.
 	 *
-	 * @param opts   Generation options (output path, btp output, level, symbols).
-	 * @param assets Collected asset entries.
-	 * @param log    Stream for progress output.
+	 * @param opts         Generation options.
+	 * @param assets       Collected asset entries, paths relative to projectRoot.
+	 * @param log          Stream for progress output.
+	 * @param metadataPath Metadata path relative to projectRoot, or empty.
 	 * @return true on success.
 	 */
 	static bool writeManifest(
 		const Options&                    opts,
 		const std::vector<ManifestAsset>& assets,
 		std::ostream&                     log,
-		std::filesystem::path             metadataPath
+		const std::string&                metadataPath
 	);
 };
 
