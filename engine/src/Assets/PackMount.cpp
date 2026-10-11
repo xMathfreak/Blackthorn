@@ -23,7 +23,6 @@ bool PackMount::mount(const std::filesystem::path& path, U32 priority) {
 	contentMap.clear();
 
 #ifdef BLACKTHORN_DEBUG
-	symbols.clear();
 	sources.clear();
 #endif
 
@@ -195,10 +194,49 @@ void PackMount::loadSymbolTable(std::FILE* file, const BTPHeader& header) {
 
 	BT_DEBUG("PackMount: '{}': loaded {} symbol(s)", packPath.string(), sources.size());
 }
+
+std::string_view PackMount::sourceOf(U64 assetID) const {
+	const auto it = sources.find(assetID);
+	return it == sources.end() ? std::string_view{} : std::string_view(it->second);
+}
 #endif
 
 bool PackMount::has(U64 assetID) const {
 	return contentMap.contains(assetID);
+}
+
+std::optional<PackedAssetInfo> PackMount::find(U64 assetID) const {
+	const auto it = contentMap.find(assetID);
+	if (it == contentMap.end())
+		return std::nullopt;
+
+	const BTPEntry& entry = it->second;
+
+	PackedAssetInfo info;
+	info.id = entry.assetID;
+	info.type = entry.assetType;
+	info.dataOffset = entry.dataOffset;
+	info.compressedSize = entry.compressedSize;
+	info.uncompressedSize = entry.uncompressedSize;
+	info.compression = entry.compression;
+	info.payloadHash = entry.xxhash;
+	return info;
+}
+
+std::unique_ptr<AssetStream> PackMount::open(U64 assetID) const {
+	const auto it = contentMap.find(assetID);
+	if (it == contentMap.end())
+		return nullptr;
+
+	const BTPEntry& entry = it->second;
+
+	if (entry.compression != PackCompression::None)
+		return nullptr;
+
+	if (entry.compressedSize != entry.uncompressedSize)
+		return nullptr;
+
+	return PackedAssetStream::open(packPath, entry.dataOffset, entry.uncompressedSize);
 }
 
 std::optional<PackedAssetData> PackMount::read(U64 assetID) const {

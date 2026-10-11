@@ -13,33 +13,33 @@ namespace Blackthorn::Assets {
 
 namespace {
 
-#ifndef BT_PACK_MODE
 /**
- * @brief Reads a whole file into @p out. Returns false if it can't be opened or read.
+ * @brief Reads a whole stream into a fresh buffer. Fails on any short read or I/O error.
  */
-bool readLooseFile(const std::filesystem::path& path, std::vector<U8>& out) {
-	std::FILE* f = std::fopen(path.string().c_str(), "rb");
-	if (!f)
-		return false;
+std::optional<AssetBytes> readAllFrom(AssetStream& stream, const std::string& id, const std::string& sourcePath) {
+	std::vector<U8> bytes(static_cast<size_t>(stream.size()));
 
-	if (!Blackthorn::seekTo(f, 0, SEEK_END)) {
-		std::fclose(f);
-		return false;
+	size_t total = 0;
+	while (total < bytes.size()) {
+		const size_t got = stream.read(std::span<U8>(bytes.data() + total, bytes.size() - total));
+		if (got == 0)
+			break;
+
+		total += got;
 	}
 
-	const int64_t size = Blackthorn::fileTell(f);
-	if (size < 0 || !Blackthorn::seekTo(f, 0, SEEK_SET)) {
-		std::fclose(f);
-		return false;
+	if (!stream.ok() || total != bytes.size()) {
+		BT_ERROR("AssetResolver: read failed for '{}' from '{}' ({} of {} bytes)",
+			id, sourcePath, total, bytes.size());
+		return std::nullopt;
 	}
 
-	out.resize(static_cast<size_t>(size));
-	const bool ok = Blackthorn::readExact(f, out.data(), out.size());
-	std::fclose(f);
-	return ok;
+	AssetBytes out;
+	out.bytes = std::move(bytes);
+	out.id = id;
+	out.sourcePath = sourcePath;
+	return out;
 }
-
-#endif
 
 } // namespace
 
@@ -93,6 +93,45 @@ void AssetResolver::unmount(const std::filesystem::path& path) {
 		mounts[i].packPriority = i;
 }
 
+std::unique_ptr<AssetStream> AssetResolver::open(std::string_view id) const {
+	const auto norm = Blackthorn::normalizeAssetPath(id);
+	if (!norm) {
+		BT_WARN("AssetResolver: invalid asset ID '{}'", std::string(id));
+		return nullptr;
+	}
+
+#ifdef BT_PACK_MODE
+	const U64 hash = XXH64(norm->data(), norm->size(), 0);
+
+	std::shared_lock lock(mutex);
+
+	for (auto it = mounts.rbegin(); it != mounts.rend(); ++it) {
+		if (!it->find(hash))
+			continue;
+
+		// First match wins, even if it can't be streamed. A compressed entry in
+		// a higher-priority pack must not fall through to a lower one.
+		auto stream = it->open(hash);
+		if (!stream)
+			BT_ERROR("AssetResolver: '{}' in '{}' can't be streamed (compressed entry, or truncated pack)",
+				*norm, it->path().string());
+
+		return stream;
+	}
+
+	BT_WARN("AssetResolver: '{}' not found in any mounted pack", *norm);
+	return nullptr;
+#else
+	const std::filesystem::path path = looseRoot() / *norm;
+
+	auto stream = LooseAssetStream::open(path);
+	if (!stream)
+		BT_WARN("AssetResolver: '{}' not found at '{}'", *norm, path.string());
+
+	return stream;
+#endif
+}
+
 std::optional<AssetBytes> AssetResolver::resolve(std::string_view id) const {
 	const auto norm = Blackthorn::normalizeAssetPath(id);
 	if (!norm) {
@@ -106,21 +145,44 @@ std::optional<AssetBytes> AssetResolver::resolve(std::string_view id) const {
 	std::shared_lock lock(mutex);
 
 	for (auto it = mounts.rbegin(); it != mounts.rend(); ++it) {
-		if (!it->has(hash))
+		const auto info = it->find(hash);
+		if (!info)
 			continue;
 
-		auto packed = it->read(hash);
-		if (!packed) {
-			BT_WARN("AssetResolver: read failed for '{}' in '{}', trying lower-priority mounts",
-				*norm, it->path().string());
-			continue;
+		if (info->compression == PackCompression::Zstd) {
+			// PackMount::read() decompresses and verifies the payload hash itself.
+			auto packed = it->read(hash);
+			if (!packed) {
+				BT_ERROR("AssetResolver: read failed for '{}' in '{}'", *norm, it->path().string());
+				return std::nullopt;
+			}
+
+			AssetBytes out;
+			out.bytes = std::move(packed->bytes);
+			out.id = *norm;
+			out.sourcePath = packed->sourcePath;
+			return out;
 		}
 
-		AssetBytes out;
-		out.bytes = std::move(packed->bytes);
-		out.id = *norm;
-		out.sourcePath = packed->sourcePath;
-		return out;
+		// Uncompressed entries are read through the stream. Streaming skips the
+		// payload hash, so verify it here while we have the whole payload.
+		auto stream = it->open(hash);
+		if (!stream) {
+			BT_ERROR("AssetResolver: cannot open '{}' in '{}'", *norm, it->path().string());
+			return std::nullopt;
+		}
+
+		auto bytes = readAllFrom(*stream, *norm, it->path().string());
+		if (!bytes)
+			return std::nullopt;
+
+		const U64 actual = XXH64(bytes->bytes.data(), bytes->bytes.size(), 0);
+		if (actual != info->payloadHash) {
+			BT_ERROR("AssetResolver: payload hash mismatch for '{}' in '{}'", *norm, it->path().string());
+			return std::nullopt;
+		}
+
+		return bytes;
 	}
 
 	BT_WARN("AssetResolver: '{}' not found in any mounted pack", *norm);
@@ -128,15 +190,13 @@ std::optional<AssetBytes> AssetResolver::resolve(std::string_view id) const {
 #else
 	const std::filesystem::path path = looseRoot() / *norm;
 
-	AssetBytes out;
-	if (!readLooseFile(path, out.bytes)) {
+	auto stream = LooseAssetStream::open(path);
+	if (!stream) {
 		BT_WARN("AssetResolver: '{}' not found at '{}'", *norm, path.string());
 		return std::nullopt;
 	}
 
-	out.id = *norm;
-	out.sourcePath = path.string();
-	return out;
+	return readAllFrom(*stream, *norm, path.string());
 #endif
 }
 
@@ -155,7 +215,7 @@ bool AssetResolver::has(std::string_view id) const {
 	std::shared_lock lock(mutex);
 
 	for (auto it = mounts.rbegin(); it != mounts.rend(); ++it) {
-		if (it->has(hash))
+		if (it->find(hash))
 			return true;
 	}
 

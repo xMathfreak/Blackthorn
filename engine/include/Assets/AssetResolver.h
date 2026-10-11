@@ -10,6 +10,7 @@
 
 #include "AssetNormalize.h"
 #include "AssetReference.h"
+#include "Assets/AssetStream.h"
 #include "Assets/PackMount.h"
 #include "Core/Export.h"
 
@@ -104,6 +105,21 @@ public:
 	 *         otherwise). Misses are logged.
 	 */
 	std::optional<AssetBytes> resolve(std::string_view id) const;
+
+	/**
+	 * @brief Opens an incremental stream over an asset's bytes.
+	 *
+	 * Searches the same way as resolve(). The first match wins and is streamed
+	 * even if it can't be, so a higher-priority compressed entry is never
+	 * silently replaced by a lower-priority one.
+	 *
+	 * Loose mode always returns a LooseAssetStream when the file exists. Pack
+	 * mode returns a PackedAssetStream only for uncompressed entries. Compressed
+	 * entries return nullptr, and so do misses. resolve() can read those instead.
+	 *
+	 * @param id A canonical ID, normalized before use.
+	 */
+	std::unique_ptr<AssetStream> open(std::string_view id) const;
 
 	/**
 	 * @brief Resolves a reference written inside the asset with ID @p baseID.

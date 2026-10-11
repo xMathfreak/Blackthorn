@@ -3,9 +3,11 @@
 #include <filesystem>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <vector>
 
+#include "Assets/AssetStream.h"
 #include "Assets/PackFormat.h"
 #include "Core/Export.h"
 #include "Types/Numeric.h"
@@ -29,6 +31,24 @@ struct BLACKTHORN_API PackedAssetData {
 
 	PackedAssetData(const PackedAssetData&) = delete;
 	PackedAssetData& operator=(const PackedAssetData&) = delete;
+};
+
+/**
+ * @brief Table-of-contents information for one entry, without any I/O.
+ *
+ * Returned by PackMount::find(). Everything here comes from the TOC that's
+ * already in memory, so a lookup never reads, allocates, or decompresses.
+ */
+struct BLACKTHORN_API PackedAssetInfo {
+	U64 id = 0;                       ///< xxHash64 of the canonical asset ID.
+	PackAssetType type = PackAssetType::Unknown;
+
+	U64 dataOffset = 0;               ///< Byte offset of the stored payload from the start of the pack.
+	U64 compressedSize = 0;           ///< Stored (on-disk) payload size.
+	U64 uncompressedSize = 0;         ///< Asset size after decompression. Equals compressedSize for None.
+
+	PackCompression compression = PackCompression::None;
+	U64 payloadHash = 0;              ///< xxHash64 of the stored payload (the BTPEntry::xxhash field).
 };
 
 /**
@@ -99,6 +119,38 @@ public:
 	 */
 	std::optional<PackedAssetData> read(U64 assetID) const;
 
+	/**
+	 * @brief Looks up an entry's TOC information. Does no I/O or allocation of asset data.
+	 *
+	 * @param assetID xxHash64 of the canonical asset ID.
+	 * @return The entry's info, or std::nullopt if the pack doesn't contain it.
+	 */
+	std::optional<PackedAssetInfo> find(U64 assetID) const;
+
+	/**
+	 * @brief Opens an incremental stream over an uncompressed entry.
+	 *
+	 * Only PackCompression::None entries can be streamed. Compressed entries,
+	 * missing entries, and truncated packs all return nullptr. Callers that need
+	 * to know which, check find() first.
+	 *
+	 * @param assetID xxHash64 of the canonical asset ID.
+	 */
+	std::unique_ptr<AssetStream> open(U64 assetID) const;
+
+#ifdef BLACKTHORN_DEBUG
+	/**
+	 * @brief Original string ID for an entry, or empty if there's no symbol table.
+	 *
+	 * Debug builds only, like the symbol table itself. Returns an empty view in
+	 * release builds.
+	 */
+	std::string_view nameOf(U64 assetID) const;
+
+	/// Source path recorded by the packer, or empty if unavailable. Debug builds only.
+	std::string_view sourceOf(U64 assetID) const;
+#endif
+
 	/// Path to the .btp file backing this mount.
 	const std::filesystem::path& path() const { return packPath; }
 
@@ -163,7 +215,7 @@ private:
 	/**
 	 * @brief Reads the debug symbol table if present.
 	 *
-	 * Populates symbols and sources. No-op if symbolTableOff is 0.
+	 * Populates sources. No-op if symbolTableOff is 0.
 	 *
 	 * @param file   Open FILE* positioned anywhere (will seek internally).
 	 * @param header Validated BTPHeader read from offset 0.
@@ -182,9 +234,6 @@ private:
 	PackMetadata metadata;
 
 #ifdef BLACKTHORN_DEBUG
-	/// assetID → original string ID (e.g. "player_texture").
-	std::unordered_map<U64, std::string> symbols;
-
 	/// assetID → source path recorded by the packer (e.g. "assets/textures/player.png").
 	std::unordered_map<U64, std::string> sources;
 #endif
