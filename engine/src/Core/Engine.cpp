@@ -109,7 +109,7 @@ Particles::ParticleRenderer& Engine::getParticleRenderer() {
 }
 
 bool Engine::init(const EngineConfig& cfg) {
-	if (!Runtime::init(cfg))
+	if (!Runtime::init(cfg)) // AssetManager is created here
 		return false;
 
 	Fonts::FontConfig::setCurrent(cfg.fonts);
@@ -123,6 +123,7 @@ bool Engine::init(const EngineConfig& cfg) {
 	}
 
 	audioManager = std::make_unique<Audio::AudioManager>();
+	audioManager->setAssetResolver(assetManager->resolver());
 
 	initAssetLoaders();
 	Particles::BehaviorFactory::instance().registerBuiltins();
@@ -296,11 +297,10 @@ void Engine::shutdown() {
 	particleRenderer.reset();
 	renderer.reset();
 	audioManager.reset();
-	assetManager.reset();
 
 	cleanupGraphics();
 
-	Runtime::shutdown();
+	Runtime::shutdown(); // asset manager destroyed here
 }
 
 void Engine::cleanupGraphics() {

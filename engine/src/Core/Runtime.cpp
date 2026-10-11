@@ -149,7 +149,7 @@ void Runtime::shutdown() {
 		s.saveToFile(config.settingsFilePath);
 
 	connectionManager->stop();
-
+	assetManager.reset();
 	jobSystem.reset();
 
 	Net::Transport::Sockets::SocketFactory::shutdown();

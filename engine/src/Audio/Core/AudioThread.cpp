@@ -652,42 +652,22 @@ void AudioThread::processStreamingPlayback(
 			: clip.sourcePath().string();
 	};
 
-	std::unique_ptr<Streaming::IStreamDecoder> decoder;
-	bool opened = false;
+	BT_LOG("Source path: {}", clip.sourcePath().string());
 
-	if (clip.hasCompressedSource()) {
-		decoder = Streaming::StreamDecoderFactory::createFromMemory(
-			clip.compressedData(), clip.compressedSize()
-		);
-
-		if (decoder)
-			opened = decoder->openMemory(clip.compressedData(), clip.compressedSize());
-	} else {
-		decoder = Streaming::StreamDecoderFactory::create(clip.sourcePath());
-
-		if (decoder)
-			opened = decoder->open(clip.sourcePath());
-	}
-
-	if (!decoder) {
-		BT_ERROR("AudioThread: no decoder for '{}'", describeSource());
-		voicePool->release(voice);
-		return;
-	}
-
-	if (!opened) {
-		BT_ERROR("AudioThread: failed to open decoder for '{}'", describeSource());
+	if (!assetResolver) {
+		BT_ERROR("AudioThread: no asset resolver set, cannot stream '{}'", describeSource());
 		voicePool->release(voice);
 		return;
 	}
 
 	auto sstate = std::make_unique<StreamingVoiceState>();
-	sstate->format = (clip.channels() == 2)
-		? AL_FORMAT_STEREO16 : AL_FORMAT_MONO16;
 
-	sstate->sampleRate = clip.sampleRate();
-	sstate->sourceClip = &clip;
-	sstate->decoder = std::move(decoder);
+	if (!sstate->openDecoder(clip, *assetResolver)) {
+		BT_ERROR("AudioThread: failed to open stream for '{}'", describeSource());
+		voicePool->release(voice);
+		return;
+	}
+
 	sstate->init();
 
 	if (startFrame > 0) {

@@ -1,4 +1,5 @@
 #include "Audio/Playback/StreamingVoiceState.h"
+#include "Debug/Logger.h"
 
 namespace Blackthorn::Audio {
 
@@ -60,6 +61,47 @@ void StreamingVoiceState::init() {
 	pendingUpload.clear();
 	pendingEndOfStream = false;
 	endOfStream = false;
+}
+
+bool StreamingVoiceState::openDecoder(const AudioClip& clip, const Assets::AssetResolver& resolver) {
+	decoder.reset();
+	sourceClip = nullptr;
+
+	const std::string id = clip.sourcePath().generic_string();
+
+	decoder = Streaming::StreamDecoderFactory::create(id);
+	if (!decoder)
+		return false;
+
+	bool opened = false;
+
+	if (clip.hasCompressedSource()) {
+		// Small clip: the bytes are already in memory, so stream from them.
+		auto stream = std::make_unique<Assets::MemoryAssetStream>(
+			clip.compressedData(), clip.compressedSize()
+		);
+
+		opened = decoder->openStream(std::move(stream));
+	} else {
+		// Large clip: stream from the resolver so the file is never fully loaded.
+		auto stream = resolver.open(id);
+		if (!stream) {
+			BT_ERROR("StreamingVoiceState: cannot open stream for '{}'", id);
+			decoder.reset();
+			return false;
+		}
+
+		opened = decoder->openStream(std::move(stream));
+	}
+
+	if (!opened) {
+		BT_ERROR("StreamingVoiceState: decoder failed to open '{}'", id);
+		decoder.reset();
+		return false;
+	}
+
+	sourceClip = &clip;
+	return true;
 }
 
 } //namespace Blackthorn::Audio

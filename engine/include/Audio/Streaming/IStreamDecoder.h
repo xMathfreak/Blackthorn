@@ -1,7 +1,9 @@
 #pragma once
 
 #include <filesystem>
+#include <memory>
 
+#include "Assets/AssetStream.h"
 #include "Audio/Resources/AudioData.h"
 #include "Core/Export.h"
 #include "Types/Numeric.h"
@@ -62,6 +64,25 @@ public:
 	 * @return true on success.
 	 */
 	virtual bool openMemory(const U8* data, size_t size) = 0;
+
+	/**
+	 * @brief Opens a decoder over an incremental asset stream.
+	 *
+	 * Ownership of @p stream transfers to the decoder, which closes it when the
+	 * decoder is closed. The stream must stay readable for as long as the decoder
+	 * is open. This is the preferred entry point: loose files and packed assets
+	 * both reach the decoder through it.
+	 *
+	 * The default returns false, so codecs that haven't been converted report a
+	 * failure instead of silently doing nothing. Each codec overrides it.
+	 *
+	 * @param stream The source bytes, positioned at the start of the encoded audio.
+	 * @return true on success.
+	 */
+	virtual bool openStream(std::unique_ptr<Assets::AssetStream> stream) {
+		(void)stream;
+		return false;
+	}
 
 	/**
 	 * @brief Reads up to @p frameCount interleaved PCM frames into @p dest.

@@ -489,8 +489,15 @@ bool Packer::pack(const PackManifest& manifest, const PackOptions& opts, std::os
 			return false;
 		}
 
+		// Audio is stored uncompressed so PackMount::open() can stream it by offset.
+		// OGG, MP3, and FLAC are already compressed, so zstd would save little here.
+		const PackAssetType assetType = resolveAssetType(asset.typeStr);
+		const bool storeRaw = assetType == PackAssetType::Audio;
+
 		std::vector<uint8_t> compressed;
-		if (!compressZstd(raw, compressed, manifest.compressionLevel)) {
+		if (storeRaw) {
+			compressed = raw;
+		} else if (!compressZstd(raw, compressed, manifest.compressionLevel)) {
 			std::fclose(out);
 			std::filesystem::remove(opts.output);
 			return false;
@@ -519,8 +526,8 @@ bool Packer::pack(const PackManifest& manifest, const PackOptions& opts, std::os
 		entry.compressedSize = static_cast<uint64_t>(compressed.size());
 		entry.uncompressedSize = static_cast<uint64_t>(raw.size());
 		entry.xxhash = blobHash;
-		entry.assetType = resolveAssetType(asset.typeStr);
-		entry.compression = PackCompression::Zstd;
+		entry.assetType = assetType;
+		entry.compression = storeRaw ? PackCompression::None : PackCompression::Zstd;
 		toc.push_back(entry);
 
 		if (manifest.writeSymbolTable) {

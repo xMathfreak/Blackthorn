@@ -73,7 +73,7 @@ std::unique_ptr<IStreamDecoder> StreamDecoderFactory::createFromMemory(
 }
 
 bool StreamDecoderFactory::isSupported(const std::filesystem::path& path) noexcept {
-	const std::string ext = toLower(path.string());
+	const std::string ext = toLower(path.extension().string());
 	return ext == ".wav"
 		|| ext == ".mp3"
 		|| ext == ".flac"

@@ -2,12 +2,51 @@
 
 #include <dr_flac.h>
 
+#include "Audio/Streaming/Codecs/StreamCallbacks.h"
 #include "Debug/Logger.h"
 
 namespace Blackthorn::Audio::Streaming {
 
+namespace {
+
+inline std::optional<StreamCallbacks::SeekOrigin> toSeekOrigin(
+	drflac_seek_origin origin
+) {
+	switch (origin) {
+		case DRFLAC_SEEK_SET:
+			return StreamCallbacks::SeekOrigin::Begin;
+		case DRFLAC_SEEK_CUR:
+			return StreamCallbacks::SeekOrigin::Current;
+		case DRFLAC_SEEK_END:
+			return StreamCallbacks::SeekOrigin::End;
+		default:
+			return std::nullopt;
+	}
+}
+
+drflac_bool32 onFlacSeek(void* user, int offset, drflac_seek_origin origin) {
+	auto mapped = toSeekOrigin(origin);
+	if (!mapped)
+		return DRFLAC_FALSE;
+	return StreamCallbacks::seek(user, offset, *mapped) ? DRFLAC_TRUE : DRFLAC_FALSE;
+}
+
+size_t onFlacRead(void* user, void* dst, size_t bytes) {
+	return StreamCallbacks::read(user, dst, bytes);
+}
+
+drflac_bool32 onFlacTell(void* user, drflac_int64* cursor) {
+	auto* stream = static_cast<Assets::AssetStream*>(user);
+	*cursor = static_cast<drflac_int64>(stream->tell());
+	return DRFLAC_TRUE;
+}
+
+} // anonymous namespace
+
 struct FlacStreamDecoder::Impl {
 	drflac* flac = nullptr;
+
+	std::unique_ptr<Assets::AssetStream> stream; ///< Owned source for openStream(); null for path/memory opens.
 
 	bool open = false;
 
@@ -82,6 +121,41 @@ bool FlacStreamDecoder::openMemory(const U8* data, size_t size) {
 	return true;
 }
 
+bool FlacStreamDecoder::openStream(std::unique_ptr<Assets::AssetStream> stream) {
+	close();
+
+	if (!stream) {
+		BT_ERROR("FlacStreamDecoder: openStream called with a null stream");
+		return false;
+	}
+
+	m_impl->stream = std::move(stream);
+
+	m_impl->flac = drflac_open(onFlacRead, onFlacSeek, onFlacTell, m_impl->stream.get(), nullptr);
+
+	if (!m_impl->flac) {
+		BT_ERROR("FlacStreamDecoder: failed to open stream ({} bytes)", m_impl->stream->size());
+		m_impl->stream.reset();
+		return false;
+	}
+
+	m_impl->open = true;
+
+	m_impl->metadata.channels = static_cast<U32>(m_impl->flac->channels);
+	m_impl->metadata.sampleRate = static_cast<U32>(m_impl->flac->sampleRate);
+	m_impl->metadata.frameCount = static_cast<U64>(m_impl->flac->totalPCMFrameCount);
+
+	BT_DEBUG(
+		"FlacStreamDecoder: opened stream ({} bytes) [{} ch, {} Hz, {} frames]",
+		m_impl->stream->size(),
+		m_impl->metadata.channels,
+		m_impl->metadata.sampleRate,
+		m_impl->metadata.frameCount
+	);
+
+	return true;
+}
+
 size_t FlacStreamDecoder::readFrames(
 	I16* dest,
 	size_t frameCount
@@ -126,6 +200,9 @@ void FlacStreamDecoder::close() {
 		drflac_close(m_impl->flac);
 		m_impl->flac = nullptr;
 	}
+
+	// Freed after drflac_close(), since the decoder may still read through it until then.
+	m_impl->stream.reset();
 
 	m_impl->open = false;
 	m_impl->metadata = {};

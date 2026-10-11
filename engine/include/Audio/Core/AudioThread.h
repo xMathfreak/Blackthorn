@@ -7,6 +7,7 @@
 #include <optional>
 #include <thread>
 
+#include "Assets/AssetResolver.h"
 #include "Audio/AudioConfig.h"
 #include "Audio/Backend/AudioContext.h"
 #include "Audio/Backend/AudioDevice.h"
@@ -60,6 +61,10 @@ public:
 
 	[[nodiscard]]
 	VoiceViewPool& views() const noexcept;
+
+	void setAssetResolver(const Assets::AssetResolver& resolver) {
+		assetResolver = &resolver;
+	}
 
 private:
 	void threadLoop();
@@ -128,6 +133,7 @@ private:
 	std::condition_variable wakeCv;
 	std::mutex wakeMutex;
 
+	const Assets::AssetResolver* assetResolver = nullptr;
 	AudioConfig config;
 
 private:

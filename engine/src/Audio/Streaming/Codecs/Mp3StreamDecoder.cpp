@@ -2,12 +2,51 @@
 
 #include <dr_mp3.h>
 
+#include "Audio/Streaming/Codecs/StreamCallbacks.h"
 #include "Debug/Logger.h"
 
 namespace Blackthorn::Audio::Streaming {
 
+namespace {
+
+inline std::optional<StreamCallbacks::SeekOrigin> toSeekOrigin(
+	drmp3_seek_origin origin
+) {
+	switch (origin) {
+		case DRMP3_SEEK_SET:
+			return StreamCallbacks::SeekOrigin::Begin;
+		case DRMP3_SEEK_CUR:
+			return StreamCallbacks::SeekOrigin::Current;
+		case DRMP3_SEEK_END:
+			return StreamCallbacks::SeekOrigin::End;
+		default:
+			return std::nullopt;
+	}
+}
+
+drmp3_bool32 onMp3Seek(void* user, int offset, drmp3_seek_origin origin) {
+	auto mapped = toSeekOrigin(origin);
+	if (!mapped)
+		return DRMP3_FALSE;
+	return StreamCallbacks::seek(user, offset, *mapped) ? DRMP3_TRUE : DRMP3_FALSE;
+}
+
+size_t onMp3Read(void* user, void* dst, size_t bytes) {
+	return StreamCallbacks::read(user, dst, bytes);
+}
+
+drmp3_bool32 onMp3Tell(void* user, drmp3_int64* cursor) {
+	auto* stream = static_cast<Assets::AssetStream*>(user);
+	*cursor = static_cast<drmp3_int64>(stream->tell());
+	return DRMP3_TRUE;
+}
+
+} // anonymous namespace
+
 struct Mp3StreamDecoder::Impl {
 	drmp3 mp3{};
+
+	std::unique_ptr<Assets::AssetStream> stream; ///< Owned source for openStream(); null for path/memory opens.
 
 	std::vector<drmp3_seek_point> seekPoints;
 
@@ -47,6 +86,25 @@ bool Mp3StreamDecoder::openMemory(const U8* data, size_t size) {
 	}
 
 	return finalizeAfterInit("<memory>");
+}
+
+bool Mp3StreamDecoder::openStream(std::unique_ptr<Assets::AssetStream> stream) {
+	close();
+
+	if (!stream) {
+		BT_ERROR("Mp3StreamDecoder: openStream called with a null stream");
+		return false;
+	}
+
+	m_impl->stream = std::move(stream);
+
+	if (!drmp3_init(&m_impl->mp3, onMp3Read, onMp3Seek, onMp3Tell, nullptr, m_impl->stream.get(), nullptr)) {
+		BT_ERROR("Mp3StreamDecoder: failed to open stream ({} bytes)", m_impl->stream->size());
+		m_impl->stream.reset();
+		return false;
+	}
+
+	return finalizeAfterInit("<stream>");
 }
 
 bool Mp3StreamDecoder::finalizeAfterInit(const std::string& sourceLabel) {
@@ -141,6 +199,9 @@ void Mp3StreamDecoder::close() {
 		drmp3_uninit(&m_impl->mp3);
 		m_impl->open = false;
 	}
+
+	// Freed after drmp3_uninit(), since the decoder may still read through it until then.
+	m_impl->stream.reset();
 
 	m_impl->seekPoints.clear();
 	m_impl->metadata = {};

@@ -1,7 +1,10 @@
 #pragma once
 
 #include <filesystem>
+#include <memory>
 #include <string>
+
+#include "Assets/AssetStream.h"
 
 #include "Audio/Resources/AudioData.h"
 #include "Audio/Streaming/IStreamDecoder.h"
@@ -19,6 +22,7 @@ public:
 
 	bool open(const std::filesystem::path& path) override;
 	bool openMemory(const U8* data, size_t size) override;
+	bool openStream(std::unique_ptr<Assets::AssetStream> stream) override;
 	size_t readFrames(I16* dest, size_t frameCount) override;
 	bool seek(U64 frameOffset) override;
 	void close() override;

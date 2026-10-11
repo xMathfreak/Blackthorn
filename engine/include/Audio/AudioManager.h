@@ -84,6 +84,10 @@ public:
 	bool init(const AudioConfig& cfg = AudioConfig{});
 	void shutdown();
 
+	void setAssetResolver(Assets::AssetResolver& res) {
+		audioThread.setAssetResolver(res);
+	}
+
 	/**
 	 * @brief Starts playback of @p clip and returns a handle to the voice.
 	 *

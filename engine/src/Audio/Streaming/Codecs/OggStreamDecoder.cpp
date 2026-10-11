@@ -78,6 +78,62 @@ long memTell(void* datasource) {
 	return static_cast<long>(src->pos);
 }
 
+/**
+ * @brief Callbacks for openStream(). The datasource is an Assets::AssetStream*.
+ *
+ * The stream is owned by the decoder, so close_func does nothing. The decoder
+ * resets the stream after ov_clear(), which is what actually closes it.
+ */
+size_t streamRead(void* ptr, size_t size, size_t nmemb, void* datasource) {
+	if (size == 0)
+		return 0;
+
+	auto* stream = static_cast<Assets::AssetStream*>(datasource);
+	const size_t bytes = stream->read(std::span<U8>(static_cast<U8*>(ptr), size * nmemb));
+	return bytes / size;
+}
+
+int streamSeek(void* datasource, ogg_int64_t offset, int whence) {
+	auto* stream = static_cast<Assets::AssetStream*>(datasource);
+
+	int64_t target = 0;
+
+	switch (whence) {
+		case SEEK_SET:
+			target = offset;
+			break;
+		case SEEK_CUR:
+			target = static_cast<int64_t>(stream->tell()) + offset;
+			break;
+		case SEEK_END:
+			target = static_cast<int64_t>(stream->size()) + offset;
+			break;
+		default:
+			return -1;
+	}
+
+	if (target < 0)
+		return -1;
+
+	return stream->seek(static_cast<U64>(target)) ? 0 : -1;
+}
+
+int streamClose(void* /*datasource*/) {
+	return 0;
+}
+
+long streamTell(void* datasource) {
+	auto* stream = static_cast<Assets::AssetStream*>(datasource);
+	return static_cast<long>(stream->tell());
+}
+
+const ov_callbacks kStreamCallbacks = {
+	streamRead,
+	streamSeek,
+	streamClose,
+	streamTell
+};
+
 } // anonymous namespace
 
 struct OggStreamDecoder::Impl {
@@ -87,6 +143,8 @@ struct OggStreamDecoder::Impl {
 
 	AudioMetadata metadata{};
 	MemorySource memSource;
+
+	std::unique_ptr<Assets::AssetStream> stream; ///< Owned source for openStream(); null for path/memory opens.
 };
 
 OggStreamDecoder::OggStreamDecoder()
@@ -188,6 +246,48 @@ bool OggStreamDecoder::openMemory(const U8* data, size_t size) {
 	return true;
 }
 
+bool OggStreamDecoder::openStream(std::unique_ptr<Assets::AssetStream> stream) {
+	close();
+
+	if (!stream) {
+		BT_ERROR("OggStreamDecoder: openStream called with a null stream");
+		return false;
+	}
+
+	m_impl->stream = std::move(stream);
+
+	if (ov_open_callbacks(m_impl->stream.get(), &m_impl->vf, nullptr, 0, kStreamCallbacks) != 0) {
+		BT_ERROR("OggStreamDecoder: failed to open stream ({} bytes)", m_impl->stream->size());
+		m_impl->stream.reset();
+		return false;
+	}
+
+	const vorbis_info* info = ov_info(&m_impl->vf, -1);
+	if (!info) {
+		ov_clear(&m_impl->vf);
+		m_impl->stream.reset();
+		return false;
+	}
+
+	m_impl->metadata.channels = static_cast<U32>(info->channels);
+	m_impl->metadata.sampleRate = static_cast<U32>(info->rate);
+
+	const ogg_int64_t total = ov_pcm_total(&m_impl->vf, -1);
+	m_impl->metadata.frameCount = (total > 0) ? static_cast<U64>(total) : 0;
+
+	m_impl->open = true;
+
+	BT_DEBUG(
+		"OggStreamDecoder: opened stream ({} bytes) [{} ch, {} Hz, {} frames]",
+		m_impl->stream->size(),
+		m_impl->metadata.channels,
+		m_impl->metadata.sampleRate,
+		m_impl->metadata.frameCount
+	);
+
+	return true;
+}
+
 size_t OggStreamDecoder::readFrames(
 	I16* dest,
 	size_t frameCount
@@ -266,6 +366,9 @@ void OggStreamDecoder::close() {
 
 	m_impl->metadata = {};
 	m_impl->memSource = {};
+
+	// Freed after ov_clear(), which is the last point that can touch the stream.
+	m_impl->stream.reset();
 }
 
 AudioMetadata OggStreamDecoder::info() const {
