@@ -1,5 +1,6 @@
 #pragma once
 
+#include <span>
 #include <vector>
 
 #include <glad/gl.h>
@@ -209,6 +210,11 @@ public:
 	 */
 	template <typename T>
 	void updateData(const std::vector<T>& data, size_t offset = 0) {
+		updateData(data.data(), data.size() * sizeof(T), offset);
+	}
+
+	template <typename T>
+	void updateData(std::span<T> data, size_t offset = 0) {
 		updateData(data.data(), data.size() * sizeof(T), offset);
 	}
 

@@ -119,6 +119,7 @@ private:
 		config.rotation = parseRange(j, "rotation", Math::FloatRange{0.0f, 2 * std::numbers::pi_v<float>});
 		config.offset = readVec2(j, "offset", {0.0f, 0.0f});
 		config.maxParticles = j.value("maxParticles", 0u);
+		config.blend = parseBlend(j);
 
 		if (j.contains("texture"))
 			config.texture = resolveTexture(j.at("texture").get<std::string>(), manager, baseID);
@@ -167,6 +168,24 @@ private:
 			return Math::FloatRange{ it->get<float>() };
 
 		return fallback;
+	}
+
+	static Graphics::BlendMode parseBlend(const nlohmann::json& j) {
+		const std::string blend = j.value("blend", std::string("alpha"));
+
+		if (blend == "alpha")
+			return Graphics::BlendMode::Alpha;
+
+		if (blend == "opaque")
+			return Graphics::BlendMode::Opaque;
+
+		if (blend == "add" || blend == "additive")
+			return Graphics::BlendMode::Additive;
+
+		if (blend == "pre" || blend == "premult" || blend == "premultiply")
+			return Graphics::BlendMode::PremultAlpha;
+
+		return Graphics::BlendMode::Alpha;
 	}
 
 	static glm::vec2 readVec2(const nlohmann::json& j, const char* key, glm::vec2 fallback) {

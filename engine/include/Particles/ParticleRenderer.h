@@ -3,11 +3,13 @@
 #include <memory>
 #include <span>
 #include <vector>
+#include <unordered_map>
 
 #include <glm/glm.hpp>
 #include <SDL3/SDL.h>
 
 #include "Core/Export.h"
+#include "Graphics/BlendMode.h"
 #include "Types/Numeric.h"
 #include "Graphics/EBO.h"
 #include "Graphics/Shader.h"
@@ -52,37 +54,49 @@ private:
 		glm::vec4 uvRect;
 	};
 
+	struct Batch {
+		std::vector<Instance> instances;
+	};
+
+	/// A contiguous, same-state span of instances kept in submission order.
+	struct Run {
+		std::vector<Instance> instances;
+		const Graphics::Texture* texture = nullptr;
+		Graphics::BlendMode blend = Graphics::BlendMode::Alpha;
+	};
+
 public:
 	/**
 	 * @brief Constructs the renderer and allocates GPU resources.
+	 *
 	 * @param cfg cfg.maxInstances is the maximum particles drawable in a
 	 * single draw() call. Sizes the instance buffer once, up front; draw()
 	 * calls with more particles than this are truncated (with a warning).
 	 */
 	explicit ParticleRenderer(const ParticleConfig& cfg = ParticleConfig{});
 
+	/** @brief Begins a new frame of particle submissions. */
+	void startBatch();
+
 	/**
-	 * @brief Draws camera-facing textured particle quads, culling by the
-	 * supplied world-space bounds and converting each pixel space sourceRect
-	 * to normalized UVs using the bound texture's dimensions.
+	 * @brief Queues particles for drawing, preserving submission order.
 	 *
-	 * @param particles Particles to draw, typically one emitter's live
-	 * range (or several same-texture emitters' ranges batched by the
-	 * caller).
-	 * @param texture Texture bound for every instance in this call.
-	 * Also supplies the dimensions used to normalize each particle's
-	 * pixel-space sourceRect into a UV sub-rect.
-	 * @param bounds World-space AABB the particles are contained within,
-	 * used for the cull test above.
-	 * @param viewBounds Current camera view bounds, e.g. from
-	 * Graphics::Renderer::getViewBounds().
+	 * @param particles Particles to draw. Copied into the renderer's runs.
+	 * @param texture Texture sampled by these particles. Must outlive the flush.
+	 * @param blend Blend mode for these particles. Must not be BlendMode::Unset.
+	 * @param bounds World-space bounds of the emitter, used for culling.
+	 * @param viewBounds Visible world-space bounds, used for culling.
 	 */
-	void draw(
+	void submit(
 		std::span<const Particle> particles,
 		const Graphics::Texture& texture,
+		Graphics::BlendMode blend,
 		const SDL_FRect& bounds,
 		const SDL_FRect& viewBounds
 	);
+
+	/** @brief Issues all queued draws and clears the queue. */
+	void endBatch();
 
 	/**
 	 * @brief Releases the shared particle shader.
@@ -95,11 +109,31 @@ private:
 	Graphics::EBO quadEbo;
 	Graphics::VBO instanceVbo;
 
-	/// Instance buffer capacity, in particles. Set at construction.
-	U32 maxInstances;
+	/// Maximum queued particles before an automatic flush.
+	U32 maxQueuedInstances;
 
-	/// CPU-side scratch buffer instance data to avoid per-frame allocation.
-	std::vector<Instance> instanceScratch;
+	/// Particles queued since the last flush.
+	U32 queuedInstances = 0;
+
+	/// Instance buffer capacity, in particles. Set at construction.
+	size_t instanceBufferCapacity = 0;
+
+	/// Ordered runs. Only the first @c runCount entries are live this frame.
+	/// Entries past runCount keep their vector capacity for reuse.
+	std::vector<Run> runs;
+	size_t runCount = 0;
+
+	/** @brief Appends one instance, opening a new run if texture or blend changed. */
+	void pushInstance(const Instance& inst, const Graphics::Texture& tex, Graphics::BlendMode blend);
+
+	/** @brief Draws every live run in order, then resets the queue */
+	void flush();
+
+	/** @brief Draws one run's instances, chunked to the instance buffer capacity. */
+	void drawInstances(std::span<const Instance> instances);
+
+	/** @brief Sets GL blend state for a mode. Opaque mode disables blending */
+	static void applyBlend(Graphics::BlendMode mode);
 
 	static std::shared_ptr<Graphics::Shader> shader;
 

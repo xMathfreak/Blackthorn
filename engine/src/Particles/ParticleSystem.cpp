@@ -23,6 +23,7 @@ void ParticleSystem::update(float dt) {
 
 void ParticleSystem::render(const Graphics::Renderer& mainRenderer, ParticleRenderer& particleRenderer) {
 	const SDL_FRect& viewBounds = mainRenderer.getViewBounds();
+	particleRenderer.startBatch();
 
 	for (const auto& instance : instances) {
 		const auto configs = instance->getEffect().getEmitters();
@@ -30,18 +31,22 @@ void ParticleSystem::render(const Graphics::Renderer& mainRenderer, ParticleRend
 
 		for (std::size_t i = 0; i < configs.size(); ++i) {
 			const EmitterRuntime& runtime = runtimes[i];
+			const EmitterConfig& config = configs[i];
 
-			if (runtime.count == 0 || !configs[i].texture)
+			if (runtime.count == 0 || !config.texture)
 				continue;
 
-			particleRenderer.draw(
+			particleRenderer.submit(
 				instance->getParticles(static_cast<U32>(i)),
-				*configs[i].texture,
+				*config.texture,
+				config.blend,
 				runtime.bounds,
 				viewBounds
 			);
 		}
 	}
+
+	particleRenderer.endBatch();
 }
 
 } // namespace Blackthorn::Particles

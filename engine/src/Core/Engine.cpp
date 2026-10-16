@@ -7,6 +7,7 @@
 #include "Debug/Profiler.h"
 #include "Fonts/BitmapFont.h"
 #include "Fonts/TrueTypeFont.h"
+#include "Graphics/BlendMode.h"
 #include "Scene/ClientSceneManager.h"
 #include "Scene/SceneContext.h"
 #include "Threads/Relax.h"
@@ -235,8 +236,7 @@ void Engine::initGraphics(const EngineConfig& cfg) {
 		return;
 	}
 
-	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	Graphics::setBlendMode(Graphics::BlendMode::Alpha);
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LEQUAL);
 

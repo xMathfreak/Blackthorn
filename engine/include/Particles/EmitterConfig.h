@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "Core/Export.h"
+#include "Graphics/BlendMode.h"
 #include "Types/Numeric.h"
 #include "Math/NumericRange.h"
 #include "Math/Random.h"
@@ -90,6 +91,8 @@ struct BLACKTHORN_API EmitterConfig {
 	/// e.g. offsetting a "debris" emitter slightly from an explosion
 	/// effect's "flash" emitter.
 	glm::vec2 offset{0.0f};
+
+	Graphics::BlendMode blend = Graphics::BlendMode::Alpha;
 
 	/// Texture drawn for particles spawned by this emitter.
 	///
