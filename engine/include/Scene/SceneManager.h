@@ -166,12 +166,12 @@ public:
 		transitionPhase = TransitionPhase::FadeOut;
 	}
 
-	void fixedUpdate(float dt, U64 tick) {
+	void fixedUpdate(float dt) {
 		if (inTransition)
 			return;
 
 		for (auto it = scenes.rbegin(); it != scenes.rend(); ++it) {
-			(*it)->fixedUpdate(dt, tick);
+			(*it)->fixedUpdate(dt);
 
 			if ((*it)->blocksUpdate())
 				break;

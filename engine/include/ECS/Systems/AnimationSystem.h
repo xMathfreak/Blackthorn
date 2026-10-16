@@ -25,7 +25,7 @@ namespace Blackthorn::ECS::Systems {
  */
 class AnimationSystem : public ISystem {
 public:
-	void fixedUpdate(ECS::EntityPool* pool, float dt, Jobs::JobSystem* js, U64 tick) override {
+	void fixedUpdate(ECS::EntityPool* pool, float dt, Jobs::JobSystem* js) override {
 		auto view = pool->view<Components::SpriteAnimation, Components::Sprite>();
 		view.eachJobs(js, [dt](Entity, Components::SpriteAnimation& anim, Components::Sprite& sprite) {
 			if (!anim.playing || !anim.clip || !anim.clip->isValid())

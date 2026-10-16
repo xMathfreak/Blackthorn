@@ -70,9 +70,9 @@ public:
 			system->update(&pool, dt, jobs);
 	}
 
-	void fixedUpdate(float dt, U64 tick) {
+	void fixedUpdate(float dt) {
 		for (auto& system: systems)
-			system->fixedUpdate(&pool, dt, jobs, tick);
+			system->fixedUpdate(&pool, dt, jobs);
 	}
 
 	void render(float alpha) {

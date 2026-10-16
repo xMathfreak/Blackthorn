@@ -97,8 +97,8 @@ public:
 		systemManager.update(dt);
 	}
 
-	void fixedUpdate(float dt, U64 tick) {
-		systemManager.fixedUpdate(dt, tick);
+	void fixedUpdate(float dt) {
+		systemManager.fixedUpdate(dt);
 	}
 
 	void render(float alpha) {

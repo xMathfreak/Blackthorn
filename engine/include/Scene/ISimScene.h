@@ -75,19 +75,25 @@ public:
 	virtual bool blocksUpdate() const { return true; }
 	virtual bool blocksRender() const { return true; }
 
-	virtual void fixedUpdate(float dt, U64 tick) {
+	void fixedUpdate(float dt) {
 		if (world)
-			world->fixedUpdate(dt, tick);
+			world->fixedUpdate(dt);
+
+		onFixedUpdate(dt);
 	}
 
 	virtual void update(float dt) {
 		if (world)
 			world->update(dt);
+
+		onUpdate(dt);
 	}
 
-	virtual void lateUpdate(float dt) {
+	void lateUpdate(float dt) {
 		if (world)
 			world->lateUpdate(dt);
+
+		onLateUpdate(dt);
 	}
 
 	ECS::World* getWorld() { return world.get(); }
@@ -136,6 +142,11 @@ private:
 	 * `SceneManager` immediately before `init()`. Not callable by game code.
 	 */
 	void setContext(ISimContext& ctx) { context = &ctx; }
+
+protected:
+	virtual void onFixedUpdate(float dt) {}
+	virtual void onUpdate(float dt) {}
+	virtual void onLateUpdate(float dt) {}
 };
 
 } // namespace Blackthorn::Scene

@@ -285,7 +285,7 @@ void Runtime::processEvents() {
 
 void Runtime::fixedUpdate(float dt) {
 	simClock->tick();
-	sceneManager->fixedUpdate(dt, simClock->getCurrentTick());
+	sceneManager->fixedUpdate(dt);
 }
 
 void Runtime::update(float dt) {

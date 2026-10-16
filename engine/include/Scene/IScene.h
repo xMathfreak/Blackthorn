@@ -87,7 +87,7 @@ public:
 		}
 	}
 
-	virtual void render(float alpha) {
+	void render(float alpha) {
 		if (world)
 			world->render(alpha);
 
@@ -96,6 +96,8 @@ public:
 
 		if (uiManager)
 			uiManager->render(renderer());
+
+		onRender(alpha);
 	}
 
 	UI::UIManager* getUIManager() { return uiManager.get(); }
@@ -132,6 +134,9 @@ public:
 
 	/** @brief Shortcut for this scene's owned Particles::ParticleSystem. */
 	Particles::ParticleSystem& particles() { return *particleSystem; }
+
+protected:
+	virtual void onRender(float alpha) {}
 };
 
 } // namespace Blackthorn::Scene
