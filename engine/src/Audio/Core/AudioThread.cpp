@@ -652,8 +652,6 @@ void AudioThread::processStreamingPlayback(
 			: clip.sourcePath().string();
 	};
 
-	BT_LOG("Source path: {}", clip.sourcePath().string());
-
 	if (!assetResolver) {
 		BT_ERROR("AudioThread: no asset resolver set, cannot stream '{}'", describeSource());
 		voicePool->release(voice);
