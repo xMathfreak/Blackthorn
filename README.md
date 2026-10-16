@@ -1,7 +1,6 @@
 # Blackthorn
 
-Blackthorn is a simple 2D game engine written in modern C++20, designed for learning and experimentation.
-The project is split into a sample game application and a reusable library.
+A modular 2D game engine written in C++ 20, featuring a custom renderer, ECS architecture, asset management, networking infrastructure and extensible gameplay systems.
 
 ## Dependencies
 
