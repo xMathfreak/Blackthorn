@@ -8,6 +8,7 @@
 #include <string_view>
 
 #include "Core/Export.h"
+#include "Types/Numeric.h"
 
 namespace Blackthorn::Debug {
 
@@ -31,6 +32,19 @@ enum class LogLevel : int {
 	Info     = 3,
 	Trace    = 4,
 	Debug    = 5,
+};
+
+/**
+ * @brief Subsystem an entry belongs to. Independent of its severity
+ *
+ * LogTag::None omits the tag column entirely.
+ */
+enum class LogTag : U8 {
+	None,
+	Engine,
+	Script,
+	Render,
+	Assets,
 };
 
 /**
@@ -140,6 +154,20 @@ public:
 	bool isOpen() const;
 
 	/**
+	 * @brief Formats and logs a message with a subsystem tag.
+	 *
+	 * The level and tag are independent. The tag never replaces the level tag.
+	 */
+	template <typename... Args>
+	void logTagged(LogTag tag, LogLevel level, const char* srcFile, int srcLine,
+		std::format_string<Args...> fmt, Args&&... args) {
+		if (static_cast<int>(level) > static_cast<int>(currentLevel.load(std::memory_order::relaxed)))
+			return;
+
+		logImpl(tag, level, std::format(fmt, std::forward<Args>(args)...), srcFile, srcLine);
+	}
+
+	/**
 	 * @brief Formats and logs a message at the given level, with source location.
 	 *
 	 * Intended to be called via the BT_* macros, which inject __FILE__
@@ -153,35 +181,32 @@ public:
 	 */
 	template <typename... Args>
 	void log(LogLevel level, const char* srcFile, int srcLine, std::format_string<Args...> fmt, Args&&... args) {
-		if (static_cast<int>(level) > static_cast<int>(currentLevel.load(std::memory_order::relaxed)))
-			return;
-
-		logImpl(level, std::format(fmt, std::forward<Args>(args)...), srcFile, srcLine);
+		logTagged(LogTag::None, level, srcFile, srcLine, fmt, std::forward<Args>(args)...);
 	}
 
 	template <typename... Args>
 	void info(std::format_string<Args...> fmt, Args&&... args) {
-		log(LogLevel::Info, fmt, std::forward<Args>(args)...);
+		log(LogLevel::Info, nullptr, 0, fmt, std::forward<Args>(args)...);
 	}
 
 	template <typename... Args>
 	void warn(std::format_string<Args...> fmt, Args&&... args) {
-		log(LogLevel::Warning, fmt, std::forward<Args>(args)...);
+		log(LogLevel::Warning, nullptr, 0, fmt, std::forward<Args>(args)...);
 	}
 
 	template <typename... Args>
 	void error(std::format_string<Args...> fmt, Args&&... args) {
-		log(LogLevel::Error, fmt, std::forward<Args>(args)...);
+		log(LogLevel::Error, nullptr, 0, fmt, std::forward<Args>(args)...);
 	}
 
 	template <typename... Args>
 	void trace(std::format_string<Args...> fmt, Args&&... args) {
-		log(LogLevel::Trace, fmt, std::forward<Args>(args)...);
+		log(LogLevel::Trace, nullptr, 0, fmt, std::forward<Args>(args)...);
 	}
 
 	template <typename... Args>
 	void debug(std::format_string<Args...> fmt, Args&&... args) {
-		log(LogLevel::Debug, fmt, std::forward<Args>(args)...);
+		log(LogLevel::Debug, nullptr, 0, fmt, std::forward<Args>(args)...);
 	}
 private:
 	Logger();
@@ -192,6 +217,7 @@ private:
 
 	/// Build a complete, formatted log entry string.
 	static std::string formatEntry(
+		LogTag           tag,
 		LogLevel         level,
 		std::string_view message,
 		const char*      srcFile,
@@ -199,13 +225,22 @@ private:
 	);
 
 	/// Performs the actual write.
-	void logImpl(LogLevel level, std::string_view message, const char* srcFile, int srcLine);
+	void logImpl(
+		LogTag tag,
+		LogLevel level,
+		std::string_view message,
+		const char* srcFile,
+		int srcLine
+	);
 
 	/// Return just the filename portion of a full source path.
 	static const char* stripPath(const char* fullPath);
 
 	/// Fixed-width label for each log level.
 	static const char* levelTag(LogLevel level);
+
+	/// Display name for a tag or nullptr for LogTag::None.
+	static const char* tagName(LogTag tag);
 
 	/// Forward a pre-formatted entry to the appropriate SDL log function.
 	static void forwardToSDL(LogLevel level, const char* entry);
@@ -232,15 +267,19 @@ private:
 
 
 #ifdef BLACKTHORN_DEBUG
-	#define BT_LOG(...)     ::Blackthorn::Debug::Logger::instance().log(::Blackthorn::Debug::LogLevel::Info,    __FILE__, __LINE__, __VA_ARGS__)
-	#define BT_WARN(...)    ::Blackthorn::Debug::Logger::instance().log(::Blackthorn::Debug::LogLevel::Warning, __FILE__, __LINE__, __VA_ARGS__)
-	#define BT_ERROR(...)   ::Blackthorn::Debug::Logger::instance().log(::Blackthorn::Debug::LogLevel::Error,   __FILE__, __LINE__, __VA_ARGS__)
-	#define BT_TRACE(...) ::Blackthorn::Debug::Logger::instance().log(::Blackthorn::Debug::LogLevel::Trace, __FILE__, __LINE__, __VA_ARGS__)
-	#define BT_DEBUG(...)   ::Blackthorn::Debug::Logger::instance().log(::Blackthorn::Debug::LogLevel::Debug,   __FILE__, __LINE__, __VA_ARGS__)
+	#define BT_SRC_FILE __FILE__
+	#define BT_SRC_LINE __LINE__
 #else
-	#define BT_LOG(...)     ::Blackthorn::Debug::Logger::instance().log(::Blackthorn::Debug::LogLevel::Info,    nullptr, 0, __VA_ARGS__)
-	#define BT_WARN(...)    ::Blackthorn::Debug::Logger::instance().log(::Blackthorn::Debug::LogLevel::Warning, nullptr, 0, __VA_ARGS__)
-	#define BT_ERROR(...)   ::Blackthorn::Debug::Logger::instance().log(::Blackthorn::Debug::LogLevel::Error,   nullptr, 0, __VA_ARGS__)
-	#define BT_TRACE(...) ::Blackthorn::Debug::Logger::instance().log(::Blackthorn::Debug::LogLevel::Trace, nullptr, 0, __VA_ARGS__)
-	#define BT_DEBUG(...)   ::Blackthorn::Debug::Logger::instance().log(::Blackthorn::Debug::LogLevel::Debug,   nullptr, 0, __VA_ARGS__)
+	#define BT_SRC_FILE nullptr
+	#define BT_SRC_LINE 0
 #endif
+
+#define BT_LOG(...)     ::Blackthorn::Debug::Logger::instance().log(::Blackthorn::Debug::LogLevel::Info,    BT_SRC_FILE, BT_SRC_LINE, __VA_ARGS__)
+#define BT_WARN(...)    ::Blackthorn::Debug::Logger::instance().log(::Blackthorn::Debug::LogLevel::Warning, BT_SRC_FILE, BT_SRC_LINE, __VA_ARGS__)
+#define BT_ERROR(...)   ::Blackthorn::Debug::Logger::instance().log(::Blackthorn::Debug::LogLevel::Error,   BT_SRC_FILE, BT_SRC_LINE, __VA_ARGS__)
+#define BT_TRACE(...)   ::Blackthorn::Debug::Logger::instance().log(::Blackthorn::Debug::LogLevel::Trace,   BT_SRC_FILE, BT_SRC_LINE, __VA_ARGS__)
+#define BT_DEBUG(...)   ::Blackthorn::Debug::Logger::instance().log(::Blackthorn::Debug::LogLevel::Debug,   BT_SRC_FILE, BT_SRC_LINE, __VA_ARGS__)
+
+/// Tagged entry: BT_TAGGED(LogTag::Script, LogLevel::Info, "{}", line);
+#define BT_TAGGED(tag, level, ...) \
+	::Blackthorn::Debug::Logger::instance().logTagged(tag, level, BT_SRC_FILE, BT_SRC_LINE, __VA_ARGS__)

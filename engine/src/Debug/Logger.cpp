@@ -59,31 +59,25 @@ void Logger::shutdown() {
 }
 
 void Logger::setLevel(LogLevel level) {
-	std::lock_guard<std::mutex> lock(mutex);
-	currentLevel = level;
+	currentLevel.store(level);
 }
 
 LogLevel Logger::getLevel() const {
-	std::lock_guard<std::mutex> lock(mutex);
-	return currentLevel;
+	return currentLevel.load();
 }
 
 void Logger::setSDLMirrorEnabled(bool enabled) {
-	std::lock_guard<std::mutex> lock(mutex);
-	sdlMirror = enabled;
+	sdlMirror.store(enabled);
 }
 
 bool Logger::isSDLMirrorEnabled() const {
-	std::lock_guard<std::mutex> lock(mutex);
-	return sdlMirror;
+	return sdlMirror.load();
 }
 
 bool Logger::isOpen() const {
 	std::lock_guard<std::mutex> lock(mutex);
 	return file.is_open();
 }
-
-
 
 void Logger::openFile() {
 	namespace fs = std::filesystem;
@@ -113,7 +107,8 @@ void Logger::openFile() {
 	}
 }
 
-std::string Logger::formatEntry(LogLevel level, std::string_view message, const char* srcFile, int srcLine) {
+std::string Logger::formatEntry(LogTag tag, LogLevel level, std::string_view message,
+	const char* srcFile, int srcLine) {
 	auto now = std::chrono::system_clock::now();
 	std::time_t t = std::chrono::system_clock::to_time_t(now);
 	std::tm tm{};
@@ -129,12 +124,28 @@ std::string Logger::formatEntry(LogLevel level, std::string_view message, const 
 
 	std::string threadName = Threads::ThreadRegistry::instance().currentName();
 
-	std::string entry = std::format("[{}] [{:<5}] [{}] {}", timeBuf, levelTag(level), threadName, message);
+	std::string entry = std::format("[{}] [{:<5}] ", timeBuf, levelTag(level));
+
+	if (const char* name = tagName(tag))
+		entry += std::format("[{}] ", name);
+
+	entry += std::format("[{}] {}", threadName, message);
 
 	if (srcFile && srcLine > 0)
 		entry += std::format("  ({}:{})", stripPath(srcFile), srcLine);
 
 	return entry;
+}
+
+const char* Logger::tagName(LogTag tag) {
+	switch (tag) {
+		case LogTag::Engine: return "ENGINE";
+		case LogTag::Script: return "SCRIPT";
+		case LogTag::Render: return "RENDER";
+		case LogTag::Assets: return "ASSETS";
+		case LogTag::None:   return nullptr;
+	}
+	return nullptr;
 }
 
 const char* Logger::levelTag(LogLevel level) {
@@ -185,9 +196,10 @@ void Logger::forwardToSDL(LogLevel level, const char* entry) {
 	}
 }
 
-void Logger::logImpl(LogLevel level, std::string_view message, const char* srcFile, int srcLine) {
+void Logger::logImpl(LogTag tag, LogLevel level, std::string_view message,
+	const char* srcFile, int srcLine) {
 	const bool mirror = sdlMirror.load(std::memory_order::relaxed);
-	const std::string entry = formatEntry(level, message, srcFile, srcLine);
+	const std::string entry = formatEntry(tag, level, message, srcFile, srcLine);
 
 	{
 		std::lock_guard<std::mutex> lock(mutex);
@@ -200,8 +212,13 @@ void Logger::logImpl(LogLevel level, std::string_view message, const char* srcFi
 		}
 	}
 
-	if (mirror)
-		forwardToSDL(level, std::string(message).c_str());
+	if (mirror) {
+		const char* name = tagName(tag);
+		const std::string sdlText = name
+			? std::format("[{}] {}", name, message)
+			: std::string(message);
+		forwardToSDL(level, sdlText.c_str());
+	}
 }
 
 } // namespace Blackthorn::Debug
