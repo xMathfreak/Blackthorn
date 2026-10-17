@@ -39,12 +39,19 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 option(BLACKTHORN_BUILD_APP "Build sample application" ON)
 option(BLACKTHORN_BUILD_TOOLS "Build tools" ON)
 option(BLACKTHORN_ENABLE_TESTING "Enable unit tests" OFF)
+option(BLACKTHORN_ENABLE_SCRIPTING "Enable Lua scripts" ON)
 
 # External dependencies
 find_package(OpenGL REQUIRED)
 find_package(SDL3 REQUIRED)
 find_package(SDL3_image REQUIRED)
 find_package(SDL3_ttf REQUIRED)
+
+# Lua dependency
+set(LUA_SOURCE_DIR
+    "${CMAKE_CURRENT_SOURCE_DIR}/third_party/lua"
+)
+include(cmake/lua.cmake)
 
 # Subdirectories
 add_subdirectory(third_party)

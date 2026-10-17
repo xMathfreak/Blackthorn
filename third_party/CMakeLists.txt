@@ -83,5 +83,3 @@ set(ALSOFT_ENABLE_MODULES OFF CACHE BOOL "" FORCE)
 
 add_subdirectory(openal-soft)
 suppress_third_party_warnings(OpenAL)
-
-add_subdirectory(lua)
