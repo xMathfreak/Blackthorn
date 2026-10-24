@@ -85,21 +85,22 @@ struct LocaleRequest {
  * @brief Canonical ID, priority, and format for a locale request.
  */
 inline std::optional<LocaleRequest> localeRequest(const Assets::LoadParams& params) {
-	const auto* lp = dynamic_cast<const LocaleLoadParams*>(&params);
-	if (!lp) {
-		BT_ERROR("LocalizationSourceLoader: expected LocaleLoadParams");
+	const auto* base = dynamic_cast<const Assets::AssetLoadParams*>(&params);
+	if (!base) {
+		BT_ERROR("LocalizationSourceLoader: unrecognized LoadParams type");
 		return std::nullopt;
 	}
 
-	const auto id = Blackthorn::normalizeAssetPath(lp->source.generic_string());
+	const auto id = Blackthorn::normalizeAssetPath(base->source.generic_string());
 	if (!id) {
-		BT_ERROR("LocalizationSourceLoader: invalid asset path '{}'", lp->source.generic_string());
+		BT_ERROR("LocalizationSourceLoader: invalid asset path '{}'", base->source.generic_string());
 		return std::nullopt;
 	}
 
+	const auto* lp = dynamic_cast<const LocaleLoadParams*>(&params);
 	return LocaleRequest{
 		*id,
-		lp->priority,
+		lp ? lp->priority : 0,
 		std::filesystem::path(*id).extension() == ".btloc"
 	};
 }
