@@ -293,7 +293,7 @@ inline PackMetadata parsePackMetadata(
  * byte-identical output. That property is what lets the pack digest cover
  * the metadata block.
  */
-inline std::string serializePackMetadata(const PackMetadata& md) {
+inline std::string serializePackMetadata(const PackMetadata& md, int indent = -1) {
 	nlohmann::json j = nlohmann::json::object();
 
 	j["id"] = md.id;
@@ -316,7 +316,7 @@ inline std::string serializePackMetadata(const PackMetadata& md) {
 	j["loadAfter"] = md.loadAfter;
 	j["conflicts"] = md.conflicts;
 
-	return j.dump(-1, ' ', false, nlohmann::json::error_handler_t::replace);
+	return j.dump(indent, ' ', false, nlohmann::json::error_handler_t::replace);
 }
 
 } // namespace Blackthorn::Assets

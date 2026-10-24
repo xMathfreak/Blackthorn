@@ -979,6 +979,21 @@ bool Packer::unpack(
 		log << "  unpacked  " << label << "  ->  " << outFile.string() << "\n";
 	}
 
+	const auto metadata = readPackMetadata(f, header);
+	if (metadata) {
+		std::filesystem::path outMetadata = destDir / ".metadata";
+		std::ofstream st(outMetadata);
+
+		if (st.is_open()) {
+			st << serializePackMetadata(*metadata, 2);
+		} else {
+			std::cerr << "btpacker: error: failed to write metadata\n";
+			anyFailed = true;
+		}
+
+		st.close();
+	}
+
 	std::fclose(f);
 	return !anyFailed;
 }
