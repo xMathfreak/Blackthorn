@@ -1,8 +1,5 @@
 #pragma once
 
-#include "Scripting/LuaConverter.h"
-#include "Scripting/LuaResult.h"
-
 #include <concepts>
 #include <cstddef>
 #include <exception>
@@ -12,10 +9,10 @@
 #include <type_traits>
 #include <utility>
 
-extern "C" {
-	#include <lua.h>
-	#include <lauxlib.h>
-}
+#include <lua.h>
+
+#include "Scripting/LuaConverter.h"
+#include "Scripting/LuaResult.h"
 
 namespace Blackthorn::Scripting {
 

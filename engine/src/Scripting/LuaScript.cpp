@@ -8,6 +8,8 @@
 #include <iterator>
 #include <stdexcept>
 
+#include <lualib.h>
+
 namespace Blackthorn::Scripting {
 
 namespace {

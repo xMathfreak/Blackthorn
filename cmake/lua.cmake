@@ -51,6 +51,10 @@ list(TRANSFORM LUA_SOURCES
 add_library(liblua STATIC ${LUA_SOURCES})
 add_library(lua::lua ALIAS liblua)
 
+set_source_files_properties(${LUA_SOURCES} PROPERTIES
+    LANGUAGE CXX
+)
+
 target_include_directories(liblua
     PUBLIC
         $<BUILD_INTERFACE:${LUA_SOURCE_DIR}>
@@ -66,7 +70,7 @@ if(UNIX AND NOT APPLE)
     check_library_exists(m sin "" LUA_HAVE_LIBM)
 
     if(LUA_HAVE_LIBM)
-        target_link_libraries(liblua PUBLIC m)
+        target_link_libraries(liblua PUBLIC m dl)
     endif()
 endif()
 

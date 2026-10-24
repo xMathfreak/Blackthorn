@@ -1,10 +1,5 @@
 #pragma once
 
-#include "Core/Export.h"
-#include "Debug/Logger.h"
-#include "Scripting/LuaConverter.h"
-#include "Scripting/LuaResult.h"
-
 #include <chrono>
 #include <cstddef>
 #include <functional>
@@ -14,11 +9,13 @@
 #include <type_traits>
 #include <utility>
 
-extern "C" {
-	#include <lua.h>
-	#include <lauxlib.h>
-	#include <lualib.h>
-}
+#include <lua.h>
+#include <lauxlib.h>
+
+#include "Core/Export.h"
+#include "Debug/Logger.h"
+#include "Scripting/LuaConverter.h"
+#include "Scripting/LuaResult.h"
 
 namespace Blackthorn::Scripting {
 

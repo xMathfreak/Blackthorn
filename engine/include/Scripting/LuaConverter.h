@@ -1,7 +1,5 @@
 #pragma once
 
-#include "Scripting/LuaResult.h"
-
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
@@ -13,10 +11,10 @@
 #include <utility>
 #include <vector>
 
-extern "C" {
-	#include <lua.h>
-	#include <lauxlib.h>
-}
+#include <lua.h>
+#include <lauxlib.h>
+
+#include "Scripting/LuaResult.h"
 
 namespace Blackthorn::Scripting {
 
