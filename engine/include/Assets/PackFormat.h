@@ -41,6 +41,7 @@ enum class PackAssetType : uint8_t {
 	SpriteClip = 5,
 	ParticleEffect = 6,
 	Localization = 7,
+	Script = 8,
 	Raw = 255,
 };
 

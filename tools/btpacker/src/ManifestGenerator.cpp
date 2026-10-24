@@ -52,6 +52,9 @@ std::string ManifestGenerator::classifyExtension(const std::string& ext) {
 	static const std::set<std::string> locale = {
 		".btloc"
 	};
+	static const std::set<std::string> script = {
+		".lua", ".luac"
+	};
 
 	if (ext == ".metadata")
 		return "Metadata";
@@ -76,6 +79,9 @@ std::string ManifestGenerator::classifyExtension(const std::string& ext) {
 
 	if (locale.contains(ext))
 		return "Localization";
+
+	if (script.contains(ext))
+		return "Script";
 
 	return "Raw";
 }
@@ -243,6 +249,7 @@ bool ManifestGenerator::writeManifest(
 		"SpriteClip",
 		"ParticleEffect",
 		"Localization",
+		"Script",
 		"Raw"
 	};
 

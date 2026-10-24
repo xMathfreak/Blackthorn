@@ -148,6 +148,8 @@ PackAssetType resolveAssetType(const std::string& typeStr) {
 		return PackAssetType::ParticleEffect;
 	if (lower == "localization")
 		return PackAssetType::Localization;
+	if (lower == "script")
+		return PackAssetType::Script;
 	if (lower == "raw")
 		return PackAssetType::Raw;
 
@@ -171,6 +173,8 @@ const char* assetTypeName(PackAssetType t) {
 			return "ParticleEffect";
 		case PackAssetType::Localization:
 			return "Localization";
+		case PackAssetType::Script:
+			return "Script";
 		case PackAssetType::Raw:
 			return "Raw";
 		default:
