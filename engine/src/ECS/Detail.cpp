@@ -1,23 +1,43 @@
 #include "ECS/Detail.h"
 
 #include <mutex>
-#include <typeindex>
+#include <stdexcept>
+#include <string>
 #include <unordered_map>
 
 namespace Blackthorn::ECS::Detail {
 
-size_t componentIDForType(std::type_index type) noexcept {
-	static size_t counter = 0;
-	static std::mutex mutex;
-	static std::unordered_map<std::type_index, size_t> registry;
+namespace {
 
-	std::lock_guard lock(mutex);
+struct ComponentRegistry {
+	std::mutex mutex;
+	std::unordered_map<std::type_index, size_t> ids;
+};
 
-	auto [it, inserted] = registry.emplace(type, counter);
-	if (inserted)
-		++counter;
+ComponentRegistry& registry() {
+	// Function-local static: constructed on first use, so registration from
+	// other static initializers is safe.
+	static ComponentRegistry instance;
+	return instance;
+}
 
-	return it->second;
+} // namespace
+
+size_t assignComponentID(std::type_index type) {
+	ComponentRegistry& reg = registry();
+	std::lock_guard<std::mutex> lock(reg.mutex);
+
+	if (const auto it = reg.ids.find(type); it != reg.ids.end())
+		return it->second;
+
+	if (reg.ids.size() >= MAX_COMPONENTS) {
+		throw std::length_error(
+			"ECS: component type limit (" + std::to_string(MAX_COMPONENTS) + ") exceeded");
+	}
+
+	const size_t id = reg.ids.size();
+	reg.ids.emplace(type, id);
+	return id;
 }
 
 } // namespace Blackthorn::ECS::Detail

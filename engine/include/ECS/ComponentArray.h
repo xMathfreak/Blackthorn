@@ -1,125 +1,123 @@
 #pragma once
 
+#include <cassert>
+#include <memory>
+#include <utility>
+#include <vector>
+
 #include "ECS/Detail.h"
 #include "ECS/IComponentArray.h"
 
 namespace Blackthorn::ECS {
 
+/**
+ * @brief Dense storage for one component type, indexed by entity.
+ *
+ * Components live contiguously in `components`. `dense` maps each component
+ * back to its entity, and `sparse` maps an entity slot to its position. Each
+ * sparse entry also stores the generation it was written for, so a stale
+ * handle can't reach a component that now belongs to a reused slot.
+ *
+ * Pointers and references returned by get() and insert() are invalidated by
+ * any insert or remove on this array.
+ */
 template <typename T>
 class ComponentArray : public IComponentArray {
 private:
+	static constexpr U32 kNoPos = U32_MAX;
+
 	struct SparseEntry {
-		U32 pos;
-		U8 generation;
+		U32 pos = kNoPos;
+		U16 generation = 0;
 	};
 
-private:
 	std::vector<T> components;
 	std::vector<Entity> dense;
 	std::vector<SparseEntry> sparse;
 
 public:
-	explicit ComponentArray(size_t reserve = Detail::MAX_ENTITIES) {
-		components.reserve(reserve);
-		dense.reserve(reserve);
-		sparse.assign(reserve, { INVALID_ENTITY, 0 });
+	/**
+	 * @param capacity Number of entity slots to size the sparse table for.
+	 *                 Pass the owning pool's capacity so inserts never grow it.
+	 */
+	explicit ComponentArray(size_t capacity = Detail::MAX_ENTITIES) {
+		components.reserve(capacity);
+		dense.reserve(capacity);
+		sparse.resize(capacity);
 	}
 
+	/**
+	 * @brief Adds a component for @p entity, or replaces the existing one.
+	 *
+	 * If an entry from an older generation of the same slot is still present,
+	 * it is removed first. Otherwise it would stay in `components` with no
+	 * sparse entry pointing to it.
+	 *
+	 * Strong exception guarantee: if T's constructor throws, the array is unchanged.
+	 *
+	 * @return A reference valid until the next insert or remove on this array.
+	 */
 	template <typename... Args>
 	T& insert(Entity entity, Args&&... args) {
-		U32 idx = Detail::entityIndex(entity);
-		U32 gen = Detail::entityGeneration(entity);
+		const U32 idx = Detail::entityIndex(entity);
+		const U16 gen = Detail::entityGeneration(entity);
 
-		if (idx >= static_cast<U32>(sparse.size())) {
-			#ifdef BLACKTHORN_DEBUG
-				assert(false && "ComponentArray::insert: entity index out of range");
-			#endif
+		if (idx >= sparse.size())
+			sparse.resize(idx + 1);
 
-			sparse.resize(idx + 1, { INVALID_ENTITY, 0 });
-		}
+		SparseEntry& entry = sparse[idx];
 
-		auto& entry = sparse[idx];
+		// Drop stale generation first
+		if (entry.pos != kNoPos && entry.generation != gen)
+			removeAt(entry.pos, entry);
 
-		if (entry.pos != INVALID_ENTITY && entry.generation == gen) {
-			std::destroy_at(&components[entry.pos]);
-			std::construct_at(&components[entry.pos], std::forward<Args>(args)...);
+		if (entry.pos != kNoPos) {
+			T replacement(std::forward<Args>(args)...);
+			components[entry.pos] = std::move(replacement);
 			return components[entry.pos];
 		}
 
-		entry.pos = static_cast<U32>(components.size());
+		const U32 pos = static_cast<U32>(components.size());
+
+		T& component = components.emplace_back(std::forward<Args>(args)...);
+		try {
+			dense.push_back(entity);
+		} catch (...) {
+			components.pop_back();
+			throw;
+		}
+
+		entry.pos = pos;
 		entry.generation = gen;
-
-		components.emplace_back(std::forward<Args>(args)...);
-		dense.push_back(entity);
-
-		return components.back();
+		return component;
 	}
 
 	void remove(Entity entity) override {
-		U32 idx = Detail::entityIndex(entity);
-		U32 gen = Detail::entityGeneration(entity);
+		const U32 idx = Detail::entityIndex(entity);
+		const U16 gen = Detail::entityGeneration(entity);
 
-		if (idx >= static_cast<U32>(sparse.size()))
+		if (idx >= sparse.size())
 			return;
 
-		auto& entry = sparse[idx];
-
-		if (entry.pos == INVALID_ENTITY || entry.generation != gen)
+		SparseEntry& entry = sparse[idx];
+		if (entry.pos == kNoPos || entry.generation != gen)
 			return;
 
-		U32 pos = entry.pos;
-		U32 lastPos = static_cast<U32>(components.size() - 1);
-
-		if (pos != lastPos) {
-			components[pos] = std::move(components[lastPos]);
-			Entity moved = dense[lastPos];
-			dense[pos] = moved;
-
-			auto& movedEntry = sparse[Detail::entityIndex(moved)];
-			movedEntry.pos = pos;
-		}
-
-		components.pop_back();
-		dense.pop_back();
-		entry.pos = INVALID_ENTITY;
+		removeAt(entry.pos, entry);
 	}
 
 	bool has(Entity entity) const override {
-		U32 idx = Detail::entityIndex(entity);
-		U32 gen = Detail::entityGeneration(entity);
-
-		if (idx >= static_cast<U32>(sparse.size()))
-			return false;
-
-		const auto& entry = sparse[idx];
-
-		return entry.pos != INVALID_ENTITY && entry.generation == gen;
+		return find(entity) != nullptr;
 	}
 
 	T* get(Entity entity) {
-		U32 idx = Detail::entityIndex(entity);
-		U32 gen = Detail::entityGeneration(entity);
-
-		if (idx >= static_cast<U32>(sparse.size()))
-			return nullptr;
-
-		auto& entry = sparse[idx];
-		return (entry.pos != INVALID_ENTITY && entry.generation == gen)
-			? &components[entry.pos]
-			: nullptr;
+		const SparseEntry* entry = find(entity);
+		return entry ? &components[entry->pos] : nullptr;
 	}
 
 	const T* get(Entity entity) const {
-		U32 idx = Detail::entityIndex(entity);
-		U32 gen = Detail::entityGeneration(entity);
-
-		if (idx >= static_cast<U32>(sparse.size()))
-			return nullptr;
-
-		const auto& entry = sparse[idx];
-		return (entry.pos != INVALID_ENTITY && entry.generation == gen)
-			? &components[entry.pos]
-			: nullptr;
+		const SparseEntry* entry = find(entity);
+		return entry ? &components[entry->pos] : nullptr;
 	}
 
 	void* getRaw(Entity entity) override {
@@ -138,6 +136,44 @@ public:
 
 	T* data() noexcept { return components.data(); }
 	const T* data() const noexcept { return components.data(); }
+
+private:
+	/// Returns the sparse entry for @p entity if it holds a live component, else null.
+	const SparseEntry* find(Entity entity) const noexcept {
+		const U32 idx = Detail::entityIndex(entity);
+		if (idx >= sparse.size())
+			return nullptr;
+
+		const SparseEntry& entry = sparse[idx];
+		const bool live = entry.pos != kNoPos
+			&& entry.generation == Detail::entityGeneration(entity);
+
+		return live ? &entry : nullptr;
+	}
+
+	/**
+	 * @brief Removes the component at @p pos by moving the last element into
+	 *        its place, then clears @p entry.
+	 *
+	 * The entity that was moved gets its sparse position updated. Its
+	 * generation is already correct, because the dense array holds the full
+	 * entity value.
+	 */
+	void removeAt(U32 pos, SparseEntry& entry) {
+		assert(pos < components.size());
+
+		const U32 last = static_cast<U32>(components.size() - 1);
+		if (pos != last) {
+			components[pos] = std::move(components[last]);
+			const Entity moved = dense[last];
+			dense[pos] = moved;
+			sparse[Detail::entityIndex(moved)].pos = pos;
+		}
+
+		components.pop_back();
+		dense.pop_back();
+		entry.pos = kNoPos;
+	}
 };
 
 } // namespace Blackthorn::ECS

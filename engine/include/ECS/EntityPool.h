@@ -1,9 +1,15 @@
 #pragma once
 
 #include <array>
+#include <atomic>
+#include <bit>
+#include <cassert>
+#include <cstdint>
 #include <memory>
 #include <shared_mutex>
 #include <span>
+#include <stdexcept>
+#include <vector>
 
 #include "Core/Export.h"
 #include "ECS/ComponentArray.h"
@@ -23,7 +29,7 @@ class BLACKTHORN_API EntityPool {
 private:
 	struct EntityData {
 		U64 componentMask = 0;
-		U8 generation = 0;
+		U16 generation = 0;
 		bool alive = false;
 	};
 
@@ -40,6 +46,9 @@ private:
 
 public:
 	explicit EntityPool(size_t maxEntities = Detail::MAX_ENTITIES) {
+		if (maxEntities > (U32{1} << Detail::INDEX_BITS))
+			throw std::invalid_argument("EntityPool: maxEntities exceeds the entity index range (" + std::to_string(Detail::INDEX_MASK) + ")");
+
 		entities.resize(maxEntities);
 		freeList.reserve(maxEntities);
 
@@ -84,8 +93,13 @@ public:
 		entities[index].componentMask = 0;
 		entities[index].alive = false;
 		entities[index].generation++;
-		freeList.push_back(index);
 		--entityCount;
+
+		// If the generation wrapped to zero, don't reuse the slot. A handle
+		// from 65536 reuses ago would otherwise match a live entity again.
+		if (entities[index].generation != 0)
+			freeList.push_back(index);
+
 		bumpEpoch();
 	}
 
@@ -93,28 +107,30 @@ public:
 		if (entity == INVALID_ENTITY)
 			return false;
 
-		U32 index = Detail::entityIndex(entity);
-
+		const U32 index = Detail::entityIndex(entity);
 		if (index >= entities.size())
 			return false;
 
 		const EntityData& ed = entities[index];
-		return ed.alive && entities[index].generation == Detail::entityGeneration(entity);
+		return ed.alive && ed.generation == Detail::entityGeneration(entity);
 	}
 
 	size_t aliveCount() const { return entityCount; }
 
 	void clear() {
-		for (auto& ca : componentArrays) {
-			if (ca)
-				ca.reset();
-		}
+		for (auto& ca : componentArrays)
+			ca.reset();
 
 		freeList.clear();
 
 		for (I32 i = static_cast<I32>(entities.size()) - 1; i >= 0; --i) {
+			// Keep the generation and advance it, so every existing handle goes stale.
+			const U16 next = static_cast<U16>(entities[i].generation + 1);
 			entities[i] = EntityData{};
-			freeList.push_back(static_cast<U32>(i));
+			entities[i].generation = next;
+
+			if (next != 0)
+				freeList.push_back(static_cast<U32>(i));
 		}
 
 		entityCount = 0;
@@ -135,7 +151,7 @@ public:
 		static const size_t id = Detail::componentID<Component>();
 
 		if (!componentArrays[id])
-			componentArrays[id] = std::make_unique<ComponentArray<Component>>();
+			componentArrays[id] = std::make_unique<ComponentArray<Component>>(entities.size());
 
 		auto* array = static_cast<ComponentArray<Component>*>(componentArrays[id].get());
 		Component& component = array->insert(entity, std::forward<Args>(args)...);
@@ -272,7 +288,7 @@ private:
 
 	mutable std::shared_mutex cacheMutex;
 	mutable std::vector<Entity> cachedMatching;
-	mutable U64 cachedEpoch = U64_MAX;
+	mutable std::atomic<U64> cachedEpoch{ U64_MAX };
 
 public:
 	View(EntityPool* p, U64 mask, const std::vector<Entity>* entities)
@@ -283,60 +299,50 @@ public:
 
 	View(const View&) = delete;
 	View& operator=(const View&) = delete;
+	View& operator=(View&&) = delete;
 
 	View(View&& other) noexcept
 		: pool(other.pool)
 		, requiredMask(other.requiredMask)
 		, entityList(other.entityList)
 		, cachedMatching(std::move(other.cachedMatching))
-		, cachedEpoch(other.cachedEpoch)
+		, cachedEpoch(other.cachedEpoch.load(std::memory_order::acquire))
 	{
-		other.cachedEpoch = U64_MAX;
+		other.cachedEpoch.store(U64_MAX, std::memory_order::release);
 	}
 
-	View& operator=(View&&) = delete;
-
 	/**
-	 * @brief Calls @p callback for every entity that has all required
-	 *        components. Runs on the calling thread.
+	 * @brief Calls @p callback for every entity with all required components.
+	 *        Runs on the calling thread.
 	 *
-	 * @param callback Invocable as `(Entity, Components&...)` or `(Entity,
-	 *                 Components*...)` for optional pointer types.
+	 * @param callback Invocable as `(Entity, Components&...)`, or
+	 *                 `(Entity, Components*...)` for pointer types.
 	 */
 	template <typename Callable>
 	void each(Callable&& callback) {
-		rebuildCache();
+		const std::shared_lock<std::shared_mutex> lock = acquireCache();
 
-		std::shared_lock lock(cacheMutex);
 		for (Entity e : cachedMatching)
 			callback(e, getComponentForView<Components>(e)...);
 	}
 
 	/**
-	 * @brief Dispatches @p callback across worker threads using @p js,
-	 *        then blocks until all batches have completed.
+	 * @brief Dispatches @p callback across worker threads, then blocks until
+	 *        every batch has finished.
 	 *
-	 * The callback signature is identical to `each()`. The batching is
-	 * fully transparent to the caller. Falls back to `each()` if @p js
-	 * is null or the matching entity count is below @p threshold.
+	 * Falls back to serial iteration when @p js is null or the match count is
+	 * below @p threshold. The callback must be safe to call concurrently on
+	 * different entities and must not add or remove components or entities.
 	 *
-	 * Every batch runs to completion before this function returns , so
-	 * it is safe to read or write component data immediately after the
-	 * call, just as with `each()`.
-	 *
-	 * @param js        Job system to dispatch on. Triggers serial fallback
-	 *                  when null.
-	 * @param callback  Per-entity work. Must be safe to call concurrently
-	 *                  on different entities. Must not add or remove
-	 *                  components or entities during execution.
-	 * @param threshold Minimum matching entity count before parallel
-	 *                  dispatch is used. Defaults to 64.
+	 * @param threshold Minimum matches before parallel dispatch. A value of 0
+	 *                  is treated as 1.
 	 */
 	template <typename Callable>
 	void eachJobs(Jobs::JobSystem* js, Callable&& callback, size_t threshold = 64) {
-		rebuildCache();
+		if (threshold == 0)
+			threshold = 1;
 
-		std::shared_lock lock(cacheMutex);
+		const std::shared_lock<std::shared_mutex> lock = acquireCache();
 		const std::vector<Entity>& entities = cachedMatching;
 		const size_t count = entities.size();
 
@@ -346,19 +352,19 @@ public:
 		if (!js || count < threshold) {
 			for (Entity e : entities)
 				callback(e, getComponentForView<Components>(e)...);
-
 			return;
 		}
 
+		const size_t batchCount = (count + threshold - 1) / threshold;
 		auto handle = js->createHandle();
-		handle->addPending(static_cast<int>((count + threshold - 1) / threshold) - 1);
+		handle->addPending(static_cast<int>(batchCount) - 1);
 
-		for (size_t b = 0; b * threshold < count; ++b) {
+		for (size_t b = 0; b < batchCount; ++b) {
 			const size_t begin = b * threshold;
 			const size_t end = std::min(begin + threshold, count);
 
 			js->submit(Jobs::Job(
-				[&entities, &callback, begin, end, this]() {
+				[this, &entities, &callback, begin, end]() {
 					for (size_t i = begin; i < end; ++i)
 						callback(entities[i], getComponentForView<Components>(entities[i])...);
 				},
@@ -370,29 +376,48 @@ public:
 	}
 
 private:
-	void rebuildCache() const {
-		if (cachedEpoch == pool->getEpoch())
-			return;
+	/**
+	 * @brief Returns a shared lock on a cache that matches the pool's current
+	 *        epoch, rebuilding it first if needed.
+	 *
+	 * The fast path takes only a shared lock. A stale cache is rebuilt under an
+	 * exclusive lock, which rechecks the epoch so only one thread rebuilds.
+	 *
+	 * Structural changes to the pool must not run while iteration is in
+	 * progress. This lock protects the cache, not the pool.
+	 */
+	std::shared_lock<std::shared_mutex> acquireCache() const {
+		{
+			std::shared_lock<std::shared_mutex> lock(cacheMutex);
+			if (cachedEpoch.load(std::memory_order::acquire) == pool->getEpoch())
+				return lock;
+		}
 
-		std::unique_lock lock(cacheMutex);
+		{
+			std::unique_lock<std::shared_mutex> lock(cacheMutex);
+			const U64 epoch = pool->getEpoch();
+			if (cachedEpoch.load(std::memory_order::acquire) != epoch)
+				rebuildLocked(epoch);
+		}
 
-		if (cachedEpoch == pool->getEpoch())
-			return;
+		return std::shared_lock<std::shared_mutex>(cacheMutex);
+	}
 
+	/// Rebuilds cachedMatching. The caller must hold cacheMutex exclusively.
+	void rebuildLocked(U64 epoch) const {
 		cachedMatching.clear();
-		if (cachedMatching.capacity() < entityList->size())
-			cachedMatching.reserve(entityList->size());
+		cachedMatching.reserve(entityList->size());
 
 		for (Entity e : *entityList) {
 			if (matchesMask(e))
 				cachedMatching.push_back(e);
 		}
 
-		cachedEpoch = pool->getEpoch();
+		cachedEpoch.store(epoch, std::memory_order::release);
 	}
 
 	bool matchesMask(Entity e) const {
-		U32 idx = Detail::entityIndex(e);
+		const U32 idx = Detail::entityIndex(e);
 		return (pool->getEntities()[idx].componentMask & requiredMask) == requiredMask;
 	}
 
