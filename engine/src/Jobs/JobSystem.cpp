@@ -1,6 +1,8 @@
 #include "Jobs/JobSystem.h"
 
 #include <cassert>
+#include <chrono>
+#include <string>
 #include <thread>
 
 #include "Debug/Logger.h"
@@ -54,12 +56,16 @@ void JobSystem::shutdown() {
 		return;
 
 	stopFlag.store(true, std::memory_order::release);
+
+	{ std::lock_guard<std::mutex> lock(wakeMutex); }
 	wakeCondition.notify_all();
 
 	for (auto& t : workers)
 		t.join();
 
 	workers.clear();
+
+	while (executeOne(false)) {}
 }
 
 JobSystem::~JobSystem() {

@@ -3,6 +3,7 @@
 #include <atomic>
 #include <condition_variable>
 #include <memory>
+#include <mutex>
 #include <thread>
 #include <vector>
 
@@ -16,7 +17,7 @@ namespace Blackthorn::Jobs {
 /**
  * @brief Central scheduler for the engine job system.
  *
- * Owns a pool of worker threads, one Chase-Lev work-stealing deque per
+ * Owns a pool of worker threads, one work-stealing deque per
  * worker, and a dedicated MPSC queue for main-thread-pinned jobs.
  *
  * The main-thread queue uses a sentinel-node MPSC design (Michael & Scott
