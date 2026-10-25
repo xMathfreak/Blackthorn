@@ -70,6 +70,8 @@ public:
 		, affinity(aff)
 	{
 		using Decayed = std::decay_t<F>;
+		static_assert(alignof(Decayed) <= alignof(std::max_align_t),
+			"Job: callable over-aligned for inline storage");
 
 		if constexpr (sizeof(Decayed) <= INLINE_SIZE &&
 					  std::is_trivially_copyable_v<Decayed> &&
