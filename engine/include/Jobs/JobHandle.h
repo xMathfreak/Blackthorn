@@ -24,6 +24,8 @@ namespace Blackthorn::Jobs {
  */
 class BLACKTHORN_API JobHandle {
 public:
+	~JobHandle();
+
 	/**
 	 * @brief Creates a handle with an initial pending count of 1.
 	 *

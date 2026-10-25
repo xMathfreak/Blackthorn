@@ -1,6 +1,7 @@
 #include "Jobs/JobHandle.h"
 
 #include <cassert>
+#include <cstdint>
 
 namespace Blackthorn::Jobs {
 
@@ -9,6 +10,19 @@ JobHandle::Continuation* const JobHandle::COMPLETE_SENTINEL =
 
 std::shared_ptr<JobHandle> JobHandle::create() {
 	return std::shared_ptr<JobHandle>(new JobHandle());
+}
+
+JobHandle::~JobHandle() {
+	Continuation* node = continuationHead.load(std::memory_order::relaxed);
+
+	if (node == COMPLETE_SENTINEL)
+		return;
+
+	while (node) {
+		Continuation* next = node->next;
+		delete node;
+		node = next;
+	}
 }
 
 std::shared_ptr<JobHandle> JobHandle::createComplete() {
