@@ -20,7 +20,11 @@ struct ICallable {
 template <typename F>
 struct CallableWrapper final : ICallable {
 	F fn;
-	explicit CallableWrapper(F&& f) : fn(std::move(f)) {}
+
+	template <typename G>
+	requires std::constructible_from<F, G>
+	explicit CallableWrapper(G&& g) : fn(std::forward<G>(g)) {}
+
 	void invoke() override { fn(); }
 };
 
