@@ -132,37 +132,19 @@ void JobSystem::enqueueReady(Job&& job) {
 		++activeJobs;
 		++pendingWork;
 
-		int localIdx = getWorkerIndex();
-		size_t idx = (localIdx >= 0)
+		const int localIdx = getWorkerIndex();
+		const size_t idx = (localIdx >= 0)
 			? static_cast<size_t>(localIdx)
 			: nextWorker.fetch_add(1, std::memory_order::relaxed) % queues.size();
 
-		if (!queues[idx]->push(std::make_unique<Job>(std::move(job)))) {
-			--activeJobs;
-			--pendingWork;
+		queues[idx]->push(std::make_unique<Job>(std::move(job)));
 
-			BT_ERROR("JobSystem: worker queue {} full, Job dropped", idx);
-			return;
-		}
-
+		{ std::lock_guard<std::mutex> lock(wakeMutex); }
 		wakeCondition.notify_one();
 	}
 }
 
 bool JobSystem::executeOne(bool mainThreadOnly) {
-	auto runJob = [this](Job& job) {
-		job.invoke();
-
-		if (const auto& h = job.getCompletionHandle()) {
-			h->signal([this](std::function<void()> fn, bool isMt) {
-				enqueueReady(Job(std::move(fn), nullptr, nullptr,
-					isMt ? ThreadAffinity::MainThread : ThreadAffinity::Any));
-			});
-		}
-
-		--activeJobs;
-	};
-
 	if (mainThreadOnly || getWorkerIndex() == -1) {
 		MainThreadNode* tail = mainTail.load(std::memory_order::acquire);
 		MainThreadNode* next = tail->next.load(std::memory_order::acquire);
@@ -251,6 +233,19 @@ int JobSystem::getWorkerIndex() {
 
 void JobSystem::setWorkerIndex(int idx) {
 	workerIndex = idx;
+}
+
+void JobSystem::runJob(Job& job) {
+	job.invoke();
+
+	if (const auto& h = job.getCompletionHandle()) {
+		h->signal([this](std::function<void()> fn, bool isMt) {
+			enqueueReady(Job(std::move(fn), nullptr, nullptr,
+				isMt ? ThreadAffinity::MainThread : ThreadAffinity::Any));
+		});
+	}
+
+	--activeJobs;
 }
 
 } // namespace Blackthorn::Jobs

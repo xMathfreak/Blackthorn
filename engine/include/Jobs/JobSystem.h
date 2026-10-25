@@ -92,6 +92,7 @@ private:
 	void enqueueReady(Job&& fn);
 	bool executeOne(bool mainThreadOnly = false);
 	void workerLoop(size_t workerIndex);
+	void runJob(Job& job);
 
 	std::vector<std::unique_ptr<JobQueue>> queues;
 	std::vector<std::thread> workers;
