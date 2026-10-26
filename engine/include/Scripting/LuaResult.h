@@ -26,7 +26,9 @@ public:
 
 	[[nodiscard]] bool ok() const noexcept { return storage_.index() == 0; }
 	[[nodiscard]] T& value() { return std::get<0>(storage_); }
+	[[nodiscard]] const T& value() const { return std::get<0>(storage_); }
 	[[nodiscard]] LuaError& error() { return std::get<1>(storage_); }
+	[[nodiscard]] const LuaError& error() const { return std::get<1>(storage_); }
 
 private:
 	std::variant<T, LuaError> storage_;
@@ -41,6 +43,7 @@ public:
 
 	[[nodiscard]] bool ok() const noexcept { return !failed_; }
 	[[nodiscard]] LuaError& error() { return error_; }
+	[[nodiscard]] const LuaError& error() const { return error_; }
 
 private:
 	LuaError error_{};
