@@ -6,6 +6,7 @@
 #include <cassert>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <shared_mutex>
 #include <span>
 #include <stdexcept>
@@ -135,6 +136,51 @@ public:
 
 		entityCount = 0;
 		bumpEpoch();
+	}
+
+	/**
+	 * @brief Returns the first live entity whose component C satisfies @p pred.
+	 *
+	 * Scans only the entities that have C. Order is unspecified, so th
+	 * predicate should match at most one entity for a unique key.
+	 */
+	template <typename C, typename Pred>
+	std::optional<Entity> findEntity(Pred&& pred) const {
+		const size_t id = Detail::componentID<C>();
+		if (id >= componentArrays.size() || !componentArrays[id])
+			return std::nullopt;
+
+		const auto* array = static_cast<const ComponentArray<C>*>(componentArrays[id].get());
+		for (const Entity entity : componentArrays[id]->entities()) {
+			const C* component = array->get(entity);
+			if (component && pred(*component))
+				return entity;
+		}
+
+		return std::nullopt;
+	}
+
+	/**
+	 * @brief Returns every entity whose component C satisfies @p pred.
+	 *
+	 * Scans only entities that have C. Result order is unspecified.
+	 */
+	template <typename C, typename Pred>
+	std::vector<Entity> collectEntities(Pred&& pred) const {
+		std::vector<Entity> result;
+
+		const size_t id = Detail::componentID<C>();
+		if (id >= componentArrays.size() || !componentArrays[id])
+			return result;
+
+		const auto* array = static_cast<const ComponentArray<C>*>(componentArrays[id].get());
+		for (const Entity entity : componentArrays[id]->entities()) {
+			const C* component = array->get(entity);
+			if (component && pred(*component))
+				result.push_back(entity);
+		}
+
+		return result;
 	}
 
 	std::span<const EntityData> getEntities() const { return entities; }
