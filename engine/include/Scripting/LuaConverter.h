@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <limits>
 #include <map>
+#include <optional>
 #include <string>
 #include <type_traits>
 #include <unordered_map>
@@ -338,6 +339,28 @@ struct LuaConverter<std::unordered_map<std::string, V>> {
 
 	static void push(lua_State* L, const std::unordered_map<std::string, V>& map) {
 		Detail::mapToLua(L, map);
+	}
+};
+
+template <typename V>
+struct LuaConverter<std::optional<V>> {
+	static LuaResult<std::optional<V>> fromLua(lua_State* L, int index) {
+		if (lua_isnil(L, index))
+			return std::optional<V>{};
+
+		LuaResult<V> inner = LuaConverter<V>::fromLua(L, index);
+		if (!inner.ok())
+			return inner.error();
+
+		return std::optional<V>(std::move(inner.value()));
+	}
+
+	static void push(lua_State* L, const std::optional<V>& value) {
+		if (value) {
+			LuaConverter<V>::push(L, *value);
+		} else {
+			lua_pushnil(L);
+		}
 	}
 };
 
