@@ -69,21 +69,27 @@ constexpr bool allReadable(std::index_sequence<I...>) {
  */
 template <typename Params, size_t... I>
 std::optional<LuaError> convertArgs(lua_State* L, Params& params, std::index_sequence<I...>) {
-	std::optional<LuaError> error;
+	if constexpr (sizeof...(I) == 0) {
+		return std::nullopt;
+	} else {
+		std::optional<LuaError> error;
 
-	([&] {
-		if (error)
-			return;
-		using T = std::tuple_element_t<I, Params>;
-		LuaResult<T> converted = LuaConverter<T>::fromLua(L, static_cast<int>(I) + 1);
-		if (!converted.ok()) {
-			error = converted.error();
-			return;
-		}
-		std::get<I>(params) = std::move(converted.value());
-	}(), ...);
+		([&] {
+			if (error)
+				return;
 
-	return error;
+			using T = std::tuple_element_t<I, Params>;
+			LuaResult<T> converted = LuaConverter<T>::fromLua(L, static_cast<int>(I) + 1);
+
+			if (!converted.ok()) {
+				error = converted.error();
+				return;
+			}
+			std::get<I>(params) = std::move(converted.value());
+		}(), ...);
+
+		return error;
+	}
 }
 
 /**
@@ -190,9 +196,9 @@ void registerFunction(lua_State* L, const char* name) {
 		std::is_function_v<std::remove_pointer_t<decltype(Fn)>>,
 		"registerFunction requires a free function pointer");
 
-	lua_pushstring(L, name);                              // upvalue: name for errors
+	lua_pushstring(L, name);                            // upvalue: name for errors
 	lua_pushcclosure(L, &Detail::dispatch<Fn>, 1);
-	lua_setfield(L, -2, name);                            // table[name] = closure
+	lua_setfield(L, -2, name);                    // table[name] = closure
 }
 
 } // namespace Blackthorn::Scripting
