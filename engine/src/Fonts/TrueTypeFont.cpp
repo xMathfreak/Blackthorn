@@ -4,6 +4,7 @@
 
 #include "Fonts/FontConfig.h"
 #include "Debug/Logger.h"
+#include "Resources/Resource.h"
 
 namespace Blackthorn::Fonts {
 
@@ -34,8 +35,15 @@ TrueTypeFont::~TrueTypeFont() {
 
 void TrueTypeFont::initializeShader() {
 	if (!shader) {
-		shader = std::make_shared<Graphics::Shader>("assets/shaders/font_ttf.vert", "assets/shaders/font_ttf.frag");
+		shader = std::make_shared<Graphics::Shader>();
 
+		auto vertex = Resources::find("../assets/shaders/font_ttf.vert");
+		auto frag = Resources::find("../assets/shaders/font_ttf.frag");
+
+		shader->compileFromSource(
+			{reinterpret_cast<const char*>(vertex->data), vertex->size},
+			{reinterpret_cast<const char*>(frag->data), frag->size}
+		);
 		BT_DEBUG("TrueTypeFont: Shader initialized");
 	}
 }

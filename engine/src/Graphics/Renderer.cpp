@@ -6,6 +6,7 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #include "Debug/Logger.h"
+#include "Resources/Resource.h"
 
 namespace Blackthorn::Graphics {
 
@@ -95,7 +96,15 @@ void Renderer::initQuadBuffers() {
 }
 
 void Renderer::initShader() {
-	shader = std::make_unique<Shader>("assets/shaders/default.vert", "assets/shaders/default.frag");
+	shader = std::make_unique<Shader>();
+
+	auto vertex = Resources::find("../assets/shaders/default.vert");
+	auto frag = Resources::find("../assets/shaders/default.frag");
+
+	shader->compileFromSource(
+		{reinterpret_cast<const char*>(vertex->data), vertex->size},
+		{reinterpret_cast<const char*>(frag->data), frag->size}
+	);
 	shader->bind();
 
 	for (U32 i = 0; i < MAX_TEXTURE_SLOTS; ++i) {
@@ -112,11 +121,14 @@ void Renderer::initScreenPass() {
 void Renderer::initWhiteTexture() {
 	whiteTexture = std::make_unique<Texture>(Texture::createDefault());
 
-	screenShader = std::make_unique<Shader>(
-		"assets/shaders/screen.vert",
-		"assets/shaders/screen.frag"
-	);
+	auto vertex = Resources::find("../assets/shaders/screen.vert");
+	auto frag = Resources::find("../assets/shaders/screen.frag");
 
+	screenShader = std::make_unique<Shader>();
+	screenShader->compileFromSource(
+		{reinterpret_cast<const char*>(vertex->data), vertex->size},
+		{reinterpret_cast<const char*>(frag->data), frag->size}
+	);
 	screenShader->bind();
 	screenShader->setInt("u_ScreenTexture", 0);
 

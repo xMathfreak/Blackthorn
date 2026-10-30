@@ -3,6 +3,7 @@
 #include <algorithm>
 
 #include "Debug/Logger.h"
+#include "Resources/Resource.h"
 
 namespace Blackthorn::Particles {
 
@@ -69,8 +70,15 @@ bool ParticleRenderer::intersects(const SDL_FRect& a, const SDL_FRect& b) {
 
 void ParticleRenderer::initShader() {
 	if (!shader) {
-		shader = std::make_shared<Graphics::Shader>("assets/shaders/particle.vert", "assets/shaders/particle.frag");
+		shader = std::make_shared<Graphics::Shader>();
 
+		auto vertex = Resources::find("../assets/shaders/particle.vert");
+		auto frag = Resources::find("../assets/shaders/particle.frag");
+
+		shader->compileFromSource(
+			{reinterpret_cast<const char*>(vertex->data), vertex->size},
+			{reinterpret_cast<const char*>(frag->data), frag->size}
+		);
 		BT_DEBUG("ParticleRenderer: Shader initialized");
 	}
 }

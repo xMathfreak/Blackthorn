@@ -10,6 +10,7 @@
 
 #include "Debug/Logger.h"
 #include "Fonts/FontConfig.h"
+#include "Resources/Resource.h"
 
 namespace {
 
@@ -547,7 +548,15 @@ void BitmapFont::drawCached(std::string_view text, const glm::vec2& position, co
 
 void BitmapFont::initializeShader() {
 	if (!shader) {
-		shader = std::make_shared<Graphics::Shader>("assets/shaders/font_bitmap.vert", "assets/shaders/font_bitmap.frag");
+		shader = std::make_shared<Graphics::Shader>();
+
+		auto vertex = Resources::find("../assets/shaders/font_bitmap.vert");
+		auto frag = Resources::find("../assets/shaders/font_bitmap.frag");
+
+		shader->compileFromSource(
+			{reinterpret_cast<const char*>(vertex->data), vertex->size},
+			{reinterpret_cast<const char*>(frag->data), frag->size}
+		);
 
 		BT_DEBUG("BitmapFont: Shader initialized");
 	}

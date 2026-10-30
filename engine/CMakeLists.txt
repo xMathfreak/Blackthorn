@@ -241,3 +241,48 @@ target_set_metadata(BlackthornCore
 	IDENTIFIER "com.blackthorn.engine.core"
 )
 target_add_platform_resources(BlackthornCore)
+
+# Resources
+include(${CMAKE_SOURCE_DIR}/cmake/EngineResources.cmake)
+
+embed_resource(BlackthornEngine
+	"${CMAKE_SOURCE_DIR}/assets/shaders/default.vert"
+)
+
+embed_resource(BlackthornEngine
+	"${CMAKE_SOURCE_DIR}/assets/shaders/default.frag"
+)
+
+embed_resource(BlackthornEngine
+	"${CMAKE_SOURCE_DIR}/assets/shaders/font_bitmap.vert"
+)
+
+embed_resource(BlackthornEngine
+	"${CMAKE_SOURCE_DIR}/assets/shaders/font_bitmap.frag"
+)
+
+embed_resource(BlackthornEngine
+	"${CMAKE_SOURCE_DIR}/assets/shaders/font_ttf.vert"
+)
+
+embed_resource(BlackthornEngine
+	"${CMAKE_SOURCE_DIR}/assets/shaders/font_ttf.frag"
+)
+
+embed_resource(BlackthornEngine
+	"${CMAKE_SOURCE_DIR}/assets/shaders/particle.vert"
+)
+
+embed_resource(BlackthornEngine
+	"${CMAKE_SOURCE_DIR}/assets/shaders/particle.frag"
+)
+
+embed_resource(BlackthornEngine
+	"${CMAKE_SOURCE_DIR}/assets/shaders/screen.vert"
+)
+
+embed_resource(BlackthornEngine
+	"${CMAKE_SOURCE_DIR}/assets/shaders/screen.frag"
+)
+
+generate_resource_registry(BlackthornEngine)
