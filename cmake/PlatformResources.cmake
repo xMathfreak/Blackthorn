@@ -35,13 +35,6 @@
 	  target_add_platform_resources(App)
 ]]
 
-# Directory containing the .in templates (windows/, macos/, linux/, and the
-# shared C++ header template). Set once here so callers never need to know
-# where the templates live.
-set(BLACKTHORN_RESOURCES_DIR "${CMAKE_CURRENT_LIST_DIR}/../resources" CACHE INTERNAL
-	"Directory containing platform resource templates"
-)
-
 # Helper: fetch a BT_META_* target property into a local variable, treating
 # an unset property (CMake's "<...>-NOTFOUND") the same as an empty string,
 # so downstream configure_file() calls never emit the literal word NOTFOUND.

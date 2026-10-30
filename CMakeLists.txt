@@ -35,6 +35,11 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
+# Directory containing .in templates
+set(BLACKTHORN_RESOURCES_DIR "${CMAKE_SOURCE_DIR}/resources" CACHE INTERNAL
+	"Directory containing platform resource templates"
+)
+
 # Options
 option(BLACKTHORN_BUILD_APP "Build sample application" ON)
 option(BLACKTHORN_BUILD_TOOLS "Build tools" ON)
@@ -50,6 +55,10 @@ find_package(SDL3_ttf REQUIRED)
 # Subdirectories
 add_subdirectory(third_party)
 add_subdirectory(shared)
+
+# Resource generator is required by engine
+add_subdirectory(tools/btgen)
+
 add_subdirectory(engine)
 
 if (BLACKTHORN_ENABLE_TESTING)
