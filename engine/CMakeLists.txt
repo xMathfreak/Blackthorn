@@ -226,6 +226,35 @@ if(WIN32)
 				${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
 		)
 	endforeach()
+
+	set(MINGW_RUNTIME_DLLS
+		libstdc++-6.dll
+		libgcc_s_seh-1.dll
+		libwinpthread-1.dll
+	)
+
+	if (MINGW)
+		get_filename_component(
+			MINGW_BIN_DIR
+			${CMAKE_CXX_COMPILER}
+			DIRECTORY
+		)
+
+		foreach(DLL IN LISTS MINGW_RUNTIME_DLLS)
+			set (DLL_PATH "${MINGW_BIN_DIR}/${DLL}")
+
+			if (EXISTS ${DLL_PATH})
+				add_custom_command(
+					TARGET BlackthornEngine POST_BUILD
+					COMMAND ${CMAKE_COMMAND} -E copy_if_different
+					${DLL_PATH}
+					${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+				)
+			else()
+				message(WARNING "MinGW runtime DLL not found: ${DLL_PATH}")
+			endif()
+		endforeach()
+	endif()
 endif()
 
 target_set_metadata(BlackthornEngine
