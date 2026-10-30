@@ -1,0 +1,40 @@
+#include <algorithm>
+#include <cstddef>
+#include <cstring>
+#include "Resources/Resource.h"
+
+namespace Blackthorn::Resources {
+
+@DECLS@
+static const Resource resources[] = {
+@TABLE@
+};
+
+static constexpr std::size_t resourceCount = @COUNT@;
+
+const Resource* find(const char* name) noexcept {
+	if (!name || resourceCount == 0)
+		return nullptr;
+
+	const Resource* first = resources;
+	const Resource* last = resources + resourceCount;
+
+	const Resource* it = std::lower_bound(first, last, name,
+		[](const Resource& resource, const char* key) noexcept {
+			return std::strcmp(resource.name, key) < 0;
+		});
+
+	return it != last && std::strcmp(it->name, name) == 0
+		? it
+		: nullptr;
+}
+
+std::size_t count() noexcept {
+	return resourceCount;
+}
+
+const Resource* get(std::size_t index) noexcept {
+	return index < resourceCount ? &resources[index] : nullptr;
+}
+
+} // namespace Blackthorn::Resources
