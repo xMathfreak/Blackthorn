@@ -83,3 +83,9 @@ set(ALSOFT_ENABLE_MODULES OFF CACHE BOOL "" FORCE)
 
 add_subdirectory(openal-soft)
 suppress_third_party_warnings(OpenAL)
+
+# Lua
+set(LUA_SOURCE_DIR
+	"${CMAKE_CURRENT_SOURCE_DIR}/lua"
+)
+include("${CMAKE_SOURCE_DIR}/cmake/lua.cmake")

@@ -47,12 +47,6 @@ find_package(SDL3 REQUIRED)
 find_package(SDL3_image REQUIRED)
 find_package(SDL3_ttf REQUIRED)
 
-# Lua dependency
-set(LUA_SOURCE_DIR
-    "${CMAKE_CURRENT_SOURCE_DIR}/third_party/lua"
-)
-include(cmake/lua.cmake)
-
 # Subdirectories
 add_subdirectory(third_party)
 add_subdirectory(shared)
