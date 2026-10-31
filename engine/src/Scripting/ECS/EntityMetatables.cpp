@@ -7,6 +7,7 @@
 #include <lauxlib.h>
 
 #include "ECS/Detail.h"
+#include "Scripting/LuaMetamethodHelpers.h"
 #include "Scripting/LuaResult.h"
 #include "Scripting/ECS/EntityApi.h"
 #include "Scripting/ECS/EntityHandle.h"
@@ -22,45 +23,12 @@ struct ComponentUserdata {
 	const ComponentRecord* record;
 };
 
-template <typename Fn>
-int runMetamethod(lua_State* L, Fn&& body) {
-	LuaResult<int> result = [&]() -> LuaResult<int> {
-		try {
-			return body();
-		} catch (const std::exception& e) {
-			return LuaError{e.what(), 0};
-		}
-	}();
-
-	if (result.ok())
-		return result.value();
-
-	const LuaError& error = result.error();
-	lua_pushlstring(L, error.message.data(), error.message.size());
-	return lua_error(L);
-}
-
 const EntityUserdata* entityArg(lua_State* L, int index) {
 	return static_cast<const EntityUserdata*>(luaL_testudata(L, index, kEntityMetatable));
 }
 
 const ComponentUserdata* componentArg(lua_State* L, int index) {
 	return static_cast<const ComponentUserdata*>(luaL_testudata(L, index, kComponentMetatable));
-}
-
-/// A string argument. The view points into the Lua string, which stays valid while it is on the stack.
-LuaResult<std::string_view> stringArg(lua_State* L, int index) {
-	if (lua_type(L, index) != LUA_TSTRING)
-		return LuaError{ "name must be a string", index };
-
-	size_t length = 0;
-	const char* text = lua_tolstring(L, index, &length);
-	return std::string_view(text, length);
-}
-
-/// Index of the first real argument: 2 for a colon call (self at 1), 1 for a dot call.
-int argsOffset(lua_State* L) {
-	return luaL_testudata(L, 1, kEntityMetatable) ? 2 : 1;
 }
 
 /// Applies a table of initial values through the component's property setters.
@@ -173,7 +141,7 @@ int methodAddComponent(lua_State* L) {
 		if (!self.ok())
 			return self.error();
 
-		const int first = argsOffset(L);
+		const int first = argsOffset(L, kEntityMetatable);
 		return addComponentWithValues(L, self.value(), first, first + 1);
 	});
 }
@@ -184,7 +152,7 @@ int methodRemoveComponent(lua_State* L) {
 		if (!self.ok())
 			return self.error();
 
-		return removeComponentByName(L, self.value(), argsOffset(L));
+		return removeComponentByName(L, self.value(), argsOffset(L, kEntityMetatable));
 	});
 }
 
@@ -194,15 +162,8 @@ int methodHasComponent(lua_State* L) {
 		if (!self.ok())
 			return self.error();
 
-		return hasComponentByName(L, self.value(), argsOffset(L));
+		return hasComponentByName(L, self.value(), argsOffset(L, kEntityMetatable));
 	});
-}
-
-/// Pushes a method bound to the entity at index 1, and returns 1.
-int pushMethod(lua_State* L, lua_CFunction fn) {
-	lua_pushvalue(L, 1);
-	lua_pushcclosure(L, fn, 1);
-	return 1;
 }
 
 /// Shared body for tag methods: resolves the entity and the tag name, then runs @p op.
@@ -213,7 +174,7 @@ int tagMethod(lua_State* L, Op op) {
 		if (!self.ok())
 			return self.error();
 
-		LuaResult<std::string_view> tag = stringArg(L, argsOffset(L));
+		LuaResult<std::string_view> tag = stringArg(L, argsOffset(L, kEntityMetatable));
 		if (!tag.ok())
 			return tag.error();
 
