@@ -129,12 +129,12 @@ public:
 
 		auto font = std::make_unique<TrueTypeFont>();
 		if (!font->loadFromMemory(raw.fontBytes.data(), raw.fontBytes.size(), raw.pointSize)) {
-			BT_ERROR("AsyncTrueTypeFontLoader: loadFromMemory failed for '{}'", raw.assetID);
+			BT_ERROR("AsyncTrueTypeFontLoader: loadFromMemory failed for '{}'", raw.displayName);
 			return;
 		}
 
-		manager.add<TrueTypeFont>(raw.assetID, std::move(font));
-		BT_DEBUG("AsyncTrueTypeFontLoader: '{}' ready at {}pt", raw.assetID, raw.pointSize);
+		manager.add<TrueTypeFont>({raw.assetName}, std::move(font));
+		BT_DEBUG("AsyncTrueTypeFontLoader: '{}' ready at {}pt", raw.displayName, raw.pointSize);
 	}
 };
 

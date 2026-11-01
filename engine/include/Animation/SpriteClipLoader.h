@@ -229,6 +229,7 @@ public:
 		auto raw = std::make_unique<RawSpriteClipData>();
 		raw->bytes = std::move(bytes->bytes);
 		raw->valid = true;
+		raw->displayName = *id;
 		return raw;
 	}
 
@@ -239,12 +240,12 @@ public:
 
 		auto clip = SpriteClipParser::parse(in);
 		if (!clip) {
-			BT_ERROR("AsyncSpriteClipLoader: '{}' produced no frames", raw.assetID);
+			BT_ERROR("AsyncSpriteClipLoader: '{}' produced no frames", raw.displayName);
 			return;
 		}
 
-		manager.add<SpriteClip>(raw.assetID, std::move(clip));
-		BT_DEBUG("AsyncSpriteClipLoader: '{}' ready", raw.assetID);
+		manager.add<SpriteClip>({raw.assetName}, std::move(clip));
+		BT_DEBUG("AsyncSpriteClipLoader: '{}' ready", raw.displayName);
 	}
 };
 

@@ -196,15 +196,15 @@ public:
 
 		auto texture = std::make_unique<Texture>();
 		if (!texture->loadFromMemory(raw.width, raw.height, raw.channels, raw.pixels.data(), raw.params)) {
-			BT_ERROR("AsyncTextureLoader: GPU upload failed for '{}' (src: '{}')",
-				raw.assetID, raw.srcPath);
+			BT_ERROR("AsyncTextureLoader: GPU upload failed for '{}'",
+				raw.srcPath);
 			return;
 		}
 
-		manager.add<Texture>(raw.assetID, std::move(texture));
+		manager.add<Texture>({raw.assetName}, std::move(texture));
 
-		BT_DEBUG("AsyncTextureLoader: '{}' ready: {}x{} RGBA (src: '{}')",
-			raw.assetID, raw.width, raw.height, raw.srcPath);
+		BT_DEBUG("AsyncTextureLoader: '{}' ready: {}x{} RGBA",
+			raw.srcPath, raw.width, raw.height);
 	}
 };
 

@@ -186,6 +186,7 @@ public:
 		raw->bytes = std::move(bytes->bytes);
 		raw->priority = request->priority;
 		raw->compiled = request->compiled;
+		raw->displayName = request->id;
 		raw->valid = true;
 		return raw;
 	}
@@ -193,15 +194,15 @@ public:
 	void upload(Assets::IRawAssetData& rawBase, Assets::AssetManager& manager) override {
 		auto& raw = static_cast<RawLocalizationSourceData&>(rawBase);
 
-		auto result = Detail::commitLocale(locMan, raw.assetID, raw.bytes, raw.priority, raw.compiled);
+		auto result = Detail::commitLocale(locMan, raw.displayName, raw.bytes, raw.priority, raw.compiled);
 		if (!result.handle) {
 			BT_ERROR("AsyncLocalizationSourceLoader: '{}' failed to load (status {})",
-				raw.assetID, static_cast<int>(result.status));
+				raw.displayName, static_cast<int>(result.status));
 			return;
 		}
 
-		manager.add<LocalizationSource>(raw.assetID, std::make_unique<LocalizationSource>(*result.handle, locMan));
-		BT_DEBUG("AsyncLocalizationSourceLoader: '{}' ready", raw.assetID);
+		manager.add<LocalizationSource>({raw.assetName}, std::make_unique<LocalizationSource>(*result.handle, locMan));
+		BT_DEBUG("AsyncLocalizationSourceLoader: '{}' ready", raw.displayName);
 	}
 
 private:

@@ -174,7 +174,7 @@ public:
 			std::move(raw.compressedBytes)
 		);
 
-		manager.add<AudioClip>(raw.assetID, std::move(clip));
+		manager.add<AudioClip>({raw.assetName}, std::move(clip));
 	}
 };
 

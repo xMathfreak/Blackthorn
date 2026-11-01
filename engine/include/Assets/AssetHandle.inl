@@ -10,15 +10,12 @@ AssetStatus AssetHandle<AssetType>::status() const {
 	if (!manager)
 		return AssetStatus::Missing;
 
-	return manager->statusOf<AssetType>(id);
+	return manager->status(ref);
 }
 
 template <typename AssetType>
 AssetType* AssetHandle<AssetType>::get() const {
-	if (!manager)
-		return nullptr;
-
-	return manager->peek<AssetType>(id);
+	return manager ? manager->resolve(ref) : nullptr;
 }
 
 } // namespace Blackthorn::Assets

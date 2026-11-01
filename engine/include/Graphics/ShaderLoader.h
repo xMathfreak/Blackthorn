@@ -149,12 +149,12 @@ public:
 
 		auto shader = std::make_unique<Shader>();
 		if (!shader->compileFromSource(raw.vertSource, raw.fragSource)) {
-			BT_ERROR("AsyncShaderLoader: shader compilation failed for '{}'", raw.assetID);
+			BT_ERROR("AsyncShaderLoader: shader compilation failed for '{}'", raw.displayName);
 			return;
 		}
 
-		manager.add<Shader>(raw.assetID, std::move(shader));
-		BT_DEBUG("AsyncShaderLoader: '{}' compiled and linked", raw.assetID);
+		manager.add<Shader>({raw.assetName}, std::move(shader));
+		BT_DEBUG("AsyncShaderLoader: '{}' compiled and linked", raw.displayName);
 	}
 };
 

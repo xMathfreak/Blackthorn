@@ -188,12 +188,12 @@ public:
 
 		auto font = Detail::buildBitmapFont(raw);
 		if (!font) {
-			BT_ERROR("AsyncBitmapFontLoader: failed to parse '{}'", raw.assetID);
+			BT_ERROR("AsyncBitmapFontLoader: failed to parse '{}'", raw.displayName);
 			return;
 		}
 
-		manager.add<BitmapFont>(raw.assetID, std::move(font));
-		BT_DEBUG("AsyncBitmapFontLoader: '{}' ready", raw.assetID);
+		manager.add<BitmapFont>({raw.assetName}, std::move(font));
+		BT_DEBUG("AsyncBitmapFontLoader: '{}' ready", raw.displayName);
 	}
 };
 

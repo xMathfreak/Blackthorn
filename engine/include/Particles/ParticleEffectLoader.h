@@ -213,7 +213,7 @@ private:
 			return nullptr;
 		}
 
-		return handle.get();
+		return manager.resolve<Graphics::Texture>(handle);
 	}
 
 	static const Animation::SpriteClip* resolveClip(
@@ -233,7 +233,7 @@ private:
 			return nullptr;
 		}
 
-		return handle.get();
+		return manager.resolve<Animation::SpriteClip>(handle);
 	}
 };
 
@@ -314,6 +314,7 @@ public:
 		auto raw = std::make_unique<RawParticleEffectData>();
 		raw->bytes = std::move(bytes->bytes);
 		raw->baseID = *id;
+		raw->displayName = *id;
 		raw->valid = true;
 		return raw;
 	}
@@ -337,8 +338,8 @@ public:
 			return;
 		}
 
-		manager.add<ParticleEffect>(raw.assetID, std::move(effect));
-		BT_DEBUG("AsyncParticleEffectLoader: '{}' ready", raw.assetID);
+		manager.add<ParticleEffect>({raw.assetName}, std::move(effect));
+		BT_DEBUG("AsyncParticleEffectLoader: '{}' ready", raw.displayName);
 	}
 
 };

@@ -4,21 +4,26 @@
 #include <filesystem>
 #include <functional>
 #include <memory>
-#include <mutex>
 #include <optional>
+#include <stdexcept>
 #include <string>
+#include <string_view>
 #include <typeindex>
 #include <unordered_map>
 
-#include "Assets/AssetResolver.h"
 #include "AssetNormalize.h"
-#include "Core/Export.h"
 #include "Assets/AssetHandle.h"
-#include "Assets/AssetStorage.h"
+#include "Assets/AssetRef.h"
+#include "Assets/AssetResolver.h"
+#include "Assets/AssetStatus.h"
 #include "Assets/IAssetLoader.h"
-#include "Assets/IAssetStorage.h"
+#include "Assets/IStore.h"
 #include "Assets/LoadParams.h"
+#include "Assets/NameTable.h"
 #include "Assets/RawAssetData.h"
+#include "Assets/Store.h"
+#include "Assets/TypeKey.h"
+#include "Core/Export.h"
 #include "Debug/Logger.h"
 #include "Jobs/JobSystem.h"
 
@@ -27,8 +32,8 @@ namespace Blackthorn::Assets {
 /**
  * @brief Default asset ID for a path-only load: the normalized path.
  *
- * Paths that fail normalization fall back to their generic string so the load
- * still reports a useful error.
+ * Paths that fail normalization fall back to their generic string so the
+ * load still reports a useful error.
  */
 inline std::string defaultAssetID(const std::filesystem::path& p) {
 	const std::string generic = p.generic_string();
@@ -43,32 +48,19 @@ inline std::string defaultAssetID(const std::filesystem::path& p) {
  * @class AssetManager
  * @brief Unified synchronous and asynchronous asset manager.
  *
- * Every entry point returns an AssetHandle, including get(). A handle reports
- * its asset's status, and get() on a handle returns a pointer only while the
- * asset is Ready.
+ * Asset identity is an AssetRef<AssetType>: a POD interned name. Refs are cheap to
+ * copy, hold no pointers, and resolve to nullptr when the asset is unloaded.
+ * AssetHandle<AssetType> is a C++ convenience wrapper that pairs a ref with this manager.
  *
- * @section paths Paths and IDs
- * Asset paths are relative to the project root, which is also the runtime
- * working directory. The same string names the asset in loose-file and pack
- * mode:
- * @code
- * auto tex = manager.load<Texture>("assets/textures/player.png");
- * @endcode
- * Path-only loads use the normalized path as the ID.
+ * @section ids Identity
+ * get() interns the ID and returns its ref. It never fails and never loads.
+ * Unknown IDs resolve to Missing until loaded. Names are never freed.
  *
  * @section statuses Status and failures
- * A failed load is remembered as Failed until the same ID is loaded or reloaded
- * again. A load that succeeds clears the failure. Unload clears it too.
- *
- * @section registration Registration
- * Loaders get the resolver injected at registration, so constructors take no
- * resolver argument.
- * @code
- * manager.registerLoader<Texture>(
- *     std::make_unique<TextureLoader>(),
- *     std::make_unique<AsyncTextureLoader>()
- * );
- * @endcode
+ * A failed load is remembered as Failed until the same ref is loaded or
+ * reloaded again. A successful load clears the failure. Unload clears both
+ * the asset and the recorded params, so reload() only works on assets that
+ * are currently loaded or failed.
  *
  * @section flushing Flushing
  * Call flushPendingUploads() once per frame. From a loading screen or scene
@@ -81,346 +73,305 @@ inline std::string defaultAssetID(const std::filesystem::path& p) {
 class BLACKTHORN_API AssetManager {
 public:
 	/**
-	 * @brief Constructs the AssetManager.
-	 *
 	 * @param js The engine's JobSystem. Must outlive this AssetManager.
 	 */
 	explicit AssetManager(Jobs::JobSystem& js);
+
+	/// Blocks until outstanding async loads finish, then releases all stores.
 	~AssetManager();
 
 	AssetManager(const AssetManager&) = delete;
 	AssetManager& operator=(const AssetManager&) = delete;
 
+	// ---- Identity -----------------------------------------------------------
+
+	/// Interns @p id and returns its ref. Does not load.
+	template <typename AssetType>
+	AssetRef<AssetType> get(std::string_view id) {
+		return AssetRef<AssetType>{ names.intern(id) };
+	}
+
+	/// Missing for null refs and for assets that are not loaded.
+	template <typename AssetType>
+	AssetStatus status(AssetRef<AssetType> ref) const {
+		const auto* store = findStore<AssetType>();
+		return store ? store->statusOf(ref.name) : AssetStatus::Missing;
+	}
+
+	/// The interned name for @p name, or empty for a null ref.
+	/// The view stays valid for the manager's lifetime.
+	std::string_view nameOf(U32 name) const {
+		return name == U32_MAX ? std::string_view{} : names.nameOf(name);
+	}
+
+	// ---- Access -------------------------------------------------------------
+
+	/// Non-null only when Ready. Valid until the asset is unloaded or reloaded.
+	template <typename AssetType>
+	AssetType* resolve(AssetRef<AssetType> ref) {
+		auto* store = findStore<AssetType>();
+		return store ? store->get(ref.name) : nullptr;
+	}
+
+	template <typename AssetType>
+	const AssetType* resolve(AssetRef<AssetType> ref) const {
+		const auto* store = findStore<AssetType>();
+		return store ? store->get(ref.name) : nullptr;
+	}
+
+	template <typename AssetType>
+	bool has(AssetRef<AssetType> ref) const {
+		return resolve(ref) != nullptr;
+	}
+
+	template <typename AssetType>
+	AssetHandle<AssetType> getHandle(AssetRef<AssetType> ref) {
+		return AssetHandle<AssetType>(ref, this);
+	}
+
+	template <typename AssetType>
+	AssetHandle<AssetType> getHandle(std::string_view name) {
+		return AssetHandle<AssetType>(get<AssetType>(name), this);
+	}
+
+	// ---- Direct insertion and removal ----------------------------------------
+
+	/// Stores an asset directly, marking it Ready. Cancels any pending load for the same ref.
+	template <typename AssetType>
+	void add(AssetRef<AssetType> ref, std::unique_ptr<AssetType> asset) {
+		requireNamed(ref, "add");
+
+		if (!asset)
+			throw std::invalid_argument("AssetManager: Cannot add null asset");
+
+		getStore<AssetType>().add(ref.name, std::move(asset));
+	}
+
+	void unload(std::string_view id) {
+		const auto name = names.find(id);
+
+		if (!name)
+			return;
+
+		for (auto& [key, store] : stores)
+			store->unload(*name);
+	}
+
+	/// Drops the asset and its params, and cancels any pending load for the ref.
+	template <typename AssetType>
+	void unload(AssetRef<AssetType> ref) {
+		if (auto* store = findStore<AssetType>())
+			store->unload(ref.name);
+	}
+
+	template <typename AssetType>
+	void unloadAll() {
+		if (auto* store = findStore<AssetType>())
+			store->clear();
+	}
+
+	void clear() {
+		for (auto& [key, store] : stores)
+			store->clear();
+	}
+
+	size_t getTotalMemoryUsage() const {
+		size_t total = 0;
+
+		for (const auto& [key, store] : stores)
+			total += store->getMemoryUsage();
+
+		return total;
+	}
+
+	// ---- Loading ------------------------------------------------------------
+
 	/**
-	 * @brief Registers a synchronous loader and optionally an async loader.
-	 *
-	 * @tparam AssetType The asset type both loaders produce.
+	 * @brief Synchronously loads an asset by path. The path is also the ID.
 	 */
 	template <typename AssetType>
-	void registerLoader(
-		std::unique_ptr<IAssetLoader<AssetType>> syncLoader,
-		std::unique_ptr<IAsyncAssetLoader<AssetType>> asyncLoader = nullptr
-	) {
-		const auto type = std::type_index(typeid(AssetType));
+	AssetRef<AssetType> load(std::filesystem::path path) {
+		std::string id = defaultAssetID(path);
+		return load(get<AssetType>(id), AssetLoadParams(std::move(path)));
+	}
 
-		if (syncLoader)
-			syncLoader->setResolver(&assetResolver);
-		if (asyncLoader)
-			asyncLoader->setResolver(&assetResolver);
+	template <typename AssetType>
+	AssetRef<AssetType> load(std::string_view id, const LoadParams& params) {
+		return load(get<AssetType>(id), params);
+	}
 
-		loaders[type] = std::make_unique<LoaderWrapper<AssetType>>(
-			std::move(syncLoader),
-			std::move(asyncLoader)
-		);
-
-		if (!storages.count(type))
-			storages.try_emplace(type, std::make_unique<AssetStorage<AssetType>>());
+	template <typename AssetType>
+	AssetRef<AssetType> load(std::string_view id, std::string_view path) {
+		return load(get<AssetType>(id), AssetLoadParams(std::move(path)));
 	}
 
 	/**
-	 * @brief Synchronous, blocking load.
+	 * @brief Synchronously loads @p ref. A no-op if the asset is already Ready.
 	 *
-	 * @return A handle that is Ready on success or Failed on failure.
+	 * A pending async load for the same ref is cancelled, because the sync
+	 * result bumps the slot generation.
 	 */
 	template <typename AssetType>
-	AssetHandle<AssetType> load(const std::string& id, const LoadParams& params) {
-		if (has<AssetType>(id))
-			return AssetHandle<AssetType>(id, this);
+	AssetRef<AssetType> load(AssetRef<AssetType> ref, const LoadParams& params) {
+		requireNamed(ref, "load");
 
-		const auto type = std::type_index(typeid(AssetType));
-		auto it = loaders.find(type);
-		if (it == loaders.end()) {
-			BT_WARN("AssetManager: no loader registered for '{}' (id '{}')",
-				typeid(AssetType).name(), id);
-			recordFailure(id, type);
-			return AssetHandle<AssetType>(id, this);
+		auto& store = getStore<AssetType>();
+
+		if (store.get(ref.name))
+			return ref;
+
+		// Record params before the attempt, so a failed load can be reloaded.
+		{
+			auto& slot = store.ensure(ref.name);
+			slot.params = params.clone();
+			slot.async = false;
 		}
 
-		auto* wrapper = static_cast<LoaderWrapper<AssetType>*>(it->second.get());
-		auto asset = wrapper->syncLoader ? wrapper->syncLoader->load(params) : nullptr;
+		if (!store.hasSyncLoader()) {
+			BT_DEBUG("AssetManager: missing sync loader for {}", typeid(AssetType).name());
+			store.ensure(ref.name).status = AssetStatus::Failed;
+			return ref;
+		}
+
+		auto asset = store.getSyncLoader()->load(params);
 
 		if (!asset) {
-			BT_ERROR("AssetManager: sync load failed for '{}'", id);
-			recordFailure(id, type);
-			return AssetHandle<AssetType>(id, this);
+			store.ensure(ref.name).status = AssetStatus::Failed;
+			return ref;
 		}
 
-		getStorage<AssetType>()->add(id, std::move(asset));
-		assetParams[id] = params.clone();
-		forgetFailure(id);
-
-		return AssetHandle<AssetType>(id, this);
+		store.add(ref.name, std::move(asset));
+		return ref;
 	}
 
-	/** @brief Synchronous load with an explicit ID. */
 	template <typename AssetType>
-	AssetHandle<AssetType> load(const std::string& id, std::filesystem::path path) {
-		return load<AssetType>(id, AssetLoadParams(std::move(path)));
-	}
-
-	/** @brief Synchronous load; the ID is the normalized path. */
-	template <typename AssetType>
-	AssetHandle<AssetType> load(std::filesystem::path path) {
+	AssetRef<AssetType> loadAsync(std::filesystem::path path) {
 		std::string id = defaultAssetID(path);
-		return load<AssetType>(id, AssetLoadParams(std::move(path)));
+		return loadAsync(get<AssetType>(id), AssetLoadParams(std::move(path)));
+	}
+
+	template <typename AssetType>
+	AssetRef<AssetType> loadAsync(std::string_view id, std::string_view path) {
+		return loadAsync(get<AssetType>(id), AssetLoadParams(std::move(path)));
+	}
+
+	template <typename AssetType>
+	AssetRef<AssetType> loadAsync(std::string_view id, const LoadParams& params) {
+		return loadAsync(get<AssetType>(id), params);
 	}
 
 	/**
-	 * @brief Asynchronous, non-blocking load.
+	 * @brief Starts an async load of @p ref.
 	 *
-	 * Submits a decode job on a worker, chained to an upload job on the main
-	 * thread. The upload runs during flushPendingUploads(). The returned handle
-	 * is Pending until then.
-	 *
-	 * If no async loader is registered, falls back to load().
+	 * A no-op if the asset is Ready or already Pending. Use reload() to refresh
+	 * a loaded asset. Without an async loader, this falls back to load().
 	 */
 	template <typename AssetType>
-	AssetHandle<AssetType> loadAsync(const std::string& id, const LoadParams& params) {
-		if (has<AssetType>(id))
-			return AssetHandle<AssetType>(id, this);
+	AssetRef<AssetType> loadAsync(AssetRef<AssetType> ref, const LoadParams& params) {
+		requireNamed(ref, "loadAsync");
 
-		const auto type = std::type_index(typeid(AssetType));
-		auto it = loaders.find(type);
-		if (it == loaders.end()) {
-			BT_WARN("AssetManager: no loader registered for '{}' (id '{}')",
-				typeid(AssetType).name(), id);
-			recordFailure(id, type);
-			return AssetHandle<AssetType>(id, this);
-		}
+		auto& store = getStore<AssetType>();
 
-		auto* wrapper = static_cast<LoaderWrapper<AssetType>*>(it->second.get());
+		const AssetStatus current = store.statusOf(ref.name);
+		if (current == AssetStatus::Ready || current == AssetStatus::Pending)
+			return ref;
 
-		if (!wrapper->asyncLoader) {
-			BT_DEBUG("AssetManager: no async loader for '{}', falling back to sync", id);
-			return load<AssetType>(id, params);
+		if (!store.hasAsyncLoader()) {
+			BT_DEBUG("AssetManager: missing async loader for {}, using synchronous loading", typeid(AssetType).name());
+			return load(ref, params);
 		}
 
 		{
-			std::unique_lock<std::mutex> lock(inFlightMutex);
-
-			// Already pending: the existing entry keeps its type, so a
-			// different type asking for the same ID sees Missing, not Pending.
-			if (inFlight.count(id))
-				return AssetHandle<AssetType>(id, this);
-
-			failed.erase(id);
-			inFlight.emplace(id, InFlightEntry{ Jobs::JobHandle::create(), type });
+			auto& slot = store.ensure(ref.name);
+			slot.params = params.clone();
+			slot.async = true;
 		}
 
+		const U64 generation = store.beginPending(ref.name);
 		++pendingTotal;
-		assetParams[id] = params.clone();
 
-		Jobs::JobHandlePtr decodeHandle = jobs.createHandle();
-		Jobs::JobHandlePtr uploadHandle;
+		auto* loader = store.getAsyncLoader();
+		auto paramsCopy = std::shared_ptr<LoadParams>(params.clone());
+		auto decodeHandle = jobs.createHandle();
+		const U32 name = ref.name;
 
-		{
-			std::unique_lock<std::mutex> lock(inFlightMutex);
-			uploadHandle = inFlight.at(id).job;
-		}
-
-		ILoaderWrapper* loaderWrapper = it->second.get();
-		auto paramsCopy = std::shared_ptr<LoadParams>(params.clone().release());
-
+		// Decode runs on a worker and stores its raw output on the handle.
 		jobs.submit(Jobs::Job(
-			[this, id, loaderWrapper, paramsCopy, decodeHandle]() {
-				auto raw = loaderWrapper->loadRaw(*paramsCopy);
+			[loader, paramsCopy, decodeHandle, name]() {
+				auto raw = loader->loadRaw(*paramsCopy);
 
-				if (!raw || !raw->valid) {
-					BT_ERROR("AssetManager: loadRaw failed for '{}'", id);
+				if (!raw || !raw->valid)
 					return;
-				}
 
-				raw->assetID = id;
+				raw->assetName = name;
 				decodeHandle->setOutput(raw.release());
 			},
 			decodeHandle
 		));
 
+		// Upload runs on the main thread after decode completes. A load that was
+		// unloaded or superseded in the meantime fails the generation check, and
+		// its raw data is discarded.
 		jobs.submit(Jobs::Job(
-			[this, id, type, loaderWrapper, uploadHandle, decodeHandle]() {
-				auto* raw = decodeHandle->getOutput<IRawAssetData>();
+			[this, loader, decodeHandle, name, generation]() {
+				std::unique_ptr<IRawAssetData> raw(
+					decodeHandle->getOutput<IRawAssetData>()
+				);
 
-				bool stored = false;
-				if (raw) {
-					stored = loaderWrapper->upload(*raw, *this);
-					delete raw;
-				}
+				if (auto* target = findStore<AssetType>(); target && target->isPending(name, generation)) {
+					if (raw)
+						loader->upload(*raw, *this);
 
-				{
-					std::unique_lock<std::mutex> lk(inFlightMutex);
-					if (!stored)
-						failed.insert_or_assign(id, type);
-
-					inFlight.erase(id);
+					if (auto* after = findStore<AssetType>())
+						after->markFailed(name, generation);
 				}
 
 				--pendingTotal;
-
-				uploadHandle->signal([this](std::function<void()> fn, bool isMt) {
-					jobs.submit(Jobs::Job(
-						std::move(fn),
-						nullptr, nullptr,
-						isMt ? Jobs::ThreadAffinity::MainThread : Jobs::ThreadAffinity::Any
-					));
-				});
 			},
 			nullptr,
 			decodeHandle,
 			Jobs::ThreadAffinity::MainThread
 		));
 
-		return AssetHandle<AssetType>(id, this);
-	}
-
-	/** @brief Asynchronous load with an explicit ID. */
-	template <typename AssetType>
-	AssetHandle<AssetType> loadAsync(const std::string& id, std::filesystem::path path) {
-		return loadAsync<AssetType>(id, AssetLoadParams(std::move(path)));
-	}
-
-	/** @brief Asynchronous load; the ID is the normalized path. */
-	template <typename AssetType>
-	AssetHandle<AssetType> loadAsync(std::filesystem::path path) {
-		std::string id = defaultAssetID(path);
-		return loadAsync<AssetType>(id, AssetLoadParams(std::move(path)));
+		return ref;
 	}
 
 	/**
-	 * @brief Returns a handle for @p id. Never fails; check status() or operator bool.
+	 * @brief Reloads an asset using the params and mode of its last load.
 	 *
-	 * Does not load anything. An ID that was never requested returns a Missing handle.
+	 * Returns false if there are no params to reload from (never loaded, or
+	 * unloaded). Returns true once the reload has started. Check status() for
+	 * the outcome: a sync reload is already finished, an async one is Pending.
 	 */
 	template <typename AssetType>
-	AssetHandle<AssetType> get(const std::string& id) {
-		return AssetHandle<AssetType>(id, this);
-	}
+	bool reload(AssetRef<AssetType> ref) {
+		auto* store = findStore<AssetType>();
 
-	/** @copydoc get */
-	template <typename AssetType>
-	AssetHandle<AssetType> get(const std::string& id) const {
-		// The handle never mutates the manager, and queries are const in practice.
-		return AssetHandle<AssetType>(id, const_cast<AssetManager*>(this));
-	}
-
-	/**
-	 * @brief Raw pointer to a stored asset, or nullptr if it isn't Ready.
-	 *
-	 * Used by AssetHandle::get(). Prefer get() and a handle for normal code.
-	 */
-	template <typename AssetType>
-	AssetType* peek(const std::string& id) {
-		auto* storage = getStorage<AssetType>();
-		return (storage && storage->has(id)) ? storage->get(id) : nullptr;
-	}
-
-	/**
-	 * @brief Status of @p id for asset type @p AssetType.
-	 *
-	 * Ready wins over Pending. A pending or failed entry of a different type
-	 * reports Missing.
-	 */
-	template <typename AssetType>
-	AssetStatus statusOf(const std::string& id) const {
-		if (has<AssetType>(id))
-			return AssetStatus::Ready;
-
-		const auto type = std::type_index(typeid(AssetType));
-
-		std::unique_lock<std::mutex> lock(inFlightMutex);
-
-		if (auto it = inFlight.find(id); it != inFlight.end())
-			return it->second.type == type ? AssetStatus::Pending : AssetStatus::Missing;
-
-		if (auto it = failed.find(id); it != failed.end() && it->second == type)
-			return AssetStatus::Failed;
-
-		return AssetStatus::Missing;
-	}
-
-	template <typename AssetType>
-	bool has(const std::string& id) const {
-		auto* storage = getStorage<AssetType>();
-		return storage && storage->has(id);
-	}
-
-	template <typename AssetType>
-	void add(const std::string& id, std::unique_ptr<AssetType> asset) {
-		getStorage<AssetType>()->add(id, std::move(asset));
-		forgetFailure(id);
-	}
-
-	template <typename AssetType>
-	void unload(const std::string& id) {
-		auto* storage = getStorage<AssetType>();
-		if (storage) {
-			storage->remove(id);
-			assetParams.erase(id);
-		}
-		forgetFailure(id);
-	}
-
-	template <typename AssetType>
-	void unloadAll() {
-		auto* storage = getStorage<AssetType>();
-		if (storage) {
-			for (const auto& id : storage->getAllIDs()) {
-				assetParams.erase(id);
-				forgetFailure(id);
-			}
-			storage->clear();
-		}
-	}
-
-	void clear() {
-		for (auto& [type, storage] : storages)
-			storage->clear();
-		assetParams.clear();
-
-		std::unique_lock<std::mutex> lock(inFlightMutex);
-		failed.clear();
-	}
-
-	/**
-	 * @brief Reloads an asset from its stored parameters.
-	 *
-	 * Also the way to retry a Failed asset whose parameters were recorded. Returns
-	 * false if no parameters are stored for @p id.
-	 */
-	template <typename AssetType>
-	bool reload(const std::string& id) {
-		auto it = assetParams.find(id);
-		if (it == assetParams.end())
+		if (!store)
 			return false;
 
-		auto paramsCopy = it->second->clone();
-		unload<AssetType>(id);
-		return static_cast<bool>(load<AssetType>(id, *paramsCopy));
+		const auto* slot = store->find(ref.name);
+
+		if (!slot || !slot->params)
+			return false;
+
+		const bool wasAsync = slot->async;
+		auto params = slot->params->clone();
+
+		unload(ref);
+
+		if (wasAsync)
+			loadAsync(ref, *params);
+		else
+			load(ref, *params);
+
+		return true;
 	}
 
-	template <typename AssetType>
-	size_t getCount() const {
-		auto* s = getStorage<AssetType>();
-		return s ? s->size() : 0;
-	}
-
-	size_t getTotalMemoryUsage() const {
-		size_t total = 0;
-		for (const auto& [type, storage] : storages)
-			total += storage->getMemoryUsage();
-		return total;
-	}
-
-	void unloadByID(const std::string& id) {
-		for (auto& [type, storage] : storages) {
-			if (storage->has(id))
-				storage->remove(id);
-		}
-		assetParams.erase(id);
-		forgetFailure(id);
-	}
+	// ---- Pumping ------------------------------------------------------------
 
 	/**
-	 * @brief Promotes completed decode jobs into GPU-resident assets.
+	 * @brief Promotes completed decode jobs into loaded assets.
 	 *
 	 * Call once per frame before beginScene().
 	 */
@@ -429,140 +380,114 @@ public:
 	/**
 	 * @brief Blocks until all outstanding async loads are complete.
 	 *
-	 * Only call from loading screens or scene transitions. This is the only
-	 * way to wait for loads to finish, because uploads run on the main thread.
+	 * Only call from loading screens or scene transitions.
 	 */
 	void flushAllPendingUploads();
 
-	/// Total outstanding loads (decode + upload jobs not yet complete).
+	/// Outstanding async loads (decode and upload jobs not yet complete).
 	size_t pendingCount() const;
 
 	/// Blocks until all outstanding async loads complete.
 	void shutdown();
 
-#ifdef BT_PACK_MODE
-	/**
-	 * @brief Mounts a .btp pack file onto the resolver stack.
-	 *
-	 * The last pack mounted wins any ID conflict, giving mod packs priority
-	 * over base game packs.
-	 *
-	 * @param path Path to the .btp file.
-	 * @return true if the pack mounted successfully.
-	 */
-	bool mountPack(const std::filesystem::path& path) {
-		return assetResolver.mount(path);
-	}
+	// ---- Loaders and resolver -----------------------------------------------
 
 	/**
-	 * @brief Unmounts a previously mounted pack file.
+	 * @brief Registers the loaders for asset type AssetType.
 	 *
-	 * Assets already loaded from this pack remain alive in AssetStorage.
+	 * Flushes outstanding async loads first. Replacing a loader while its jobs
+	 * are in flight would leave them calling a destroyed object.
 	 */
-	void unmountPack(const std::filesystem::path& path) {
-		assetResolver.unmount(path);
-	}
+	template <typename AssetType>
+	void registerLoader(
+		std::unique_ptr<IAssetLoader<AssetType>> sync,
+		std::unique_ptr<IAsyncAssetLoader<AssetType>> async = nullptr
+	) {
+		flushAllPendingUploads();
 
-	/**
-	 * @brief Returns the metadata of the pack mounted at @p path.
-	 *
-	 * @param path Path that was previously passed to mountPack().
-	 * @return The pack's PackMetadata, or std::nullopt if no pack is mounted there.
-	 */
-	std::optional<PackMetadata> getPackMetadata(const std::filesystem::path& path) const {
-		return assetResolver.getPackMetadata(path);
-	}
+		auto& store = getStore<AssetType>();
 
-#endif
+		if (sync)
+			sync->setResolver(&assetResolver);
+
+		if (async)
+			async->setResolver(&assetResolver);
+
+		store.setSyncLoader(std::move(sync));
+		store.setAsyncLoader(std::move(async));
+	}
 
 	/// The resolver used for every asset read, in both build modes.
 	AssetResolver& resolver() { return assetResolver; }
 	const AssetResolver& resolver() const { return assetResolver; }
 
-private:
-	struct InFlightEntry {
-		Jobs::JobHandlePtr job;
-		std::type_index    type;
-	};
+#ifdef BT_PACK_MODE
+	/**
+	 * @brief Mounts a .btp pack file onto the resolver stack.
+	 *
+	 * The last pack mounted wins any ID conflict, so mod packs take priority
+	 * over base game packs.
+	 */
+	bool mountPack(const std::filesystem::path& path) {
+		return assetResolver.mount(path);
+	}
 
+	/// Assets already loaded from this pack remain alive in their stores.
+	void unmountPack(const std::filesystem::path& path) {
+		assetResolver.unmount(path);
+	}
+
+	std::optional<PackMetadata> getPackMetadata(const std::filesystem::path& path) const {
+		return assetResolver.getPackMetadata(path);
+	}
+#endif
+
+private:
 	template <typename AssetType>
-	AssetStorage<AssetType>* getStorage() {
-		const auto type = std::type_index(typeid(AssetType));
-		auto it = storages.find(type);
-		if (it == storages.end()) {
-			storages[type] = std::make_unique<AssetStorage<AssetType>>();
-			return static_cast<AssetStorage<AssetType>*>(storages[type].get());
-		}
-		return static_cast<AssetStorage<AssetType>*>(it->second.get());
+	static void requireNamed(AssetRef<AssetType> ref, const char* op) {
+		if (ref.isNull())
+			throw std::invalid_argument(std::string("AssetManager: null asset ref passed to ") + op);
 	}
 
 	template <typename AssetType>
-	const AssetStorage<AssetType>* getStorage() const {
-		const auto type = std::type_index(typeid(AssetType));
-		auto it = storages.find(type);
-		return (it != storages.end())
-			? static_cast<const AssetStorage<AssetType>*>(it->second.get())
+	Store<AssetType>& getStore() {
+		const auto key = Detail::typeKey<AssetType>();
+
+		if (auto it = stores.find(key); it != stores.end())
+			return *static_cast<Store<AssetType>*>(it->second.get());
+
+		auto store = std::make_unique<Store<AssetType>>();
+		auto* result = store.get();
+
+		stores.emplace(key, std::move(store));
+		return *result;
+	}
+
+	template <typename AssetType>
+	Store<AssetType>* findStore() {
+		const auto it = stores.find(Detail::typeKey<AssetType>());
+
+		return it != stores.end()
+			? static_cast<Store<AssetType>*>(it->second.get())
 			: nullptr;
 	}
 
-	void recordFailure(const std::string& id, std::type_index type) {
-		std::unique_lock<std::mutex> lock(inFlightMutex);
-		failed.insert_or_assign(id, type);
-	}
-
-	void forgetFailure(const std::string& id) {
-		std::unique_lock<std::mutex> lock(inFlightMutex);
-		failed.erase(id);
-	}
-
-	struct ILoaderWrapper {
-		virtual ~ILoaderWrapper() = default;
-		virtual std::unique_ptr<IRawAssetData> loadRaw(const LoadParams&) = 0;
-
-		/// @return true if the asset is stored after the upload.
-		virtual bool upload(IRawAssetData&, AssetManager&) = 0;
-	};
-
 	template <typename AssetType>
-	struct LoaderWrapper : ILoaderWrapper {
-		LoaderWrapper(
-			std::unique_ptr<IAssetLoader<AssetType>> sync,
-			std::unique_ptr<IAsyncAssetLoader<AssetType>> async)
-			: syncLoader(std::move(sync))
-			, asyncLoader(std::move(async))
-		{}
+	const Store<AssetType>* findStore() const {
+		const auto it = stores.find(Detail::typeKey<AssetType>());
 
-		std::unique_ptr<IRawAssetData> loadRaw(const LoadParams& params) override {
-			return asyncLoader ? asyncLoader->loadRaw(params) : nullptr;
-		}
+		return it != stores.end()
+			? static_cast<const Store<AssetType>*>(it->second.get())
+			: nullptr;
+	}
 
-		bool upload(IRawAssetData& raw, AssetManager& manager) override {
-			if (!asyncLoader)
-				return false;
-
-			asyncLoader->upload(raw, manager);
-			return manager.has<AssetType>(raw.assetID);
-		}
-
-		std::unique_ptr<IAssetLoader<AssetType>> syncLoader;
-		std::unique_ptr<IAsyncAssetLoader<AssetType>> asyncLoader;
-	};
-
-	std::unordered_map<std::type_index, std::unique_ptr<ILoaderWrapper>> loaders;
-	std::unordered_map<std::type_index, std::unique_ptr<IAssetStorage>> storages;
-	std::unordered_map<std::string, std::unique_ptr<LoadParams>> assetParams; ///< Asset parameters for reloading.
+	NameTable names;
 
 	AssetResolver assetResolver;
 
+	std::unordered_map<const void*, std::unique_ptr<IStore>> stores;
+
 	Jobs::JobSystem& jobs;
-
-	/// Pending async loads, keyed by ID. Guarded by inFlightMutex.
-	std::unordered_map<std::string, InFlightEntry> inFlight;
-
-	/// Failed loads, keyed by ID, with the type that failed. Guarded by inFlightMutex.
-	std::unordered_map<std::string, std::type_index> failed;
-
-	mutable std::mutex inFlightMutex;
 
 	std::atomic<size_t> pendingTotal { 0 };
 };

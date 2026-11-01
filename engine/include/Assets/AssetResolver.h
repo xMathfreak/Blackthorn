@@ -89,7 +89,7 @@ public:
 	/**
 	 * @brief Unmounts a previously mounted pack file.
 	 *
-	 * Thread-safe. Assets already loaded from this pack stay in AssetStorage.
+	 * Thread-safe. Assets already loaded from this pack stay in Store.
 	 * If @p path is not mounted, this is a no-op.
 	 */
 	void unmount(const std::filesystem::path& path);
