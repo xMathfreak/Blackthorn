@@ -59,6 +59,8 @@ public:
 	bool isValid() const noexcept {
 		return !frames.empty();
 	}
+
+	U32 duration = 0;
 };
 
 } // namespace Blackthorn::Animation

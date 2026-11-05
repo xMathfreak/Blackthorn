@@ -7,6 +7,8 @@
 #include <string>
 #include <vector>
 
+#include <nlohmann/json.hpp>
+
 #include "Animation/SpriteClip.h"
 #include "Assets/AssetManager.h"
 #include "Assets/AssetResolver.h"
@@ -28,139 +30,171 @@ struct BLACKTHORN_API RawSpriteClipData : Assets::IRawAssetData {
 	RawSpriteClipData() = default;
 };
 
-/**
- * @brief Text-format parser shared by both sprite clip loaders.
- *
- * Lines are applied in file order. Blank lines and lines starting with '#' are
- * ignored, and CRLF line endings are accepted.
- */
 class SpriteClipParser {
 public:
-	/**
-	 * @return The parsed clip, or nullptr if it contains no frames.
-	 */
-	static std::unique_ptr<SpriteClip> parse(std::istream& in) {
+	static std::unique_ptr<SpriteClip> parse(
+		std::istream& in,
+		std::string_view name
+	) {
+		const auto json = nlohmann::json::parse(in, nullptr, true, true, true);
+
+		const auto framesIt = json.find("frames");
+		if (framesIt == json.end() || !framesIt->is_array()) {
+			BT_WARN("SpriteClipParser: '{}' is missing a 'frames' array", name);
+			return nullptr;
+		}
+
 		auto clip = std::make_unique<SpriteClip>();
-		float defaultDuration = 0.1f;
+		clip->loopMode = parseLoopMode(json.value("loop", "infinite"));
 
-		std::string line;
-		while (std::getline(in, line))
-			parseLine(line, *clip, defaultDuration);
+		for (const auto& frame : *framesIt) {
+			parseFrame(frame, *clip, name);
+		}
 
-		return clip->isValid() ? std::move(clip) : nullptr;
+		return clip;
 	}
 
 private:
-	static void parseLine(const std::string& rawLine, SpriteClip& clip, float& defaultDuration) {
-		const std::string line = trim(rawLine);
-		if (line.empty() || line[0] == '#')
+	static void parseFrame(
+		const nlohmann::json& frame,
+		SpriteClip& clip,
+		std::string_view name
+	) {
+		const auto typeIt = frame.find("type");
+		if (typeIt == frame.end() || !typeIt->is_string()) {
+			BT_WARN("SpriteClipParser: Missing or invalid 'type' in '{}'", name);
 			return;
+		}
 
-		const size_t colon = line.find(':');
-		if (colon == std::string::npos)
+		const auto type = typeIt->get<std::string>();
+
+		if (type == "frame") {
+			parseSingleFrame(frame, clip);
+		} else if (type == "grid") {
+			parseGrid(frame, clip);
+		} else {
+			BT_WARN("SpriteClipParser: Unknown frame type '{}' in '{}'", type, name);
+		}
+	}
+
+	static void parseSingleFrame(
+		const nlohmann::json& json,
+		SpriteClip& clip
+	) {
+		Frame frame{};
+
+		frame.sourceRect = SDL_FRect{
+			json.value("x", 0.0f),
+			json.value("y", 0.0f),
+			aliasedValue<float>(json, {"w", "width"}, 0.0f),
+			aliasedValue<float>(json, {"h", "height"}, 0.0f)
+		};
+
+		frame.duration = json.value("duration", 0.0f);
+		clip.duration += frame.duration;
+
+		clip.frames.push_back(frame);
+	}
+
+	static void parseGrid(
+		const nlohmann::json& json,
+		SpriteClip& clip
+	) {
+		const int count = json.value("count", 0);
+		const int columns = json.value("columns", 0);
+
+		if (count <= 0) {
+			BT_WARN("SpriteClipParser: 'grid' frame count must be greater than 0");
 			return;
+		}
 
-		const std::string key = trim(line.substr(0, colon));
-		std::istringstream args(line.substr(colon + 1));
+		if (columns <= 0) {
+			BT_WARN("SpriteClipParser: 'grid' columns must be greater than 0");
+			return;
+		}
 
-		if (key == "loop") {
-			std::string mode;
-			args >> mode;
-			clip.loopMode = parseLoopMode(mode);
-		} else if (key == "duration") {
-			float value = 0.0f;
-			if (args >> value)
-				defaultDuration = value;
-			else
-				BT_ERROR("SpriteClipParser: 'duration' needs a number, got '{}'", trim(line.substr(colon + 1)));
-		} else if (key == "grid") {
-			float originX = 0.0f, originY = 0.0f, frameW = 0.0f, frameH = 0.0f;
-			U32 columns = 0, count = 0;
+		const float originX = json.at("x").get<float>();
+		const float originY = json.at("y").get<float>();
+		const float frameW = aliasedValue(json, {"w", "width"}, 0.0f);
+		const float frameH = aliasedValue(json, {"h", "height"}, 0.0f);
+		const float duration = json.value("duration", 0.0f);
 
-			if (!(args >> originX >> originY >> frameW >> frameH >> columns >> count)) {
-				BT_ERROR("SpriteClipParser: malformed 'grid' line '{}'", line);
-				return;
-			}
+		for (int i = 0; i < count; ++i) {
+			const auto col = i % columns;
+			const auto row = i / columns;
 
-			if (columns == 0) {
-				BT_ERROR("SpriteClipParser: 'grid' columns must be non-zero");
-				return;
-			}
+			Frame frame{};
 
-			for (U32 i = 0; i < count; ++i) {
-				const U32 col = i % columns;
-				const U32 row = i / columns;
+			frame.sourceRect = SDL_FRect{
+				originX + static_cast<float>(col) * frameW,
+				originY + static_cast<float>(row) * frameH,
+				frameW,
+				frameH
+			};
 
-				Frame frame;
-				frame.sourceRect = SDL_FRect{
-					originX + static_cast<float>(col) * frameW,
-					originY + static_cast<float>(row) * frameH,
-					frameW,
-					frameH
-				};
-				frame.duration = defaultDuration;
-
-				clip.frames.push_back(frame);
-			}
-		} else if (key == "frame") {
-			Frame frame;
-			frame.duration = defaultDuration;
-
-			if (!(args >> frame.sourceRect.x >> frame.sourceRect.y >> frame.sourceRect.w >> frame.sourceRect.h)) {
-				BT_ERROR("SpriteClipParser: malformed 'frame' line '{}'", line);
-				return;
-			}
-
-			float duration = 0.0f;
-			if (args >> duration)
-				frame.duration = duration;
-
+			frame.duration = duration;
+			clip.duration += frame.duration;
 			clip.frames.push_back(frame);
 		}
 	}
 
-	static LoopMode parseLoopMode(const std::string& mode) {
+	static LoopMode parseLoopMode(std::string_view mode) {
 		if (mode == "once")
 			return LoopMode::Once;
-		if (mode == "pingpong")
+
+		if (mode == "ping-pong" || mode == "pingpong")
 			return LoopMode::PingPong;
 
 		return LoopMode::Loop;
 	}
 
-	static std::string trim(const std::string& s) {
-		const size_t start = s.find_first_not_of(" \t\r\n");
-		if (start == std::string::npos)
-			return "";
+	template <typename T>
+	static T aliasedValue(
+		const nlohmann::json& json,
+		std::initializer_list<std::string_view> aliases,
+		T defaultValue
+	) {
+		for (const auto alias : aliases) {
+			if (json.contains(alias)) {
+				return json.at(alias).get<T>();
+			}
+		}
 
-		const size_t end = s.find_last_not_of(" \t\r\n");
-		return s.substr(start, end - start + 1);
+		return defaultValue;
 	}
 };
+
 
 /**
  * @brief Loads a SpriteClip from a plain-text `.btclip` file through the resolver.
  *
- * @code
- * loop: once | loop | pingpong      # default: loop
- * duration: 0.1                     # default per-frame duration, in seconds
- *
- * # Grid shorthand: append `count` equal-sized frames, left to right, top to bottom.
- * grid: originX originY frameW frameH columns count
- *
- * # Single frame: x y w h [duration]
- * frame: x y w h [duration]
- * @endcode
- *
- * Directives are applied in file order, so a `duration:` line affects only the
- * grid and frame lines that follow it. A clip has no texture reference: the
- * emitter or sprite that uses it supplies the texture.
+ * A clip has no texture reference. the emitter or sprite that uses it supplies
+ * the texture.
  *
  * @par Example
  * @code
- * loop: loop
- * duration: 0.1
- * grid: 0 0 32 32 6 6
+ * {
+ *   "loop": "infinite",
+ *   "frames": [
+ *     {
+ *       "type": "grid",
+ *       "x": 0,
+ *       "y": 0,
+ *       "width": 32,
+ *       "height": 32,
+ *       "columns": 6,
+ *       "count": 6,
+ *       "duration": 0.5
+ *     },
+ *     {
+ *       "type": "frame",
+ *       "x": 64,
+ *       "y": 32,
+ *       "width": 64,
+ *       "height": 32
+ *     }
+ *   ]
+ * }
  * @endcode
  */
 class BLACKTHORN_API SpriteClipLoader final : public Assets::IAssetLoader<SpriteClip> {
@@ -189,7 +223,7 @@ public:
 
 		std::istringstream in(std::string(reinterpret_cast<const char*>(bytes->bytes.data()), bytes->bytes.size()));
 
-		auto clip = SpriteClipParser::parse(in);
+		auto clip = SpriteClipParser::parse(in, *id);
 		if (!clip)
 			BT_ERROR("SpriteClipLoader: '{}' produced no frames", *id);
 
@@ -238,7 +272,7 @@ public:
 
 		std::istringstream in(std::string(reinterpret_cast<const char*>(raw.bytes.data()), raw.bytes.size()));
 
-		auto clip = SpriteClipParser::parse(in);
+		auto clip = SpriteClipParser::parse(in, raw.displayName);
 		if (!clip) {
 			BT_ERROR("AsyncSpriteClipLoader: '{}' produced no frames", raw.displayName);
 			return;
