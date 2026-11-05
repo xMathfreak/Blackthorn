@@ -227,13 +227,13 @@ if(WIN32)
 		)
 	endforeach()
 
-	set(MINGW_RUNTIME_DLLS
-		libstdc++-6.dll
-		libgcc_s_seh-1.dll
-		libwinpthread-1.dll
-	)
+	if (NOT MSVC)
+		set(MINGW_RUNTIME_DLLS
+			libstdc++-6.dll
+			libgcc_s_seh-1.dll
+			libwinpthread-1.dll
+		)
 
-	if (MINGW)
 		get_filename_component(
 			MINGW_BIN_DIR
 			${CMAKE_CXX_COMPILER}
