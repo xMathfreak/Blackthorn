@@ -4,10 +4,10 @@
 #include <memory>
 #include <vector>
 
-#include "Core/Export.h"
-#include "Types/Numeric.h"
-#include "Debug/Logger.h"
-#include "Scene/ISimScene.h"
+#include "Core/Export.hpp"
+#include "Types/Numeric.hpp"
+#include "Debug/Logger.hpp"
+#include "Scene/ISimScene.hpp"
 
 namespace Blackthorn::Scene {
 

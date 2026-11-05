@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Assets/AssetHandle.h"
-#include "Assets/AssetManager.h"
+#include "Assets/AssetHandle.hpp"
+#include "Assets/AssetManager.hpp"
 
 namespace Blackthorn::Assets {
 

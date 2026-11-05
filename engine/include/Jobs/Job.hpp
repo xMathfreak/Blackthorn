@@ -4,9 +4,9 @@
 #include <functional>
 #include <type_traits>
 
-#include "Core/Export.h"
-#include "Types/Numeric.h"
-#include "Jobs/JobHandle.h"
+#include "Core/Export.hpp"
+#include "Types/Numeric.hpp"
+#include "Jobs/JobHandle.hpp"
 
 namespace Blackthorn::Jobs {
 

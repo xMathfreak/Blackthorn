@@ -2,9 +2,9 @@
 
 #include <string>
 
-#include "Core/Export.h"
-#include "Types/Numeric.h"
-#include "Types/UUID.h"
+#include "Core/Export.hpp"
+#include "Types/Numeric.hpp"
+#include "Types/UUID.hpp"
 
 namespace Blackthorn::Saves {
 

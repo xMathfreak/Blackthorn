@@ -1,8 +1,8 @@
 #pragma once
 
-#include "ECS/Components/Kinematics.h"
-#include "ECS/Components/Transform.h"
-#include "ECS/ISystem.h"
+#include "ECS/Components/Kinematics.hpp"
+#include "ECS/Components/Transform.hpp"
+#include "ECS/ISystem.hpp"
 
 namespace Blackthorn::ECS::Systems {
 

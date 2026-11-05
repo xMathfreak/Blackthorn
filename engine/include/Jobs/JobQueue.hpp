@@ -4,8 +4,8 @@
 #include <memory>
 #include <mutex>
 
-#include "Core/Export.h"
-#include "Jobs/Job.h"
+#include "Core/Export.hpp"
+#include "Jobs/Job.hpp"
 
 namespace Blackthorn::Jobs {
 

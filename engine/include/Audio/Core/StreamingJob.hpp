@@ -1,9 +1,9 @@
 #pragma once
 
-#include "Audio/AudioHandle.h"
-#include "Audio/Streaming/IStreamDecoder.h"
-#include "Containers/SPSCRingQueue.h"
-#include "Types/Numeric.h"
+#include "Audio/AudioHandle.hpp"
+#include "Audio/Streaming/IStreamDecoder.hpp"
+#include "Containers/SPSCRingQueue.hpp"
+#include "Types/Numeric.hpp"
 
 namespace Blackthorn::Audio {
 

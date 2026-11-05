@@ -2,9 +2,9 @@
 
 #include <memory>
 
-#include "Core/Export.h"
-#include "Net/Transport/Sockets/TCPSocket.h"
-#include "Net/Transport/Sockets/UDPSocket.h"
+#include "Core/Export.hpp"
+#include "Net/Transport/Sockets/TCPSocket.hpp"
+#include "Net/Transport/Sockets/UDPSocket.hpp"
 
 namespace Blackthorn::Net::Transport::Sockets {
 

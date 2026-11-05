@@ -1,4 +1,4 @@
-#include "Compiler.h"
+#include "Compiler.hpp"
 
 #include <algorithm>
 #include <cstdio>
@@ -14,9 +14,9 @@
 
 #include <zstd.h>
 
-#include "LocManifest.h"
-#include "LocParser.h"
-#include "Localization/LocFormat.h"
+#include "LocManifest.hpp"
+#include "LocParser.hpp"
+#include "Localization/LocFormat.hpp"
 
 using namespace Blackthorn::Localization;
 

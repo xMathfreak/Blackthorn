@@ -1,4 +1,4 @@
-#include "Audio/Playback/VoiceViewPool.h"
+#include "Audio/Playback/VoiceViewPool.hpp"
 
 namespace Blackthorn::Audio {
 

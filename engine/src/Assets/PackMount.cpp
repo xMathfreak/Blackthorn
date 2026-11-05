@@ -1,4 +1,4 @@
-#include "Assets/PackMount.h"
+#include "Assets/PackMount.hpp"
 
 #include <cstdio>
 #include <cstring>
@@ -10,9 +10,9 @@
 #define XXH_INLINE_ALL
 #include <xxhash.h>
 
-#include "Assets/PackMetadataJson.h"
-#include "Debug/Logger.h"
-#include "FileIO.h"
+#include "Assets/PackMetadataJson.hpp"
+#include "Debug/Logger.hpp"
+#include "FileIO.hpp"
 
 namespace Blackthorn::Assets {
 

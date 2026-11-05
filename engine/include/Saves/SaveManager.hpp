@@ -6,14 +6,14 @@
 #include <unordered_map>
 #include <vector>
 
-#include "Core/Export.h"
-#include "Saves/SaveConfig.h"
-#include "Saves/SaveDocument.h"
-#include "Saves/SaveHash.h"
-#include "Saves/Storage/ISaveStorage.h"
-#include "Saves/Sections/ISaveSection.h"
-#include "Saves/Compression/ICompressor.h"
-#include "Saves/Encryption/IEncryptor.h"
+#include "Core/Export.hpp"
+#include "Saves/SaveConfig.hpp"
+#include "Saves/SaveDocument.hpp"
+#include "Saves/SaveHash.hpp"
+#include "Saves/Storage/ISaveStorage.hpp"
+#include "Saves/Sections/ISaveSection.hpp"
+#include "Saves/Compression/ICompressor.hpp"
+#include "Saves/Encryption/IEncryptor.hpp"
 
 namespace Blackthorn::Saves {
 

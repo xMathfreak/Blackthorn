@@ -53,7 +53,7 @@ function(embed_resource TARGET RESOURCE)
 	set(OUTPUT_BASE "${OUTPUT_DIR}/${RESOURCE_SYMBOL}")
 
 	set(SOURCE_OUTPUT "${OUTPUT_BASE}.cpp")
-	set(HEADER_OUTPUT "${OUTPUT_BASE}.h")
+	set(HEADER_OUTPUT "${OUTPUT_BASE}.hpp")
 
 	add_custom_command(
 		OUTPUT

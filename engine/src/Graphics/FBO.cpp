@@ -1,4 +1,4 @@
-#include "Graphics/FBO.h"
+#include "Graphics/FBO.hpp"
 
 #include <stdexcept>
 

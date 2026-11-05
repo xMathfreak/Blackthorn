@@ -1,13 +1,13 @@
 #pragma once
 
-#include "Audio/AudioManager.h"
-#include "Core/Export.h"
-#include "Graphics/Renderer.h"
-#include "Input/InputManager.h"
-#include "Particles/ParticleSystem.h"
-#include "Scene/ISceneContext.h"
-#include "Scene/ISimScene.h"
-#include "UI/UIManager.h"
+#include "Audio/AudioManager.hpp"
+#include "Core/Export.hpp"
+#include "Graphics/Renderer.hpp"
+#include "Input/InputManager.hpp"
+#include "Particles/ParticleSystem.hpp"
+#include "Scene/ISceneContext.hpp"
+#include "Scene/ISimScene.hpp"
+#include "UI/UIManager.hpp"
 
 namespace Blackthorn::Scene {
 

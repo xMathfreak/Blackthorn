@@ -1,8 +1,8 @@
-#include "Saves/Sections/WorldSaveSection.h"
+#include "Saves/Sections/WorldSaveSection.hpp"
 
-#include "Debug/Logger.h"
-#include "ECS/Components/Persistent.h"
-#include "ECS/Serialization/ComponentSerializer.h"
+#include "Debug/Logger.hpp"
+#include "ECS/Components/Persistent.hpp"
+#include "ECS/Serialization/ComponentSerializer.hpp"
 
 namespace Blackthorn::Saves::Sections {
 

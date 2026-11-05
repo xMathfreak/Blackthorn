@@ -3,17 +3,17 @@
 #include <filesystem>
 #include <string>
 
-#include "Core/Export.h"
-#include "Types/Numeric.h"
+#include "Core/Export.hpp"
+#include "Types/Numeric.hpp"
 
-#include "Assets/AssetConfig.h"
-#include "Core/MetadataConfig.h"
-#include "Debug/DebugConfig.h"
-#include "Audio/AudioConfig.h"
-#include "Fonts/FontConfig.h"
-#include "Graphics/RenderConfig.h"
-#include "Net/ConnectionConfig.h"
-#include "Saves/SaveConfig.h"
+#include "Assets/AssetConfig.hpp"
+#include "Core/MetadataConfig.hpp"
+#include "Debug/DebugConfig.hpp"
+#include "Audio/AudioConfig.hpp"
+#include "Fonts/FontConfig.hpp"
+#include "Graphics/RenderConfig.hpp"
+#include "Net/ConnectionConfig.hpp"
+#include "Saves/SaveConfig.hpp"
 
 namespace Blackthorn {
 

@@ -1,4 +1,4 @@
-#include "Scripting/LuaScript.h"
+#include "Scripting/LuaScript.hpp"
 
 #include <cassert>
 #include <cstdio>

@@ -3,10 +3,10 @@
 #include <atomic>
 #include <memory>
 
-#include "Core/CachedSetting.h"
-#include "Core/EngineConfig.h"
-#include "Core/Export.h"
-#include "Localization/LocalizationManager.h"
+#include "Core/CachedSetting.hpp"
+#include "Core/EngineConfig.hpp"
+#include "Core/Export.hpp"
+#include "Localization/LocalizationManager.hpp"
 
 namespace Blackthorn {
 

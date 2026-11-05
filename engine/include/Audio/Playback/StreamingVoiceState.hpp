@@ -6,11 +6,11 @@
 
 #include <AL/al.h>
 
-#include "Assets/AssetResolver.h"
-#include "Audio/Resources/AudioClip.h"
-#include "Audio/Streaming/IStreamDecoder.h"
-#include "Audio/Streaming/StreamDecoderFactory.h"
-#include "Types/Numeric.h"
+#include "Assets/AssetResolver.hpp"
+#include "Audio/Resources/AudioClip.hpp"
+#include "Audio/Streaming/IStreamDecoder.hpp"
+#include "Audio/Streaming/StreamDecoderFactory.hpp"
+#include "Types/Numeric.hpp"
 
 namespace Blackthorn::Audio {
 

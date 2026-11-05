@@ -7,8 +7,8 @@
 #include <memory>
 #include <thread>
 
-#include "Audio/Device/IDeviceNotifier.h"
-#include "Core/Export.h"
+#include "Audio/Device/IDeviceNotifier.hpp"
+#include "Core/Export.hpp"
 
 namespace Blackthorn::Audio {
 

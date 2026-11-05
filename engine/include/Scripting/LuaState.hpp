@@ -11,8 +11,8 @@
 
 #include <lua.h>
 
-#include "Scripting/LuaConverter.h"
-#include "Scripting/LuaResult.h"
+#include "Scripting/LuaConverter.hpp"
+#include "Scripting/LuaResult.hpp"
 
 namespace Blackthorn::Scripting {
 

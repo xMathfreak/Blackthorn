@@ -1,10 +1,10 @@
 #if defined(__linux__)
 
-#include "Audio/Device/LinuxDeviceNotifier.h"
+#include "Audio/Device/LinuxDeviceNotifier.hpp"
 
 #include <dlfcn.h>
 
-#include "Debug/Logger.h"
+#include "Debug/Logger.hpp"
 
 extern "C" {
 

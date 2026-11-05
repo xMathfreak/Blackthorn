@@ -2,7 +2,7 @@
 
 #include <AL/al.h>
 
-#include "Audio/Resources/AudioData.h"
+#include "Audio/Resources/AudioData.hpp"
 
 namespace Blackthorn::Audio {
 

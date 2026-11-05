@@ -1,10 +1,10 @@
-#include "Fonts/TrueTypeFont.h"
+#include "Fonts/TrueTypeFont.hpp"
 
 #include <algorithm>
 
-#include "Fonts/FontConfig.h"
-#include "Debug/Logger.h"
-#include "Resources/Resource.h"
+#include "Fonts/FontConfig.hpp"
+#include "Debug/Logger.hpp"
+#include "Resources/Resource.hpp"
 
 namespace Blackthorn::Fonts {
 

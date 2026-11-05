@@ -1,5 +1,5 @@
-#include "Packer.h"
-#include "AssetNormalize.h"
+#include "Packer.hpp"
+#include "AssetNormalize.hpp"
 
 #include <algorithm>
 #include <cctype>
@@ -21,10 +21,10 @@
 #define XXH_INLINE_ALL
 #include <xxhash.h>
 
-#include "Assets/PackFormat.h"
-#include "Assets/PackMetadataJson.h"
+#include "Assets/PackFormat.hpp"
+#include "Assets/PackMetadataJson.hpp"
 
-#include "FileIO.h"
+#include "FileIO.hpp"
 
 using namespace Blackthorn::Assets;
 

@@ -1,8 +1,8 @@
-#include "Scripting/ECS/BuiltinBindings.h"
+#include "Scripting/ECS/BuiltinBindings.hpp"
 
-#include "ECS/Components/Tag.h"
-#include "Scripting/ECS/ComponentBindings.h"
-#include "Scripting/ECS/ScriptWorld.h"
+#include "ECS/Components/Tag.hpp"
+#include "Scripting/ECS/ComponentBindings.hpp"
+#include "Scripting/ECS/ScriptWorld.hpp"
 
 namespace Blackthorn::Scripting::ECS::Bindings {
 

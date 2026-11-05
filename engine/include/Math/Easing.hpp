@@ -3,7 +3,7 @@
 #include <cmath>
 #include <numbers>
 
-#include "Math/Interpolation.h"
+#include "Math/Interpolation.hpp"
 
 namespace Blackthorn::Math::Easing {
 

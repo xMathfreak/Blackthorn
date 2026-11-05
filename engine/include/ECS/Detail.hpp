@@ -6,9 +6,9 @@
 #include <typeindex>
 #include <typeinfo>
 
-#include "Core/Export.h"
-#include "ECS/Entity.h"
-#include "Types/Numeric.h"
+#include "Core/Export.hpp"
+#include "ECS/Entity.hpp"
+#include "Types/Numeric.hpp"
 
 namespace Blackthorn::ECS::Detail {
 

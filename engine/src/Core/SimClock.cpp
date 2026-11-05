@@ -1,7 +1,7 @@
-#include "Core/SimClock.h"
+#include "Core/SimClock.hpp"
 
-#include "Core/Settings.h"
-#include "Debug/Logger.h"
+#include "Core/Settings.hpp"
+#include "Debug/Logger.hpp"
 
 namespace Blackthorn::Core {
 

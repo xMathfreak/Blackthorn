@@ -1,4 +1,4 @@
-#include "Net/Transport/Sockets/TCPSocket.h"
+#include "Net/Transport/Sockets/TCPSocket.hpp"
 
 #ifdef _WIN32
 	#include <winsock2.h>
@@ -15,7 +15,7 @@
 	#include <unistd.h>
 #endif
 
-#include "Debug/Logger.h"
+#include "Debug/Logger.hpp"
 
 namespace Blackthorn::Net::Transport::Sockets {
 

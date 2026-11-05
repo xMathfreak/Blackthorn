@@ -1,6 +1,6 @@
-#include "Audio/Playback/VoicePool.h"
+#include "Audio/Playback/VoicePool.hpp"
 
-#include "Audio/Playback/StreamingVoiceState.h"
+#include "Audio/Playback/StreamingVoiceState.hpp"
 
 namespace Blackthorn::Audio {
 

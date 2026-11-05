@@ -6,7 +6,7 @@
 #include <utility>
 #include <vector>
 
-#include "Localization/PluralRules.h"
+#include "Localization/PluralRules.hpp"
 
 namespace BTLocC {
 

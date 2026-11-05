@@ -5,8 +5,8 @@
 #include <utility>
 #include <vector>
 
-#include "ECS/Detail.h"
-#include "ECS/IComponentArray.h"
+#include "ECS/Detail.hpp"
+#include "ECS/IComponentArray.hpp"
 
 namespace Blackthorn::ECS {
 

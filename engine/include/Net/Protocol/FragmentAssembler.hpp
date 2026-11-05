@@ -6,9 +6,9 @@
 
 #include <SDL3/SDL.h>
 
-#include "Core/Export.h"
-#include "IO/ByteBuffer.h"
-#include "Net/Protocol/FragmentHeader.h"
+#include "Core/Export.hpp"
+#include "IO/ByteBuffer.hpp"
+#include "Net/Protocol/FragmentHeader.hpp"
 
 namespace Blackthorn::Net::Protocol {
 

@@ -5,7 +5,7 @@
 #include <AL/al.h>
 #include <glm/glm.hpp>
 
-#include "Core/Export.h"
+#include "Core/Export.hpp"
 
 namespace Blackthorn::Audio {
 

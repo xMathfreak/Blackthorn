@@ -12,10 +12,10 @@
 #include <lua.h>
 #include <lauxlib.h>
 
-#include "Core/Export.h"
-#include "Debug/Logger.h"
-#include "Scripting/LuaConverter.h"
-#include "Scripting/LuaResult.h"
+#include "Core/Export.hpp"
+#include "Debug/Logger.hpp"
+#include "Scripting/LuaConverter.hpp"
+#include "Scripting/LuaResult.hpp"
 
 namespace Blackthorn::Scripting {
 

@@ -5,8 +5,8 @@
 
 #include <glad/gl.h>
 
-#include "Core/Export.h"
-#include "Debug/Logger.h"
+#include "Core/Export.hpp"
+#include "Debug/Logger.hpp"
 
 namespace Blackthorn::Graphics {
 

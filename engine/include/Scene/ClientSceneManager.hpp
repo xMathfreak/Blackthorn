@@ -1,8 +1,8 @@
 #pragma once
 
-#include "Core/Export.h"
-#include "Scene/IScene.h"
-#include "Scene/SceneManager.h"
+#include "Core/Export.hpp"
+#include "Scene/IScene.hpp"
+#include "Scene/SceneManager.hpp"
 
 namespace Blackthorn::Scene {
 

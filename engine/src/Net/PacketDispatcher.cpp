@@ -1,9 +1,9 @@
-#include "Net/PacketDispatcher.h"
+#include "Net/PacketDispatcher.hpp"
 
-#include "Debug/Logger.h"
-#include "Jobs/JobSystem.h"
-#include "Net/Connection/PeerRegistry.h"
-#include "Net/Protocol/PacketHeader.h"
+#include "Debug/Logger.hpp"
+#include "Jobs/JobSystem.hpp"
+#include "Net/Connection/PeerRegistry.hpp"
+#include "Net/Protocol/PacketHeader.hpp"
 
 namespace Blackthorn::Net {
 

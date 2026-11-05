@@ -3,8 +3,8 @@
 #include <memory>
 #include <vector>
 
-#include "Core/Export.h"
-#include "UI/Widget.h"
+#include "Core/Export.hpp"
+#include "UI/Widget.hpp"
 
 namespace Blackthorn::UI {
 

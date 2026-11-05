@@ -1,4 +1,4 @@
-#include "Saves/Storage/LocalFileSaveStorage.h"
+#include "Saves/Storage/LocalFileSaveStorage.hpp"
 
 #include <cstdio>
 #include <fstream>
@@ -11,8 +11,8 @@
 	#include <unistd.h>
 #endif
 
-#include "Debug/Logger.h"
-#include "Saves/SaveDocument.h"
+#include "Debug/Logger.hpp"
+#include "Saves/SaveDocument.hpp"
 
 namespace Blackthorn::Saves {
 

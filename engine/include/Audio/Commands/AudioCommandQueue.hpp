@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Audio/Commands/AudioCommand.h"
-#include "Containers/SPSCRingQueue.h"
+#include "Audio/Commands/AudioCommand.hpp"
+#include "Containers/SPSCRingQueue.hpp"
 
 namespace Blackthorn::Audio {
 

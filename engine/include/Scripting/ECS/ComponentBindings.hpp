@@ -13,12 +13,12 @@
 
 #include <lua.h>
 
-#include "ECS/EntityPool.h"
-#include "Scripting/ECS/EntityHandle.h"
-#include "Scripting/LuaConverter.h"
-#include "Scripting/LuaResult.h"
-#include "Scripting/LuaState.h"
-#include "Types/StringHash.h"
+#include "ECS/EntityPool.hpp"
+#include "Scripting/ECS/EntityHandle.hpp"
+#include "Scripting/LuaConverter.hpp"
+#include "Scripting/LuaResult.hpp"
+#include "Scripting/LuaState.hpp"
+#include "Types/StringHash.hpp"
 
 namespace Blackthorn::Scripting::ECS {
 

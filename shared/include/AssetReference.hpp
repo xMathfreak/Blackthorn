@@ -5,7 +5,7 @@
 #include <string_view>
 #include <vector>
 
-#include "AssetNormalize.h"
+#include "AssetNormalize.hpp"
 
 namespace Blackthorn {
 

@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-#include "Manifest.h"
+#include "Manifest.hpp"
 
 namespace BTPacker {
 

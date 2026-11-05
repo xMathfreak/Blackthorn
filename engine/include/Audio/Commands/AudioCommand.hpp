@@ -5,10 +5,10 @@
 
 #include <glm/glm.hpp>
 
-#include "Audio/AudioCategory.h"
-#include "Audio/AudioHandle.h"
-#include "Audio/Resources/AudioClip.h"
-#include "Types/Numeric.h"
+#include "Audio/AudioCategory.hpp"
+#include "Audio/AudioHandle.hpp"
+#include "Audio/Resources/AudioClip.hpp"
+#include "Types/Numeric.hpp"
 
 namespace Blackthorn::Audio {
 /**

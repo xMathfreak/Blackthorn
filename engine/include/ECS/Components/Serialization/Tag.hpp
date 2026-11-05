@@ -1,7 +1,7 @@
 #pragma once
 
-#include "ECS/Components/Tag.h"
-#include "ECS/Serialization/ComponentSerializer.h"
+#include "ECS/Components/Tag.hpp"
+#include "ECS/Serialization/ComponentSerializer.hpp"
 
 namespace Blackthorn::ECS::Serialization {
 

@@ -1,7 +1,7 @@
-#include "Net/Connection/PeerRegistry.h"
+#include "Net/Connection/PeerRegistry.hpp"
 
-#include "Debug/Logger.h"
-#include "Net/Transport/Channels/UDPChannel.h"
+#include "Debug/Logger.hpp"
+#include "Net/Transport/Channels/UDPChannel.hpp"
 
 namespace Blackthorn::Net::Connection {
 

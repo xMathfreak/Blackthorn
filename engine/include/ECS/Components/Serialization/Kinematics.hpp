@@ -1,7 +1,7 @@
 #pragma once
 
-#include "ECS/Components/Kinematics.h"
-#include "ECS/Serialization/ComponentSerializer.h"
+#include "ECS/Components/Kinematics.hpp"
+#include "ECS/Serialization/ComponentSerializer.hpp"
 
 namespace Blackthorn::ECS::Serialization {
 

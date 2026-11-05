@@ -4,10 +4,10 @@
 #include <unordered_map>
 #include <vector>
 
-#include "Core/Export.h"
-#include "Net/Connection/NetworkPeer.h"
-#include "Net/Transport/Address.h"
-#include "Net/Transport/Sockets/UDPSocket.h"
+#include "Core/Export.hpp"
+#include "Net/Connection/NetworkPeer.hpp"
+#include "Net/Transport/Address.hpp"
+#include "Net/Transport/Sockets/UDPSocket.hpp"
 
 namespace Blackthorn {
 

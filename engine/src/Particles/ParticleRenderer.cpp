@@ -1,9 +1,9 @@
-#include "Particles/ParticleRenderer.h"
+#include "Particles/ParticleRenderer.hpp"
 
 #include <algorithm>
 
-#include "Debug/Logger.h"
-#include "Resources/Resource.h"
+#include "Debug/Logger.hpp"
+#include "Resources/Resource.hpp"
 
 namespace Blackthorn::Particles {
 

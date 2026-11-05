@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Core/MetadataConfig.h"
+#include "Core/MetadataConfig.hpp"
 
 namespace Blackthorn::Generated {
 

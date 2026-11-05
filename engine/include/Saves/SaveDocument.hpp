@@ -2,9 +2,9 @@
 
 #include <vector>
 
-#include "Core/Export.h"
-#include "IO/ByteBuffer.h"
-#include "Saves/SaveID.h"
+#include "Core/Export.hpp"
+#include "IO/ByteBuffer.hpp"
+#include "Saves/SaveID.hpp"
 
 namespace Blackthorn::Saves {
 

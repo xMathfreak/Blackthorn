@@ -2,8 +2,8 @@
 
 #include <cassert>
 
-#include "IO/ByteBuffer.h"
-#include "Net/Protocol/PacketHeader.h"
+#include "IO/ByteBuffer.hpp"
+#include "Net/Protocol/PacketHeader.hpp"
 
 namespace Blackthorn::Net::Protocol {
 

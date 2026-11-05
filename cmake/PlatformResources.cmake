@@ -165,7 +165,7 @@ function(target_add_platform_resources target)
 
 	configure_file(
 		"${BLACKTHORN_RESOURCES_DIR}/BlackthornMetadata.h.in"
-		"${GEN_DIR}/include/Generated/BlackthornMetadata.h"
+		"${GEN_DIR}/include/Generated/BlackthornMetadata.hpp"
 		@ONLY
 	)
 	target_include_directories(${target} PRIVATE "${GEN_DIR}/include")

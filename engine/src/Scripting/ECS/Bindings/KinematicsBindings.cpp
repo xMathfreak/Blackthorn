@@ -1,9 +1,9 @@
-#include "Scripting/ECS/BuiltinBindings.h"
+#include "Scripting/ECS/BuiltinBindings.hpp"
 
-#include "ECS/Components/Kinematics.h"
-#include "Scripting/ECS/ComponentBindings.h"
-#include "Scripting/ECS/ScriptWorld.h"
-#include "Scripting/LuaMath.h"
+#include "ECS/Components/Kinematics.hpp"
+#include "Scripting/ECS/ComponentBindings.hpp"
+#include "Scripting/ECS/ScriptWorld.hpp"
+#include "Scripting/LuaMath.hpp"
 
 namespace Blackthorn::Scripting::ECS::Bindings {
 

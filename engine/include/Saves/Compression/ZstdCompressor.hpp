@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Core/Export.h"
-#include "Saves/Compression/ICompressor.h"
+#include "Core/Export.hpp"
+#include "Saves/Compression/ICompressor.hpp"
 
 namespace Blackthorn::Saves {
 

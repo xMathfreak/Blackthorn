@@ -1,4 +1,4 @@
-#include "Fonts/BitmapFont.h"
+#include "Fonts/BitmapFont.hpp"
 
 #include <algorithm>
 #include <cstring>
@@ -8,9 +8,9 @@
 
 #include <SDL3_image/SDL_image.h>
 
-#include "Debug/Logger.h"
-#include "Fonts/FontConfig.h"
-#include "Resources/Resource.h"
+#include "Debug/Logger.hpp"
+#include "Fonts/FontConfig.hpp"
+#include "Resources/Resource.hpp"
 
 namespace {
 

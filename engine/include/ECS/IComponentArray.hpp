@@ -2,8 +2,8 @@
 
 #include <vector>
 
-#include "Core/Export.h"
-#include "ECS/Entity.h"
+#include "Core/Export.hpp"
+#include "ECS/Entity.hpp"
 
 namespace Blackthorn::ECS {
 

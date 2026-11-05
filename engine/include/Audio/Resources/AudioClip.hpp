@@ -4,10 +4,10 @@
 #include <filesystem>
 #include <vector>
 
-#include "Audio/Decoding/AudioDecoder.h"
-#include "Audio/Resources/AudioData.h"
-#include "Core/Export.h"
-#include "Types/Numeric.h"
+#include "Audio/Decoding/AudioDecoder.hpp"
+#include "Audio/Resources/AudioData.hpp"
+#include "Core/Export.hpp"
+#include "Types/Numeric.hpp"
 
 namespace Blackthorn::Audio {
 

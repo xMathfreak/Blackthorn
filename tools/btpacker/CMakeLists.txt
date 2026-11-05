@@ -6,12 +6,12 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 add_executable(btpacker
 	src/main.cpp
-	src/Manifest.h
-	src/ManifestParser.h
+	src/Manifest.hpp
+	src/ManifestParser.hpp
 	src/ManifestParser.cpp
-	src/Packer.h
+	src/Packer.hpp
 	src/Packer.cpp
-	src/ManifestGenerator.h
+	src/ManifestGenerator.hpp
 	src/ManifestGenerator.cpp
 )
 

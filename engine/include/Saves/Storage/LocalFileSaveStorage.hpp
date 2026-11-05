@@ -3,9 +3,9 @@
 #include <filesystem>
 #include <functional>
 
-#include "Core/Export.h"
-#include "Saves/SaveDocument.h"
-#include "Saves/Storage/ISaveStorage.h"
+#include "Core/Export.hpp"
+#include "Saves/SaveDocument.hpp"
+#include "Saves/Storage/ISaveStorage.hpp"
 
 namespace Blackthorn::Saves {
 

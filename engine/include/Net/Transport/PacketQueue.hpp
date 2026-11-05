@@ -4,11 +4,11 @@
 #include <atomic>
 #include <cstddef>
 
-#include "Core/Export.h"
-#include "Types/Numeric.h"
-#include "IO/ByteBuffer.h"
-#include "Net/Connection/NetworkPeer.h"
-#include "Net/Transport/Address.h"
+#include "Core/Export.hpp"
+#include "Types/Numeric.hpp"
+#include "IO/ByteBuffer.hpp"
+#include "Net/Connection/NetworkPeer.hpp"
+#include "Net/Transport/Address.hpp"
 
 namespace Blackthorn::Net::Transport {
 

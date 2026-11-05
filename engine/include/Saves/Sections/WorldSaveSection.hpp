@@ -2,13 +2,13 @@
 
 #include <string_view>
 
-#include "Core/Export.h"
-#include "ECS/Components/Persistent.h"
-#include "ECS/EntityPool.h"
-#include "ECS/Serialization/ComponentSerializer.h"
-#include "Saves/SaveEntityRegistry.h"
-#include "Saves/SaveHash.h"
-#include "Saves/Sections/ISaveSection.h"
+#include "Core/Export.hpp"
+#include "ECS/Components/Persistent.hpp"
+#include "ECS/EntityPool.hpp"
+#include "ECS/Serialization/ComponentSerializer.hpp"
+#include "Saves/SaveEntityRegistry.hpp"
+#include "Saves/SaveHash.hpp"
+#include "Saves/Sections/ISaveSection.hpp"
 
 namespace Blackthorn::Saves::Sections {
 

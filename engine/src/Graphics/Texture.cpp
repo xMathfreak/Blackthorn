@@ -1,8 +1,8 @@
-#include "Graphics/Texture.h"
+#include "Graphics/Texture.hpp"
 
 #include <SDL3_image/SDL_image.h>
 
-#include "Debug/Logger.h"
+#include "Debug/Logger.hpp"
 
 namespace Blackthorn::Graphics {
 

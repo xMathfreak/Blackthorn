@@ -1,15 +1,15 @@
-#include "CLI.h"
-#include "Terminal.h"
+#include "CLI.hpp"
+#include "Terminal.hpp"
 
 #include <filesystem>
 #include <iostream>
 #include <string>
 #include <unordered_map>
 
-#include "Manifest.h"
-#include "ManifestGenerator.h"
-#include "ManifestParser.h"
-#include "Packer.h"
+#include "Manifest.hpp"
+#include "ManifestGenerator.hpp"
+#include "ManifestParser.hpp"
+#include "Packer.hpp"
 
 namespace cli = Blackthorn::Tools;
 namespace term = Blackthorn::Terminal;

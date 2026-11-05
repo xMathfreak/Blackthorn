@@ -1,4 +1,4 @@
-#include "Audio/AudioManager.h"
+#include "Audio/AudioManager.hpp"
 
 namespace Blackthorn::Audio {
 

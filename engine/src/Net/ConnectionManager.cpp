@@ -1,9 +1,9 @@
-#include "Net/ConnectionManager.h"
+#include "Net/ConnectionManager.hpp"
 
-#include "Debug/Logger.h"
-#include "Net/Protocol/PacketHeader.h"
-#include "Net/Transport/Channels/TCPChannel.h"
-#include "Net/Transport/Sockets/SocketFactory.h"
+#include "Debug/Logger.hpp"
+#include "Net/Protocol/PacketHeader.hpp"
+#include "Net/Transport/Channels/TCPChannel.hpp"
+#include "Net/Transport/Sockets/SocketFactory.hpp"
 
 namespace Blackthorn::Net {
 

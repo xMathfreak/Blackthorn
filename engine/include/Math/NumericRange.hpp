@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Math/Random.h"
+#include "Math/Random.hpp"
 
 namespace Blackthorn::Math {
 

@@ -4,7 +4,7 @@
 #include <atomic>
 #include <vector>
 
-#include "Audio/Playback/VoiceView.h"
+#include "Audio/Playback/VoiceView.hpp"
 
 namespace Blackthorn::Audio {
 

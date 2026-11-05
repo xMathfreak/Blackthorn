@@ -7,15 +7,15 @@
 #include <utility>
 #include <vector>
 
-#include "Assets/AssetManager.h"
-#include "Assets/AssetResolver.h"
-#include "Assets/IAssetLoader.h"
-#include "Assets/LoadParams.h"
-#include "Assets/RawAssetData.h"
-#include "AssetNormalize.h"
-#include "Core/Export.h"
-#include "Debug/Logger.h"
-#include "Fonts/TrueTypeFont.h"
+#include "Assets/AssetManager.hpp"
+#include "Assets/AssetResolver.hpp"
+#include "Assets/IAssetLoader.hpp"
+#include "Assets/LoadParams.hpp"
+#include "Assets/RawAssetData.hpp"
+#include "AssetNormalize.hpp"
+#include "Core/Export.hpp"
+#include "Debug/Logger.hpp"
+#include "Fonts/TrueTypeFont.hpp"
 
 namespace Blackthorn::Fonts {
 

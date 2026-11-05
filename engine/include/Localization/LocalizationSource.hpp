@@ -5,9 +5,9 @@
 #include <unordered_map>
 #include <variant>
 
-#include "Types/Numeric.h"
-#include "Localization/PluralRules.h"
-#include "Localization/TextID.h"
+#include "Types/Numeric.hpp"
+#include "Localization/PluralRules.hpp"
+#include "Localization/TextID.hpp"
 
 namespace Blackthorn::Localization {
 

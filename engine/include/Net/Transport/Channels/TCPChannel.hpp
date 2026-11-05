@@ -2,10 +2,10 @@
 
 #include <vector>
 
-#include "Core/Export.h"
-#include "Types/Numeric.h"
-#include "IO/ByteBuffer.h"
-#include "Net/Transport/Sockets/ISocket.h"
+#include "Core/Export.hpp"
+#include "Types/Numeric.hpp"
+#include "IO/ByteBuffer.hpp"
+#include "Net/Transport/Sockets/ISocket.hpp"
 
 namespace Blackthorn::Net::Transport::Channels {
 

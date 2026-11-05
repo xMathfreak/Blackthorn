@@ -1,4 +1,4 @@
-#include "Saves/SaveManager.h"
+#include "Saves/SaveManager.hpp"
 
 #include <chrono>
 #include <filesystem>
@@ -8,10 +8,10 @@
 
 #include <SDL3/SDL.h>
 
-#include "Debug/Logger.h"
-#include "Saves/Compression/ZstdCompressor.h"
-#include "Saves/Encryption/XChaCha20Encryptor.h"
-#include "Saves/Storage/LocalFileSaveStorage.h"
+#include "Debug/Logger.hpp"
+#include "Saves/Compression/ZstdCompressor.hpp"
+#include "Saves/Encryption/XChaCha20Encryptor.hpp"
+#include "Saves/Storage/LocalFileSaveStorage.hpp"
 
 namespace Blackthorn::Saves {
 

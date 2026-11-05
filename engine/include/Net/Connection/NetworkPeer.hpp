@@ -5,15 +5,15 @@
 
 #include <SDL3/SDL.h>
 
-#include "Core/Export.h"
-#include "Types/Numeric.h"
-#include "Net/Connection/PeerRateLimiter.h"
-#include "Net/Connection/PeerRateLimiter.h"
-#include "Net/Protocol/FragmentAssembler.h"
-#include "Net/Transport/Address.h"
-#include "Net/Transport/Channels/TCPChannel.h"
-#include "Net/Transport/Channels/UDPChannel.h"
-#include "Net/Transport/Sockets/ISocket.h"
+#include "Core/Export.hpp"
+#include "Types/Numeric.hpp"
+#include "Net/Connection/PeerRateLimiter.hpp"
+#include "Net/Connection/PeerRateLimiter.hpp"
+#include "Net/Protocol/FragmentAssembler.hpp"
+#include "Net/Transport/Address.hpp"
+#include "Net/Transport/Channels/TCPChannel.hpp"
+#include "Net/Transport/Channels/UDPChannel.hpp"
+#include "Net/Transport/Sockets/ISocket.hpp"
 
 namespace Blackthorn::Net::Connection {
 

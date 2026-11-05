@@ -1,14 +1,14 @@
 #pragma once
 
-#include "Assets/AssetManager.h"
-#include "Core/Export.h"
-#include "Core/SimClock.h"
-#include "Types/Numeric.h"
-#include "ECS/World.h"
-#include "Jobs/JobSystem.h"
-#include "Net/ConnectionManager.h"
-#include "Saves/SaveManager.h"
-#include "Scene/ISimContext.h"
+#include "Assets/AssetManager.hpp"
+#include "Core/Export.hpp"
+#include "Core/SimClock.hpp"
+#include "Types/Numeric.hpp"
+#include "ECS/World.hpp"
+#include "Jobs/JobSystem.hpp"
+#include "Net/ConnectionManager.hpp"
+#include "Saves/SaveManager.hpp"
+#include "Scene/ISimContext.hpp"
 
 namespace Blackthorn::Scene {
 

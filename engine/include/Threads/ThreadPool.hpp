@@ -4,8 +4,8 @@
 #include <queue>
 #include <thread>
 
-#include "Core/Export.h"
-#include "Threads/Task.h"
+#include "Core/Export.hpp"
+#include "Threads/Task.hpp"
 
 namespace Blackthorn::Threads {
 

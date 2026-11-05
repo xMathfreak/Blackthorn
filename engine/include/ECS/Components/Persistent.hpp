@@ -2,8 +2,8 @@
 
 #include <string>
 
-#include "Core/Export.h"
-#include "Saves/SaveEntityID.h"
+#include "Core/Export.hpp"
+#include "Saves/SaveEntityID.hpp"
 
 namespace Blackthorn::ECS::Components {
 

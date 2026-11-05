@@ -2,7 +2,7 @@
 
 #include <cstddef>
 
-#include "Core/Export.h"
+#include "Core/Export.hpp"
 
 namespace Blackthorn::Assets {
 

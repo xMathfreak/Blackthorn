@@ -6,10 +6,10 @@
 #include <unordered_map>
 #include <vector>
 
-#include "Core/Export.h"
-#include "Types/Numeric.h"
-#include "ECS/Entity.h"
-#include "IO/ByteBuffer.h"
+#include "Core/Export.hpp"
+#include "Types/Numeric.hpp"
+#include "ECS/Entity.hpp"
+#include "IO/ByteBuffer.hpp"
 
 namespace Blackthorn::ECS {
 

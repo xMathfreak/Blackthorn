@@ -2,11 +2,11 @@
 
 #include <vector>
 
-#include "Core/Export.h"
-#include "Types/Numeric.h"
-#include "IO/ByteBuffer.h"
-#include "Net/Connection/NetworkPeer.h"
-#include "Net/Protocol/PacketHeader.h"
+#include "Core/Export.hpp"
+#include "Types/Numeric.hpp"
+#include "IO/ByteBuffer.hpp"
+#include "Net/Connection/NetworkPeer.hpp"
+#include "Net/Protocol/PacketHeader.hpp"
 
 namespace Blackthorn::Net::Connection {
 

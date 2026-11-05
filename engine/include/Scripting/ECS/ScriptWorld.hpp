@@ -6,10 +6,10 @@
 #include <string_view>
 #include <vector>
 
-#include "ECS/Entity.h"
-#include "ECS/EntityPool.h"
-#include "Scripting/ECS/EntityHandle.h"
-#include "Types/Numeric.h"
+#include "ECS/Entity.hpp"
+#include "ECS/EntityPool.hpp"
+#include "Scripting/ECS/EntityHandle.hpp"
+#include "Types/Numeric.hpp"
 
 namespace Blackthorn::Scripting::ECS {
 

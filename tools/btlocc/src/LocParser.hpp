@@ -4,7 +4,7 @@
 #include <optional>
 #include <string>
 
-#include "LocManifest.h"
+#include "LocManifest.hpp"
 
 namespace BTLocC {
 

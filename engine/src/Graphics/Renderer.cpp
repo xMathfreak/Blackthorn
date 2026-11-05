@@ -1,12 +1,12 @@
-#include "Graphics/Renderer.h"
-#include "Graphics/RenderLayers.h"
+#include "Graphics/Renderer.hpp"
+#include "Graphics/RenderLayers.hpp"
 
 #include <cstring>
 
 #include <glm/gtc/type_ptr.hpp>
 
-#include "Debug/Logger.h"
-#include "Resources/Resource.h"
+#include "Debug/Logger.hpp"
+#include "Resources/Resource.hpp"
 
 namespace Blackthorn::Graphics {
 

@@ -2,10 +2,10 @@
 
 #include <string_view>
 
-#include "Core/Export.h"
-#include "Core/SimClock.h"
-#include "Saves/SaveHash.h"
-#include "Saves/Sections/ISaveSection.h"
+#include "Core/Export.hpp"
+#include "Core/SimClock.hpp"
+#include "Saves/SaveHash.hpp"
+#include "Saves/Sections/ISaveSection.hpp"
 
 namespace Blackthorn::Saves::Sections {
 

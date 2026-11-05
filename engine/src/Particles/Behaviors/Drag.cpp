@@ -1,4 +1,4 @@
-#include "Particles/Behaviors/Drag.h"
+#include "Particles/Behaviors/Drag.hpp"
 
 #include <algorithm>
 

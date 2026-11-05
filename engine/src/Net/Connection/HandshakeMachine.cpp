@@ -1,8 +1,8 @@
-#include "Net/Connection/HandshakeMachine.h"
+#include "Net/Connection/HandshakeMachine.hpp"
 
 #include <SDL3/SDL.h>
 
-#include "Debug/Logger.h"
+#include "Debug/Logger.hpp"
 
 namespace Blackthorn::Net::Connection {
 

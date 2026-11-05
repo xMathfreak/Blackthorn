@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Core/Export.h"
-#include "Saves/Encryption/IEncryptor.h"
+#include "Core/Export.hpp"
+#include "Saves/Encryption/IEncryptor.hpp"
 
 namespace Blackthorn::Saves {
 

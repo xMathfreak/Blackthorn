@@ -3,10 +3,10 @@
 #include <glm/glm.hpp>
 #include <SDL3/SDL.h>
 
-#include "Core/Export.h"
-#include "Math/Edges.h"
-#include "UI/WidgetState.h"
-#include "UI/Alignment.h"
+#include "Core/Export.hpp"
+#include "Math/Edges.hpp"
+#include "UI/WidgetState.hpp"
+#include "UI/Alignment.hpp"
 
 namespace Blackthorn {
 

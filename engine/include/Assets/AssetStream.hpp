@@ -8,11 +8,11 @@
 #include <span>
 #include <system_error>
 
-#include "Core/Export.h"
-#include "FileIO.h"
-#include "Types/Numeric.h"
+#include "Core/Export.hpp"
+#include "FileIO.hpp"
+#include "Types/Numeric.hpp"
 
-#include "Debug/Logger.h"
+#include "Debug/Logger.hpp"
 namespace Blackthorn::Assets {
 
 /**

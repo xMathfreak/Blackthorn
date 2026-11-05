@@ -1,4 +1,4 @@
-#include "Tests.h"
+#include "Tests.hpp"
 
 int main(int argc, char** argv) {
 	// argc/argv lets --shuffle / --seed=N / --repeat=N / --timeout=MS be

@@ -1,9 +1,9 @@
-#include "Particles/Behaviors/BehaviorFactory.h"
+#include "Particles/Behaviors/BehaviorFactory.hpp"
 
-#include "Debug/Logger.h"
-#include "Particles/Behaviors/Drag.h"
-#include "Particles/Behaviors/Gravity.h"
-#include "Particles/Behaviors/Wind.h"
+#include "Debug/Logger.hpp"
+#include "Particles/Behaviors/Drag.hpp"
+#include "Particles/Behaviors/Gravity.hpp"
+#include "Particles/Behaviors/Wind.hpp"
 
 namespace Blackthorn::Particles {
 

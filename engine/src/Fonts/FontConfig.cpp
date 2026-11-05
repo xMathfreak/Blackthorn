@@ -1,4 +1,4 @@
-#include "Fonts/FontConfig.h"
+#include "Fonts/FontConfig.hpp"
 
 namespace Blackthorn::Fonts {
 

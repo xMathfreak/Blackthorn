@@ -1,6 +1,6 @@
-#include "UI/Widget.h"
-#include "UI/Container.h"
-#include "UI/UIManager.h"
+#include "UI/Widget.hpp"
+#include "UI/Container.hpp"
+#include "UI/UIManager.hpp"
 
 namespace Blackthorn::UI {
 

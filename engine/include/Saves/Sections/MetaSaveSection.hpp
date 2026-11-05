@@ -3,9 +3,9 @@
 #include <string>
 #include <string_view>
 
-#include "Core/Export.h"
-#include "Saves/SaveHash.h"
-#include "Saves/Sections/ISaveSection.h"
+#include "Core/Export.hpp"
+#include "Saves/SaveHash.hpp"
+#include "Saves/Sections/ISaveSection.hpp"
 
 namespace Blackthorn::Saves::Sections {
 

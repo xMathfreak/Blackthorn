@@ -4,8 +4,8 @@
 
 #include <glad/gl.h>
 
-#include "Core/Export.h"
-#include "Graphics/Texture.h"
+#include "Core/Export.hpp"
+#include "Graphics/Texture.hpp"
 
 namespace Blackthorn::Graphics {
 

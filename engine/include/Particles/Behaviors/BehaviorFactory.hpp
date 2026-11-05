@@ -7,8 +7,8 @@
 
 #include <nlohmann/json.hpp>
 
-#include "Core/Export.h"
-#include "Particles/IBehavior.h"
+#include "Core/Export.hpp"
+#include "Particles/IBehavior.hpp"
 
 namespace Blackthorn::Particles {
 

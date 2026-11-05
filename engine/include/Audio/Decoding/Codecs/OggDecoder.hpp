@@ -2,8 +2,8 @@
 
 #include <filesystem>
 
-#include "Audio/Resources/AudioData.h"
-#include "Core/Export.h"
+#include "Audio/Resources/AudioData.hpp"
+#include "Core/Export.hpp"
 
 namespace Blackthorn::Audio::Decoding {
 

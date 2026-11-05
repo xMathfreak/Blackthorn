@@ -4,14 +4,14 @@
 #include <cstdint>
 #include <filesystem>
 
-#include "Audio/Resources/AudioData.h"
-#include "Core/Export.h"
-#include "Debug/Logger.h"
+#include "Audio/Resources/AudioData.hpp"
+#include "Core/Export.hpp"
+#include "Debug/Logger.hpp"
 
-#include "Audio/Decoding/Codecs/FlacDecoder.h"
-#include "Audio/Decoding/Codecs/Mp3Decoder.h"
-#include "Audio/Decoding/Codecs/OggDecoder.h"
-#include "Audio/Decoding/Codecs/WavDecoder.h"
+#include "Audio/Decoding/Codecs/FlacDecoder.hpp"
+#include "Audio/Decoding/Codecs/Mp3Decoder.hpp"
+#include "Audio/Decoding/Codecs/OggDecoder.hpp"
+#include "Audio/Decoding/Codecs/WavDecoder.hpp"
 
 namespace Blackthorn::Audio::Decoding {
 

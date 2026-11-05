@@ -1,5 +1,5 @@
-#include "Audio/AudioException.h"
-#include "Debug/Logger.h"
+#include "Audio/AudioException.hpp"
+#include "Debug/Logger.hpp"
 
 #include <AL/al.h>
 #include <string>

@@ -7,16 +7,16 @@
 
 #include <SDL3_ttf/SDL_ttf.h>
 
-#include "Containers/LRUCache.h"
-#include "Core/Export.h"
-#include "Fonts/Font.h"
-#include "Fonts/TextCacheKey.h"
-#include "Fonts/TextMarkup.h"
-#include "Graphics/Texture.h"
-#include "Graphics/Shader.h"
-#include "Graphics/EBO.h"
-#include "Graphics/VAO.h"
-#include "Graphics/VBO.h"
+#include "Containers/LRUCache.hpp"
+#include "Core/Export.hpp"
+#include "Fonts/Font.hpp"
+#include "Fonts/TextCacheKey.hpp"
+#include "Fonts/TextMarkup.hpp"
+#include "Graphics/Texture.hpp"
+#include "Graphics/Shader.hpp"
+#include "Graphics/EBO.hpp"
+#include "Graphics/VAO.hpp"
+#include "Graphics/VBO.hpp"
 
 namespace Blackthorn::Fonts {
 

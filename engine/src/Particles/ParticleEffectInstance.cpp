@@ -1,12 +1,12 @@
-#include "Particles/ParticleEffectInstance.h"
+#include "Particles/ParticleEffectInstance.hpp"
 
 #include <algorithm>
 #include <cmath>
 #include <limits>
 
-#include "Animation/SpriteClipPlayback.h"
-#include "Math/Color.h"
-#include "Particles/IBehavior.h"
+#include "Animation/SpriteClipPlayback.hpp"
+#include "Math/Color.hpp"
+#include "Particles/IBehavior.hpp"
 
 namespace Blackthorn::Particles {
 

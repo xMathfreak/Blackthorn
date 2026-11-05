@@ -8,21 +8,21 @@
 #include <glm/glm.hpp>
 #include <nlohmann/json.hpp>
 
-#include "Animation/SpriteClip.h"
-#include "Animation/SpriteClipLoader.h"
-#include "Assets/AssetManager.h"
-#include "Assets/AssetResolver.h"
-#include "Assets/IAssetLoader.h"
-#include "Assets/LoadParams.h"
-#include "Assets/RawAssetData.h"
-#include "AssetNormalize.h"
-#include "Core/Export.h"
-#include "Debug/Logger.h"
-#include "Graphics/Texture.h"
-#include "Math/NumericRange.h"
-#include "Particles/Behaviors/BehaviorFactory.h"
-#include "Particles/EmitterConfig.h"
-#include "Particles/ParticleEffect.h"
+#include "Animation/SpriteClip.hpp"
+#include "Animation/SpriteClipLoader.hpp"
+#include "Assets/AssetManager.hpp"
+#include "Assets/AssetResolver.hpp"
+#include "Assets/IAssetLoader.hpp"
+#include "Assets/LoadParams.hpp"
+#include "Assets/RawAssetData.hpp"
+#include "AssetNormalize.hpp"
+#include "Core/Export.hpp"
+#include "Debug/Logger.hpp"
+#include "Graphics/Texture.hpp"
+#include "Math/NumericRange.hpp"
+#include "Particles/Behaviors/BehaviorFactory.hpp"
+#include "Particles/EmitterConfig.hpp"
+#include "Particles/ParticleEffect.hpp"
 
 namespace Blackthorn::Particles {
 

@@ -1,9 +1,9 @@
-#include "Net/Transport/Channels/UDPChannel.h"
+#include "Net/Transport/Channels/UDPChannel.hpp"
 
 #include <SDL3/SDL.h>
 
-#include "Debug/Logger.h"
-#include "Net/Protocol/PacketHeader.h"
+#include "Debug/Logger.hpp"
+#include "Net/Protocol/PacketHeader.hpp"
 
 namespace Blackthorn::Net::Transport::Channels {
 

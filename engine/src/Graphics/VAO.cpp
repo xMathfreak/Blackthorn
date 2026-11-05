@@ -1,6 +1,6 @@
-#include "Graphics/VAO.h"
+#include "Graphics/VAO.hpp"
 
-#include "Debug/Logger.h"
+#include "Debug/Logger.hpp"
 
 namespace Blackthorn::Graphics {
 

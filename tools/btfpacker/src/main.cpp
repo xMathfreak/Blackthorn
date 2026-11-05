@@ -1,5 +1,5 @@
-#include "CLI.h"
-#include "Terminal.h"
+#include "CLI.hpp"
+#include "Terminal.hpp"
 
 #include <algorithm>
 #include <cmath>

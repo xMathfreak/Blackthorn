@@ -1,8 +1,8 @@
 #pragma once
 
-#include "Core/Export.h"
-#include "Types/Numeric.h"
-#include "Math/Color.h"
+#include "Core/Export.hpp"
+#include "Types/Numeric.hpp"
+#include "Math/Color.hpp"
 
 namespace Blackthorn::Graphics {
 

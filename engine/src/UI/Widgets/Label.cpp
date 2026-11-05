@@ -1,8 +1,8 @@
-#include "UI/Widgets/Label.h"
-#include "Fonts/BitmapFont.h"
-#include "Fonts/Font.h"
-#include "UI/Container.h"
-#include "UI/UIManager.h"
+#include "UI/Widgets/Label.hpp"
+#include "Fonts/BitmapFont.hpp"
+#include "Fonts/Font.hpp"
+#include "UI/Container.hpp"
+#include "UI/UIManager.hpp"
 
 namespace Blackthorn::UI {
 

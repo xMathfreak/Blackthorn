@@ -5,7 +5,7 @@
 #include <string_view>
 #include <vector>
 
-#include "Core/Export.h"
+#include "Core/Export.hpp"
 
 namespace Blackthorn::ECS::Components {
 

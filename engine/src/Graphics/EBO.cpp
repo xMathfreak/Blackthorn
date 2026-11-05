@@ -1,4 +1,4 @@
-#include "Graphics/EBO.h"
+#include "Graphics/EBO.hpp"
 
 namespace Blackthorn::Graphics {
 

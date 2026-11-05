@@ -9,9 +9,9 @@
 #include <string>
 #include <vector>
 
-#include "CLI.h"
-#include "NormalizeSymbol.h"
-#include "Terminal.h"
+#include "CLI.hpp"
+#include "NormalizeSymbol.hpp"
+#include "Terminal.hpp"
 
 namespace fs = std::filesystem;
 namespace CLI = Blackthorn::Tools;
@@ -47,7 +47,7 @@ bool generate(CLI::ParseResult& result) {
 		std::istreambuf_iterator<char>()
 	);
 
-	std::string headerPath = outputPath.replace_extension(".h").generic_string();
+	std::string headerPath = outputPath.replace_extension(".hpp").generic_string();
 	std::string sourcePath = outputPath.replace_extension(".cpp").generic_string();
 
 	// Generate Header

@@ -2,8 +2,8 @@
 
 #include <span>
 
-#include "Core/Export.h"
-#include "Particles/Particle.h"
+#include "Core/Export.hpp"
+#include "Particles/Particle.hpp"
 
 namespace Blackthorn::Particles {
 

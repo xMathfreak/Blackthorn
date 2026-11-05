@@ -4,9 +4,9 @@
 #include <unordered_map>
 #include <vector>
 
-#include "Core/Export.h"
-#include "ECS/Entity.h"
-#include "Saves/SaveEntityID.h"
+#include "Core/Export.hpp"
+#include "ECS/Entity.hpp"
+#include "Saves/SaveEntityID.hpp"
 
 namespace Blackthorn::Saves {
 

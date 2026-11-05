@@ -1,7 +1,7 @@
 #pragma once
 
-#include "ECS/Entity.h"
-#include "Scripting/LuaConverter.h"
+#include "ECS/Entity.hpp"
+#include "Scripting/LuaConverter.hpp"
 
 namespace Blackthorn::Scripting {
 

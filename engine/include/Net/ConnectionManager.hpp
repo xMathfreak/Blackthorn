@@ -2,16 +2,16 @@
 
 #include <vector>
 
-#include "Core/Export.h"
-#include "IO/ByteBuffer.h"
-#include "Net/ConnectionConfig.h"
-#include "Net/Connection/NetworkPeer.h"
-#include "Net/Connection/PeerRateLimiter.h"
-#include "Net/Connection/PeerRegistry.h"
-#include "Net/ConnectionEventBus.h"
-#include "Net/NetworkIOWorker.h"
-#include "Net/PacketDispatcher.h"
-#include "Net/Transport/Address.h"
+#include "Core/Export.hpp"
+#include "IO/ByteBuffer.hpp"
+#include "Net/ConnectionConfig.hpp"
+#include "Net/Connection/NetworkPeer.hpp"
+#include "Net/Connection/PeerRateLimiter.hpp"
+#include "Net/Connection/PeerRegistry.hpp"
+#include "Net/ConnectionEventBus.hpp"
+#include "Net/NetworkIOWorker.hpp"
+#include "Net/PacketDispatcher.hpp"
+#include "Net/Transport/Address.hpp"
 
 namespace Blackthorn {
 

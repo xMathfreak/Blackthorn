@@ -1,13 +1,13 @@
-#include "Audio/Streaming/StreamDecoderFactory.h"
+#include "Audio/Streaming/StreamDecoderFactory.hpp"
 
 #include <algorithm>
 
-#include "Audio/Decoding/AudioDecoder.h"
-#include "Audio/Streaming/Codecs/FlacStreamDecoder.h"
-#include "Audio/Streaming/Codecs/Mp3StreamDecoder.h"
-#include "Audio/Streaming/Codecs/OggStreamDecoder.h"
-#include "Audio/Streaming/Codecs/WavStreamDecoder.h"
-#include "Debug/Logger.h"
+#include "Audio/Decoding/AudioDecoder.hpp"
+#include "Audio/Streaming/Codecs/FlacStreamDecoder.hpp"
+#include "Audio/Streaming/Codecs/Mp3StreamDecoder.hpp"
+#include "Audio/Streaming/Codecs/OggStreamDecoder.hpp"
+#include "Audio/Streaming/Codecs/WavStreamDecoder.hpp"
+#include "Debug/Logger.hpp"
 
 namespace Blackthorn::Audio::Streaming {
 

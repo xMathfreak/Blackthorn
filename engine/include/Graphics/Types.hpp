@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Math/Edges.h"
+#include "Math/Edges.hpp"
 
 namespace Blackthorn::Graphics {
 

@@ -2,9 +2,9 @@
 
 #include <SDL3/SDL.h>
 
-#include "Core/Export.h"
-#include "Core/Runtime.h"
-#include "Input/InputManager.h"
+#include "Core/Export.hpp"
+#include "Core/Runtime.hpp"
+#include "Input/InputManager.hpp"
 
 namespace Blackthorn {
 

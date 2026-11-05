@@ -1,8 +1,8 @@
 #pragma once
 
-#include "Core/Export.h"
-#include "ECS/EntityPool.h"
-#include "ECS/SystemManager.h"
+#include "Core/Export.hpp"
+#include "ECS/EntityPool.hpp"
+#include "ECS/SystemManager.hpp"
 
 namespace Blackthorn {
 

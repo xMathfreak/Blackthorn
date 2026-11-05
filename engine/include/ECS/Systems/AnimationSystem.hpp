@@ -1,11 +1,11 @@
 #pragma once
 
-#include "Animation/SpriteClip.h"
-#include "Animation/SpriteClipPlayback.h"
-#include "Types/Numeric.h"
-#include "ECS/Components/Sprite.h"
-#include "ECS/Components/SpriteAnimation.h"
-#include "ECS/ISystem.h"
+#include "Animation/SpriteClip.hpp"
+#include "Animation/SpriteClipPlayback.hpp"
+#include "Types/Numeric.hpp"
+#include "ECS/Components/Sprite.hpp"
+#include "ECS/Components/SpriteAnimation.hpp"
+#include "ECS/ISystem.hpp"
 
 namespace Blackthorn::ECS::Systems {
 

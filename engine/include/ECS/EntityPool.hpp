@@ -12,10 +12,10 @@
 #include <stdexcept>
 #include <vector>
 
-#include "Core/Export.h"
-#include "ECS/ComponentArray.h"
-#include "ECS/Detail.h"
-#include "Jobs/JobSystem.h"
+#include "Core/Export.hpp"
+#include "ECS/ComponentArray.hpp"
+#include "ECS/Detail.hpp"
+#include "Jobs/JobSystem.hpp"
 
 namespace Blackthorn::ECS {
 

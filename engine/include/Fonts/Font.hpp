@@ -4,7 +4,7 @@
 
 #include <glm/glm.hpp>
 
-#include "Fonts/TextTypes.h"
+#include "Fonts/TextTypes.hpp"
 
 namespace Blackthorn::Fonts {
 

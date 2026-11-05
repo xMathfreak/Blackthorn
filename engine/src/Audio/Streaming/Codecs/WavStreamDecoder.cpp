@@ -1,9 +1,9 @@
-#include "Audio/Streaming/Codecs/WavStreamDecoder.h"
+#include "Audio/Streaming/Codecs/WavStreamDecoder.hpp"
 
 #include <dr_wav.h>
 
-#include "Audio/Streaming/Codecs/StreamCallbacks.h"
-#include "Debug/Logger.h"
+#include "Audio/Streaming/Codecs/StreamCallbacks.hpp"
+#include "Debug/Logger.hpp"
 
 namespace Blackthorn::Audio::Streaming {
 

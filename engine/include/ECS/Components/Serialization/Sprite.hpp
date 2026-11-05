@@ -1,7 +1,7 @@
 #pragma once
 
-#include "ECS/Components/Sprite.h"
-#include "ECS/Serialization/ComponentSerializer.h"
+#include "ECS/Components/Sprite.hpp"
+#include "ECS/Serialization/ComponentSerializer.hpp"
 
 namespace Blackthorn::ECS::Serialization {
 

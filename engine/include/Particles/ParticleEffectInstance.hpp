@@ -6,11 +6,11 @@
 #include <glm/glm.hpp>
 #include <SDL3/SDL.h>
 
-#include "Core/Export.h"
-#include "Types/Numeric.h"
-#include "Math/Random.h"
-#include "Particles/Particle.h"
-#include "Particles/ParticleEffect.h"
+#include "Core/Export.hpp"
+#include "Types/Numeric.hpp"
+#include "Math/Random.hpp"
+#include "Particles/Particle.hpp"
+#include "Particles/ParticleEffect.hpp"
 
 namespace Blackthorn::Particles {
 

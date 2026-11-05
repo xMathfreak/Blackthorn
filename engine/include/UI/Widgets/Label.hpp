@@ -2,11 +2,11 @@
 
 #include <string>
 
-#include "Core/Export.h"
-#include "Fonts/TextTypes.h"
-#include "Graphics/RenderLayers.h"
-#include "Math/Color.h"
-#include "UI/Widget.h"
+#include "Core/Export.hpp"
+#include "Fonts/TextTypes.hpp"
+#include "Graphics/RenderLayers.hpp"
+#include "Math/Color.hpp"
+#include "UI/Widget.hpp"
 
 namespace Blackthorn {
 

@@ -1,10 +1,10 @@
-#include "Graphics/Shader.h"
+#include "Graphics/Shader.hpp"
 
 #include <fstream>
 #include <sstream>
 #include <stdexcept>
 
-#include "Debug/Logger.h"
+#include "Debug/Logger.hpp"
 
 namespace Blackthorn::Graphics {
 

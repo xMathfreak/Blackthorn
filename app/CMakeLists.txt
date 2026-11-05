@@ -10,7 +10,7 @@ file(GLOB_RECURSE APP_SOURCES
 )
 
 file(GLOB_RECURSE APP_HEADERS
-	"${CMAKE_CURRENT_SOURCE_DIR}/include/*.h"
+	"${CMAKE_CURRENT_SOURCE_DIR}/include/*.hpp"
 )
 
 add_executable(${PROJECT_NAME}

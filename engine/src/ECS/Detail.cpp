@@ -1,4 +1,4 @@
-#include "ECS/Detail.h"
+#include "ECS/Detail.hpp"
 
 #include <mutex>
 #include <stdexcept>

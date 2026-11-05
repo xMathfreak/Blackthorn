@@ -1,11 +1,11 @@
-#include "ManifestParser.h"
+#include "ManifestParser.hpp"
 
 #include <cctype>
 #include <fstream>
 #include <iostream>
 #include <sstream>
 
-#include "AssetReference.h"
+#include "AssetReference.hpp"
 
 namespace BTPacker {
 

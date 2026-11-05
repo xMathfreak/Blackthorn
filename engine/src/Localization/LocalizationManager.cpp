@@ -1,4 +1,4 @@
-#include "Localization/LocalizationManager.h"
+#include "Localization/LocalizationManager.hpp"
 
 #include <algorithm>
 #include <cstring>
@@ -10,8 +10,8 @@
 
 #include <zstd.h>
 
-#include "Debug/Logger.h"
-#include "Localization/LocFormat.h"
+#include "Debug/Logger.hpp"
+#include "Localization/LocFormat.hpp"
 
 namespace fs = std::filesystem;
 

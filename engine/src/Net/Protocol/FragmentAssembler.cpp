@@ -1,6 +1,6 @@
-#include "Net/Protocol/FragmentAssembler.h"
+#include "Net/Protocol/FragmentAssembler.hpp"
 
-#include "Debug/Logger.h"
+#include "Debug/Logger.hpp"
 
 namespace Blackthorn::Net::Protocol {
 

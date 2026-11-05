@@ -1,8 +1,8 @@
 #pragma once
 
-#include "Core/Export.h"
-#include "Net/Transport/Sockets/ISocket.h"
-#include "Net/Transport/Sockets/SocketHandle.h"
+#include "Core/Export.hpp"
+#include "Net/Transport/Sockets/ISocket.hpp"
+#include "Net/Transport/Sockets/SocketHandle.hpp"
 
 namespace Blackthorn::Net::Transport::Sockets {
 

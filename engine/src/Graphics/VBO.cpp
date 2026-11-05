@@ -1,5 +1,5 @@
-#include "Graphics/VBO.h"
-#include "Debug/Logger.h"
+#include "Graphics/VBO.hpp"
+#include "Debug/Logger.hpp"
 
 #include <cstring>
 

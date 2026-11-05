@@ -8,17 +8,17 @@
 #include <glm/glm.hpp>
 #include <SDL3/SDL.h>
 
-#include "Core/Export.h"
-#include "Graphics/BlendMode.h"
-#include "Types/Numeric.h"
-#include "Graphics/EBO.h"
-#include "Graphics/Shader.h"
-#include "Graphics/VAO.h"
-#include "Graphics/VBO.h"
-#include "Graphics/Texture.h"
-#include "Math/Color.h"
-#include "Particles/Particle.h"
-#include "Particles/ParticleConfig.h"
+#include "Core/Export.hpp"
+#include "Graphics/BlendMode.hpp"
+#include "Types/Numeric.hpp"
+#include "Graphics/EBO.hpp"
+#include "Graphics/Shader.hpp"
+#include "Graphics/VAO.hpp"
+#include "Graphics/VBO.hpp"
+#include "Graphics/Texture.hpp"
+#include "Math/Color.hpp"
+#include "Particles/Particle.hpp"
+#include "Particles/ParticleConfig.hpp"
 
 namespace Blackthorn::Particles {
 

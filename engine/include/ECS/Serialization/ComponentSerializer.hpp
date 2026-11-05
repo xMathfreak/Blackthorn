@@ -4,10 +4,10 @@
 #include <functional>
 #include <unordered_map>
 
-#include "Core/Export.h"
-#include "ECS/Detail.h"
-#include "ECS/EntityPool.h"
-#include "IO/ByteBuffer.h"
+#include "Core/Export.hpp"
+#include "ECS/Detail.hpp"
+#include "ECS/EntityPool.hpp"
+#include "IO/ByteBuffer.hpp"
 
 namespace Blackthorn::ECS::Serialization {
 
@@ -42,8 +42,8 @@ namespace Blackthorn::ECS::Serialization {
  * Example specialization (in ECS/Components/Serialization/MyComponent.h):
  *
  * @code
- * #include "ECS/Components/MyComponent.h"
- * #include "ECS/Serialization/ComponentSerializer.h"
+ * #include "ECS/Components/MyComponent.hpp"
+ * #include "ECS/Serialization/ComponentSerializer.hpp"
  *
  * template <>
  * struct Blackthorn::ECS::Serialization::ComponentSerializer<MyComponent> {
@@ -113,7 +113,7 @@ inline bool hasContext(SerializationContext flags, SerializationContext flag) {
  * after including its corresponding serializer specialization header.
  *
  * @code
- * #include "ECS/Components/Serialization/Transform.h"
+ * #include "ECS/Components/Serialization/Transform.hpp"
  * // ...
  * SerializerRegistry::instance().registerComponent<Components::Transform>();
  * @endcode

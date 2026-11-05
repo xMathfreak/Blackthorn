@@ -9,11 +9,11 @@
 
 #include <nlohmann/json.hpp>
 
-#include "Core/Export.h"
-#include "Types/Numeric.h"
-#include "Localization/FormatArg.h"
-#include "Localization/LocalizationSource.h"
-#include "Localization/LocalizedString.h"
+#include "Core/Export.hpp"
+#include "Types/Numeric.hpp"
+#include "Localization/FormatArg.hpp"
+#include "Localization/LocalizationSource.hpp"
+#include "Localization/LocalizedString.hpp"
 
 namespace Blackthorn::Localization {
 

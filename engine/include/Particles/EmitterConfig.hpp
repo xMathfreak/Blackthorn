@@ -3,13 +3,13 @@
 #include <memory>
 #include <vector>
 
-#include "Core/Export.h"
-#include "Graphics/BlendMode.h"
-#include "Types/Numeric.h"
-#include "Math/NumericRange.h"
-#include "Math/Random.h"
-#include "Particles/EmitterShape.h"
-#include "Particles/IBehavior.h"
+#include "Core/Export.hpp"
+#include "Graphics/BlendMode.hpp"
+#include "Types/Numeric.hpp"
+#include "Math/NumericRange.hpp"
+#include "Math/Random.hpp"
+#include "Particles/EmitterShape.hpp"
+#include "Particles/IBehavior.hpp"
 
 namespace Blackthorn::Graphics {
 	class Texture;

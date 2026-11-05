@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Core/Export.h"
-#include "Scene/ISimContext.h"
+#include "Core/Export.hpp"
+#include "Scene/ISimContext.hpp"
 
 namespace Blackthorn {
 

@@ -2,13 +2,13 @@
 
 #include <array>
 
-#include "Core/Export.h"
-#include "Types/Numeric.h"
-#include "IO/ByteBuffer.h"
-#include "Net/Transport/Address.h"
-#include "Net/Transport/Sockets/ISocket.h"
-#include "Net/Protocol/PacketHeader.h"
-#include "Net/Protocol/FragmentHeader.h"
+#include "Core/Export.hpp"
+#include "Types/Numeric.hpp"
+#include "IO/ByteBuffer.hpp"
+#include "Net/Transport/Address.hpp"
+#include "Net/Transport/Sockets/ISocket.hpp"
+#include "Net/Protocol/PacketHeader.hpp"
+#include "Net/Protocol/FragmentHeader.hpp"
 
 namespace Blackthorn::Net::Transport::Channels {
 

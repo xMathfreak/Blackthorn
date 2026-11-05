@@ -1,4 +1,4 @@
-#include "LocParser.h"
+#include "LocParser.hpp"
 
 #include <fstream>
 #include <iostream>

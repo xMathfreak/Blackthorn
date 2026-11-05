@@ -5,7 +5,7 @@
 #include <glad/gl.h>
 #include <SDL3/SDL.h>
 
-#include "Core/Export.h"
+#include "Core/Export.hpp"
 
 namespace Blackthorn::Graphics {
 

@@ -3,7 +3,7 @@ option(BLACKTHORN_BUILD_FONT_PACKER "Build Font Packer" ON)
 option(BLACKTHORN_BUILD_LOC_COMPILER "Build Localization Compiler" ON)
 
 add_library(BlackthornCLI STATIC
-	include/CLI.h
+	include/CLI.hpp
 	src/CLI.cpp
 )
 

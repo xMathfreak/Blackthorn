@@ -2,7 +2,7 @@
 
 #include <glm/glm.hpp>
 #include <SDL3/SDL.h>
-#include "Core/Export.h"
+#include "Core/Export.hpp"
 
 namespace Blackthorn {
 

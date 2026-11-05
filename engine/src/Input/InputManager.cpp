@@ -1,7 +1,7 @@
-#include "Input/InputManager.h"
+#include "Input/InputManager.hpp"
 
-#include "Core/Settings.h"
-#include "Debug/Logger.h"
+#include "Core/Settings.hpp"
+#include "Debug/Logger.hpp"
 
 namespace Blackthorn::Input {
 

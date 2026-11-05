@@ -1,10 +1,10 @@
 #ifdef _WIN32
 
-#include "Audio/Device/WindowsDeviceNotifier.h"
+#include "Audio/Device/WindowsDeviceNotifier.hpp"
 
 #include <objbase.h>
 
-#include "Debug/Logger.h"
+#include "Debug/Logger.hpp"
 
 namespace Blackthorn::Audio {
 

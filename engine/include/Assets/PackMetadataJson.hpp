@@ -9,8 +9,8 @@
 
 #include <nlohmann/json.hpp>
 
-#include "Assets/PackFormat.h"
-#include "Types/SemVer.h"
+#include "Assets/PackFormat.hpp"
+#include "Types/SemVer.hpp"
 
 /**
  * @file PackMetadataJson.h

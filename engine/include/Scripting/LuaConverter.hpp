@@ -15,7 +15,7 @@
 #include <lua.h>
 #include <lauxlib.h>
 
-#include "Scripting/LuaResult.h"
+#include "Scripting/LuaResult.hpp"
 
 namespace Blackthorn::Scripting {
 

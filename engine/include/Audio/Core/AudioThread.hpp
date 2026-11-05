@@ -7,19 +7,19 @@
 #include <optional>
 #include <thread>
 
-#include "Assets/AssetResolver.h"
-#include "Audio/AudioConfig.h"
-#include "Audio/Backend/AudioContext.h"
-#include "Audio/Backend/AudioDevice.h"
-#include "Audio/Commands/AudioCommand.h"
-#include "Audio/Commands/AudioCommandQueue.h"
-#include "Audio/Core/StreamingThread.h"
-#include "Audio/Device/IDeviceNotifier.h"
-#include "Audio/Playback/VoicePool.h"
-#include "Audio/Playback/VoiceViewPool.h"
-#include "Audio/Playback/VoiceSnapshot.h"
-#include "Core/Export.h"
-#include "Types/Numeric.h"
+#include "Assets/AssetResolver.hpp"
+#include "Audio/AudioConfig.hpp"
+#include "Audio/Backend/AudioContext.hpp"
+#include "Audio/Backend/AudioDevice.hpp"
+#include "Audio/Commands/AudioCommand.hpp"
+#include "Audio/Commands/AudioCommandQueue.hpp"
+#include "Audio/Core/StreamingThread.hpp"
+#include "Audio/Device/IDeviceNotifier.hpp"
+#include "Audio/Playback/VoicePool.hpp"
+#include "Audio/Playback/VoiceViewPool.hpp"
+#include "Audio/Playback/VoiceSnapshot.hpp"
+#include "Core/Export.hpp"
+#include "Types/Numeric.hpp"
 
 namespace Blackthorn::Audio {
 

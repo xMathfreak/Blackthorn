@@ -1,8 +1,8 @@
 #pragma once
 
-#include "Core/Export.h"
-#include "Types/Numeric.h"
-#include "IO/ByteBuffer.h"
+#include "Core/Export.hpp"
+#include "Types/Numeric.hpp"
+#include "IO/ByteBuffer.hpp"
 
 namespace Blackthorn::Net::Protocol {
 

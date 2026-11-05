@@ -1,6 +1,6 @@
-#include "Audio/Backend/AudioBuffer.h"
-#include "Audio/AudioException.h"
-#include "Debug/Logger.h"
+#include "Audio/Backend/AudioBuffer.hpp"
+#include "Audio/AudioException.hpp"
+#include "Debug/Logger.hpp"
 
 namespace Blackthorn::Audio {
 

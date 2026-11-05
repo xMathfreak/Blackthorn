@@ -1,4 +1,4 @@
-#include "Net/NetworkIOWorker.h"
+#include "Net/NetworkIOWorker.hpp"
 
 #ifdef _WIN32
 	#include <winsock2.h>
@@ -6,15 +6,15 @@
 	#include <sys/select.h>
 #endif
 
-#include "Debug/Logger.h"
-#include "Net/Connection/PeerRegistry.h"
-#include "Net/Protocol/FragmentAssembler.h"
-#include "Net/Protocol/FragmentHeader.h"
-#include "Net/Protocol/PacketHeader.h"
-#include "Net/Transport/Channels/TCPChannel.h"
-#include "Net/Transport/Channels/UDPChannel.h"
-#include "Net/Transport/Sockets/SocketFactory.h"
-#include "Threads/ThreadRegistry.h"
+#include "Debug/Logger.hpp"
+#include "Net/Connection/PeerRegistry.hpp"
+#include "Net/Protocol/FragmentAssembler.hpp"
+#include "Net/Protocol/FragmentHeader.hpp"
+#include "Net/Protocol/PacketHeader.hpp"
+#include "Net/Transport/Channels/TCPChannel.hpp"
+#include "Net/Transport/Channels/UDPChannel.hpp"
+#include "Net/Transport/Sockets/SocketFactory.hpp"
+#include "Threads/ThreadRegistry.hpp"
 
 namespace Blackthorn::Net {
 

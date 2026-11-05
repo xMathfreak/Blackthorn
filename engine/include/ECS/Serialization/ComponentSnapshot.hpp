@@ -2,12 +2,12 @@
 
 #include <cstddef>
 
-#include "Core/Export.h"
-#include "Types/Numeric.h"
-#include "ECS/EntityPool.h"
-#include "ECS/NetworkEntityRegistry.h"
-#include "ECS/Serialization/ComponentSerializer.h"
-#include "IO/ByteBuffer.h"
+#include "Core/Export.hpp"
+#include "Types/Numeric.hpp"
+#include "ECS/EntityPool.hpp"
+#include "ECS/NetworkEntityRegistry.hpp"
+#include "ECS/Serialization/ComponentSerializer.hpp"
+#include "IO/ByteBuffer.hpp"
 
 namespace Blackthorn::ECS::Serialization {
 

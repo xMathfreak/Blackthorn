@@ -2,7 +2,7 @@
 
 #include <string>
 
-#include "Fonts/TextTypes.h"
+#include "Fonts/TextTypes.hpp"
 
 namespace Blackthorn::Fonts {
 

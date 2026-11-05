@@ -3,8 +3,8 @@
 #include <algorithm>
 #include <vector>
 
-#include "Core/Export.h"
-#include "ECS/ISystem.h"
+#include "Core/Export.hpp"
+#include "ECS/ISystem.hpp"
 
 namespace Blackthorn {
 

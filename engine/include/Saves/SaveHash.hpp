@@ -2,7 +2,7 @@
 
 #include <string_view>
 
-#include "Types/Numeric.h"
+#include "Types/Numeric.hpp"
 
 namespace Blackthorn::Saves {
 

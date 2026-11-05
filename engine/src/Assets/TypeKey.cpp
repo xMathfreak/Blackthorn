@@ -1,4 +1,4 @@
-#include "Assets/TypeKey.h"
+#include "Assets/TypeKey.hpp"
 
 #include <memory>
 #include <mutex>

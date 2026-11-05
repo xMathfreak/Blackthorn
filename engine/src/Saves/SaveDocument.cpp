@@ -1,10 +1,10 @@
-#include "Saves/SaveDocument.h"
+#include "Saves/SaveDocument.hpp"
 
 #include <cstring>
 
-#include "Debug/Logger.h"
-#include "Saves/Compression/ICompressor.h"
-#include "Saves/Encryption/IEncryptor.h"
+#include "Debug/Logger.hpp"
+#include "Saves/Compression/ICompressor.hpp"
+#include "Saves/Encryption/IEncryptor.hpp"
 
 namespace Blackthorn::Saves {
 

@@ -1,6 +1,6 @@
-#include "Net/Transport/Address.h"
+#include "Net/Transport/Address.hpp"
 
-#include "Debug/Logger.h"
+#include "Debug/Logger.hpp"
 
 namespace Blackthorn::Net::Transport {
 

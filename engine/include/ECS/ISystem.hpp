@@ -2,8 +2,8 @@
 
 #include <concepts>
 
-#include "Core/Export.h"
-#include "ECS/EntityPool.h"
+#include "Core/Export.hpp"
+#include "ECS/EntityPool.hpp"
 
 namespace Blackthorn::ECS::Systems {
 

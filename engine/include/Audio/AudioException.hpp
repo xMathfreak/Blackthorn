@@ -1,7 +1,7 @@
 #pragma once
 
 #include <stdexcept>
-#include "Core/Export.h"
+#include "Core/Export.hpp"
 
 namespace Blackthorn::Audio {
 

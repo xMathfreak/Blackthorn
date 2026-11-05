@@ -3,8 +3,8 @@
 #include <span>
 #include <vector>
 
-#include "Core/Export.h"
-#include "Particles/EmitterConfig.h"
+#include "Core/Export.hpp"
+#include "Particles/EmitterConfig.hpp"
 
 namespace Blackthorn::Particles {
 

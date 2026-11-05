@@ -3,7 +3,7 @@
 #include <filesystem>
 #include <optional>
 
-#include "Manifest.h"
+#include "Manifest.hpp"
 
 namespace BTPacker {
 

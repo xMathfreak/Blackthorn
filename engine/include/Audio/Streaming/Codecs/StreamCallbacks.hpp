@@ -4,8 +4,8 @@
 #include <cstdint>
 #include <span>
 
-#include "Assets/AssetStream.h"
-#include "Types/Numeric.h"
+#include "Assets/AssetStream.hpp"
+#include "Types/Numeric.hpp"
 
 namespace Blackthorn::Audio::Streaming::StreamCallbacks {
 

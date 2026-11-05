@@ -5,7 +5,7 @@
 #include <memory>
 #include <mutex>
 
-#include "Core/Export.h"
+#include "Core/Export.hpp"
 
 namespace Blackthorn::Jobs {
 

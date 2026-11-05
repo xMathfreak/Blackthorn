@@ -2,11 +2,11 @@
 
 #include <optional>
 
-#include "Audio/AudioConfig.h"
-#include "Audio/Core/AudioThread.h"
-#include "Core/Export.h"
-#include "Math/NumericRange.h"
-#include "Math/Random.h"
+#include "Audio/AudioConfig.hpp"
+#include "Audio/Core/AudioThread.hpp"
+#include "Core/Export.hpp"
+#include "Math/NumericRange.hpp"
+#include "Math/Random.hpp"
 
 namespace Blackthorn::Audio {
 

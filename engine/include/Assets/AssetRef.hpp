@@ -2,7 +2,7 @@
 
 #include <type_traits>
 
-#include "Types/Numeric.h"
+#include "Types/Numeric.hpp"
 
 namespace Blackthorn::Assets {
 

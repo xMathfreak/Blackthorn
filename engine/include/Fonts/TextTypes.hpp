@@ -4,7 +4,7 @@
 
 #include <glm/glm.hpp>
 
-#include "Math/Color.h"
+#include "Math/Color.hpp"
 
 namespace Blackthorn::Text {
 

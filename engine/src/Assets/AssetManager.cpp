@@ -1,4 +1,4 @@
-#include "Assets/AssetManager.h"
+#include "Assets/AssetManager.hpp"
 
 #include <chrono>
 #include <thread>

@@ -1,10 +1,10 @@
 #pragma once
 
-#include "Graphics/Renderer.h"
-#include "ECS/Components/Kinematics.h"
-#include "ECS/Components/Sprite.h"
-#include "ECS/Components/Transform.h"
-#include "ECS/ISystem.h"
+#include "Graphics/Renderer.hpp"
+#include "ECS/Components/Kinematics.hpp"
+#include "ECS/Components/Sprite.hpp"
+#include "ECS/Components/Transform.hpp"
+#include "ECS/ISystem.hpp"
 
 namespace Blackthorn::ECS::Systems {
 

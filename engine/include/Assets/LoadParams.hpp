@@ -3,7 +3,7 @@
 #include <filesystem>
 #include <memory>
 
-#include "Core/Export.h"
+#include "Core/Export.hpp"
 
 namespace Blackthorn::Assets {
 

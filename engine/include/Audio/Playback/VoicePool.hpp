@@ -2,7 +2,7 @@
 
 #include <vector>
 
-#include "Audio/Playback/Voice.h"
+#include "Audio/Playback/Voice.hpp"
 
 namespace Blackthorn::Audio {
 

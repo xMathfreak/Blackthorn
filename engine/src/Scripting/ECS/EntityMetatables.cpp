@@ -1,4 +1,4 @@
-#include "Scripting/ECS/EntityMetatable.h"
+#include "Scripting/ECS/EntityMetatable.hpp"
 
 #include <exception>
 #include <string>
@@ -6,12 +6,12 @@
 
 #include <lauxlib.h>
 
-#include "ECS/Detail.h"
-#include "Scripting/LuaMetamethodHelpers.h"
-#include "Scripting/LuaResult.h"
-#include "Scripting/ECS/EntityApi.h"
-#include "Scripting/ECS/EntityHandle.h"
-#include "Scripting/ECS/ComponentBindings.h"
+#include "ECS/Detail.hpp"
+#include "Scripting/LuaMetamethodHelpers.hpp"
+#include "Scripting/LuaResult.hpp"
+#include "Scripting/ECS/EntityApi.hpp"
+#include "Scripting/ECS/EntityHandle.hpp"
+#include "Scripting/ECS/ComponentBindings.hpp"
 
 namespace Blackthorn::Scripting::ECS {
 

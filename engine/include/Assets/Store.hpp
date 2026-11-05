@@ -4,10 +4,10 @@
 #include <unordered_map>
 #include <vector>
 
-#include "Assets/AssetStatus.h"
-#include "Assets/IAssetLoader.h"
-#include "Assets/IStore.h"
-#include "Assets/LoadParams.h"
+#include "Assets/AssetStatus.hpp"
+#include "Assets/IAssetLoader.hpp"
+#include "Assets/IStore.hpp"
+#include "Assets/LoadParams.hpp"
 
 namespace Blackthorn::Assets {
 

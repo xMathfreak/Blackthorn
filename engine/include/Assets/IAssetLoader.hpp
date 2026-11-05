@@ -3,8 +3,8 @@
 #include <memory>
 #include <vector>
 
-#include "Assets/LoadParams.h"
-#include "Assets/RawAssetData.h"
+#include "Assets/LoadParams.hpp"
+#include "Assets/RawAssetData.hpp"
 
 namespace Blackthorn::Assets {
 

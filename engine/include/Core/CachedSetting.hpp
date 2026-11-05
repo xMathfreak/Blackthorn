@@ -4,7 +4,7 @@
 #include <concepts>
 #include <string>
 
-#include "Core/Settings.h"
+#include "Core/Settings.hpp"
 
 namespace Blackthorn::Core {
 

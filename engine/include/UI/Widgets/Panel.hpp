@@ -2,13 +2,13 @@
 
 #include <SDL3/SDL.h>
 
-#include "Core/Export.h"
-#include "Types/Numeric.h"
-#include "Graphics/RenderLayers.h"
-#include "Graphics/Texture.h"
-#include "Math/Color.h"
-#include "Graphics/Types.h"
-#include "UI/Container.h"
+#include "Core/Export.hpp"
+#include "Types/Numeric.hpp"
+#include "Graphics/RenderLayers.hpp"
+#include "Graphics/Texture.hpp"
+#include "Math/Color.hpp"
+#include "Graphics/Types.hpp"
+#include "UI/Container.hpp"
 
 namespace Blackthorn::UI {
 

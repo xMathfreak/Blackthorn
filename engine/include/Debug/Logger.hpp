@@ -7,8 +7,8 @@
 #include <string>
 #include <string_view>
 
-#include "Core/Export.h"
-#include "Types/Numeric.h"
+#include "Core/Export.hpp"
+#include "Types/Numeric.hpp"
 
 namespace Blackthorn::Debug {
 

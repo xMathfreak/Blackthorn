@@ -1,8 +1,8 @@
-#include "Graphics/Camera.h"
+#include "Graphics/Camera.hpp"
 
 #include <glm/gtc/matrix_transform.hpp>
 
-#include "Graphics/Renderer.h"
+#include "Graphics/Renderer.hpp"
 
 namespace Blackthorn::Graphics {
 

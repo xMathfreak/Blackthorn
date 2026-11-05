@@ -3,7 +3,7 @@
 #include <string>
 #include <vector>
 
-#include "Math/Color.h"
+#include "Math/Color.hpp"
 
 namespace Blackthorn::Fonts {
 

@@ -1,11 +1,11 @@
-#include "Audio/Device/DeviceNotifierFactory.h"
+#include "Audio/Device/DeviceNotifierFactory.hpp"
 
 #if defined(_WIN32)
-	#include "Audio/Device/WindowsDeviceNotifier.h"
+	#include "Audio/Device/WindowsDeviceNotifier.hpp"
 #elif defined(__APPLE__)
-	#include "Audio/Device/MacDeviceNotifier.h"
+	#include "Audio/Device/MacDeviceNotifier.hpp"
 #elif defined(__linux__)
-	#include "Audio/Device/LinuxDeviceNotifier.h"
+	#include "Audio/Device/LinuxDeviceNotifier.hpp"
 #endif
 
 namespace Blackthorn::Audio {

@@ -3,10 +3,10 @@
 #include <filesystem>
 #include <memory>
 
-#include "Assets/AssetStream.h"
-#include "Audio/Resources/AudioData.h"
-#include "Audio/Streaming/IStreamDecoder.h"
-#include "Core/Export.h"
+#include "Assets/AssetStream.hpp"
+#include "Audio/Resources/AudioData.hpp"
+#include "Audio/Streaming/IStreamDecoder.hpp"
+#include "Core/Export.hpp"
 
 namespace Blackthorn::Audio::Streaming {
 

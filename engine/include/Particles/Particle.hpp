@@ -3,8 +3,8 @@
 #include <glm/glm.hpp>
 #include <SDL3/SDL.h>
 
-#include "Types/Numeric.h"
-#include "Math/Color.h"
+#include "Types/Numeric.hpp"
+#include "Math/Color.hpp"
 
 namespace Blackthorn::Particles {
 

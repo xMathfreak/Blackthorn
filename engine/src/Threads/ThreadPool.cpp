@@ -1,6 +1,6 @@
-#include "Threads/ThreadPool.h"
+#include "Threads/ThreadPool.hpp"
 
-#include "Threads/ThreadRegistry.h"
+#include "Threads/ThreadRegistry.hpp"
 
 namespace Blackthorn::Threads {
 

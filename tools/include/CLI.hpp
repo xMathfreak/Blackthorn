@@ -1,7 +1,7 @@
 #pragma once
 
 /**
- * @file CLI.h
+ * @file CLI.hpp
  * @brief Centralized command-line parsing library shared by Blackthorn's tools.
  *
  * Usage sketch:

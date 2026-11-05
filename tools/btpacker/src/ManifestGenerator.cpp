@@ -1,4 +1,4 @@
-#include "ManifestGenerator.h"
+#include "ManifestGenerator.hpp"
 
 #include <algorithm>
 #include <cctype>
@@ -12,8 +12,8 @@
 
 #include <nlohmann/json.hpp>
 
-#include "AssetNormalize.h"
-#include "AssetReference.h"
+#include "AssetNormalize.hpp"
+#include "AssetReference.hpp"
 
 namespace BTPacker {
 

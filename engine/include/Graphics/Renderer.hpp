@@ -6,18 +6,18 @@
 #include <glm/glm.hpp>
 #include <SDL3/SDL.h>
 
-#include "Core/Export.h"
-#include "Types/Numeric.h"
-#include "Graphics/EBO.h"
-#include "Graphics/FBO.h"
-#include "Graphics/RenderConfig.h"
-#include "Graphics/Shader.h"
-#include "Graphics/Texture.h"
-#include "Graphics/Types.h"
-#include "Graphics/UBO.h"
-#include "Graphics/VAO.h"
-#include "Graphics/VBO.h"
-#include "Math/Color.h"
+#include "Core/Export.hpp"
+#include "Types/Numeric.hpp"
+#include "Graphics/EBO.hpp"
+#include "Graphics/FBO.hpp"
+#include "Graphics/RenderConfig.hpp"
+#include "Graphics/Shader.hpp"
+#include "Graphics/Texture.hpp"
+#include "Graphics/Types.hpp"
+#include "Graphics/UBO.hpp"
+#include "Graphics/VAO.hpp"
+#include "Graphics/VBO.hpp"
+#include "Math/Color.hpp"
 
 namespace Blackthorn::Graphics {
 

@@ -4,10 +4,10 @@
 #include <memory>
 #include <vector>
 
-#include "Core/Export.h"
-#include "Jobs/JobHandle.h"
-#include "Net/ConnectionEventBus.h"
-#include "Net/Transport/PacketQueue.h"
+#include "Core/Export.hpp"
+#include "Jobs/JobHandle.hpp"
+#include "Net/ConnectionEventBus.hpp"
+#include "Net/Transport/PacketQueue.hpp"
 
 namespace Blackthorn {
 

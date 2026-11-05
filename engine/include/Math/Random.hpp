@@ -4,9 +4,9 @@
 #include <ranges>
 #include <vector>
 
-#include "Core/Export.h"
-#include "Types/Numeric.h"
-#include "Math/Xoshiro256ss.h"
+#include "Core/Export.hpp"
+#include "Types/Numeric.hpp"
+#include "Math/Xoshiro256ss.hpp"
 
 namespace Blackthorn::Math {
 

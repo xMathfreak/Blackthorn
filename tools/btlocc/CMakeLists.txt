@@ -6,10 +6,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 add_executable(btlocc
 	src/main.cpp
-	src/LocManifest.h
-	src/LocParser.h
+	src/LocManifest.hpp
+	src/LocParser.hpp
 	src/LocParser.cpp
-	src/Compiler.h
+	src/Compiler.hpp
 	src/Compiler.cpp
 )
 

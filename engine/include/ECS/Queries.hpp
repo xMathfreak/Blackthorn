@@ -4,9 +4,9 @@
 #include <string_view>
 #include <vector>
 
-#include "ECS/Components/Tag.h"
-#include "ECS/Detail.h"
-#include "ECS/EntityPool.h"
+#include "ECS/Components/Tag.hpp"
+#include "ECS/Detail.hpp"
+#include "ECS/EntityPool.hpp"
 
 namespace Blackthorn::ECS {
 

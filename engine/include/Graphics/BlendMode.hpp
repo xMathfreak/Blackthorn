@@ -2,7 +2,7 @@
 
 #include <glad/gl.h>
 
-#include "Types/Numeric.h"
+#include "Types/Numeric.hpp"
 
 namespace Blackthorn::Graphics {
 

@@ -1,8 +1,8 @@
 #pragma once
 
-#include "Animation/SpriteClip.h"
-#include "Core/Export.h"
-#include "Types/Numeric.h"
+#include "Animation/SpriteClip.hpp"
+#include "Core/Export.hpp"
+#include "Types/Numeric.hpp"
 
 namespace Blackthorn::Animation {
 

@@ -7,17 +7,17 @@
 #include <utility>
 #include <vector>
 
-#include "Assets/AssetManager.h"
-#include "Assets/AssetResolver.h"
-#include "Assets/IAssetLoader.h"
-#include "Assets/LoadParams.h"
-#include "Assets/RawAssetData.h"
-#include "AssetNormalize.h"
-#include "Audio/Decoding/AudioDecoder.h"
-#include "Audio/Resources/AudioClip.h"
-#include "Audio/Resources/AudioData.h"
-#include "Core/Export.h"
-#include "Debug/Logger.h"
+#include "Assets/AssetManager.hpp"
+#include "Assets/AssetResolver.hpp"
+#include "Assets/IAssetLoader.hpp"
+#include "Assets/LoadParams.hpp"
+#include "Assets/RawAssetData.hpp"
+#include "AssetNormalize.hpp"
+#include "Audio/Decoding/AudioDecoder.hpp"
+#include "Audio/Resources/AudioClip.hpp"
+#include "Audio/Resources/AudioData.hpp"
+#include "Core/Export.hpp"
+#include "Debug/Logger.hpp"
 
 namespace Blackthorn::Audio {
 

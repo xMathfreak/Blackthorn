@@ -1,11 +1,11 @@
 #pragma once
 
-#include "Audio/AudioCategory.h"
-#include "Audio/AudioHandle.h"
-#include "Audio/Backend/AudioSource.h"
-#include "Audio/Playback/StreamingVoiceState.h"
-#include "Audio/Resources/AudioClip.h"
-#include "Types/Numeric.h"
+#include "Audio/AudioCategory.hpp"
+#include "Audio/AudioHandle.hpp"
+#include "Audio/Backend/AudioSource.hpp"
+#include "Audio/Playback/StreamingVoiceState.hpp"
+#include "Audio/Resources/AudioClip.hpp"
+#include "Types/Numeric.hpp"
 
 namespace Blackthorn::Audio {
 

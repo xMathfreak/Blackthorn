@@ -1,8 +1,8 @@
-#include "Audio/Core/StreamingThread.h"
+#include "Audio/Core/StreamingThread.hpp"
 
-#include "Audio/Commands/AudioCommand.h"
-#include "Debug/Logger.h"
-#include "Threads/ThreadRegistry.h"
+#include "Audio/Commands/AudioCommand.hpp"
+#include "Debug/Logger.hpp"
+#include "Threads/ThreadRegistry.hpp"
 
 namespace Blackthorn::Audio {
 

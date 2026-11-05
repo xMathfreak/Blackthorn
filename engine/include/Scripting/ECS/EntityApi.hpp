@@ -3,10 +3,10 @@
 #include <stdexcept>
 #include <string>
 
-#include "Core/Export.h"
-#include "Scripting/LuaScript.h"
-#include "Scripting/ECS/ComponentBindings.h"
-#include "Scripting/ECS/ScriptWorld.h"
+#include "Core/Export.hpp"
+#include "Scripting/LuaScript.hpp"
+#include "Scripting/ECS/ComponentBindings.hpp"
+#include "Scripting/ECS/ScriptWorld.hpp"
 
 namespace Blackthorn::Scripting::ECS {
 

@@ -11,21 +11,21 @@
 #include <typeindex>
 #include <unordered_map>
 
-#include "AssetNormalize.h"
-#include "Assets/AssetHandle.h"
-#include "Assets/AssetRef.h"
-#include "Assets/AssetResolver.h"
-#include "Assets/AssetStatus.h"
-#include "Assets/IAssetLoader.h"
-#include "Assets/IStore.h"
-#include "Assets/LoadParams.h"
-#include "Assets/NameTable.h"
-#include "Assets/RawAssetData.h"
-#include "Assets/Store.h"
-#include "Assets/TypeKey.h"
-#include "Core/Export.h"
-#include "Debug/Logger.h"
-#include "Jobs/JobSystem.h"
+#include "AssetNormalize.hpp"
+#include "Assets/AssetHandle.hpp"
+#include "Assets/AssetRef.hpp"
+#include "Assets/AssetResolver.hpp"
+#include "Assets/AssetStatus.hpp"
+#include "Assets/IAssetLoader.hpp"
+#include "Assets/IStore.hpp"
+#include "Assets/LoadParams.hpp"
+#include "Assets/NameTable.hpp"
+#include "Assets/RawAssetData.hpp"
+#include "Assets/Store.hpp"
+#include "Assets/TypeKey.hpp"
+#include "Core/Export.hpp"
+#include "Debug/Logger.hpp"
+#include "Jobs/JobSystem.hpp"
 
 namespace Blackthorn::Assets {
 

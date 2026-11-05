@@ -1,7 +1,7 @@
-#include "Particles/ParticleSystem.h"
+#include "Particles/ParticleSystem.hpp"
 
-#include "Graphics/Renderer.h"
-#include "Particles/ParticleRenderer.h"
+#include "Graphics/Renderer.hpp"
+#include "Particles/ParticleRenderer.hpp"
 
 namespace Blackthorn::Particles {
 

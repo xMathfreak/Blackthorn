@@ -7,10 +7,10 @@
 #include <unordered_map>
 #include <vector>
 
-#include "Assets/AssetStream.h"
-#include "Assets/PackFormat.h"
-#include "Core/Export.h"
-#include "Types/Numeric.h"
+#include "Assets/AssetStream.hpp"
+#include "Assets/PackFormat.hpp"
+#include "Core/Export.hpp"
+#include "Types/Numeric.hpp"
 
 namespace Blackthorn::Assets {
 

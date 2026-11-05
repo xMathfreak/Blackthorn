@@ -5,10 +5,10 @@
 
 #include <glm/glm.hpp>
 
-#include "Core/Export.h"
-#include "Math/Random.h"
-#include "Particles/ParticleEffect.h"
-#include "Particles/ParticleEffectInstance.h"
+#include "Core/Export.hpp"
+#include "Math/Random.hpp"
+#include "Particles/ParticleEffect.hpp"
+#include "Particles/ParticleEffectInstance.hpp"
 
 namespace Blackthorn::Graphics {
 	class Renderer;

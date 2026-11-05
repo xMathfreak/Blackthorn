@@ -1,4 +1,4 @@
-#include "Particles/EmitterConfig.h"
+#include "Particles/EmitterConfig.hpp"
 
 #include <algorithm>
 #include <cmath>

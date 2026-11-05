@@ -8,11 +8,11 @@
 #include <string_view>
 #include <vector>
 
-#include "AssetNormalize.h"
-#include "AssetReference.h"
-#include "Assets/AssetStream.h"
-#include "Assets/PackMount.h"
-#include "Core/Export.h"
+#include "AssetNormalize.hpp"
+#include "AssetReference.hpp"
+#include "Assets/AssetStream.hpp"
+#include "Assets/PackMount.hpp"
+#include "Core/Export.hpp"
 
 namespace Blackthorn::Assets {
 

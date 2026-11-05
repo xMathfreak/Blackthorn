@@ -5,14 +5,14 @@
 #include <thread>
 #include <vector>
 
-#include "Core/Export.h"
-#include "Types/Numeric.h"
-#include "Net/Connection/HandshakeMachine.h"
-#include "Net/ConnectionConfig.h"
-#include "Net/ConnectionEventBus.h"
-#include "Net/Transport/PacketQueue.h"
-#include "Net/Transport/Sockets/TCPSocket.h"
-#include "Net/Transport/Sockets/UDPSocket.h"
+#include "Core/Export.hpp"
+#include "Types/Numeric.hpp"
+#include "Net/Connection/HandshakeMachine.hpp"
+#include "Net/ConnectionConfig.hpp"
+#include "Net/ConnectionEventBus.hpp"
+#include "Net/Transport/PacketQueue.hpp"
+#include "Net/Transport/Sockets/TCPSocket.hpp"
+#include "Net/Transport/Sockets/UDPSocket.hpp"
 
 namespace Blackthorn::Net {
 

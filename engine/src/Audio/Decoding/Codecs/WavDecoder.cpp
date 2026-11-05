@@ -1,8 +1,8 @@
-#include "Audio/Decoding/Codecs/WavDecoder.h"
+#include "Audio/Decoding/Codecs/WavDecoder.hpp"
 
 #include <dr_wav.h>
 
-#include "Debug/Logger.h"
+#include "Debug/Logger.hpp"
 
 namespace Blackthorn::Audio::Decoding {
 

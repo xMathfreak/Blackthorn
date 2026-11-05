@@ -7,10 +7,10 @@
 #include <thread>
 #include <vector>
 
-#include "Core/Export.h"
-#include "Jobs/Job.h"
-#include "Jobs/JobHandle.h"
-#include "Jobs/JobQueue.h"
+#include "Core/Export.hpp"
+#include "Jobs/Job.hpp"
+#include "Jobs/JobHandle.hpp"
+#include "Jobs/JobQueue.hpp"
 
 namespace Blackthorn::Jobs {
 

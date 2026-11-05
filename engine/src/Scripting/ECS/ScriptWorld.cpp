@@ -1,12 +1,12 @@
-#include "Scripting/ECS/ScriptWorld.h"
+#include "Scripting/ECS/ScriptWorld.hpp"
 
 #include <stdexcept>
 
-#include "ECS/Components/Name.h"
-#include "ECS/Components/Tag.h"
-#include "ECS/Detail.h"
-#include "ECS/Queries.h"
-#include "Scripting/ECS/ComponentBindings.h"
+#include "ECS/Components/Name.hpp"
+#include "ECS/Components/Tag.hpp"
+#include "ECS/Detail.hpp"
+#include "ECS/Queries.hpp"
+#include "Scripting/ECS/ComponentBindings.hpp"
 
 namespace Blackthorn::Scripting::ECS {
 

@@ -1,4 +1,4 @@
-#include "Localization/PluralRules.h"
+#include "Localization/PluralRules.hpp"
 
 namespace Blackthorn::Localization {
 

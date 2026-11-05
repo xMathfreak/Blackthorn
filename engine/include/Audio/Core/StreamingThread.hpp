@@ -5,9 +5,9 @@
 #include <future>
 #include <thread>
 
-#include "Audio/Commands/AudioCommandQueue.h"
-#include "Audio/Core/StreamingJob.h"
-#include "Core/Export.h"
+#include "Audio/Commands/AudioCommandQueue.hpp"
+#include "Audio/Core/StreamingJob.hpp"
+#include "Core/Export.hpp"
 
 namespace Blackthorn::Audio {
 

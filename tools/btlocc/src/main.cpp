@@ -1,11 +1,11 @@
-#include "CLI.h"
+#include "CLI.hpp"
 
 #include <filesystem>
 #include <iostream>
 #include <string>
 #include <unordered_map>
 
-#include "Compiler.h"
+#include "Compiler.hpp"
 
 namespace cli = Blackthorn::Tools;
 

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Scripting/LuaConverter.h"
+#include "Scripting/LuaConverter.hpp"
 
 #include <glm/vec2.hpp>
 

@@ -2,7 +2,7 @@
 
 #include <typeinfo>
 
-#include "Core/Export.h"
+#include "Core/Export.hpp"
 
 namespace Blackthorn::Assets::Detail {
 

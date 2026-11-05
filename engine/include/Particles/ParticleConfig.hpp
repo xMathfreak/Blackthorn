@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Types/Numeric.h"
+#include "Types/Numeric.hpp"
 
 namespace Blackthorn::Particles {
 

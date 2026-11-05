@@ -4,7 +4,7 @@
 
 #include <glad/gl.h>
 
-#include "Debug/Logger.h"
+#include "Debug/Logger.hpp"
 
 namespace Blackthorn::Graphics {
 
