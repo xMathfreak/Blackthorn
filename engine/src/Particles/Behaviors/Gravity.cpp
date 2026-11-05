@@ -1,4 +1,4 @@
-#include "Particles/Behaviors/Gravity.hpp"
+#include "Blackthorn/Particles/Behaviors/Gravity.hpp"
 
 namespace Blackthorn::Particles {
 

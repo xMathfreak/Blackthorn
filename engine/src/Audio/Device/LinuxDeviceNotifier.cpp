@@ -1,10 +1,10 @@
 #if defined(__linux__)
 
-#include "Audio/Device/LinuxDeviceNotifier.hpp"
+#include "Blackthorn/Audio/Device/LinuxDeviceNotifier.hpp"
 
 #include <dlfcn.h>
 
-#include "Debug/Logger.hpp"
+#include "Blackthorn/Debug/Logger.hpp"
 
 extern "C" {
 

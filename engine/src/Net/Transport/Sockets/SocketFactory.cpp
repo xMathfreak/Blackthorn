@@ -1,4 +1,4 @@
-#include "Net/Transport/Sockets/SocketFactory.hpp"
+#include "Blackthorn/Net/Transport/Sockets/SocketFactory.hpp"
 
 #ifdef _WIN32
 	#include <winsock2.h>
@@ -8,7 +8,7 @@
 	#include <netdb.h>
 #endif
 
-#include "Debug/Logger.hpp"
+#include "Blackthorn/Debug/Logger.hpp"
 
 namespace Blackthorn::Net::Transport::Sockets {
 

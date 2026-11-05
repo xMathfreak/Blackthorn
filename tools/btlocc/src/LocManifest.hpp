@@ -6,7 +6,7 @@
 #include <utility>
 #include <vector>
 
-#include "Localization/PluralRules.hpp"
+#include "Blackthorn/Localization/PluralRules.hpp"
 
 namespace BTLocC {
 

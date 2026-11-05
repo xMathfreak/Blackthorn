@@ -1,4 +1,4 @@
-#include "Fonts/BitmapFont.hpp"
+#include "Blackthorn/Fonts/BitmapFont.hpp"
 
 #include <algorithm>
 #include <cstring>
@@ -8,9 +8,9 @@
 
 #include <SDL3_image/SDL_image.h>
 
-#include "Debug/Logger.hpp"
-#include "Fonts/FontConfig.hpp"
-#include "Resources/Resource.hpp"
+#include "Blackthorn/Debug/Logger.hpp"
+#include "Blackthorn/Fonts/FontConfig.hpp"
+#include "Blackthorn/Resources/Resource.hpp"
 
 namespace {
 

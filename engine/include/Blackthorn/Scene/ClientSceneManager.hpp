@@ -1,0 +1,65 @@
+#pragma once
+
+#include "Blackthorn/Core/Export.hpp"
+#include "Blackthorn/Scene/IScene.hpp"
+#include "Blackthorn/Scene/SceneManager.hpp"
+
+namespace Blackthorn::Scene {
+
+/**
+ * @brief Client-side scene manager that adds a `render()` dispatch step.
+ *
+ * Only compiled into `BlackthornEngine`. `Engine` constructs one of these
+ * and stores it behind the `SceneManager` pointer inherited from
+ * `Runtime`, replacing the plain `SceneManager` created during
+ * `Runtime::init()`.
+ *
+ * `render()` walks the scene stack in the same render-visibility order as
+ * the update walk, downcasting each scene to `IScene*`. Scenes that are not
+ * `IScene` (e.g. a headless `ISimScene` pushed onto a client stack for
+ * testing) are silently skipped during render and still receive all
+ * simulation updates normally.
+ *
+ * The transition overlay callback is also dispatched here, so fade effects
+ * still work correctly.
+ */
+class BLACKTHORN_API ClientSceneManager : public SceneManager {
+public:
+	ClientSceneManager() = default;
+	~ClientSceneManager() override = default;
+
+	/**
+	 * @brief Renders visible client scenes in stack order.
+	 *
+	 * @param alpha Interpolation factor for smooth rendering between ticks.
+	 */
+	void render(float alpha) {
+		if (scenes.empty())
+			return;
+
+		auto firstRender = scenes.begin();
+
+		for (auto it = scenes.rbegin(); it != scenes.rend(); ++it) {
+			if ((*it)->blocksRender()) {
+				firstRender = (it + 1).base();
+				break;
+			}
+		}
+
+		for (auto it = firstRender; it != scenes.end(); ++it) {
+			auto* clientScene = dynamic_cast<IScene*>(it->get());
+
+			if (clientScene)
+				clientScene->render(alpha);
+		}
+
+		if (inTransition && transitionCallback) {
+			float t = transitionTime / transitionDuration;
+			transitionCallback(
+				transitionPhase == TransitionPhase::FadeOut ? t : 1.0f - t
+			);
+		}
+	}
+};
+
+} // namespace Blackthorn::Scene

@@ -1,11 +1,11 @@
-#include "Audio/Core/AudioThread.hpp"
+#include "Blackthorn/Audio/Core/AudioThread.hpp"
 
 #include <AL/al.h>
 
-#include "Audio/AudioCategory.hpp"
-#include "Audio/Playback/StreamingVoiceState.hpp"
-#include "Audio/Resources/AudioClip.hpp"
-#include "Debug/Logger.hpp"
+#include "Blackthorn/Audio/AudioCategory.hpp"
+#include "Blackthorn/Audio/Playback/StreamingVoiceState.hpp"
+#include "Blackthorn/Audio/Resources/AudioClip.hpp"
+#include "Blackthorn/Debug/Logger.hpp"
 
 namespace Blackthorn::Audio {
 

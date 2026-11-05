@@ -1,9 +1,9 @@
-#include "Audio/Backend/AudioContext.hpp"
+#include "Blackthorn/Audio/Backend/AudioContext.hpp"
 
 #include <AL/alext.h>
 
-#include "Audio/AudioException.hpp"
-#include "Audio/Backend/AudioDevice.hpp"
+#include "Blackthorn/Audio/AudioException.hpp"
+#include "Blackthorn/Audio/Backend/AudioDevice.hpp"
 
 namespace Blackthorn::Audio {
 

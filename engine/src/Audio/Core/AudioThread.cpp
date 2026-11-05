@@ -1,12 +1,12 @@
-#include "Audio/Core/AudioThread.hpp"
+#include "Blackthorn/Audio/Core/AudioThread.hpp"
 
-#include "Audio/AudioException.hpp"
-#include "Audio/Backend/AudioBuffer.hpp"
-#include "Audio/Device/DeviceNotifierFactory.hpp"
-#include "Audio/Streaming/StreamDecoderFactory.hpp"
-#include "Debug/Logger.hpp"
-#include "Threads/ThreadPriority.hpp"
-#include "Threads/ThreadRegistry.hpp"
+#include "Blackthorn/Audio/AudioException.hpp"
+#include "Blackthorn/Audio/Backend/AudioBuffer.hpp"
+#include "Blackthorn/Audio/Device/DeviceNotifierFactory.hpp"
+#include "Blackthorn/Audio/Streaming/StreamDecoderFactory.hpp"
+#include "Blackthorn/Debug/Logger.hpp"
+#include "Blackthorn/Threads/ThreadPriority.hpp"
+#include "Blackthorn/Threads/ThreadRegistry.hpp"
 
 namespace Blackthorn::Audio {
 

@@ -1,4 +1,4 @@
-#include "Particles/Behaviors/Wind.hpp"
+#include "Blackthorn/Particles/Behaviors/Wind.hpp"
 
 namespace Blackthorn::Particles {
 

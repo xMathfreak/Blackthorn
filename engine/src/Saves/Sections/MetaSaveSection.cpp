@@ -1,6 +1,6 @@
-#include "Saves/Sections/MetaSaveSection.hpp"
+#include "Blackthorn/Saves/Sections/MetaSaveSection.hpp"
 
-#include "Saves/SaveDocument.hpp"
+#include "Blackthorn/Saves/SaveDocument.hpp"
 
 namespace Blackthorn::Saves::Sections {
 

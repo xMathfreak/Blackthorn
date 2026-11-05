@@ -1,4 +1,4 @@
-#include "Assets/AssetResolver.hpp"
+#include "Blackthorn/Assets/AssetResolver.hpp"
 
 #include <algorithm>
 #include <cstdio>
@@ -6,7 +6,7 @@
 #define XXH_INLINE_ALL
 #include <xxhash.h>
 
-#include "Debug/Logger.hpp"
+#include "Blackthorn/Debug/Logger.hpp"
 #include "FileIO.hpp"
 
 namespace Blackthorn::Assets {

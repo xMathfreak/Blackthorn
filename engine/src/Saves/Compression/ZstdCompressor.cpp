@@ -1,10 +1,10 @@
-#include "Saves/Compression/ZstdCompressor.hpp"
+#include "Blackthorn/Saves/Compression/ZstdCompressor.hpp"
 
 #include <algorithm>
 
 #include <zstd.h>
 
-#include "Debug/Logger.hpp"
+#include "Blackthorn/Debug/Logger.hpp"
 
 namespace Blackthorn::Saves {
 

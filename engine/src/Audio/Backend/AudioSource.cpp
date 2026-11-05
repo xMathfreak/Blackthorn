@@ -1,10 +1,10 @@
-#include "Audio/Backend/AudioSource.hpp"
+#include "Blackthorn/Audio/Backend/AudioSource.hpp"
 
 #include <AL/al.h>
 #include <alext.h>
 
-#include "Audio/AudioException.hpp"
-#include "Audio/Backend/AudioBuffer.hpp"
+#include "Blackthorn/Audio/AudioException.hpp"
+#include "Blackthorn/Audio/Backend/AudioBuffer.hpp"
 
 namespace Blackthorn::Audio {
 

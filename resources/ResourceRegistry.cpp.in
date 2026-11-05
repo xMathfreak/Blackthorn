@@ -1,7 +1,7 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstring>
-#include "Resources/Resource.hpp"
+#include "Blackthorn/Resources/Resource.hpp"
 
 namespace Blackthorn::Resources {
 

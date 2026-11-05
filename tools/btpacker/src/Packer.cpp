@@ -21,8 +21,8 @@
 #define XXH_INLINE_ALL
 #include <xxhash.h>
 
-#include "Assets/PackFormat.hpp"
-#include "Assets/PackMetadataJson.hpp"
+#include "Blackthorn/Assets/PackFormat.hpp"
+#include "Blackthorn/Assets/PackMetadataJson.hpp"
 
 #include "FileIO.hpp"
 

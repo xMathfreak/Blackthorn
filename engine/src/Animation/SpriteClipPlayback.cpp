@@ -1,6 +1,6 @@
-#include "Animation/SpriteClipPlayback.hpp"
+#include "Blackthorn/Animation/SpriteClipPlayback.hpp"
 
-#include "Types/Numeric.hpp"
+#include "Blackthorn/Types/Numeric.hpp"
 
 namespace Blackthorn::Animation {
 

@@ -1,9 +1,9 @@
-#include "Audio/Streaming/Codecs/FlacStreamDecoder.hpp"
+#include "Blackthorn/Audio/Streaming/Codecs/FlacStreamDecoder.hpp"
 
 #include <dr_flac.h>
 
-#include "Audio/Streaming/Codecs/StreamCallbacks.hpp"
-#include "Debug/Logger.hpp"
+#include "Blackthorn/Audio/Streaming/Codecs/StreamCallbacks.hpp"
+#include "Blackthorn/Debug/Logger.hpp"
 
 namespace Blackthorn::Audio::Streaming {
 

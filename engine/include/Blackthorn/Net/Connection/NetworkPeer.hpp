@@ -1,0 +1,182 @@
+#pragma once
+
+#include <memory>
+#include <string>
+
+#include <SDL3/SDL.h>
+
+#include "Blackthorn/Core/Export.hpp"
+#include "Blackthorn/Types/Numeric.hpp"
+#include "Blackthorn/Net/Connection/PeerRateLimiter.hpp"
+#include "Blackthorn/Net/Connection/PeerRateLimiter.hpp"
+#include "Blackthorn/Net/Protocol/FragmentAssembler.hpp"
+#include "Blackthorn/Net/Transport/Address.hpp"
+#include "Blackthorn/Net/Transport/Channels/TCPChannel.hpp"
+#include "Blackthorn/Net/Transport/Channels/UDPChannel.hpp"
+#include "Blackthorn/Net/Transport/Sockets/ISocket.hpp"
+
+namespace Blackthorn::Net::Connection {
+
+/** @brief Numeric identifier for a peer, assigned by ConnectionManager. */
+using PeerID = U32;
+
+static constexpr PeerID INVALID_PEER_ID = 0xFFFFFFFFu;
+
+/**
+ * @brief Connection state of a peer.
+ */
+enum class PeerState : U8 {
+	Disconnected, ///< No active connection.
+	Connecting, ///< Handshake in progress (TCP connect or UDP hello).
+	Authenticating, ///< Unused, for future authentication state.
+	Connected, ///< Fully established.
+	Disconnecting, ///< Graceful shutdown in progress.
+};
+
+/**
+ * @brief Which side of a connection initiated it.
+ *
+ * Stored per-peer so the handshake state machine can enforce role-correct
+ * packet flow.
+ */
+enum class PeerOrigin : U8 {
+	Inbound, ///< Accepted via TCP listen socket or UDP-implicit.
+	Outbound ///< Initiated locally via ConnectionManager::connect().
+};
+
+enum class HandshakePhase : U8 {
+	None,
+	Dialing, ///< Outbound: waiting for the TCP socket to connect.
+	AwaitingRequest, ///< Inbound: waiting for the client's ConnectRequest.
+	AwaitingAck, ///< Outbound: ConnectRequest sent, waiting for ConnectAck.
+	Established, ///< Handshake complete; peer is fully connected.
+	Failed, ///< Handshake failed; the peer is being torn down.
+};
+
+/**
+ * @brief A single remote peer holding both a UDP simulation channel and a
+ * TCP session channel.
+ *
+ * @details @c ConnectionManager owns a flat array of @c NetworkPeer instances
+ * up to @c maxPeers. Slots are reused after a peer disconnects.
+ *
+ * @par Channel optionality
+ *
+ * Either channel may be absent depending on the peer's capabilities:
+ *
+ * - UDP-only peers: @c tcpSocket is nullptr.
+ * - TCP-only peers: @c udpConnected is false (the UDP channel is still allocated
+ *   but never used to keep the struct layout predictable).
+ *
+ * For the standard dual-channel configuration, both channels are active.
+ */
+struct BLACKTHORN_API NetworkPeer {
+	/// Unique ID assigned by ConnectionManager on slot allocation.
+	PeerID id = INVALID_PEER_ID;
+
+	/// Remote address for TCP connection.
+	Transport::Address tcpAddress;
+
+	/// Remote address for UDP connection.
+	Transport::Address udpAddress;
+
+	/// Current connection state.
+	PeerState state = PeerState::Disconnected;
+
+	/// Which side intiiated this connection.
+	/// Set byu HandshakeMachine::begin() on slot allocation.
+	PeerOrigin origin = PeerOrigin::Inbound;
+
+	/// Explicit handshake progress, driven by HandshakeMachine.
+	HandshakePhase handshakePhase = HandshakePhase::None;
+
+	/// SDL_GetTicks() timestamp when handshake began.
+	U64 handshakeStartedAtMs = 0;
+
+	/// UDP simulation channel. Always allocated; only used when udpConnected.
+	Transport::Channels::UDPChannel udpChannel;
+
+	/// Whether UDP traffic is active for this peer.
+	bool udpConnected = false;
+
+	/// Whether TCP traffic is active for this peer.
+	bool tcpConnected = false;
+
+	/// TCP session channel. Nullptr if TCP is not used for this peer.
+	std::unique_ptr<Transport::Channels::TCPChannel> tcpChannel;
+
+	/// TCP socket for this peer. Nullptr if TCP is not established.
+	std::unique_ptr<Transport::Sockets::ISocket> tcpSocket;
+
+	/// Timestamp of the last received packet (either channel), in ms.
+	/// Used for timeout detection.
+	U64 lastReceivedMs = 0;
+
+	/// Timestamp of the last outbound Heartbeat sent to this peer.
+	U64 lastHeartbeatSentMs = 0;
+
+	/// Timeout threshold in milliseconds. A peer is considered timed out
+	/// when `SDL_GetTicks() - lastReceivedMs > timeoutMs`.
+	U64 timeoutMs = 10000;
+
+	/// Optional human-readable label (e.g. "Player 1", "Server").
+	std::string label;
+
+	/// Per-peer inbound rate limiter. initialized with defaults from
+	/// ConnectionConfig; may be overridden after connection via
+	/// ConnectionManager::setPeerRateLimit().
+	PeerRateLimiter rateLimiter;
+
+	/// Schema version agreed during the TCP handshake.
+	/// 0 = not yet negotiated (peer is still Connecting).
+	U16 negotiatedSchemaVersion = 0;
+
+	/// Per-peer UDP fragment reassembler.
+	/// initialized by PeerRegistry::allocateSlot() with a reference to
+	/// NetworkIOWorker::globalFragmentBytes so the assembler can enforce
+	/// the engine-wide memory cap.
+	/// nullptr until the peer slot is allocated.
+	std::unique_ptr<Protocol::FragmentAssembler> fragmentAssembler;
+
+	/** @brief Returns true if the peer is in the Connected state. */
+	bool isConnected() const noexcept {
+		return (tcpConnected && tcpSocket != nullptr) || udpConnected;
+	}
+
+	/** @brief Returns true if the peer has timed out. */
+	bool isTimedOut() const noexcept {
+		if (!(state == PeerState::Connected || state == PeerState::Connecting))
+			return false;
+
+		return (SDL_GetTicks() - lastReceivedMs) > timeoutMs;
+	}
+
+	/**
+	 * @brief Returns true if a Heartbeat should be sent to this peer.
+	 *
+	 * @param intervalMs Interval from @c ConnectionConfig::heartbeatIntervalMs.
+	 *
+	 * A heartbeat is due when:
+	 *   - The peer is fully Connected over TCP (we only heartbeat TCP peers).
+	 *   - No data has been received for at least @p intervalMs milliseconds.
+	 *   - We have not already sent a heartbeat within the same interval
+	 *     (prevents flooding if the remote side stops responding entirely).
+	 */
+	bool needsHeartbeat(U32 intervalMs) const noexcept {
+		if (intervalMs == 0 || !tcpConnected || tcpSocket == nullptr)
+			return false;
+
+		const U64 now = SDL_GetTicks();
+		const bool silent = (now - lastReceivedMs) >= intervalMs;
+		const bool notSent = (now - lastHeartbeatSentMs) >= intervalMs;
+
+		return silent && notSent;
+	}
+
+	/** @brief Updates the last-received timestamp to now. */
+	void markAlive() noexcept {
+		lastReceivedMs = SDL_GetTicks();
+	}
+};
+
+} // namespace Blackthorn::Net::Connection

@@ -1,6 +1,6 @@
-#include "ECS/NetworkEntityRegistry.hpp"
+#include "Blackthorn/ECS/NetworkEntityRegistry.hpp"
 
-#include "Net/Protocol/PacketWriter.hpp"
+#include "Blackthorn/Net/Protocol/PacketWriter.hpp"
 
 namespace Blackthorn::ECS {
 

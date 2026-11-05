@@ -1,10 +1,10 @@
-#include "Audio/Decoding/Codecs/OggDecoder.hpp"
+#include "Blackthorn/Audio/Decoding/Codecs/OggDecoder.hpp"
 
 #include <cstring>
 
 #include <vorbis/vorbisfile.h>
 
-#include "Debug/Logger.hpp"
+#include "Blackthorn/Debug/Logger.hpp"
 
 namespace Blackthorn::Audio::Decoding {
 

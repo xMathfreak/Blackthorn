@@ -1,8 +1,8 @@
-#include "Saves/Encryption/XChaCha20Encryptor.hpp"
+#include "Blackthorn/Saves/Encryption/XChaCha20Encryptor.hpp"
 
 #include <sodium.h>
 
-#include "Debug/Logger.hpp"
+#include "Blackthorn/Debug/Logger.hpp"
 
 namespace Blackthorn::Saves {
 

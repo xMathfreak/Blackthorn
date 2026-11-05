@@ -1,14 +1,14 @@
-#include "UI/UIManager.hpp"
+#include "Blackthorn/UI/UIManager.hpp"
 
 #include <algorithm>
 
 #include <SDL3/SDL.h>
 
-#include "Debug/Logger.hpp"
-#include "Types/Numeric.hpp"
-#include "Input/InputManager.hpp"
-#include "UI/Container.hpp"
-#include "UI/Widget.hpp"
+#include "Blackthorn/Debug/Logger.hpp"
+#include "Blackthorn/Types/Numeric.hpp"
+#include "Blackthorn/Input/InputManager.hpp"
+#include "Blackthorn/UI/Container.hpp"
+#include "Blackthorn/UI/Widget.hpp"
 
 namespace Blackthorn::UI {
 

@@ -1,4 +1,4 @@
-#include "Debug/Logger.hpp"
+#include "Blackthorn/Debug/Logger.hpp"
 
 #include <chrono>
 #include <ctime>
@@ -6,7 +6,7 @@
 
 #include <SDL3/SDL.h>
 
-#include "Threads/ThreadRegistry.hpp"
+#include "Blackthorn/Threads/ThreadRegistry.hpp"
 
 namespace Blackthorn::Debug {
 

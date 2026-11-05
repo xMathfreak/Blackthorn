@@ -1,7 +1,7 @@
-#include "Scripting/ECS/EntityApi.hpp"
+#include "Blackthorn/Scripting/ECS/EntityApi.hpp"
 
-#include "Scripting/ECS/EntityMetatable.hpp"
-#include "Scripting/Module.hpp"
+#include "Blackthorn/Scripting/ECS/EntityMetatable.hpp"
+#include "Blackthorn/Scripting/Module.hpp"
 
 namespace Blackthorn::Scripting::ECS {
 

@@ -1,6 +1,6 @@
-#include "UI/Container.hpp"
-#include "Graphics/Renderer.hpp"
-#include "UI/UIManager.hpp"
+#include "Blackthorn/UI/Container.hpp"
+#include "Blackthorn/Graphics/Renderer.hpp"
+#include "Blackthorn/UI/UIManager.hpp"
 #include <algorithm>
 
 namespace Blackthorn::UI {

@@ -1,4 +1,4 @@
-#include "ECS/Detail.hpp"
+#include "Blackthorn/ECS/Detail.hpp"
 
 #include <mutex>
 #include <stdexcept>

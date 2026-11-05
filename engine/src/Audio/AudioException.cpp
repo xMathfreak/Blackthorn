@@ -1,5 +1,5 @@
-#include "Audio/AudioException.hpp"
-#include "Debug/Logger.hpp"
+#include "Blackthorn/Audio/AudioException.hpp"
+#include "Blackthorn/Debug/Logger.hpp"
 
 #include <AL/al.h>
 #include <string>

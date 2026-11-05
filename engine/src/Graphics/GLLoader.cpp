@@ -1,9 +1,9 @@
-#include "Graphics/GLLoader.hpp"
+#include "Blackthorn/Graphics/GLLoader.hpp"
 
 #include <glad/gl.h>
 #include <SDL3/SDL.h>
 
-#include "Debug/Logger.hpp"
+#include "Blackthorn/Debug/Logger.hpp"
 
 namespace Blackthorn::Graphics {
 

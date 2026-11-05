@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Core/SimClock.hpp"
-#include "Scene/ISimContext.hpp"
+#include "Blackthorn/Core/SimClock.hpp"
+#include "Blackthorn/Scene/ISimContext.hpp"
 
 namespace Blackthorn::Scene {
 

@@ -1,4 +1,4 @@
-#include "Threads/ThreadPriority.hpp"
+#include "Blackthorn/Threads/ThreadPriority.hpp"
 
 #if defined(_WIN32)
 	#include <windows.h>
@@ -11,7 +11,7 @@
 	#include <sys/resource.h>
 #endif
 
-#include "Debug/Logger.hpp"
+#include "Blackthorn/Debug/Logger.hpp"
 
 namespace Blackthorn::Threads {
 

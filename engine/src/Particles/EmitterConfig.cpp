@@ -1,9 +1,9 @@
-#include "Particles/EmitterConfig.hpp"
+#include "Blackthorn/Particles/EmitterConfig.hpp"
 
 #include <algorithm>
 #include <cmath>
 
-#include "glm/gtc/constants.hpp"
+#include <glm/gtc/constants.hpp>
 
 namespace Blackthorn::Particles {
 

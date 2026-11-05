@@ -1,0 +1,127 @@
+#pragma once
+
+#include "Blackthorn/Core/Export.hpp"
+#include "Blackthorn/ECS/EntityPool.hpp"
+#include "Blackthorn/ECS/SystemManager.hpp"
+
+namespace Blackthorn {
+
+namespace Jobs {
+	class JobSystem;
+} // namespace Jobs
+
+namespace ECS {
+
+class BLACKTHORN_API World {
+public:
+	World(size_t maxEntities = Detail::MAX_ENTITIES, Jobs::JobSystem* js = nullptr)
+		: pool(maxEntities)
+		, systemManager(pool, js)
+	{}
+
+	~World() {}
+
+	World(const World&) = delete;
+	World& operator=(const World&) = delete;
+
+	World(World&& other) = delete;
+	World& operator=(World&& other) = delete;
+
+	Entity createEntity() {
+		return pool.create();
+	}
+
+	void destroyEntity(Entity entity) {
+		pool.destroy(entity);
+	}
+
+	bool isValid(Entity entity) const {
+		return pool.isValid(entity);
+	}
+
+	size_t getEntityCount() const {
+		return pool.aliveCount();
+	}
+
+	void clear() {
+		pool.clear();
+	}
+
+	template <typename Component, typename... Args>
+	Component& addComponent(Entity entity, Args&&... args) {
+		return pool.addComponent<Component>(entity, std::forward<Args>(args)...);
+	}
+
+	template <typename Component>
+	void removeComponent(Entity entity) {
+		pool.removeComponent<Component>(entity);
+	}
+
+	template <typename Component>
+	bool hasComponent(Entity entity) const {
+		return pool.hasComponent<Component>(entity);
+	}
+
+	template <typename Component>
+	Component* getComponent(Entity entity) {
+		return pool.getComponent<Component>(entity);
+	}
+
+	template <typename Component>
+	const Component* getComponent(Entity entity) const {
+		return pool.getComponent<Component>(entity);
+	}
+
+	template <typename... Components>
+	Detail::View<Components...> view() {
+		return pool.view<Components...>();
+	}
+
+
+	template <typename System, typename... Args>
+	System* addSystem(Args&&... args) {
+		return systemManager.add<System>(std::forward<Args>(args)...);
+	}
+
+	template <typename System>
+	System* getSystem() {
+		return systemManager.get<System>();
+	}
+
+	template <typename System>
+	void removeSystem() {
+		systemManager.remove<System>();
+	}
+
+	void update(float dt) {
+		systemManager.update(dt);
+	}
+
+	void fixedUpdate(float dt) {
+		systemManager.fixedUpdate(dt);
+	}
+
+	void render(float alpha) {
+		systemManager.render(alpha);
+	}
+
+	void lateUpdate(float dt) {
+		systemManager.lateUpdate(dt);
+	}
+
+	auto& getPool() {
+		return pool;
+	}
+
+	const auto& getPool() const {
+		return pool;
+	}
+
+private:
+	EntityPool pool;
+	Systems::SystemManager systemManager;
+};
+
+} // namespace ECS
+
+} // namespace Blackthorn

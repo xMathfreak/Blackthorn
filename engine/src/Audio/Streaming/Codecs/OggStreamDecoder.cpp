@@ -1,4 +1,4 @@
-#include "Audio/Streaming/Codecs/OggStreamDecoder.hpp"
+#include "Blackthorn/Audio/Streaming/Codecs/OggStreamDecoder.hpp"
 
 #include <algorithm>
 #include <cstdio>
@@ -6,7 +6,7 @@
 
 #include <vorbis/vorbisfile.h>
 
-#include "Debug/Logger.hpp"
+#include "Blackthorn/Debug/Logger.hpp"
 
 namespace Blackthorn::Audio::Streaming {
 

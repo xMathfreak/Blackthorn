@@ -1,5 +1,5 @@
-#include "Audio/Playback/StreamingVoiceState.hpp"
-#include "Debug/Logger.hpp"
+#include "Blackthorn/Audio/Playback/StreamingVoiceState.hpp"
+#include "Blackthorn/Debug/Logger.hpp"
 
 namespace Blackthorn::Audio {
 

@@ -1,0 +1,23 @@
+#pragma once
+
+#include "Blackthorn/ECS/Components/Kinematics.hpp"
+#include "Blackthorn/ECS/Components/Transform.hpp"
+#include "Blackthorn/ECS/ISystem.hpp"
+
+namespace Blackthorn::ECS::Systems {
+
+class KinematicsSystem : public ISystem {
+public:
+	void fixedUpdate(EntityPool* pool, float dt, Jobs::JobSystem* js) override {
+		auto view = pool->view<Components::Kinematics, Components::Transform>();
+		float dt2 = dt * dt;
+		view.eachJobs(js, [dt2](Entity, Components::Kinematics& k, Components::Transform& t) {
+			glm::vec2 temp = t.position;
+			t.position = t.position * 2.0f - k.oldPosition + k.acceleration * dt2;
+			k.oldPosition = temp;
+			k.acceleration *= 0;
+		});
+	}
+};
+
+} // namespace Blackthorn::ECS::Systems

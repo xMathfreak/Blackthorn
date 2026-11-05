@@ -1,8 +1,8 @@
-#include "Audio/Decoding/Codecs/FlacDecoder.hpp"
+#include "Blackthorn/Audio/Decoding/Codecs/FlacDecoder.hpp"
 
 #include <dr_flac.h>
 
-#include "Debug/Logger.hpp"
+#include "Blackthorn/Debug/Logger.hpp"
 
 namespace Blackthorn::Audio::Decoding {
 

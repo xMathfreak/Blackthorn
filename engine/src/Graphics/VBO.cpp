@@ -1,5 +1,5 @@
-#include "Graphics/VBO.hpp"
-#include "Debug/Logger.hpp"
+#include "Blackthorn/Graphics/VBO.hpp"
+#include "Blackthorn/Debug/Logger.hpp"
 
 #include <cstring>
 

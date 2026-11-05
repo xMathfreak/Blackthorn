@@ -1,8 +1,8 @@
-#include "UI/Widgets/Panel.hpp"
+#include "Blackthorn/UI/Widgets/Panel.hpp"
 
-#include "Graphics/Renderer.hpp"
-#include "Graphics/Texture.hpp"
-#include "UI/UIManager.hpp"
+#include "Blackthorn/Graphics/Renderer.hpp"
+#include "Blackthorn/Graphics/Texture.hpp"
+#include "Blackthorn/UI/UIManager.hpp"
 
 namespace Blackthorn::UI {
 

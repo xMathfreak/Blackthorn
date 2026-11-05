@@ -1,13 +1,13 @@
-#include "Jobs/JobSystem.hpp"
+#include "Blackthorn/Jobs/JobSystem.hpp"
 
 #include <cassert>
 #include <chrono>
 #include <string>
 #include <thread>
 
-#include "Debug/Logger.hpp"
-#include "Threads/ThreadRegistry.hpp"
-#include "Threads/Relax.hpp"
+#include "Blackthorn/Debug/Logger.hpp"
+#include "Blackthorn/Threads/ThreadRegistry.hpp"
+#include "Blackthorn/Threads/Relax.hpp"
 
 namespace Blackthorn::Jobs {
 

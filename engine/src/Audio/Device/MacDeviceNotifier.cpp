@@ -1,8 +1,8 @@
 #ifdef __APPLE__
 
-#include "Audio/Device/MacDeviceNotifier.hpp"
+#include "Blackthorn/Audio/Device/MacDeviceNotifier.hpp"
 
-#include "Debug/Logger.hpp"
+#include "Blackthorn/Debug/Logger.hpp"
 
 namespace Blackthorn::Audio {
 

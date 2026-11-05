@@ -16,7 +16,7 @@
 
 #include "LocManifest.hpp"
 #include "LocParser.hpp"
-#include "Localization/LocFormat.hpp"
+#include "Blackthorn/Localization/LocFormat.hpp"
 
 using namespace Blackthorn::Localization;
 

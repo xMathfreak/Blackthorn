@@ -1,9 +1,9 @@
-#include "Scripting/ECS/BuiltinBindings.hpp"
+#include "Blackthorn/Scripting/ECS/BuiltinBindings.hpp"
 
-#include "ECS/Components/Transform.hpp"
-#include "Scripting/ECS/ComponentBindings.hpp"
-#include "Scripting/ECS/ScriptWorld.hpp"
-#include "Scripting/LuaMath.hpp"
+#include "Blackthorn/ECS/Components/Transform.hpp"
+#include "Blackthorn/Scripting/ECS/ComponentBindings.hpp"
+#include "Blackthorn/Scripting/ECS/ScriptWorld.hpp"
+#include "Blackthorn/Scripting/LuaMath.hpp"
 
 namespace Blackthorn::Scripting::ECS::Bindings {
 

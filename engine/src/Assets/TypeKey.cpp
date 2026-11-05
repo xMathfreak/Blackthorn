@@ -1,4 +1,4 @@
-#include "Assets/TypeKey.hpp"
+#include "Blackthorn/Assets/TypeKey.hpp"
 
 #include <memory>
 #include <mutex>

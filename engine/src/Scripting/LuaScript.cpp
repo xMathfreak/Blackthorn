@@ -1,4 +1,4 @@
-#include "Scripting/LuaScript.hpp"
+#include "Blackthorn/Scripting/LuaScript.hpp"
 
 #include <cassert>
 #include <cstdio>

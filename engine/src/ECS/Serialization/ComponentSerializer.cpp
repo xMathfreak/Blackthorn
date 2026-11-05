@@ -1,4 +1,4 @@
-#include "ECS/Serialization/ComponentSerializer.hpp"
+#include "Blackthorn/ECS/Serialization/ComponentSerializer.hpp"
 
 namespace Blackthorn::ECS::Serialization {
 

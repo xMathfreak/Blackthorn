@@ -1,8 +1,8 @@
 #pragma once
 
-#include "Graphics/Renderer.hpp"
-#include "Particles/ParticleRenderer.hpp"
-#include "Scene/ISceneContext.hpp"
+#include "Blackthorn/Graphics/Renderer.hpp"
+#include "Blackthorn/Particles/ParticleRenderer.hpp"
+#include "Blackthorn/Scene/ISceneContext.hpp"
 
 namespace Blackthorn::Scene {
 

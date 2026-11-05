@@ -1,11 +1,11 @@
-#include "Debug/Profiler.hpp"
+#include "Blackthorn/Debug/Profiler.hpp"
 
 #include <algorithm>
 #include <numeric>
 
 #include <SDL3/SDL_timer.h>
 
-#include "Debug/Logger.hpp"
+#include "Blackthorn/Debug/Logger.hpp"
 
 namespace Blackthorn::Debug {
 

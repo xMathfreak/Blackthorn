@@ -1,9 +1,9 @@
-#include "Audio/Streaming/Codecs/Mp3StreamDecoder.hpp"
+#include "Blackthorn/Audio/Streaming/Codecs/Mp3StreamDecoder.hpp"
 
 #include <dr_mp3.h>
 
-#include "Audio/Streaming/Codecs/StreamCallbacks.hpp"
-#include "Debug/Logger.hpp"
+#include "Blackthorn/Audio/Streaming/Codecs/StreamCallbacks.hpp"
+#include "Blackthorn/Debug/Logger.hpp"
 
 namespace Blackthorn::Audio::Streaming {
 

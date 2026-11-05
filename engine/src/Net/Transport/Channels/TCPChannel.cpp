@@ -1,6 +1,6 @@
-#include "Net/Transport/Channels/TCPChannel.hpp"
+#include "Blackthorn/Net/Transport/Channels/TCPChannel.hpp"
 
-#include "Debug/Logger.hpp"
+#include "Blackthorn/Debug/Logger.hpp"
 
 namespace Blackthorn::Net::Transport::Channels {
 

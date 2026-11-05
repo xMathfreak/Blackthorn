@@ -1,8 +1,8 @@
-#include "Audio/Decoding/Codecs/Mp3Decoder.hpp"
+#include "Blackthorn/Audio/Decoding/Codecs/Mp3Decoder.hpp"
 
 #include <dr_mp3.h>
 
-#include "Debug/Logger.hpp"
+#include "Blackthorn/Debug/Logger.hpp"
 
 namespace Blackthorn::Audio::Decoding {
 

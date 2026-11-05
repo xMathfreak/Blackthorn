@@ -1,4 +1,4 @@
-#include "Graphics/FBO.hpp"
+#include "Blackthorn/Graphics/FBO.hpp"
 
 #include <stdexcept>
 
