@@ -16,7 +16,6 @@ These are expected to be installed on your system and discoverable via `find_pac
 
 ### Included
 - glm
-- glfw
 - glad
 - zstd
 - libsodium
