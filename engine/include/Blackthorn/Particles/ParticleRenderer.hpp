@@ -6,7 +6,6 @@
 #include <unordered_map>
 
 #include <glm/glm.hpp>
-#include <SDL3/SDL.h>
 
 #include "Blackthorn/Core/Export.hpp"
 #include "Blackthorn/Graphics/BlendMode.hpp"

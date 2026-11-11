@@ -4,7 +4,6 @@
 #include <cstddef>
 #include <type_traits>
 #include <typeindex>
-#include <typeinfo>
 
 #include "Blackthorn/Core/Export.hpp"
 #include "Blackthorn/ECS/Entity.hpp"

@@ -4,9 +4,8 @@
 #include <filesystem>
 #include <unordered_set>
 
-#include <sodium.h>
-
 #include <SDL3/SDL.h>
+#include <sodium.h>
 
 #include "Blackthorn/Debug/Logger.hpp"
 #include "Blackthorn/Saves/Compression/ZstdCompressor.hpp"
