@@ -56,8 +56,6 @@ Renderer::Renderer(const RenderConfig& cfg)
 	);
 }
 
-Renderer::~Renderer() {}
-
 void Renderer::initQuadBuffers() {
 	QuadVAO = std::make_unique<VAO>(true);
 	QuadVBO = std::make_unique<VBO>(BufferType::Streaming, true);

@@ -78,7 +78,6 @@ struct BLACKTHORN_API PlayOptions {
  */
 class BLACKTHORN_API AudioManager {
 public:
-	AudioManager();
 	~AudioManager();
 
 	bool init(const AudioConfig& cfg = AudioConfig{});

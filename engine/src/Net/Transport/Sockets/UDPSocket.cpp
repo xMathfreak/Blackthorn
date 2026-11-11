@@ -17,10 +17,6 @@
 
 namespace Blackthorn::Net::Transport::Sockets {
 
-UDPSocket::UDPSocket() {
-
-}
-
 UDPSocket::~UDPSocket() {
 	close();
 }

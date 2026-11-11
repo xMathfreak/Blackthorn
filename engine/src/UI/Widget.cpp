@@ -4,8 +4,6 @@
 
 namespace Blackthorn::UI {
 
-Widget::Widget() {}
-
 void Widget::setState(WidgetState flag) {
 	state = state | flag;
 	markRenderDirty();

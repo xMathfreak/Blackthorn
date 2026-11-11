@@ -3,9 +3,6 @@
 #include <array>
 #include <memory>
 
-#include <glm/glm.hpp>
-#include <SDL3/SDL.h>
-
 #include "Blackthorn/Core/Export.hpp"
 #include "Blackthorn/Types/Numeric.hpp"
 #include "Blackthorn/Graphics/EBO.hpp"
@@ -223,11 +220,6 @@ public:
 	 * letterbox color, etc. Defaults to @c RenderConfig{}.
 	 */
 	explicit Renderer(const RenderConfig& cfg = RenderConfig{});
-
-	/**
-	 * @brief Destroys the renderer and releases GPU resources.
-	 */
-	~Renderer();
 
 	/// Copy construction is disabled
 	Renderer(const Renderer&) = delete;

@@ -19,8 +19,6 @@
 
 namespace Blackthorn::Net::Transport::Sockets {
 
-TCPSocket::TCPSocket() {}
-
 TCPSocket::TCPSocket(SocketHandle existingFd)
 	: fd(existingFd)
 	, connected(existingFd != INVALID_SOCKET_HANDLE)

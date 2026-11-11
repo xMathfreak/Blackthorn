@@ -134,12 +134,6 @@ TextID makeTextID(std::string_view id) noexcept {
 	return TextID{XXH64(id.data(), id.size(), 0)};
 }
 
-LocalizationManager::LocalizationManager() = default;
-
-LocalizationManager::~LocalizationManager() {
-
-}
-
 void LocalizationManager::setLocaleCode(std::string_view lc) {
 	localeCode = lc;
 }

@@ -34,8 +34,6 @@ void Runtime::signalHandler(int) {
 	signalReceived.store(true, std::memory_order::relaxed);
 }
 
-Runtime::Runtime() {}
-
 Runtime::~Runtime() {
 	shutdown();
 }

@@ -65,7 +65,7 @@ protected:
 	void toggleState(WidgetState flag);
 
 public:
-	Widget();
+	Widget() = default;
 	virtual ~Widget() = default;
 
 	Widget(const Widget&) = delete;

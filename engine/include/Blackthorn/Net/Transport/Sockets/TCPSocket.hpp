@@ -21,7 +21,7 @@ namespace Blackthorn::Net::Transport::Sockets {
  */
 class BLACKTHORN_API TCPSocket : public ISocket {
 public:
-	TCPSocket();
+	TCPSocket() = default;
 
 	/**
 	 * @brief Constructs a TCPSocket from an already-open file descriptor.

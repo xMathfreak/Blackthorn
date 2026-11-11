@@ -2,9 +2,6 @@
 
 namespace Blackthorn::Audio {
 
-AudioManager::AudioManager() {
-}
-
 AudioManager::~AudioManager() {
 	shutdown();
 }

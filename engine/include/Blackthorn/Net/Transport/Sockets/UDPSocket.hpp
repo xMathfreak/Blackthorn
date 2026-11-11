@@ -24,7 +24,7 @@ namespace Blackthorn::Net::Transport::Sockets {
  */
 class BLACKTHORN_API UDPSocket : public ISocket {
 public:
-	UDPSocket();
+	UDPSocket() = default;
 	~UDPSocket() override;
 
 	UDPSocket(const UDPSocket&) = delete;

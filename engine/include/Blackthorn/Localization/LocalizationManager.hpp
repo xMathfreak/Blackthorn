@@ -35,9 +35,6 @@ struct LoadResult {
 
 class BLACKTHORN_API LocalizationManager {
 public:
-	LocalizationManager();
-	~LocalizationManager();
-
 	void setLocaleCode(std::string_view lc);
 	[[nodiscard]] std::string_view getLocaleCode() const noexcept;
 

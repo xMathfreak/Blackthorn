@@ -68,7 +68,7 @@ namespace Scene {
  */
 class BLACKTHORN_API Runtime {
 public:
-	Runtime();
+	Runtime() = default;
 	virtual ~Runtime();
 
 	Runtime(const Runtime&) = delete;
