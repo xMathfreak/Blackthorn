@@ -15,45 +15,45 @@ struct BLACKTHORN_API AABB {
 	glm::vec2 max;
 
 	[[nodiscard]]
-	constexpr glm::vec2 center() const {
+	inline glm::vec2 center() const {
 		return (min + max) * 0.5f;
 	}
 
 	[[nodiscard]]
-	constexpr glm::vec2 size() const {
+	inline glm::vec2 size() const {
 		return max - min;
 	}
 
 	[[nodiscard]]
-	constexpr glm::vec2 halfExtents() const {
+	inline glm::vec2 halfExtents() const {
 		return size() * 0.5f;
 	}
 
 	[[nodiscard]]
-	constexpr float area() const {
+	inline float area() const {
 		glm::vec2 s = size();
 		return (s.x * s.y);
 	}
 
 	[[nodiscard]]
-	constexpr float perimeter() const {
+	inline float perimeter() const {
 		glm::vec2 s = size();
 		return 2.0f * (s.x + s.y);
 	}
 
 	[[nodiscard]]
-	constexpr AABB expanded(float amount) const {
+	inline AABB expanded(float amount) const {
 		return { min - glm::vec2{amount}, max + glm::vec2{amount} };
 	}
 
 	[[nodiscard]]
-	constexpr bool contains(const glm::vec2& point) const {
+	inline bool contains(const glm::vec2& point) const {
 		return point.x >= min.x && point.x <= max.x
 			&& point.y >= min.y && point.y <= max.y;
 	}
 
 	[[nodiscard]]
-	constexpr bool overlaps(const AABB& other) const {
+	inline bool overlaps(const AABB& other) const {
 		return !(
 			max.x < other.min.x ||
 			min.x > other.max.x ||
@@ -63,7 +63,7 @@ struct BLACKTHORN_API AABB {
 	}
 
 	[[nodiscard]]
-	constexpr bool intersection(const AABB& other, AABB& result) const {
+	inline bool intersection(const AABB& other, AABB& result) const {
 		AABB r {
 			glm::vec2{ std::max(min.x, other.min.x), std::max(min.y, other.min.y) },
 			glm::vec2{ std::min(max.x, other.max.x), std::min(max.y, other.max.y) }
@@ -77,7 +77,7 @@ struct BLACKTHORN_API AABB {
 	}
 
 	[[nodiscard]]
-	constexpr AABB merge(const AABB& other) const {
+	inline AABB merge(const AABB& other) const {
 		return {
 			glm::vec2{ std::min(min.x, other.min.x), std::min(min.y, other.min.y) },
 			glm::vec2{ std::max(max.x, other.max.x), std::max(max.y, other.max.y) }
@@ -85,7 +85,7 @@ struct BLACKTHORN_API AABB {
 	}
 
 	[[nodiscard]]
-	static constexpr AABB fromCenterSize(const glm::vec2& center, const glm::vec2& size) {
+	static inline AABB fromCenterSize(const glm::vec2& center, const glm::vec2& size) {
 		glm::vec2 half = size * 0.5f;
 		return { center - half, center + half };
 	}
@@ -96,35 +96,35 @@ struct BLACKTHORN_API Circle {
 	float radius;
 
 	[[nodiscard]]
-	constexpr float radiusSq() const {
+	inline float radiusSq() const {
 		return radius * radius;
 	}
 
 	[[nodiscard]]
-	constexpr float area() const {
+	inline float area() const {
 		return std::numbers::pi_v<float> * radiusSq();
 	}
 
 	[[nodiscard]]
-	constexpr float circumference() const {
+	inline float circumference() const {
 		return 2.0f * std::numbers::pi_v<float> * radius;
 	}
 
 	[[nodiscard]]
-	constexpr bool contains(const glm::vec2& point) const {
+	inline bool contains(const glm::vec2& point) const {
 		glm::vec2 d = point - center;
 		return (d.x * d.x + d.y * d.y) <= radiusSq();
 	}
 
 	[[nodiscard]]
-	constexpr bool overlaps(const Circle& other) const {
+	inline bool overlaps(const Circle& other) const {
 		glm::vec2 d = other.center - center;
 		float radSum = radius + other.radius;
 		return (d.x * d.x + d.y * d.y) <= radSum * radSum;
 	}
 
 	[[nodiscard]]
-	constexpr bool overlaps(const AABB& box) const {
+	inline bool overlaps(const AABB& box) const {
 
 		glm::vec2 closest = glm::vec2{
 		glm::max(box.min.x, glm::min(center.x, box.max.x)),
@@ -136,7 +136,7 @@ struct BLACKTHORN_API Circle {
 	}
 
 	[[nodiscard]]
-	constexpr AABB bounds() const {
+	inline AABB bounds() const {
 		return {
 			center - glm::vec2{radius},
 			center + glm::vec2{radius}
@@ -163,7 +163,7 @@ struct RayHit {
 };
 
 [[nodiscard]]
-constexpr bool pointInTriangle(const glm::vec2& p, const glm::vec2& a, const glm::vec2& b, const glm::vec2& c) {
+inline bool pointInTriangle(const glm::vec2& p, const glm::vec2& a, const glm::vec2& b, const glm::vec2& c) {
 	glm::vec2 ab = b - a, bc = c - b, ca = a - c;
 	glm::vec2 ap = p - a, bp = p - b, cp = p - c;
 
@@ -178,7 +178,7 @@ constexpr bool pointInTriangle(const glm::vec2& p, const glm::vec2& a, const glm
 }
 
 [[nodiscard]]
-constexpr glm::vec2 closestPointOnSegment(const glm::vec2& point, const glm::vec2& segStart, const glm::vec2& segEnd) {
+inline glm::vec2 closestPointOnSegment(const glm::vec2& point, const glm::vec2& segStart, const glm::vec2& segEnd) {
 	glm::vec2 ab = segEnd - segStart;
 	float lenSq = ab.x * ab.x + ab.y * ab.y;
 
@@ -201,7 +201,7 @@ inline float distanceToSegment(const glm::vec2& point, const glm::vec2& segStart
 }
 
 [[nodiscard]]
-constexpr float distanceSqToSegment(const glm::vec2& point, const glm::vec2& segStart, const glm::vec2& segEnd) {
+inline float distanceSqToSegment(const glm::vec2& point, const glm::vec2& segStart, const glm::vec2& segEnd) {
 	glm::vec2 closest = closestPointOnSegment(point, segStart, segEnd);
 	glm::vec2 d = point - closest;
 
@@ -209,7 +209,7 @@ constexpr float distanceSqToSegment(const glm::vec2& point, const glm::vec2& seg
 }
 
 [[nodiscard]]
-constexpr bool segmentIntersection(const glm::vec2& a1, const glm::vec2& a2, const glm::vec2& b1, const glm::vec2& b2, glm::vec2& outPoint) {
+inline bool segmentIntersection(const glm::vec2& a1, const glm::vec2& a2, const glm::vec2& b1, const glm::vec2& b2, glm::vec2& outPoint) {
 	glm::vec2 da = a2 - a1;
 	glm::vec2 db = b2 - b1;
 	float denom = da.x * db.y - da.y * db.x;
@@ -287,7 +287,7 @@ inline bool raycastCircle(const Ray2D& ray, const Circle& circle, RayHit& outHit
 }
 
 [[nodiscard]]
-constexpr bool aabbMinTransVec(const AABB& a, const AABB& b, glm::vec2& outVec) {
+inline bool aabbMinTransVec(const AABB& a, const AABB& b, glm::vec2& outVec) {
 	if (!a.overlaps(b))
 		return false;
 
@@ -316,7 +316,7 @@ constexpr bool aabbMinTransVec(const AABB& a, const AABB& b, glm::vec2& outVec) 
 }
 
 [[nodiscard]]
-constexpr float triangleArea(const glm::vec2& a, const glm::vec2& b, const glm::vec2& c) {
+inline float triangleArea(const glm::vec2& a, const glm::vec2& b, const glm::vec2& c) {
 	return std::abs((b.x - a.x) * (c.y - a.y) - (c.x - a.x) * (b.y - a.y)) * 0.5f;
 }
 
@@ -326,7 +326,7 @@ inline float angleBetween(const glm::vec2& a, const glm::vec2& b) {
 }
 
 [[nodiscard]]
-constexpr float cross2D(const glm::vec2& a, const glm::vec2& b) {
+inline float cross2D(const glm::vec2& a, const glm::vec2& b) {
 	return a.x * b.y - a.y * b.x;
 }
 
@@ -343,7 +343,7 @@ inline glm::vec2 rotateAround(const glm::vec2& point, const glm::vec2& pivot, fl
 }
 
 [[nodiscard]]
-constexpr bool intersectsFast(const AABB& a, const AABB& b) {
+inline bool intersectsFast(const AABB& a, const AABB& b) {
 	return
 		(a.min.x < b.max.x) &
 		(a.max.x > b.min.x) &
