@@ -7,7 +7,6 @@
 #include <string_view>
 #include <unordered_map>
 
-#include "Blackthorn/Core/Export.hpp"
 #include "Blackthorn/Types/Numeric.hpp"
 
 namespace Blackthorn::Assets {

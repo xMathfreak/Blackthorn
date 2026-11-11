@@ -9,13 +9,13 @@
 
 #include <nlohmann/json.hpp>
 
+#include "AssetNormalize.hpp"
 #include "Blackthorn/Animation/SpriteClip.hpp"
 #include "Blackthorn/Assets/AssetManager.hpp"
 #include "Blackthorn/Assets/AssetResolver.hpp"
 #include "Blackthorn/Assets/IAssetLoader.hpp"
 #include "Blackthorn/Assets/LoadParams.hpp"
 #include "Blackthorn/Assets/RawAssetData.hpp"
-#include "AssetNormalize.hpp"
 #include "Blackthorn/Core/Export.hpp"
 #include "Blackthorn/Debug/Logger.hpp"
 

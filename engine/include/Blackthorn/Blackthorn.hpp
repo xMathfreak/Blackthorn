@@ -1,8 +1,10 @@
 #pragma once
 
 #include "Blackthorn/Assets.hpp"
+#include "Blackthorn/Core.hpp"
 #include "Blackthorn/Debug.hpp"
 #include "Blackthorn/ECS.hpp"
+#include "Blackthorn/Engine.hpp"
 #include "Blackthorn/Loaders.hpp"
 #include "Blackthorn/Localization.hpp"
 #include "Blackthorn/Math.hpp"
@@ -11,7 +13,7 @@
 #include "Blackthorn/Scene.hpp"
 #include "Blackthorn/Scripting.hpp"
 
-#ifndef BLACKTHORN_HEADLESS
+#ifdef BLACKTHORN_CLIENT
 	#include "Blackthorn/Animation.hpp"
 	#include "Blackthorn/Audio.hpp"
 	#include "Blackthorn/Fonts.hpp"

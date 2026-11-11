@@ -1,5 +1,9 @@
 #pragma once
 
+#ifndef BLACKTHORN_CLIENT
+	#error "ClientSceneManager.h requires linking BlackthornEngine"
+#endif
+
 #include "Blackthorn/Core/Export.hpp"
 #include "Blackthorn/Scene/IScene.hpp"
 #include "Blackthorn/Scene/SceneManager.hpp"
