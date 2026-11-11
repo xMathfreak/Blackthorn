@@ -89,7 +89,7 @@ public:
 	 */
 	Scene::ISceneContext& getSceneContext();
 
-	Scene::ClientSceneManager& getClientSceneManager();
+	Scene::ClientSceneManager& getSceneManager();
 	void update(float dt) override;
 
 	Audio::AudioManager& getAudioManager();

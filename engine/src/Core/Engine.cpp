@@ -89,7 +89,7 @@ Scene::ISceneContext& Engine::getSceneContext() {
 	return static_cast<Scene::ISceneContext&>(*simContext);
 }
 
-Scene::ClientSceneManager& Engine::getClientSceneManager() {
+Scene::ClientSceneManager& Engine::getSceneManager() {
 	return static_cast<Scene::ClientSceneManager&>(*sceneManager);
 }
 
@@ -454,7 +454,7 @@ void Engine::render(float alpha) {
 	renderer->setTime(smoothTime, fixedTime);
 
 	renderer->beginScene();
-	getClientSceneManager().render(alpha);
+	getSceneManager().render(alpha);
 	renderer->endScene();
 	SDL_GL_SwapWindow(window);
 }
