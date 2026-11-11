@@ -8,9 +8,8 @@ saves/
 !assets/shaders/
 !engine/include/assets/
 !engine/src/assets/
-!engine/include/saves/
+!engine/include/Blackthorn/saves/
 !engine/src/saves/
-
 
 *.cfg
 *.dll
