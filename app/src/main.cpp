@@ -1,4 +1,4 @@
-#include "Blackthorn/Core/Engine.hpp"
+#include <Blackthorn/Blackthorn.hpp>
 
 int main(int argc, char const *argv[]) {
 	Blackthorn::Engine engine;
