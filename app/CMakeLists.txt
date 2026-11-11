@@ -101,7 +101,7 @@ target_include_directories(${PROJECT_NAME}
 
 target_link_libraries(${PROJECT_NAME}
 	PRIVATE
-		BlackthornEngine
+		Blackthorn::Engine
 )
 
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD

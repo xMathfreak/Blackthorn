@@ -48,6 +48,8 @@ add_library(BlackthornCore SHARED
 	${ALL_ENGINE_PRIVATE}
 )
 
+add_library(Blackthorn::Core ALIAS BlackthornCore)
+
 target_compile_definitions(BlackthornCore
 	PRIVATE
 		BLACKTHORN_EXPORTS
@@ -70,8 +72,8 @@ target_include_directories(BlackthornCore
 		$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
 		$<INSTALL_INTERFACE:include>
 	PRIVATE
-		${CMAKE_CURRENT_SOURCE_DIR}/src
 		${CMAKE_CURRENT_SOURCE_DIR}/private
+		${CMAKE_CURRENT_SOURCE_DIR}/src
 		${XXHASH_INCLUDE_DIR}
 )
 
@@ -98,12 +100,14 @@ add_library(BlackthornEngine SHARED
 	${ALL_ENGINE_PRIVATE}
 )
 
+add_library(Blackthorn::Engine ALIAS BlackthornEngine)
+
 target_compile_definitions(BlackthornEngine
 	PRIVATE
 		BLACKTHORN_EXPORTS
-		BLACKTHORN_CLIENT
 
 	PUBLIC
+		BLACKTHORN_CLIENT
 		$<$<CONFIG:Debug>:BLACKTHORN_DEBUG>
 		$<$<NOT:$<CONFIG:Debug>>:BLACKTHORN_RELEASE>
 
@@ -113,11 +117,12 @@ target_compile_definitions(BlackthornEngine
 
 target_include_directories(BlackthornEngine
 	PUBLIC
+		$<BUILD_INTERFACE:$<TARGET_PROPERTY:glad,INTERFACE_INCLUDE_DIRECTORIES>>
 		$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
 		$<INSTALL_INTERFACE:include>
 	PRIVATE
-		${CMAKE_CURRENT_SOURCE_DIR}/src
 		${CMAKE_CURRENT_SOURCE_DIR}/private
+		${CMAKE_CURRENT_SOURCE_DIR}/src
 		${XXHASH_INCLUDE_DIR}
 )
 
@@ -126,8 +131,6 @@ target_link_libraries(BlackthornEngine
 		BlackthornCore
 		SDL3_image::SDL3_image
 		SDL3_ttf::SDL3_ttf
-		glad
-		glfw
 		dr_libs
 		vorbis
 		vorbisfile
@@ -135,6 +138,7 @@ target_link_libraries(BlackthornEngine
 		OpenAL::OpenAL
 
 	PRIVATE
+		glad
 		OpenGL::GL
 )
 
@@ -150,6 +154,7 @@ foreach(TARGET BlackthornCore BlackthornEngine)
 			/wd4100
 			/wd4201
 			/wd4324
+			/arch:SSE4.2
 
 			$<$<CONFIG:Debug>:
 				/WX
