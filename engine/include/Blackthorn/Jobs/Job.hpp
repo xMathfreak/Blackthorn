@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstring>
 #include <cstddef>
 #include <functional>
 #include <type_traits>

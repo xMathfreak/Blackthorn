@@ -9,6 +9,17 @@ function(suppress_third_party_warnings target)
 	endif()
 endfunction()
 
+# Save the original state of the PIC variable
+if(DEFINED CMAKE_POSITION_INDEPENDENT_CODE)
+	set(_had_original_pic TRUE)
+	set(_saved_pic "${CMAKE_POSITION_INDEPENDENT_CODE}")
+else()
+	set(_had_original_pic FALSE)
+endif()
+
+# Enable PIC for third-party dependencies
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
 # json
 add_library(nlohmann_json INTERFACE)
 
@@ -81,3 +92,10 @@ set(LUA_SOURCE_DIR
 	"${CMAKE_CURRENT_SOURCE_DIR}/lua"
 )
 include("${CMAKE_SOURCE_DIR}/cmake/lua.cmake")
+
+# Restore the original state
+if(_had_original_pic)
+	set(CMAKE_POSITION_INDEPENDENT_CODE "${_saved_pic}")
+else()
+	unset(CMAKE_POSITION_INDEPENDENT_CODE)
+endif()
