@@ -1,80 +1,206 @@
-cmake_minimum_required(VERSION 3.16.0)
-project(BlackthornEngine VERSION 0.1.0 LANGUAGES CXX)
+cmake_minimum_required(VERSION 3.20.0)
 
-# C++ Standard
-set(CMAKE_CXX_STANDARD 20)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
+project(BlackthornEngine
+	VERSION 0.1.0
+	LANGUAGES CXX
+)
 
-option(BT_PACK_MODE "Enable pack-file asset resolution (forced ON for Release)" OFF)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+option (BT_PACK_MODE
+	"Enable pack-file asset resolution (forced ON for Release)"
+	OFF
+)
 
 set(XXHASH_INCLUDE_DIR
-	"${CMAKE_CURRENT_SOURCE_DIR}/../third_party/zstd/lib/common"
+	"${CMAKE_SOURCE_DIR}/third_party/zstd/lib/common"
 	CACHE PATH "Path to the directory containing xxhash.h"
 )
 
-# Source Directories
-file(GLOB_RECURSE ALL_ENGINE_SOURCES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
-file(GLOB_RECURSE ALL_ENGINE_HEADERS "${CMAKE_CURRENT_SOURCE_DIR}/include/*.hpp")
-file(GLOB_RECURSE ALL_ENGINE_PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/private/*.hpp")
+set(ENGINE_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src")
+set(ENGINE_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/include")
+set(ENGINE_PRIVATE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/private")
 
-file(GLOB_RECURSE AUDIO_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/Audio/*.cpp")
-file(GLOB_RECURSE GRAPHICS_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/Graphics/*.cpp")
-file(GLOB_RECURSE PARTICLE_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/Particles/*.cpp")
-file(GLOB_RECURSE FONT_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/Fonts/*.cpp")
-file(GLOB_RECURSE UI_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/UI/*.cpp")
-
-# Client only sources (Excluded from Core)
-set(CLIENT_ONLY_SOURCES
-	# Engine graphics entry point
-	"${CMAKE_CURRENT_SOURCE_DIR}/src/Core/Engine.cpp"
-
-	${AUDIO_SOURCES}
-	${GRAPHICS_SOURCES}
-	${PARTICLE_SOURCES}
-	${FONT_SOURCES}
-	${UI_SOURCES}
+file(GLOB_RECURSE ENGINE_SOURCES CONFIGURE_DEPENDS
+	"${ENGINE_SOURCE_DIR}/*.cpp"
 )
 
-# Core sources = all sources minus client-only ones.
-set(CORE_SOURCES ${ALL_ENGINE_SOURCES})
-foreach(src ${CLIENT_ONLY_SOURCES})
-	list(REMOVE_ITEM CORE_SOURCES "${src}")
+file(GLOB_RECURSE ENGINE_HEADERS CONFIGURE_DEPENDS
+	"${ENGINE_INCLUDE_DIR}/*.hpp"
+)
+
+file(GLOB_RECURSE ENGINE_PRIVATE_HEADERS CONFIGURE_DEPENDS
+	"${ENGINE_PRIVATE_DIR}/*.hpp"
+)
+
+set(CLIENT_SOURCE_DIRS
+	Audio
+	Graphics
+	Particles
+	Fonts
+	UI
+)
+
+set(CLIENT_ONLY_SOURCES
+	"${ENGINE_SOURCE_DIR}/Core/Engine.cpp"
+)
+
+foreach(DIR IN LISTS CLIENT_SOURCE_DIRS)
+	file(GLOB_RECURSE DIR_SOURCES CONFIGURE_DEPENDS
+		"${ENGINE_SOURCE_DIR}/${DIR}/*.cpp"
+	)
+
+	list(APPEND CLIENT_ONLY_SOURCES ${DIR_SOURCES})
 endforeach()
 
-# Simulation only (headless)
+set(CORE_SOURCES ${ENGINE_SOURCES})
+
+foreach(SOURCE IN LISTS CLIENT_ONLY_SOURCES)
+	list(REMOVE_ITEM CORE_SOURCES "${SOURCE}")
+endforeach()
+
+
+add_library(BlackthornBuildOptions INTERFACE)
+add_library(Blackthorn::BuildOptions ALIAS BlackthornBuildOptions)
+
+target_compile_features(BlackthornBuildOptions
+	INTERFACE
+		cxx_std_23
+)
+
+target_compile_definitions(BlackthornBuildOptions
+	INTERFACE
+		GLM_FORCE_INTRINSICS
+)
+
 add_library(BlackthornCore SHARED
 	${CORE_SOURCES}
-	${ALL_ENGINE_HEADERS}
-	${ALL_ENGINE_PRIVATE}
+	${ENGINE_HEADERS}
+	${ENGINE_PRIVATE_HEADERS}
 )
 
 add_library(Blackthorn::Core ALIAS BlackthornCore)
 
-target_compile_definitions(BlackthornCore
-	PRIVATE
-		BLACKTHORN_EXPORTS
-		BLACKTHORN_HEADLESS
-
-	PUBLIC
-		$<$<CONFIG:Debug>:BLACKTHORN_DEBUG>
-		$<$<NOT:$<CONFIG:Debug>>:BLACKTHORN_RELEASE>
-
-		$<$<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>>:BT_PACK_MODE>
-		$<$<AND:$<CONFIG:Debug>,$<BOOL:${BT_PACK_MODE}>>:BT_PACK_MODE>
-
-		BLACKTHORN_VERSION_MAJOR=${PROJECT_VERSION_MAJOR}
-		BLACKTHORN_VERSION_MINOR=${PROJECT_VERSION_MINOR}
-		BLACKTHORN_VERSION_PATCH=${PROJECT_VERSION_PATCH}
+add_library(BlackthornEngine SHARED
+	${CLIENT_ONLY_SOURCES}
+	${ENGINE_HEADERS}
+	${ENGINE_PRIVATE_HEADERS}
 )
 
-target_include_directories(BlackthornCore
-	PUBLIC
-		$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-		$<INSTALL_INTERFACE:include>
-	PRIVATE
-		${CMAKE_CURRENT_SOURCE_DIR}/private
-		${CMAKE_CURRENT_SOURCE_DIR}/src
-		${XXHASH_INCLUDE_DIR}
+add_library(Blackthorn::Engine ALIAS BlackthornEngine)
+
+function(blackthorn_configure_target TARGET)
+	target_link_libraries(${TARGET} PUBLIC
+		BlackthornBuildOptions
+	)
+
+	target_compile_definitions(${TARGET}
+		PRIVATE
+			BLACKTHORN_EXPORTS
+
+		PUBLIC
+			$<$<CONFIG:Debug>:BLACKTHORN_DEBUG>
+			$<$<NOT:$<CONFIG:Debug>>:BLACKTHORN_RELEASE>
+			$<$<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>>:BT_PACK_MODE>
+			$<$<AND:$<CONFIG:Debug>,$<BOOL:${BT_PACK_MODE}>>:BT_PACK_MODE>
+	)
+
+	target_include_directories(${TARGET}
+		PUBLIC
+			$<BUILD_INTERFACE:${ENGINE_INCLUDE_DIR}>
+			$<INSTALL_INTERFACE:include>
+
+		PRIVATE
+			${ENGINE_PRIVATE_DIR}
+			${ENGINE_SOURCE_DIR}
+			${XXHASH_INCLUDE_DIR}
+	)
+
+	target_compile_options(${TARGET} PRIVATE
+		# MSVC
+		$<$<CXX_COMPILER_ID:MSVC>:
+			/W4
+			/permissive-
+			/wd4100
+			/wd4201
+			/wd4324
+			/arch:SSE4.2
+		>
+
+		$<$<AND:$<CXX_COMPILER_ID:MSVC>,$<CONFIG:Debug>>:
+			/WX
+			/Zi
+			/GS
+		>
+
+		$<$<AND:$<CXX_COMPILER_ID:MSVC>,$<CONFIG:RelWithDebInfo>>:
+			/O2
+			/Zi
+		>
+
+		$<$<AND:$<CXX_COMPILER_ID:MSVC>,$<CONFIG:Release>>:
+			/O2
+			/GL
+		>
+
+		# GCC / Clang
+		$<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>>:
+			-Wall
+			-Wextra
+			-Wpedantic
+			-Wshadow
+			-Wnull-dereference
+			-Wno-unused-parameter
+			-Wimplicit-fallthrough
+			-fvisibility=hidden
+			-Wformat=2
+			-msse4.2
+		>
+
+		$<$<AND:$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>>,$<CONFIG:Debug>>:
+			-Og
+			-ggdb
+			-Werror
+			-fstack-protector-strong
+		>
+
+		$<$<AND:$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>>,$<CONFIG:RelWithDebInfo>>:
+			-O2
+			-g
+		>
+
+		$<$<AND:$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>>,$<CONFIG:Release>>:
+			-O3
+			-mtune=generic
+		>
+	)
+
+	set_target_properties(${TARGET} PROPERTIES
+		PREFIX ""
+		DEBUG_POSTFIX "d"
+		LINKER_LANGUAGE CXX
+		POSITION_INDEPENDENT_CODE ON
+
+		RUNTIME_OUTPUT_DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}"
+		LIBRARY_OUTPUT_DIRECTORY "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}"
+		ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}"
+	)
+
+	if(IPO_SUPPORTED)
+		set_property(TARGET ${TARGET} PROPERTY
+			INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE
+		)
+	endif()
+endfunction()
+
+blackthorn_configure_target(BlackthornCore)
+blackthorn_configure_target(BlackthornEngine)
+
+target_compile_definitions(BlackthornCore PUBLIC
+	BLACKTHORN_HEADLESS
+	BLACKTHORN_VERSION_MAJOR=${PROJECT_VERSION_MAJOR}
+	BLACKTHORN_VERSION_MINOR=${PROJECT_VERSION_MINOR}
+	BLACKTHORN_VERSION_PATCH=${PROJECT_VERSION_PATCH}
 )
 
 target_link_libraries(BlackthornCore
@@ -88,42 +214,19 @@ target_link_libraries(BlackthornCore
 		BlackthornShared
 )
 
-# Transport layer requires WinSock2 on Windows.
 if(WIN32)
-	target_link_libraries(BlackthornCore PUBLIC ws2_32 Avrt)
+	target_link_libraries(BlackthornCore PUBLIC
+		ws2_32
+		Avrt
+	)
 endif()
 
-# Full client build
-add_library(BlackthornEngine SHARED
-	${CLIENT_ONLY_SOURCES}
-	${ALL_ENGINE_HEADERS}
-	${ALL_ENGINE_PRIVATE}
+target_compile_definitions(BlackthornEngine PUBLIC
+	BLACKTHORN_CLIENT
 )
 
-add_library(Blackthorn::Engine ALIAS BlackthornEngine)
-
-target_compile_definitions(BlackthornEngine
-	PRIVATE
-		BLACKTHORN_EXPORTS
-
-	PUBLIC
-		BLACKTHORN_CLIENT
-		$<$<CONFIG:Debug>:BLACKTHORN_DEBUG>
-		$<$<NOT:$<CONFIG:Debug>>:BLACKTHORN_RELEASE>
-
-		$<$<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>>:BT_PACK_MODE>
-		$<$<AND:$<CONFIG:Debug>,$<BOOL:${BT_PACK_MODE}>>:BT_PACK_MODE>
-)
-
-target_include_directories(BlackthornEngine
-	PUBLIC
-		$<BUILD_INTERFACE:$<TARGET_PROPERTY:glad,INTERFACE_INCLUDE_DIRECTORIES>>
-		$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-		$<INSTALL_INTERFACE:include>
-	PRIVATE
-		${CMAKE_CURRENT_SOURCE_DIR}/private
-		${CMAKE_CURRENT_SOURCE_DIR}/src
-		${XXHASH_INCLUDE_DIR}
+target_include_directories(BlackthornEngine PUBLIC
+	$<BUILD_INTERFACE:$<TARGET_PROPERTY:glad,INTERFACE_INCLUDE_DIRECTORIES>>
 )
 
 target_link_libraries(BlackthornEngine
@@ -142,121 +245,50 @@ target_link_libraries(BlackthornEngine
 		OpenGL::GL
 )
 
-# Shared compiler options
-foreach(TARGET BlackthornCore BlackthornEngine)
-	target_compile_definitions(${TARGET} PUBLIC GLM_FORCE_INTRINSICS)
-
-	target_compile_options(${TARGET} PRIVATE
-		# MSVC
-		$<$<CXX_COMPILER_ID:MSVC>:
-			/W4
-			/permissive-
-			/wd4100
-			/wd4201
-			/wd4324
-			/arch:SSE4.2
-
-			$<$<CONFIG:Debug>:
-				/WX
-				/Zi
-				/GS
-			>
-
-			$<$<CONFIG:RelWithDebInfo>:
-				/O2
-				/Zi
-			>
-
-			$<$<CONFIG:Release>:
-				/O2
-				/GL
-			>
-		>
-
-		# GCC/Clang
-		$<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>>:
-			-Wall
-			-Wextra
-			-Wpedantic
-			-Wshadow
-			-Wnull-dereference
-			-Wno-unused-parameter
-			-Wimplicit-fallthrough
-			-fvisibility=hidden
-			-Wformat=2
-			-msse4.2
-
-			$<$<CONFIG:Debug>:
-				-Og
-				-ggdb
-				-Werror
-				-fstack-protector-strong
-			>
-
-			$<$<CONFIG:RelWithDebInfo>:
-				-O2
-				-g
-			>
-
-			$<$<CONFIG:Release>:
-				-O3
-				-mtune=generic
-			>
-		>
-	)
-
-	set_target_properties(${TARGET} PROPERTIES
-		PREFIX                    ""
-		DEBUG_POSTFIX             "d"
-		LINKER_LANGUAGE           CXX
-		RUNTIME_OUTPUT_DIRECTORY  ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-		LIBRARY_OUTPUT_DIRECTORY  ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}
-		ARCHIVE_OUTPUT_DIRECTORY  ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}
-		POSITION_INDEPENDENT_CODE ON
-	)
-
-	if (IPO_SUPPORTED)
-		set_target_properties(${TARGET} PROPERTIES
-			INTERPROCEDURAL_OPTIMIZATION $<$<CONFIG:Release>:TRUE>
-		)
-	endif()
-endforeach()
-
-# Windows dll copy
 if(WIN32)
-	foreach(LIB BlackthornEngine SDL3::SDL3 SDL3_image::SDL3_image SDL3_ttf::SDL3_ttf)
+	set(WINDOWS_RUNTIME_TARGETS
+		BlackthornEngine
+		SDL3::SDL3
+		SDL3_image::SDL3_image
+		SDL3_ttf::SDL3_ttf
+	)
+
+	foreach(TARGET IN LISTS WINDOWS_RUNTIME_TARGETS)
 		add_custom_command(TARGET BlackthornEngine POST_BUILD
 			COMMAND ${CMAKE_COMMAND} -E copy_if_different
-				$<TARGET_FILE:${LIB}>
-				${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+				"$<TARGET_FILE:${TARGET}>"
+				"$<TARGET_FILE_DIR:BlackthornEngine>"
+			VERBATIM
 		)
 	endforeach()
 
-	if (NOT MSVC)
+	# MinGW runtime dependencies.
+	if(NOT MSVC)
 		set(MINGW_RUNTIME_DLLS
 			libstdc++-6.dll
 			libgcc_s_seh-1.dll
 			libwinpthread-1.dll
 		)
 
-		get_filename_component(
-			MINGW_BIN_DIR
-			${CMAKE_CXX_COMPILER}
+		get_filename_component(MINGW_BIN_DIR
+			"${CMAKE_CXX_COMPILER}"
 			DIRECTORY
 		)
 
 		foreach(DLL IN LISTS MINGW_RUNTIME_DLLS)
-			set (DLL_PATH "${MINGW_BIN_DIR}/${DLL}")
+			set(DLL_PATH "${MINGW_BIN_DIR}/${DLL}")
 
-			if (EXISTS ${DLL_PATH})
-				add_custom_command(
-					TARGET BlackthornEngine POST_BUILD
+			if(EXISTS "${DLL_PATH}")
+				add_custom_command(TARGET BlackthornEngine POST_BUILD
 					COMMAND ${CMAKE_COMMAND} -E copy_if_different
-					${DLL_PATH}
-					${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+						"${DLL_PATH}"
+						"$<TARGET_FILE_DIR:BlackthornEngine>"
+					VERBATIM
 				)
 			else()
-				message(WARNING "MinGW runtime DLL not found: ${DLL_PATH}")
+				message(WARNING
+					"MinGW runtime DLL not found: ${DLL_PATH}"
+				)
 			endif()
 		endforeach()
 	endif()
@@ -267,6 +299,7 @@ target_set_metadata(BlackthornEngine
 	VERSION    "${PROJECT_VERSION}"
 	IDENTIFIER "com.blackthorn.engine"
 )
+
 target_add_platform_resources(BlackthornEngine)
 
 target_set_metadata(BlackthornCore
@@ -274,49 +307,28 @@ target_set_metadata(BlackthornCore
 	VERSION    "${PROJECT_VERSION}"
 	IDENTIFIER "com.blackthorn.engine.core"
 )
+
 target_add_platform_resources(BlackthornCore)
 
-# Resources
-include(${CMAKE_SOURCE_DIR}/cmake/EngineResources.cmake)
+include("${CMAKE_SOURCE_DIR}/cmake/EngineResources.cmake")
 
-embed_resource(BlackthornEngine
-	"${CMAKE_SOURCE_DIR}/assets/shaders/default.vert"
+set(ENGINE_SHADER_RESOURCES
+	default.vert
+	default.frag
+	font_bitmap.vert
+	font_bitmap.frag
+	font_ttf.vert
+	font_ttf.frag
+	particle.vert
+	particle.frag
+	screen.vert
+	screen.frag
 )
 
-embed_resource(BlackthornEngine
-	"${CMAKE_SOURCE_DIR}/assets/shaders/default.frag"
-)
-
-embed_resource(BlackthornEngine
-	"${CMAKE_SOURCE_DIR}/assets/shaders/font_bitmap.vert"
-)
-
-embed_resource(BlackthornEngine
-	"${CMAKE_SOURCE_DIR}/assets/shaders/font_bitmap.frag"
-)
-
-embed_resource(BlackthornEngine
-	"${CMAKE_SOURCE_DIR}/assets/shaders/font_ttf.vert"
-)
-
-embed_resource(BlackthornEngine
-	"${CMAKE_SOURCE_DIR}/assets/shaders/font_ttf.frag"
-)
-
-embed_resource(BlackthornEngine
-	"${CMAKE_SOURCE_DIR}/assets/shaders/particle.vert"
-)
-
-embed_resource(BlackthornEngine
-	"${CMAKE_SOURCE_DIR}/assets/shaders/particle.frag"
-)
-
-embed_resource(BlackthornEngine
-	"${CMAKE_SOURCE_DIR}/assets/shaders/screen.vert"
-)
-
-embed_resource(BlackthornEngine
-	"${CMAKE_SOURCE_DIR}/assets/shaders/screen.frag"
-)
+foreach(SHADER IN LISTS ENGINE_SHADER_RESOURCES)
+	embed_resource(BlackthornEngine
+		"${CMAKE_SOURCE_DIR}/assets/shaders/${SHADER}"
+	)
+endforeach()
 
 generate_resource_registry(BlackthornEngine)
