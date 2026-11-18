@@ -1,5 +1,6 @@
 #include "Packer.hpp"
 #include "AssetNormalize.hpp"
+#include "StringHelper.hpp"
 
 #include <algorithm>
 #include <cctype>
@@ -130,9 +131,7 @@ bool decompressZstd(
  */
 PackAssetType resolveAssetType(const std::string& typeStr) {
 	std::string lower = typeStr;
-	std::transform(lower.begin(), lower.end(), lower.begin(),
-		[](unsigned char c){ return static_cast<char>(std::tolower(c)); }
-	);
+	Blackthorn::String::toLowerInPlace(lower);
 
 	if (lower == "texture")
 		return PackAssetType::Texture;

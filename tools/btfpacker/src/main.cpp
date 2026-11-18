@@ -11,10 +11,12 @@
 #include <sstream>
 #include <vector>
 
+#include "StringHelper.hpp"
+
 namespace cli = Blackthorn::Tools;
 namespace term = Blackthorn::Terminal;
 
-enum ExitCodes {
+enum ExitCodes : uint8_t {
 	Ok = 0,
 	BadArgs = 2,
 	MetricsError = 3,
@@ -48,21 +50,6 @@ struct FontGlyph {
 	int16_t xOffset, yOffset, xAdvance;
 };
 
-inline void toLower(std::string& s) {
-	std::transform(s.begin(), s.end(), s.begin(), ::tolower);
-}
-
-inline void trim(std::string& s) {
-	const auto first = s.find_first_not_of(" \t");
-	if (first == std::string::npos) {
-		s.clear();
-		return;
-	}
-
-	const auto last = s.find_last_not_of(" \t");
-	s = s.substr(first, last - first + 1);
-}
-
 bool parseKeyValue(const std::string& line, const std::string& key, std::string& outValue) {
 	std::istringstream iss(line);
 	std::string token;
@@ -72,7 +59,7 @@ bool parseKeyValue(const std::string& line, const std::string& key, std::string&
 
 		if (eq != std::string::npos) {
 			std::string k = token.substr(0, eq);
-			toLower(k);
+			Blackthorn::String::toLowerInPlace(k);
 
 			std::string v = token.substr(eq + 1);
 
@@ -157,7 +144,7 @@ bool parseMetrics(const std::string& path, FontMetaData& metadata, std::vector<F
 		if (commentPos != std::string::npos)
 			line = line.substr(0, commentPos);
 
-		trim(line);
+		Blackthorn::String::trim(line);
 
 		if (line.empty())
 			continue;
@@ -165,7 +152,7 @@ bool parseMetrics(const std::string& path, FontMetaData& metadata, std::vector<F
 		std::istringstream iss(line);
 		std::string command;
 		iss >> command;
-		toLower(command);
+		Blackthorn::String::toLowerInPlace(command);
 
 		if (command == "common" || command == "global") {
 			if (opts.lineHeightOverride == -1.0f) {

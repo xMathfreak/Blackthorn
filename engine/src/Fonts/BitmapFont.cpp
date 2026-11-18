@@ -11,12 +11,9 @@
 #include "Blackthorn/Debug/Logger.hpp"
 #include "Blackthorn/Fonts/FontConfig.hpp"
 #include "Blackthorn/Resources/Resource.hpp"
+#include "StringHelper.hpp"
 
 namespace {
-
-inline void toLower(std::string& s) {
-	std::transform(s.begin(), s.end(), s.begin(), ::tolower);
-}
 
 bool parseKeyValue(const std::string& line, const std::string& key, std::string& outValue) {
 	std::istringstream iss(line);
@@ -27,7 +24,7 @@ bool parseKeyValue(const std::string& line, const std::string& key, std::string&
 
 		if (eq != std::string::npos) {
 			std::string k = token.substr(0, eq);
-			toLower(k);
+			Blackthorn::String::toLowerInPlace(k);
 
 			std::string v = token.substr(eq + 1);
 
@@ -253,7 +250,7 @@ bool BitmapFont::parseMetricsText(std::istream& stream, const std::string& sourc
 		std::istringstream iss(line);
 		std::string command;
 		iss >> command;
-		toLower(command);
+		String::toLowerInPlace(command);
 
 		if (command == "common" || command == "global") {
 			lineHeight = parseFloatValue(line, "lineheight");

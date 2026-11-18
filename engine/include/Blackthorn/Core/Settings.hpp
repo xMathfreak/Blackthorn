@@ -13,6 +13,7 @@
 #include <vector>
 
 #include "Blackthorn/Core/Export.hpp"
+#include "StringHelper.hpp"
 
 namespace Blackthorn::Core {
 
@@ -124,7 +125,7 @@ public:
 
 		if (found) {
 			if constexpr (std::is_same_v<T, bool>) {
-				const auto v = toLower(rawValue);
+				const auto v = String::toLower(rawValue);
 
 				if (v == "true" || v == "1" || v == "yes" || v == "on")
 					return true;
@@ -289,21 +290,8 @@ private:
 	}
 
 	/// Strips leading/trailing whitespace and lowercases
-	static std::string normalize(std::string s) {
-		const auto notSpace = [](unsigned char c){ return !std::isspace(c); };
-		s.erase(s.begin(), std::find_if(s.begin(), s.end(), notSpace));
-		s.erase(std::find_if(s.rbegin(), s.rend(), notSpace).base(), s.end());
-		std::transform(s.begin(), s.end(), s.begin(),
-			[](unsigned char c){ return static_cast<char>(std::tolower(c)); });
-		return s;
-	}
-
-	/// Lowercases a copy
-	static std::string toLower(std::string s) {
-		std::transform(s.begin(), s.end(), s.begin(),
-			[](unsigned char c){ return static_cast<char>(std::tolower(c)); });
-
-		return s;
+	static std::string normalize(const std::string& s) {
+		return String::toLower(String::trim(s));
 	}
 
 	template <typename T>

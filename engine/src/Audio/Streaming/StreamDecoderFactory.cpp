@@ -8,24 +8,14 @@
 #include "Blackthorn/Audio/Streaming/Codecs/OggStreamDecoder.hpp"
 #include "Blackthorn/Audio/Streaming/Codecs/WavStreamDecoder.hpp"
 #include "Blackthorn/Debug/Logger.hpp"
+#include "StringHelper.hpp"
 
 namespace Blackthorn::Audio::Streaming {
-
-namespace {
-
-std::string toLower(std::string str) {
-	std::transform(str.begin(), str.end(), str.begin(),
-		[](unsigned char c) { return static_cast<char>(std::tolower(c)); }
-	);
-	return str;
-}
-
-} // anonymous namespace
 
 std::unique_ptr<IStreamDecoder> StreamDecoderFactory::create(
 	const std::filesystem::path& path
 ) {
-	const auto ext = toLower(path.extension().string());
+	const auto ext = String::toLower(path.extension().string());
 
 	if (ext == ".wav")
 		return std::make_unique<WavStreamDecoder>();
@@ -73,7 +63,7 @@ std::unique_ptr<IStreamDecoder> StreamDecoderFactory::createFromMemory(
 }
 
 bool StreamDecoderFactory::isSupported(const std::filesystem::path& path) noexcept {
-	const std::string ext = toLower(path.extension().string());
+	const std::string ext = String::toLower(path.extension().string());
 	return ext == ".wav"
 		|| ext == ".mp3"
 		|| ext == ".flac"

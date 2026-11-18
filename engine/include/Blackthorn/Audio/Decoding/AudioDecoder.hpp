@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <ranges>
 #include <cstdint>
 #include <filesystem>
 
@@ -12,20 +13,9 @@
 #include "Blackthorn/Audio/Decoding/Codecs/Mp3Decoder.hpp"
 #include "Blackthorn/Audio/Decoding/Codecs/OggDecoder.hpp"
 #include "Blackthorn/Audio/Decoding/Codecs/WavDecoder.hpp"
+#include "StringHelper.hpp"
 
 namespace Blackthorn::Audio::Decoding {
-
-namespace {
-
-	std::string getExtension(const std::filesystem::path& path) {
-		std::string ext = path.extension().string();
-		std::transform(ext.begin(), ext.end(), ext.begin(),
-			[](unsigned char c) { return std::tolower(c); }
-		);
-		return ext;
-	}
-
-} // anonymous namespace
 
 class BLACKTHORN_API AudioDecoder {
 public:
@@ -92,7 +82,7 @@ public:
 		const std::filesystem::path& path,
 		AudioData& data
 	) {
-		const std::string ext = getExtension(path);
+		const std::string ext = String::toLower(path.extension().string());
 
 		if (ext == ".ogg")
 			return OggDecoder::decode(path, data);
@@ -125,7 +115,7 @@ public:
 		const std::filesystem::path& path,
 		AudioMetadata& data
 	) {
-		const std::string ext = getExtension(path);
+		const auto ext = String::toLower(path.extension().string());
 
 		if (ext == ".ogg")
 			return OggDecoder::getInfo(path, data);

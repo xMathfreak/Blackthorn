@@ -14,6 +14,7 @@
 
 #include "AssetNormalize.hpp"
 #include "AssetReference.hpp"
+#include "StringHelper.hpp"
 
 namespace BTPacker {
 
@@ -131,11 +132,7 @@ bool ManifestGenerator::generate(const Options& opts, std::ostream& log) {
 			continue;
 
 		std::string ext = path.extension().string();
-		std::transform(ext.begin(), ext.end(), ext.begin(),
-			[](unsigned char c) {
-				return static_cast<char>(std::tolower(c));
-			}
-		);
+		Blackthorn::String::toLowerInPlace(ext);
 
 		const std::string type = classifyExtension(ext);
 		if (type == "Raw") {

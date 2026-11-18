@@ -7,6 +7,8 @@
 #include <string_view>
 #include <vector>
 
+#include "StringHelper.hpp"
+
 /**
  * @file SemVer.h
  * @brief Header-only Semantic Versioning 2.0.0 values and npm-style ranges.
@@ -299,7 +301,7 @@ public:
 	static std::optional<SemVerRange> parse(std::string_view text) {
 		SemVerRange range;
 
-		const std::string_view trimmed = trim(text);
+		const std::string_view trimmed = String::trim(text);
 		if (trimmed.empty()) {
 			range.alternatives.emplace_back();
 			return range;
@@ -319,7 +321,7 @@ public:
 		}
 
 		for (const std::string_view alt : alts) {
-			const std::string_view a = trim(alt);
+			const std::string_view a = String::trim(alt);
 
 			if (a.empty() && alts.size() > 1)
 				return std::nullopt;
@@ -361,16 +363,6 @@ private:
 	};
 
 	std::vector<ComparatorSet> alternatives;
-
-	static std::string_view trim(std::string_view s) noexcept {
-		while (!s.empty() && (s.front() == ' ' || s.front() == '\t'))
-			s.remove_prefix(1);
-
-		while (!s.empty() && (s.back() == ' ' || s.back() == '\t'))
-			s.remove_suffix(1);
-
-		return s;
-	}
 
 	static bool isOperatorChar(char c) noexcept {
 		return c == '<' || c == '>' || c == '=' || c == '^' || c == '~';
