@@ -6,6 +6,7 @@
 #include <cstring>
 #include <fstream>
 #include <iterator>
+#include <print>
 #include <stdexcept>
 
 #include <lualib.h>
@@ -17,7 +18,7 @@ namespace {
 /// Reached only when an error is raised with no protected call active.
 /// Nothing can recover from that, so report it and stop.
 int panicHandler(lua_State* L) {
-	std::fprintf(stderr, "Unprotected Lua error: %s\n", lua_tostring(L, -1));
+	std::println(stderr, "Unprotected Lua error: {}", lua_tostring(L, -1));
 	std::abort();
 }
 

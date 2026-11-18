@@ -1,6 +1,7 @@
 #include "Blackthorn/UI/UIManager.hpp"
 
 #include <algorithm>
+#include <ranges>
 
 #include <SDL3/SDL.h>
 
@@ -32,7 +33,7 @@ UIManager::UIManager()
 }
 
 UIManager::~UIManager() {
-	auto it = std::find(managers.begin(), managers.end(), this);
+	auto it = std::ranges::find(managers, this);
 	if (it != managers.end())
 		managers.erase(it);
 }
@@ -167,8 +168,8 @@ Widget* UIManager::findWidgetAt(const glm::vec2& position) {
 
 		const auto& childWidgets = container->getWidgets();
 
-		for (auto it = childWidgets.rbegin(); it != childWidgets.rend(); ++it) {
-			Widget* widget = it->get();
+		for (const auto & childWidget : std::views::reverse(childWidgets)) {
+			Widget* widget = childWidget.get();
 			if (!widget || !widget->isVisible())
 				continue;
 

@@ -20,7 +20,7 @@ inline std::vector<Entity> findEntitiesWithTag(const EntityPool& pool, std::stri
 	std::vector<Entity> found = pool.collectEntities<Components::Tag>(
 		[tag](const Components::Tag& t) { return t.has(tag); });
 
-	std::sort(found.begin(), found.end(), [](Entity a, Entity b) {
+	std::ranges::sort(found, [](Entity a, Entity b) {
 		return Detail::entityIndex(a) < Detail::entityIndex(b);
 	});
 	return found;

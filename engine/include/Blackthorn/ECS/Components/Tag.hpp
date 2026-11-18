@@ -21,9 +21,9 @@ struct BLACKTHORN_API Tag {
 
 	[[nodiscard]]
 	bool has(std::string_view tag) const {
-		return std::any_of(values.begin(), values.end(),
-			[tag](const std::string& v) { return v == tag; }
-		);
+		return std::ranges::any_of(values, [tag](const std::string& v) {
+			return tag == v;
+		});
 	}
 
 	/// @return false if the tag was already present.
@@ -37,7 +37,7 @@ struct BLACKTHORN_API Tag {
 
 	/// @return false if the tag was not present.
 	bool remove(std::string_view tag) {
-		const auto it = std::find_if(values.begin(), values.end(),
+		const auto it = std::ranges::find_if(values,
 			[tag](const std::string& v) { return v == tag; }
 		);
 

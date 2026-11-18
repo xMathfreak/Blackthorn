@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cstdio>
+#include <ranges>
 
 #define XXH_INLINE_ALL
 #include <xxhash.h>
@@ -76,10 +77,9 @@ bool AssetResolver::mount(const std::filesystem::path& path) {
 void AssetResolver::unmount(const std::filesystem::path& path) {
 	std::unique_lock lock(mutex);
 
-	const auto it = std::find_if(
-		mounts.begin(), mounts.end(),
-		[&path](const PackMount& m) { return m.path() == path; }
-	);
+	const auto it = std::ranges::find_if(mounts, [&path](const PackMount& m) {
+		return m.path() == path;
+	});
 
 	if (it == mounts.end()) {
 		BT_WARN("AssetResolver: unmount called for '{}' which is not mounted", path.string());
@@ -105,16 +105,16 @@ std::unique_ptr<AssetStream> AssetResolver::open(std::string_view id) const {
 
 	std::shared_lock lock(mutex);
 
-	for (auto it = mounts.rbegin(); it != mounts.rend(); ++it) {
-		if (!it->find(hash))
+	for (auto& mount : std::views::reverse(mounts)) {
+		if (!mount.find(hash))
 			continue;
 
 		// First match wins, even if it can't be streamed. A compressed entry in
 		// a higher-priority pack must not fall through to a lower one.
-		auto stream = it->open(hash);
+		auto stream = mount.open(hash);
 		if (!stream)
 			BT_ERROR("AssetResolver: '{}' in '{}' can't be streamed (compressed entry, or truncated pack)",
-				*norm, it->path().string());
+				*norm, mount.path().string());
 
 		return stream;
 	}
@@ -126,7 +126,7 @@ std::unique_ptr<AssetStream> AssetResolver::open(std::string_view id) const {
 
 	auto stream = LooseAssetStream::open(path);
 	if (!stream)
-		BT_WARN("AssetResolver: '{}' not found at '{}'", *norm, path.string());
+		BT_WARN("AssetResolver: '{}' not found at '{}'", *norm, path.generic_string());
 
 	return stream;
 #endif
@@ -144,20 +144,20 @@ std::optional<AssetBytes> AssetResolver::resolve(std::string_view id) const {
 
 	std::shared_lock lock(mutex);
 
-	for (auto it = mounts.rbegin(); it != mounts.rend(); ++it) {
-		const auto info = it->find(hash);
+	for (auto& mount : std::views::reverse(mounts)) {
+		const auto info = mount.find(hash);
 		if (!info)
 			continue;
 
 		if (info->compression == PackCompression::Zstd) {
 			// PackMount::read() decompresses and verifies the payload hash itself.
-			auto packed = it->read(hash);
+			auto packed = mount.read(hash);
 			if (!packed) {
-				BT_ERROR("AssetResolver: read failed for '{}' in '{}'", *norm, it->path().string());
+				BT_ERROR("AssetResolver: read failed for '{}' in '{}'", *norm, mount.path().string());
 				return std::nullopt;
 			}
 
-			AssetBytes out;
+			AssetBytes out{};
 			out.bytes = std::move(packed->bytes);
 			out.id = *norm;
 			out.sourcePath = packed->sourcePath;
@@ -166,19 +166,19 @@ std::optional<AssetBytes> AssetResolver::resolve(std::string_view id) const {
 
 		// Uncompressed entries are read through the stream. Streaming skips the
 		// payload hash, so verify it here while we have the whole payload.
-		auto stream = it->open(hash);
+		auto stream = mount.open(hash);
 		if (!stream) {
-			BT_ERROR("AssetResolver: cannot open '{}' in '{}'", *norm, it->path().string());
+			BT_ERROR("AssetResolver: cannot open '{}' in '{}'", *norm, mount.path().string());
 			return std::nullopt;
 		}
 
-		auto bytes = readAllFrom(*stream, *norm, it->path().string());
+		auto bytes = readAllFrom(*stream, *norm, mount.path().string());
 		if (!bytes)
 			return std::nullopt;
 
 		const U64 actual = XXH64(bytes->bytes.data(), bytes->bytes.size(), 0);
 		if (actual != info->payloadHash) {
-			BT_ERROR("AssetResolver: payload hash mismatch for '{}' in '{}'", *norm, it->path().string());
+			BT_ERROR("AssetResolver: payload hash mismatch for '{}' in '{}'", *norm, mount.path().string());
 			return std::nullopt;
 		}
 
@@ -192,7 +192,7 @@ std::optional<AssetBytes> AssetResolver::resolve(std::string_view id) const {
 
 	auto stream = LooseAssetStream::open(path);
 	if (!stream) {
-		BT_WARN("AssetResolver: '{}' not found at '{}'", *norm, path.string());
+		BT_WARN("AssetResolver: '{}' not found at '{}'", *norm, path.generic_string());
 		return std::nullopt;
 	}
 
@@ -214,8 +214,8 @@ bool AssetResolver::has(std::string_view id) const {
 
 	std::shared_lock lock(mutex);
 
-	for (auto it = mounts.rbegin(); it != mounts.rend(); ++it) {
-		if (it->find(hash))
+	for (const auto & mount : std::views::reverse(mounts)) {
+		if (mount.find(hash))
 			return true;
 	}
 
@@ -234,8 +234,8 @@ size_t AssetResolver::mountCount() const {
 std::optional<PackMetadata> AssetResolver::getPackMetadata(const std::filesystem::path& path) const {
 	std::shared_lock lock(mutex);
 
-	const auto it = std::find_if(
-		mounts.begin(), mounts.end(),
+	const auto it = std::ranges::find_if(
+		mounts,
 		[&path](const PackMount& m) { return m.path() == path; }
 	);
 

@@ -2,6 +2,7 @@
 #include "Blackthorn/Graphics/Renderer.hpp"
 #include "Blackthorn/UI/UIManager.hpp"
 #include <algorithm>
+#include <ranges>
 
 namespace Blackthorn::UI {
 
@@ -34,9 +35,9 @@ bool Container::onMouseMove(const glm::vec2& pos) {
 	if (!visible)
 		return false;
 
-	for (auto it = widgets.rbegin(); it != widgets.rend(); ++it) {
-		if (*it && (*it)->isVisible())
-			(*it)->onMouseMove(pos);
+	for (auto & widget : std::views::reverse(widgets)) {
+		if (widget && widget->isVisible())
+			widget->onMouseMove(pos);
 	}
 
 	return Widget::onMouseMove(pos);
@@ -46,8 +47,8 @@ bool Container::onMouseDown(const glm::vec2& pos, U8 button) {
 	if (!visible || !isEnabled())
 		return false;
 
-	for (auto it = widgets.rbegin(); it != widgets.rend(); ++it) {
-		if (*it && (*it)->isVisible() && (*it)->onMouseDown(pos, button))
+	for (auto & widget : std::views::reverse(widgets)) {
+		if (widget && widget->isVisible() && widget->onMouseDown(pos, button))
 			return true;
 	}
 
@@ -58,8 +59,8 @@ bool Container::onMouseUp(const glm::vec2& pos, U8 button) {
 	if (!visible)
 		return false;
 
-	for (auto it = widgets.rbegin(); it != widgets.rend(); ++it) {
-		if (*it && (*it)->isVisible() && (*it)->onMouseUp(pos, button))
+	for (auto & widget : std::views::reverse(widgets)) {
+		if (widget && widget->isVisible() && widget->onMouseUp(pos, button))
 			return true;
 	}
 
@@ -79,7 +80,7 @@ void Container::removeWidget(Widget* widget) {
 	if (!widget)
 		return;
 
-	auto it = std::find_if(widgets.begin(), widgets.end(),
+	auto it = std::ranges::find_if(widgets,
 		[widget](const std::unique_ptr<Widget>& ptr) {
 			return ptr.get() == widget;
 		}

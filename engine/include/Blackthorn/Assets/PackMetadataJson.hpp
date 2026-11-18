@@ -57,8 +57,8 @@ inline bool isValidPackID(std::string_view id) noexcept {
 namespace Detail {
 
 inline void sortUnique(std::vector<std::string>& v) {
-	std::sort(v.begin(), v.end());
-	v.erase(std::unique(v.begin(), v.end()), v.end());
+	std::ranges::sort(v);
+	v.erase(std::ranges::unique(v).begin(), v.end());
 }
 
 /**
@@ -212,14 +212,16 @@ inline std::vector<PackDependency> readMetadataDependencies(
 		out.push_back(std::move(dep));
 	}
 
-	std::sort(out.begin(), out.end());
-	out.erase(std::unique(out.begin(), out.end()), out.end());
+	std::ranges::sort(out, [](const PackDependency& a, const PackDependency& b) {
+		return a < b;
+	});
+	out.erase(std::ranges::unique(out).begin(), out.end());
 
 	return out;
 }
 
 inline bool containsID(const std::vector<std::string>& sortedIDs, const std::string& id) {
-	return std::binary_search(sortedIDs.begin(), sortedIDs.end(), id);
+	return std::ranges::binary_search(sortedIDs, id);
 }
 
 } // namespace Detail
