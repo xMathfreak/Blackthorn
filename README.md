@@ -5,8 +5,8 @@ A modular 2D game engine written in C++ 20, featuring a custom renderer, ECS arc
 ## Dependencies
 
 ### Required
-- CMake >= 3.16
-- C++20-compatible compiler
+- CMake >= 3.20
+- C++23-compatible compiler
 - OpenGL
 - SDL3
 - SDL_image
