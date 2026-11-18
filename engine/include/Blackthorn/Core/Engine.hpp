@@ -62,7 +62,7 @@ public:
 	 * @param cfg Engine configuration. All fields are consumed here,
 	 *            including `cfg.window` and `cfg.render`.
 	 */
-	bool init(const EngineConfig& cfg = EngineConfig()) override;
+	bool init(const EngineConfig& cfg = EngineConfig{}) override;
 
 	/**
 	 * @brief Shuts down graphics resources then delegates to Runtime.

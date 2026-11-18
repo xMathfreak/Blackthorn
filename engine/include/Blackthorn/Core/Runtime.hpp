@@ -85,7 +85,7 @@ public:
 	 *            are only consumed by the `Engine` subclass.
 	 * @return true on success, false if any critical system failed to initialize.
 	 */
-	virtual bool init(const EngineConfig& cfg = EngineConfig());
+	virtual bool init(const EngineConfig& cfg = EngineConfig{});
 
 	/**
 	 * @brief Shuts down all simulation systems and saves persistent state.

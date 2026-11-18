@@ -66,7 +66,7 @@ struct BLACKTHORN_API EmitterConfig {
 	Distribution distribution = Distribution::Random;
 
 	/// Spawn area/line/point particles are sampled from, in emitter-local space.
-	EmitterShape shape = Point();
+	EmitterShape shape = Point{};
 
 	/// Particles spawned per second.
 	float rate = 10.0f;

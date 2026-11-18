@@ -19,7 +19,7 @@ public:
 		, systemManager(pool, js)
 	{}
 
-	~World() {}
+	~World() = default;
 
 	World(const World&) = delete;
 	World& operator=(const World&) = delete;
@@ -35,11 +35,11 @@ public:
 		pool.destroy(entity);
 	}
 
-	bool isValid(Entity entity) const {
+	[[nodiscard]] bool isValid(Entity entity) const {
 		return pool.isValid(entity);
 	}
 
-	size_t getEntityCount() const {
+	[[nodiscard]] size_t getEntityCount() const {
 		return pool.aliveCount();
 	}
 
@@ -113,7 +113,7 @@ public:
 		return pool;
 	}
 
-	const auto& getPool() const {
+	[[nodiscard]] const auto& getPool() const {
 		return pool;
 	}
 

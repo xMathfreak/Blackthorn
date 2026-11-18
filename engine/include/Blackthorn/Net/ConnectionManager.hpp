@@ -61,7 +61,7 @@ namespace Net {
  */
 class BLACKTHORN_API ConnectionManager {
 public:
-	ConnectionManager(const ConnectionConfig& cfg = ConnectionConfig());
+	ConnectionManager(const ConnectionConfig& cfg = ConnectionConfig{});
 	~ConnectionManager();
 
 	ConnectionManager(const ConnectionManager&) = delete;

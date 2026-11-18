@@ -102,7 +102,7 @@ public:
 	 * @param path Path to the image file.
 	 * @param parameters Texture sampling and wrapping parameters.
 	 */
-	explicit Texture(const std::filesystem::path& path, const TextureParams& parameters = TextureParams());
+	explicit Texture(const std::filesystem::path& path, const TextureParams& parameters = TextureParams{});
 
 	/**
 	 * @brief Creates a texture from raw pixel data.
@@ -112,7 +112,7 @@ public:
 	 * @param data Pointer to pixel data.
 	 * @param parameters Texture sampling and wrapping parameters.
 	 */
-	Texture(int width, int height, int channels, const void* data, const TextureParams& parameters = TextureParams());
+	Texture(int width, int height, int channels, const void* data, const TextureParams& parameters = TextureParams{});
 
 	/**
 	 * @brief Creates an empty texture with allocated storage.
@@ -121,7 +121,7 @@ public:
 	 * @param channels Number of color channels.
 	 * @param parameters Texture sampling and wrapping parameters.
 	 */
-	Texture(int width, int height, int channels = 4, const TextureParams& parameters = TextureParams());
+	Texture(int width, int height, int channels = 4, const TextureParams& parameters = TextureParams{});
 
 	/**
 	 * @brief Destroys the texture and releases the OpenGL resource.
@@ -153,7 +153,7 @@ public:
 	 * @param parameters Texture sampling and wrapping parameters.
 	 * @return True on success, false otherwise.
 	 */
-	bool loadFromFile(const std::filesystem::path& path, const TextureParams& parameters = TextureParams());
+	bool loadFromFile(const std::filesystem::path& path, const TextureParams& parameters = TextureParams{});
 
 	/**
 	 * @brief Loads texture data from an SDL Surface.
@@ -162,7 +162,7 @@ public:
 	 * @return True on success, false otherwise.
 	 * @note This method does not destroy the SDL_Surface passed to it.
 	 */
-	bool loadFromSurface(SDL_Surface* surface, const TextureParams& parameters = TextureParams());
+	bool loadFromSurface(SDL_Surface* surface, const TextureParams& parameters = TextureParams{});
 
 	/**
 	 * @brief Loads texture data from memory.
@@ -173,7 +173,7 @@ public:
 	 * @param parameters Texture sampling and wrapping parameters.
 	 * @return True on success, false otherwise.
 	 */
-	bool loadFromMemory(int w, int h, int ch, const void* data, const TextureParams& parameters = TextureParams());
+	bool loadFromMemory(int w, int h, int ch, const void* data, const TextureParams& parameters = TextureParams{});
 
 	/**
 	 * @brief Creates an empty texture with allocated storage.
@@ -183,7 +183,7 @@ public:
 	 * @param parameters Texture sampling and wrapping parameters.
 	 * @return True on success, false otherwise.
 	 */
-	bool create(int width, int height, int channels = 4, const TextureParams& parameters = TextureParams());
+	bool create(int width, int height, int channels = 4, const TextureParams& parameters = TextureParams{});
 
 	/**
 	 * @brief Destroys the texture and releases its OpenGL resource.

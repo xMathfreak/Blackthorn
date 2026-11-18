@@ -117,7 +117,7 @@ public:
 	 *
 	 * @param config Logger configuration (directory, filename, SDL mirror flag).
 	 */
-	void init(const LoggerConfig& config = LoggerConfig());
+	void init(const LoggerConfig& config = LoggerConfig{});
 
 	/**
 	 * @brief Flushes, writes a session footer, and closes the log file.
