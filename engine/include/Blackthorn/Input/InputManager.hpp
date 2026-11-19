@@ -81,10 +81,10 @@ public:
 		return mousePosition;
 	}
 
-	glm::vec2 getMouseWorldPosition(const glm::vec2& cameraPos, float cameraZoom, const glm::vec2& screenSize) const {
-		glm::vec2 offset = mousePosition - screenSize * 0.5f;
-		return cameraPos + offset / cameraZoom;
-	}
+glm::vec2 getMouseWorldPosition(const glm::vec2& cameraPos, float cameraZoom, const glm::vec2& screenSize) const {
+	glm::vec2 offset = mousePosition - screenSize * 0.5f;
+	return cameraPos + offset / cameraZoom;
+}
 
 	glm::vec2 getMouseDelta() const {
 		return mouseDelta;

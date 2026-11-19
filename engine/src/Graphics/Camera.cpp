@@ -101,22 +101,20 @@ void Camera::applyToRenderer(Renderer& renderer) const {
 }
 
 glm::vec2 Camera::screenToWorld(const glm::vec2& screenPos, const glm::ivec2& renderSize) const noexcept {
-	const float ndcX = (screenPos.x / static_cast<float>(renderSize.x)) * 2.0f - 1.0f;
-	const float ndcY = -(screenPos.y / static_cast<float>(renderSize.y)) * 2.0f + 1.0f;
+	const glm::vec2 offset =
+		screenPos - glm::vec2(renderSize) * 0.5f;
 
 	const float cosR = std::cos(rotationRad);
 	const float sinR = std::sin(rotationRad);
 
-	const float halfW = static_cast<float>(renderSize.x) * 0.5f;
-	const float halfH = static_cast<float>(renderSize.y) * 0.5f;
+	const glm::vec2 scaledOffset = offset / zoomFactor;
 
-	const float vx = ndcX * halfW * zoomFactor;
-	const float vy = -ndcY * halfH * zoomFactor;
+	const glm::vec2 rotatedOffset(
+		scaledOffset.x * cosR - scaledOffset.y * sinR,
+		scaledOffset.x * sinR + scaledOffset.y * cosR
+	);
 
-	const float worldOffsetX = vx * cosR - vy * sinR;
-	const float worldOffsetY = vx * sinR + vy * cosR;
-
-	return position + glm::vec2(worldOffsetX, worldOffsetY);
+	return position + rotatedOffset;
 }
 
 glm::vec2 Camera::worldToScreen(const glm::vec2& worldPos, const glm::ivec2& renderSize) const noexcept {
@@ -125,19 +123,14 @@ glm::vec2 Camera::worldToScreen(const glm::vec2& worldPos, const glm::ivec2& ren
 	const float cosR = std::cos(-rotationRad);
 	const float sinR = std::sin(-rotationRad);
 
-	const float rx = delta.x * cosR - delta.y * sinR;
-	const float ry = delta.x * sinR + delta.y * cosR;
+	const glm::vec2 rotated(
+		delta.x * cosR - delta.y * sinR,
+		delta.x * sinR + delta.y * cosR
+	);
 
-	const float vx = rx / zoomFactor;
-	const float vy = ry / zoomFactor;
+	const glm::vec2 offset = rotated * zoomFactor;
 
-	const float halfW = static_cast<float>(renderSize.x) * 0.5f;
-	const float halfH = static_cast<float>(renderSize.y) * 0.5f;
-
-	return {
-		(vx / halfW + 1.0f) * 0.5f * static_cast<float>(renderSize.x),
-		(1.0f - vy / halfH) * 0.5f * static_cast<float>(renderSize.y)
-	};
+	return offset + glm::vec2(renderSize) * 0.5f;
 }
 
 } // namespace Blackthorn::Graphics
