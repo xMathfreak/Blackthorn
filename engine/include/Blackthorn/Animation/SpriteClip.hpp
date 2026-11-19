@@ -44,6 +44,7 @@ struct BLACKTHORN_API Frame {
 class BLACKTHORN_API SpriteClip {
 public:
 	std::vector<Frame> frames;
+	float duration = 0;
 	LoopMode loopMode = LoopMode::Loop;
 
 	/**
@@ -59,8 +60,6 @@ public:
 	[[nodiscard]] bool isValid() const noexcept {
 		return !frames.empty();
 	}
-
-	U32 duration = 0;
 };
 
 } // namespace Blackthorn::Animation
