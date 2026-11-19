@@ -32,6 +32,9 @@ Renderer::Renderer(const RenderConfig& cfg)
 	globalUBO = std::make_unique<UBO<GlobalData>>();
 	globalUBO->bind(0);
 
+	if (renderConfig.resolutionMode != RenderResolutionMode::FollowWindow)
+		rebuildFBO(renderConfig.renderWidth, renderConfig.renderHeight);
+
 	GLuint blockIndex = glGetUniformBlockIndex(shader->id(), "GlobalData");
 	if (blockIndex != GL_INVALID_INDEX)
 		glUniformBlockBinding(shader->id(), blockIndex, 0);
@@ -148,9 +151,9 @@ void Renderer::rebuildFBO(int fboW, int fboH) {
 		RenderLayers::NearPlane, RenderLayers::FarPlane
 	);
 
-	viewBounds = { 0.0f, 0.0f,
-		static_cast<float>(fboW),
-		static_cast<float>(fboH) };
+	viewBounds = { .x=0.0f, .y=0.0f,
+		.w=static_cast<float>(fboW),
+		.h=static_cast<float>(fboH) };
 
 	globalUBO->getData().viewProjection = getViewProjectionMatrix();
 	globalUBO->uploadField(&GlobalData::viewProjection);
@@ -466,16 +469,10 @@ void Renderer::onWindowResized(int windowW, int windowH) {
 	windowWidth = windowW;
 	windowHeight = windowH;
 
-	switch (renderConfig.resolutionMode) {
-		case RenderResolutionMode::FollowWindow:
-			rebuildFBO(windowW, windowH);
-			glViewport(0, 0, windowW, windowH);
-			break;
-		case RenderResolutionMode::Fixed:
-		case RenderResolutionMode::PixelPerfect:
-			glViewport(0, 0, windowW, windowH);
-			break;
-	}
+	if (renderConfig.resolutionMode == RenderResolutionMode::FollowWindow)
+		rebuildFBO(windowW, windowH);
+
+	glViewport(0, 0, windowW, windowH);
 }
 
 glm::ivec2 Renderer::getRenderSize() const noexcept {
@@ -494,7 +491,7 @@ glm::ivec2 Renderer::getRenderSize() const noexcept {
 void Renderer::setProjection(const glm::mat4& projection) {
 	projectionMatrix = projection;
 	glm::vec4 topRight = glm::inverse(projection) * glm::vec4(1.0f, 1.0f, 0.0f, 1.0f);
-	viewBounds = { 0.0f, 0.0f, topRight.x, topRight.y };
+	viewBounds = { .x=0.0f, .y=0.0f, .w=topRight.x, .h=topRight.y };
 
 	globalUBO->getData().viewProjection = getViewProjectionMatrix();
 	globalUBO->uploadField(&GlobalData::viewProjection);

@@ -170,7 +170,7 @@ void Runtime::run() {
 
 	U64 lastTime = SDL_GetPerformanceCounter();
 	float accumulated = 0.0f;
-	const float freq = static_cast<float>(SDL_GetPerformanceFrequency());
+	const auto freq = static_cast<float>(SDL_GetPerformanceFrequency());
 
 	running = true;
 

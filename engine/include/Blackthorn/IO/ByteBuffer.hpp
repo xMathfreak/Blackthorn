@@ -58,7 +58,6 @@ public:
 	 */
 	explicit ByteBuffer(std::span<const U8> data)
 		: buffer(data.begin(), data.end())
-		, readCursor(0)
 	{}
 
 	/**
@@ -302,27 +301,27 @@ public:
 	}
 
 	/** @brief Returns a view over the raw buffer contents. */
-	std::span<const U8> span() const { return { buffer.data(), buffer.size() }; }
+	[[nodiscard]] std::span<const U8> span() const { return { buffer.data(), buffer.size() }; }
 
 	/** @brief Returns a pointer to the raw buffer contents. */
-	const U8* data() const { return buffer.data(); }
+	[[nodiscard]] const U8* data() const { return buffer.data(); }
 
 	/** @brief Returns the total number of bytes written. */
-	size_t size() const { return buffer.size(); }
+	[[nodiscard]] size_t size() const { return buffer.size(); }
 
 	/** @brief Returns true if no bytes have been written. */
-	bool empty() const { return buffer.empty(); }
+	[[nodiscard]] bool empty() const { return buffer.empty(); }
 
 	/** @brief Returns the current read cursor position. */
-	size_t readPosition() const { return readCursor; }
+	[[nodiscard]] size_t readPosition() const { return readCursor; }
 
 	/** @brief Returns the number of bytes remaining to be read. */
-	size_t remaining() const {
+	[[nodiscard]] size_t remaining() const {
 		return readCursor <= buffer.size() ? buffer.size() - readCursor : 0;
 	}
 
 	/** @brief Returns true if the read cursor has reached the end. */
-	bool exhausted() const { return readCursor >= buffer.size(); }
+	[[nodiscard]] bool exhausted() const { return readCursor >= buffer.size(); }
 
 	/**
 	 * @brief Advances the read cursor by `count` bytes without returning data.

@@ -95,7 +95,7 @@ public:
 
 	/// @throws std::runtime_error if the handle is stale or lacks component.
 	template <typename Component>
-	const Component& requireComponent(EntityHandle handle) const {
+	[[nodiscard]] const Component& requireComponent(EntityHandle handle) const {
 		requireAlive(handle);
 
 		const Component* component = pool.getComponent<Component>(handle.value);
@@ -148,7 +148,7 @@ public:
 
 	/// @return The component, or nullptr if the entity lacks it. Throws only if the handle is stale.
 	template <typename C>
-	const C* tryComponent(EntityHandle handle) const {
+	[[nodiscard]] const C* tryComponent(EntityHandle handle) const {
 		requireAlive(handle);
 		return pool.getComponent<C>(handle.value);
 	}
@@ -156,7 +156,7 @@ public:
 private:
 	void requireAlive(EntityHandle handle) const;
 	void requireSpawnBudget() const;
-	const ComponentRecord& requireRecord(std::string_view component) const;
+	[[nodiscard]] const ComponentRecord& requireRecord(std::string_view component) const;
 
 	Blackthorn::ECS::EntityPool& pool;
 	ComponentBindings& bindings;

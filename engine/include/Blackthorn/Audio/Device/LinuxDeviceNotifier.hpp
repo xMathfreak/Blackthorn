@@ -9,6 +9,7 @@
 
 #include "Blackthorn/Audio/Device/IDeviceNotifier.hpp"
 #include "Blackthorn/Core/Export.hpp"
+#include "Blackthorn/Types/Numeric.hpp"
 
 namespace Blackthorn::Audio {
 
@@ -54,7 +55,7 @@ public:
 	bool isRunning() const noexcept override;
 
 private:
-	enum class Backend {
+	enum class Backend : U8 {
 		None,
 		PipeWire,
 		PulseAudio,

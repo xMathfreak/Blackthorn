@@ -131,7 +131,7 @@ public:
 		audioClip = clip;
 	}
 
-	const AudioClip* clip() const noexcept {
+	[[nodiscard]] const AudioClip* clip() const noexcept {
 		return audioClip;
 	}
 

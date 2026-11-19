@@ -17,15 +17,15 @@ public:
 		, manager(mgr)
 	{}
 
-	bool isValid() const noexcept {
+	[[nodiscard]] bool isValid() const noexcept {
 		return ref.isValid() && manager != nullptr;
 	}
 
-	AssetStatus status() const;
+	[[nodiscard]] AssetStatus status() const;
 
-	bool isReady() const { return status() == AssetStatus::Ready; }
-	bool isPending() const { return status() == AssetStatus::Pending; }
-	bool isFailed() const { return status() == AssetStatus::Failed; }
+	[[nodiscard]] bool isReady() const { return status() == AssetStatus::Ready; }
+	[[nodiscard]] bool isPending() const { return status() == AssetStatus::Pending; }
+	[[nodiscard]] bool isFailed() const { return status() == AssetStatus::Failed; }
 
 	explicit operator bool() const noexcept { return get() != nullptr; }
 

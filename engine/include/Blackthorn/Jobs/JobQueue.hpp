@@ -23,12 +23,13 @@ public:
 	JobQueue& operator=(const JobQueue&) = delete;
 
 	void push(std::unique_ptr<Job> job) {
-		std::lock_guard<std::mutex> lock(mtx);
+		std::scoped_lock lock(mtx);
 		queue.push_back(std::move(job));
 	}
 
 	std::unique_ptr<Job> pop() {
-		std::lock_guard<std::mutex> lock(mtx);
+		std::scoped_lock lock(mtx);
+
 		if (queue.empty())
 			return nullptr;
 
@@ -38,7 +39,7 @@ public:
 	}
 
 	std::unique_ptr<Job> steal() {
-		std::lock_guard<std::mutex> lock(mtx);
+		std::scoped_lock lock(mtx);
 		if (queue.empty())
 			return nullptr;
 

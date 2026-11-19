@@ -130,7 +130,7 @@ public:
 	}
 
 	/** @brief Returns the number of bits currently held in the accumulator. */
-	int pendingBits() const { return bitCount; }
+	[[nodiscard]] int pendingBits() const { return bitCount; }
 
 private:
 	ByteBuffer& buf;

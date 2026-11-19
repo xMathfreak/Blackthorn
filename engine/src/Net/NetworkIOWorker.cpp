@@ -261,10 +261,10 @@ void NetworkIOWorker::pollUDP() {
 		}
 
 		if (newUDPPeer)
-			eventBus->push({ ConnectionEventType::Connect, peerID, srcAddress });
+			eventBus->push({ .type=ConnectionEventType::Connect, .peerID=peerID, .address=srcAddress });
 
 		if (kickedID != Connection::INVALID_PEER_ID) {
-			eventBus->push({ ConnectionEventType::Disconnect, kickedID, {} });
+			eventBus->push({ .type=ConnectionEventType::Disconnect, .peerID=kickedID, .address={} });
 			continue;
 		}
 
@@ -508,7 +508,7 @@ void NetworkIOWorker::pollTCP() {
 	}
 
 	for (const auto& d : deferred)
-		eventBus->push({ d.type, d.peerID, d.address });
+		eventBus->push({ .type=d.type, .peerID=d.peerID, .address=d.address });
 }
 
 void NetworkIOWorker::executeHandshakeActions(
@@ -537,7 +537,7 @@ void NetworkIOWorker::executeHandshakeActions(
 				);
 
 				deferred.push_back({
-					ConnectionEventType::Connect, peer.id, peer.tcpAddress
+					.type=ConnectionEventType::Connect, .peerID=peer.id, .address=peer.tcpAddress
 				});
 				break;
 
@@ -571,7 +571,7 @@ void NetworkIOWorker::closeTCPPeer(
 	registry->udpMap().erase(peer.udpAddress);
 
 	deferred.push_back({
-		ConnectionEventType::Disconnect, peer.id, {}
+		.type=ConnectionEventType::Disconnect, .peerID=peer.id, .address={}
 	});
 }
 

@@ -34,7 +34,7 @@ namespace Blackthorn::Graphics {
  * introduces unwanted blurring: at integer scale factors every logical
  * pixel maps to an identical number of physical pixels.
  */
-enum class RenderResolutionMode {
+enum class RenderResolutionMode : U8 {
 	/// Resize the FBO to match the window on every window resize event.
 	FollowWindow,
 
@@ -62,14 +62,21 @@ struct BLACKTHORN_API RenderConfig {
 	/// Controls how the internal render resolution tracks the window size.
 	RenderResolutionMode resolutionMode = RenderResolutionMode::FollowWindow;
 
-	/// Logical render width in pixels.
-	/// Only used when resolutionMode is Fixed or PixelPerfect.
-	/// Ignored (and replaced by the window size) in FollowWindow mode.
-	int renderWidth = 320;
+	/**
+	 * @brief Internal rendering width in pixels.
+	 *
+	 * Used by Fixed and PixelPerfect resolution modes. Ignored by
+	 * FollowWindow mode.
+	 */
+	int renderWidth = 640;
 
-	/// Logical render height in pixels.
-	/// Only used when resolutionMode is Fixed or PixelPerfect.
-	int renderHeight = 180;
+	/**
+	 * @brief Internal rendering height in pixels.
+	 *
+	 * Used by Fixed and PixelPerfect resolution modes. Ignored by
+	 * FollowWindow mode.
+	 */
+	int renderHeight = 360;
 
 	/// Color used to clear the border area when letterboxing.
 	/// Only visible in PixelPerfect mode when the scaled FBO does not fill

@@ -79,7 +79,7 @@ struct BLACKTHORN_API FileHeader {
 	void serialize(IO::ByteBuffer& buf) const;
 	void deserialize(IO::ByteBuffer& buf);
 
-	bool isValid() const noexcept { return magic == SAVE_MAGIC; }
+	[[nodiscard]] bool isValid() const noexcept { return magic == SAVE_MAGIC; }
 };
 
 static_assert(
@@ -281,16 +281,16 @@ public:
 		U32& outVersion
 	) const;
 
-	const FileHeader& getHeader() const { return header; }
+	[[nodiscard]] const FileHeader& getHeader() const { return header; }
 
 	/** @brief Returns the save identity block parsed by @c parse(). */
-	const SaveIDBlock& getSaveIDBlock() const { return saveIDBlock; }
+	[[nodiscard]] const SaveIDBlock& getSaveIDBlock() const { return saveIDBlock; }
 
 	/** @brief Returns all section table entries parsed by @c parse(). */
-	const std::vector<SectionTableEntry>& getSectionTable() const { return sectionTable; }
+	[[nodiscard]] const std::vector<SectionTableEntry>& getSectionTable() const { return sectionTable; }
 
 	/** @brief Returns true if the section table contains the given ID. */
-	bool hasSection(U64 sectionID) const noexcept;
+	[[nodiscard]] bool hasSection(U64 sectionID) const noexcept;
 
 	/**
 	 * @brief Computes the same FNV-1a hash written to @c FileHeader::saveIDHash

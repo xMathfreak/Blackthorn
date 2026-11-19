@@ -190,29 +190,29 @@ public:
 	/**
 	 * @brief Checks whether the buffer has been created.
 	 */
-	bool isValid() const noexcept { return id != 0; }
+	[[nodiscard]] bool isValid() const noexcept { return id != 0; }
 
 	/**
 	 * @brief Returns the OpenGL buffer handle.
 	 */
-	GLuint getID() const noexcept { return id; }
+	[[nodiscard]] GLuint getID() const noexcept { return id; }
 
 	/**
 	 * @brief Returns the number of indices stored in the buffer.
 	 */
-	size_t getCount() const noexcept { return count; }
+	[[nodiscard]] size_t getCount() const noexcept { return count; }
 
 	/**
 	 * @brief Returns the size of the buffer in bytes
 	 */
-	size_t getSize() const noexcept { return size; }
+	[[nodiscard]] size_t getSize() const noexcept { return size; }
 
 	/**
 	 * @brief Returns the OpenGL index type.
 	 *
 	 * This value is intended to be passed directly to `glDrawElements()`
 	 */
-	GLenum getIndexType() const noexcept { return indexType; }
+	[[nodiscard]] GLenum getIndexType() const noexcept { return indexType; }
 };
 
 } // namespace Blackthorn::Graphics

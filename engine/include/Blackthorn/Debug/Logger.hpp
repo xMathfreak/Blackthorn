@@ -25,7 +25,7 @@ namespace Blackthorn::Debug {
  *   Trace    - All of the above plus verbose trace detail.
  *   Debug    - Everything, including fine-grained debug output  (Debug default).
  */
-enum class LogLevel : int {
+enum class LogLevel : U8 {
 	Silent   = 0,
 	Error    = 1,
 	Warning  = 2,

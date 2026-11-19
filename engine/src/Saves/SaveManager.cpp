@@ -31,7 +31,7 @@ namespace {
  * logged when @c orgName/@c appName are empty or SDL_GetPrefPath() fails.
  */
 std::filesystem::path resolveRootDir(const SaveConfig& cfg) {
-	const std::filesystem::path dir = cfg.directory;
+	std::filesystem::path dir = cfg.directory;
 
 	if (dir.is_absolute())
 		return dir;
@@ -370,7 +370,7 @@ SaveResult SaveManager::loadImpl(
 		IO::ByteBuffer sectionData = doc.getSectionData(
 			tableEntry.sectionID, payload, savedVersion);
 
-		SectionReadContext ctx{ sectionData, savedVersion };
+		SectionReadContext ctx{ .buffer=sectionData, .savedVersion=savedVersion };
 
 		try {
 			section->read(ctx);

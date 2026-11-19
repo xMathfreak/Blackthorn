@@ -108,7 +108,7 @@ void ParticleEffectInstance::updateEmitter(const EmitterConfig& config, EmitterR
 		p.rotation = sampled.rotation;
 		p.age = 0.0f;
 		p.lifetime = config.lifetimeRange.sample(rng);
-		p.sourceRect = SDL_FRect{0.0f, 0.0f, 0.0f, 0.0f};
+		p.sourceRect = SDL_FRect{.x=0.0f, .y=0.0f, .w=0.0f, .h=0.0f};
 		p.currentFrame = 0;
 		p.frameElapsed = 0.0f;
 		p.pingPongDir = 1;
@@ -127,10 +127,10 @@ void ParticleEffectInstance::updateEmitter(const EmitterConfig& config, EmitterR
 		runtime.emissionAccumulator = std::min(runtime.emissionAccumulator, 1.0f);
 
 	runtime.bounds = (runtime.count == 0)
-		? SDL_FRect{0.0f, 0.0f, 0.0f, 0.0f}
+		? SDL_FRect{.x=0.0f, .y=0.0f, .w=0.0f, .h=0.0f}
 		: SDL_FRect{
-			boundsMin.x, boundsMin.y,
-			boundsMax.x - boundsMin.x, boundsMax.y - boundsMin.y
+			.x=boundsMin.x, .y=boundsMin.y,
+			.w=boundsMax.x - boundsMin.x, .h=boundsMax.y - boundsMin.y
 		};
 }
 

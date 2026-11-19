@@ -159,17 +159,17 @@ public:
 	/**
 	 * @brief Returns the OpenGL VAO handle.
 	 */
-	GLuint getID() const noexcept { return id; }
+	[[nodiscard]] GLuint getID() const noexcept { return id; }
 
 	/**
 	 * @brief Checks whether this VAO is currently bound.
 	 */
-	bool isBound() const noexcept { return currentVAO == id; }
+	[[nodiscard]] bool isBound() const noexcept { return currentVAO == id; }
 
 	/**
 	 * @brief Checks whether the VAO has been created.
 	 */
-	bool isValid() const noexcept { return id != 0; }
+	[[nodiscard]] bool isValid() const noexcept { return id != 0; }
 
 	/**
 	 * @brief releases ownership of the VAO handle.

@@ -32,6 +32,9 @@ namespace Blackthorn::Debug {
  */
 class BLACKTHORN_API Profiler {
 public:
+	Profiler(const Profiler&) = delete;
+	Profiler& operator=(const Profiler&) = delete;
+
 	struct Sample {
 		std::string name;
 		float duration; // seconds
@@ -85,9 +88,6 @@ public:
 private:
 	Profiler();
 	~Profiler() = default;
-
-	Profiler(const Profiler&) = delete;
-	Profiler& operator=(const Profiler&) = delete;
 
 	/// Per-thread scope stack.
 	struct ScopeEntry {

@@ -56,7 +56,7 @@ int cmdPack(const cli::ParseResult& args) {
 
 	std::cout << "packing '" << outputPath << "'...\n";
 
-	const bool ok = BTPacker::Packer::pack(*manifest, {inputPath, outputPath}, std::cout);
+	const bool ok = BTPacker::Packer::pack(*manifest, {.input=inputPath, .output=outputPath}, std::cout);
 	if (ok) {
 		std::cout << "\ndone.\n";
 	} else {

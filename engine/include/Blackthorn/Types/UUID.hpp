@@ -22,13 +22,13 @@ struct BLACKTHORN_API UUID {
 	bool operator<(const UUID& other) const noexcept { return bytes < other.bytes; }
 
 	/** @brief Returns true if all bytes are zero (default-constructed). */
-	bool isNull() const noexcept;
+	[[nodiscard]] bool isNull() const noexcept;
 
 	/**
 	 * @brief Returns the UUID formatted as a lowercase hyphenated string.
 	 * e.g. "550e8400-e29b-41d4-a716-446655440000"
 	 */
-	std::string toString() const;
+	[[nodiscard]] std::string toString() const;
 
 	/**
 	 * @brief Parses a hyphenated UUID string. Returns a null UUID on failure.

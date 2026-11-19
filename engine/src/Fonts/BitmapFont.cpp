@@ -449,9 +449,9 @@ Text::Metrics BitmapFont::measure(std::string_view text, float scale, float maxW
 
 	const Layout layout = buildLayout(layoutText, scale, maxWidth);
 	return {
-		layout.totalWidth,
-		layout.totalHeight,
-		layout.lines.size()
+		.width=layout.totalWidth,
+		.height=layout.totalHeight,
+		.lineCount=layout.lines.size()
 	};
 }
 
@@ -494,7 +494,7 @@ void BitmapFont::drawCached(std::string_view text, const glm::vec2& position, co
 	if (!isLoaded() || text.empty())
 		return;
 
-	TextCacheKey key{ std::string(text), params.scale, params.maxWidth, params.alignment, params.useMarkup };
+	TextCacheKey key{ .text=std::string(text), .scale=params.scale, .maxWidth=params.maxWidth, .alignment=params.alignment, .markup=params.useMarkup };
 	CachedText* cached = cache.get(key);
 
 	if (!cached) {
@@ -706,7 +706,7 @@ void BitmapFont::generateVertices(const Layout& layout, float scale, Text::Align
 			float v1 = (glyph.rect.y + glyph.rect.h) / texHeight;
 
 			auto push = [&](const glm::vec2& p, const glm::vec2& uv) {
-				outVertices.push_back({p, uv, glyphColor});
+				outVertices.push_back({.position=p, .texCoord=uv, .color=glyphColor});
 			};
 
 			push({glyphX,          glyphY        }, {u0, v0});
@@ -785,7 +785,7 @@ void BitmapFont::generateInstances(const Layout& layout, float scale, Text::Alig
 			float u1 = (glyph.rect.x + glyph.rect.w) / texWidth;
 			float v1 = (glyph.rect.y + glyph.rect.h) / texHeight;
 
-			Text::GlyphInstance inst;
+			Text::GlyphInstance inst{};
 			inst.position = glm::vec2(glyphX, glyphY);
 			inst.size = glm::vec2(glyphW, glyphH);
 			inst.uv = glm::vec4(u0, v0, u1, v1);
@@ -883,7 +883,7 @@ void BitmapFont::drawDynamic(std::string_view text, const glm::vec2& position, c
 	if (!isLoaded() || text.empty())
 		return;
 
-	TextCacheKey key { std::string(text), params.scale, params.maxWidth, params.alignment, params.useMarkup };
+	TextCacheKey key { .text=std::string(text), .scale=params.scale, .maxWidth=params.maxWidth, .alignment=params.alignment, .markup=params.useMarkup };
 
 	DynamicText* cached = dynamicTextCache.get(key);
 	if (!cached) {

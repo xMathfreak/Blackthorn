@@ -11,7 +11,7 @@ namespace Blackthorn::Saves {
 /**
  * @brief Bitmask flags carried in @c SaveID::flags.
  */
-enum class SaveFlags : U32 {
+enum class SaveFlags : U8 {
 	None = 0,
 	Autosave = 1 << 0, ///< Written automatically by the engine on a schedule.
 	Quicksave = 1 << 1, ///< Written on explicit player request.

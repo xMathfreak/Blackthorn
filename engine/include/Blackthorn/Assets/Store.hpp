@@ -23,7 +23,7 @@ public:
 
 		bool async = false; ///< Set by the last load that started this slot. reload() uses it.
 
-		bool isPending(U64 expectedGeneration) const noexcept {
+		[[nodiscard]] bool isPending(U64 expectedGeneration) const noexcept {
 			return status == AssetStatus::Pending
 				&& generation == expectedGeneration;
 		}
@@ -46,15 +46,15 @@ public:
 		asyncLoader = std::move(loader);
 	}
 
-	bool hasLoader() const noexcept {
+	[[nodiscard]] bool hasLoader() const noexcept {
 		return syncLoader != nullptr || asyncLoader != nullptr;
 	}
 
-	bool hasSyncLoader() const noexcept {
+	[[nodiscard]] bool hasSyncLoader() const noexcept {
 		return syncLoader != nullptr;
 	}
 
-	bool hasAsyncLoader() const noexcept {
+	[[nodiscard]] bool hasAsyncLoader() const noexcept {
 		return asyncLoader != nullptr;
 	}
 
@@ -72,7 +72,7 @@ public:
 		return &slots[name];
 	}
 
-	const Slot* find(U32 name) const noexcept {
+	[[nodiscard]] const Slot* find(U32 name) const noexcept {
 		if (name >= slots.size())
 			return nullptr;
 
@@ -84,12 +84,12 @@ public:
 		return slot ? slot->asset.get() : nullptr;
 	}
 
-	const AssetType* get(U32 name) const noexcept {
+	[[nodiscard]] const AssetType* get(U32 name) const noexcept {
 		auto* slot = find(name);
 		return slot ? slot->asset.get() : nullptr;
 	}
 
-	AssetStatus statusOf(U32 name) const noexcept {
+	[[nodiscard]] AssetStatus statusOf(U32 name) const noexcept {
 		auto* slot = find(name);
 		return slot ? slot->status : AssetStatus::Missing;
 	}
@@ -114,7 +114,7 @@ public:
 		++slot.generation;
 	}
 
-	bool isPending(U32 name, U64 generation) const noexcept {
+	[[nodiscard]] bool isPending(U32 name, U64 generation) const noexcept {
 		const auto* slot = find(name);
 		return slot && slot->isPending(generation);
 	}
@@ -159,7 +159,7 @@ public:
 		}
 	}
 
-	size_t size() const override {
+	[[nodiscard]] size_t size() const override {
 		size_t count = 0;
 
 		for (const auto& slot : slots) {
@@ -170,7 +170,7 @@ public:
 		return count;
 	}
 
-	size_t getMemoryUsage() const override {
+	[[nodiscard]] size_t getMemoryUsage() const override {
 		size_t total = 0;
 
 		for (const auto& slot : slots) {

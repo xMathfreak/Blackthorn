@@ -205,10 +205,15 @@ void Engine::initGraphics(const EngineConfig& cfg) {
 		SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, msaaSamples);
 	}
 
+	SDL_WindowFlags windowFlags = SDL_WINDOW_OPENGL;
+
+	if (cfg.window.resizable)
+		windowFlags |= SDL_WINDOW_RESIZABLE;
+
 	window = SDL_CreateWindow(
 		cfg.window.title.c_str(),
 		cfg.window.width, cfg.window.height,
-		SDL_WINDOW_RESIZABLE | SDL_WINDOW_OPENGL
+		windowFlags
 	);
 
 	if (!window) {
@@ -216,7 +221,7 @@ void Engine::initGraphics(const EngineConfig& cfg) {
 		return;
 	}
 
-	const U32 windowFlags = SDL_GetWindowFlags(window);
+	windowFlags = SDL_GetWindowFlags(window);
 	windowFocused = (windowFlags & SDL_WINDOW_INPUT_FOCUS) != 0;
 	windowMinimized = (windowFlags & SDL_WINDOW_MINIMIZED) != 0;
 
@@ -298,9 +303,10 @@ void Engine::shutdown() {
 	renderer.reset();
 	audioManager.reset();
 
+	assetManager.reset();
 	cleanupGraphics();
 
-	Runtime::shutdown(); // asset manager destroyed here
+	Runtime::shutdown();
 }
 
 void Engine::cleanupGraphics() {

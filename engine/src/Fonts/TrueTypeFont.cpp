@@ -1,6 +1,7 @@
 #include "Blackthorn/Fonts/TrueTypeFont.hpp"
 
 #include <algorithm>
+#include <cstddef>
 
 #include "Blackthorn/Fonts/FontConfig.hpp"
 #include "Blackthorn/Debug/Logger.hpp"
@@ -169,7 +170,7 @@ void TrueTypeFont::drawCached(std::string_view text, const glm::vec2& position, 
 		return;
 
 	TextCacheKey key {
-		std::string(text), params.scale, params.maxWidth, params.alignment, params.useMarkup
+		.text=std::string(text), .scale=params.scale, .maxWidth=params.maxWidth, .alignment=params.alignment, .markup=params.useMarkup
 	};
 
 	CachedText* cached = textCache.get(key);
@@ -214,7 +215,7 @@ void TrueTypeFont::drawCached(std::string_view text, const glm::vec2& position, 
 }
 
 Text::Metrics TrueTypeFont::measure(std::string_view text, float scale, float maxWidth, bool useMarkup) {
-	Text::Metrics metrics{0.0f, 0.0f, 0};
+	Text::Metrics metrics{.width=0.0f, .height=0.0f, .lineCount=0};
 
 	if (!font || text.empty())
 		return metrics;
@@ -246,7 +247,7 @@ Text::Metrics TrueTypeFont::measure(std::string_view text, float scale, float ma
 }
 
 float TrueTypeFont::getLineHeight() const {
-	return lineHeight;
+	return static_cast<float>(lineHeight);
 }
 
 void TrueTypeFont::setStyle(TTF_FontStyleFlags style) {
@@ -344,7 +345,7 @@ const TrueTypeFont::Glyph& TrueTypeFont::getGlyph(char32_t codePoint) {
 	if (it != glyphCache.end())
 		return it->second;
 
-	SDL_Surface* surface = TTF_RenderGlyph_Blended(font, codePoint, SDL_Color{255, 255, 255, 255});
+	SDL_Surface* surface = TTF_RenderGlyph_Blended(font, codePoint, SDL_Color{.r=255, .g=255, .b=255, .a=255});
 
 	if (!surface) {
 		BT_WARN(
@@ -379,7 +380,7 @@ const TrueTypeFont::Glyph& TrueTypeFont::getGlyph(char32_t codePoint) {
 	const int pitch = surface->pitch;
 
 	for (int row = 0; row < surface->h; ++row) {
-		const U32* rowPixels = reinterpret_cast<const U32*>(src + row * pitch);
+		const U32* rowPixels = reinterpret_cast<const U32*>(src + static_cast<ptrdiff_t>(row * pitch));
 		for (int col = 0; col < surface->w; ++col)
 			reuseBuffer[row * surface->w + col] = (rowPixels[col] >> 24) & 0xFF;
 	}
@@ -404,7 +405,7 @@ const TrueTypeFont::Glyph& TrueTypeFont::getGlyph(char32_t codePoint) {
 
 	SDL_DestroySurface(surface);
 
-	glyphCache[codePoint] = std::move(glyph);
+	glyphCache[codePoint] = glyph;
 	return glyphCache[codePoint];
 }
 
@@ -449,10 +450,10 @@ void TrueTypeFont::generateVertices(std::string_view text, float maxWidth, Text:
 
 			const auto& uv = glyph.uv;
 
-			outVertices.push_back({{xPos, yPos},{uv.x, uv.w}, glyphColor});
-			outVertices.push_back({{xPos + w, yPos}, {uv.z, uv.w}, glyphColor});
-			outVertices.push_back({{xPos + w, yPos + h}, {uv.z, uv.y}, glyphColor});
-			outVertices.push_back({{xPos, yPos + h}, {uv.x, uv.y}, glyphColor});
+			outVertices.push_back({.position={xPos, yPos},.texCoord={uv.x, uv.w}, .color=glyphColor});
+			outVertices.push_back({.position={xPos + w, yPos}, .texCoord={uv.z, uv.w}, .color=glyphColor});
+			outVertices.push_back({.position={xPos + w, yPos + h}, .texCoord={uv.z, uv.y}, .color=glyphColor});
+			outVertices.push_back({.position={xPos, yPos + h}, .texCoord={uv.x, uv.y}, .color=glyphColor});
 
 			outIndexCount += 6;
 
@@ -584,8 +585,8 @@ void TrueTypeFont::renderDynamic(
 		return inst.shadowColor.a > 0.01f;
 	});
 
-	const GLsizei shadowCount = static_cast<GLsizei>(std::distance(ordered.begin(), shadowEnd));
-	const GLsizei totalCount = static_cast<GLsizei>(ordered.size());
+	const auto shadowCount = static_cast<GLsizei>(std::distance(ordered.begin(), shadowEnd));
+	const auto totalCount = static_cast<GLsizei>(ordered.size());
 
 	shader->bind();
 
@@ -659,7 +660,7 @@ void TrueTypeFont::drawDynamic(
 		return;
 
 	TextCacheKey key {
-		std::string(text), params.scale, params.maxWidth, params.alignment, params.useMarkup
+		.text=std::string(text), .scale=params.scale, .maxWidth=params.maxWidth, .alignment=params.alignment, .markup=params.useMarkup
 	};
 
 	DynamicText* cached = dynamicTextCache.get(key);
@@ -790,7 +791,7 @@ std::vector<TrueTypeFont::LayoutLine> TrueTypeFont::layoutText(const std::vector
 			if (prev)
 				TTF_GetGlyphKerning(font, prev, wc, &kern);
 
-			word.push_back({&g, static_cast<float>(kern), j});
+			word.push_back({.glyph=&g, .kern=static_cast<float>(kern), .charIndex=j});
 			wordWidth += kern + g.advance;
 			prev = wc;
 		}
@@ -800,7 +801,7 @@ std::vector<TrueTypeFont::LayoutLine> TrueTypeFont::layoutText(const std::vector
 
 		for (const auto& wg : word) {
 			cursorX += wg.kern;
-			lines.back().glyphs.push_back({wg.glyph, cursorX, wg.charIndex});
+			lines.back().glyphs.push_back({.glyph=wg.glyph, .xPos=cursorX, .charIndex=wg.charIndex});
 			lines.back().width = cursorX + wg.glyph->size.x;
 			cursorX += wg.glyph->advance;
 		}

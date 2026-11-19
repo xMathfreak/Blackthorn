@@ -160,7 +160,7 @@ private:
 	glm::ivec2 atlasCursor{0, 0};
 	int atlasRowHeight = 0;
 
-	float lineHeight = 0.0f;
+	int lineHeight = 0;
 
 	U32 TAB_SPACES;
 

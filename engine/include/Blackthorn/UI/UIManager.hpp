@@ -141,7 +141,7 @@ public:
 	/**
 	 * @brief Get the root container
 	 */
-	Container* getRoot() const { return root.get(); }
+	[[nodiscard]] Container* getRoot() const { return root.get(); }
 
 	/**
 	 * @brief Update all widgets
@@ -171,7 +171,7 @@ public:
 	/**
 	 * @brief Get the currently focused widget
 	 */
-	Widget* getFocusedWidget() const { return focusedWidget; }
+	[[nodiscard]] Widget* getFocusedWidget() const { return focusedWidget; }
 
 	/**
 	 * @brief Set the currently hovered widget
@@ -183,7 +183,7 @@ public:
 	/**
 	 * @brief Get the currently hovered widget
 	 */
-	Widget* getHoveredWidget() const { return hoveredWidget; }
+	[[nodiscard]] Widget* getHoveredWidget() const { return hoveredWidget; }
 };
 
 } // namespace UI

@@ -106,7 +106,7 @@ EmissionSample EmitterConfig::sampleEmission(Math::Random& rng) const {
 		localPosition.x * s + localPosition.y * c
 	};
 
-	return {offset + rotated, r};
+	return {.position=offset + rotated, .rotation=r};
 }
 
 U32 EmitterConfig::resolveCapacity() const {

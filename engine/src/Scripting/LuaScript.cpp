@@ -3,11 +3,11 @@
 #include <cassert>
 #include <cstdio>
 #include <cstdlib>
-#include <cstring>
 #include <fstream>
 #include <iterator>
 #include <print>
 #include <stdexcept>
+#include <utility>
 
 #include <lualib.h>
 
@@ -69,7 +69,7 @@ std::string LuaScript::errorMessage(lua_State* L) {
 }
 
 LuaScript::LuaScript(LuaScriptConfig cfg)
-	: config(cfg), owningThread(std::this_thread::get_id()) {
+	: config(std::move(cfg)), owningThread(std::this_thread::get_id()) {
 	// The budget has no limit during setup, so setup cannot fail on memory.
 	state = lua_newstate(allocate, &memBudget, 0);
 	if (!state)
@@ -169,7 +169,7 @@ LuaResult<void> LuaScript::run(std::string_view chunkName, std::string_view sour
 		state, source.data(), source.size(), name.c_str(), "t"   // "t": reject bytecode
 	);
 	if (loadStatus != LUA_OK) {
-		LuaError error{ errorMessage(state), 0 };
+		LuaError error{ .message=errorMessage(state), .argIndex=0 };
 		lua_settop(state, top);
 		return error;
 	}
@@ -180,7 +180,7 @@ LuaResult<void> LuaScript::run(std::string_view chunkName, std::string_view sour
 
 	const int status = protectedCall(0, 0, handler);
 	if (status != LUA_OK) {
-		LuaError error{ errorMessage(state), 0 };
+		LuaError error{ .message=errorMessage(state), .argIndex=0 };
 		lua_settop(state, top);
 		return error;
 	}
@@ -196,12 +196,12 @@ LuaResult<void> LuaScript::runFile(const std::string& path) {
 	// Windows and shift the line numbers that error messages report.
 	std::ifstream file(path, std::ios::binary);
 	if (!file)
-		return LuaError{ "cannot open script file: " + path, 0 };
+		return LuaError{ .message="cannot open script file: " + path, .argIndex=0 };
 
 	std::string source((std::istreambuf_iterator<char>(file)),
 		std::istreambuf_iterator<char>());
 	if (file.bad())
-		return LuaError{ "failed to read script file: " + path, 0 };
+		return LuaError{ .message="failed to read script file: " + path, .argIndex=0 };
 
 	return run(path, source);
 }

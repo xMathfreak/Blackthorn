@@ -23,8 +23,7 @@ namespace Blackthorn::ECS {
  */
 using NetworkEntityID = U64;
 
-static constexpr NetworkEntityID INVALID_NET_ENTITY =
-	std::numeric_limits<U64>::max();
+static constexpr NetworkEntityID INVALID_NET_ENTITY = U64_MAX;
 
 /**
  * @brief Reason codes carried in @c DespawnPacket payloads.

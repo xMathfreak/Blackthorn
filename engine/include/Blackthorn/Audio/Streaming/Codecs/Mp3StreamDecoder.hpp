@@ -27,8 +27,8 @@ public:
 	bool seek(U64 frameOffset) override;
 	void close() override;
 
-	AudioMetadata info() const override;
-	bool isOpen() const override;
+	[[nodiscard]] AudioMetadata info() const override;
+	[[nodiscard]] bool isOpen() const override;
 
 private:
 	struct Impl;

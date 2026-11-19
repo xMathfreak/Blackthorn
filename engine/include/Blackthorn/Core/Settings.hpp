@@ -105,13 +105,13 @@ public:
 	T get(const std::string& section, const std::string& key, std::optional<T> fallback = std::nullopt) {
 		const std::string sec = this->normalize(section);
 		const std::string k = this->normalize(key);
-		const T def = fallback.value_or(T{});
+		T def = fallback.value_or(T{});
 
 		std::string rawValue;
 		bool found = false;
 
 		{
-			std::lock_guard lock(mutex);
+			std::scoped_lock lock(mutex);
 			ensureSectionOrder(sec);
 
 			auto& sd = groupedValues[sec];

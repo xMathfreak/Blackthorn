@@ -101,10 +101,10 @@ public:
 	}
 
 	UI::UIManager* getUIManager() { return uiManager.get(); }
-	const UI::UIManager* getUIManager() const { return uiManager.get(); }
+	[[nodiscard]] const UI::UIManager* getUIManager() const { return uiManager.get(); }
 
 	Particles::ParticleSystem* getParticleSystem() { return particleSystem.get(); }
-	const Particles::ParticleSystem* getParticleSystem() const { return particleSystem.get(); }
+	[[nodiscard]] const Particles::ParticleSystem* getParticleSystem() const { return particleSystem.get(); }
 
 	/**
 	 * @brief Returns the full client scene context, including rendering,
@@ -119,7 +119,7 @@ public:
 		return static_cast<ISceneContext&>(ISimScene::getContext());
 	}
 
-	const ISceneContext& getContext() const {
+	[[nodiscard]] const ISceneContext& getContext() const {
 		return static_cast<const ISceneContext&>(ISimScene::getContext());
 	}
 

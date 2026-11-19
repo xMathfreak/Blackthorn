@@ -84,10 +84,10 @@ private:
 		Frame frame{};
 
 		frame.sourceRect = SDL_FRect{
-			json.value("x", 0.0f),
-			json.value("y", 0.0f),
-			aliasedValue<float>(json, {"w", "width"}, 0.0f),
-			aliasedValue<float>(json, {"h", "height"}, 0.0f)
+			.x=json.value("x", 0.0f),
+			.y=json.value("y", 0.0f),
+			.w=aliasedValue<float>(json, {"w", "width"}, 0.0f),
+			.h=aliasedValue<float>(json, {"h", "height"}, 0.0f)
 		};
 
 		frame.duration = json.value("duration", 0.0f);
@@ -126,10 +126,10 @@ private:
 			Frame frame{};
 
 			frame.sourceRect = SDL_FRect{
-				originX + static_cast<float>(col) * frameW,
-				originY + static_cast<float>(row) * frameH,
-				frameW,
-				frameH
+				.x=originX + static_cast<float>(col) * frameW,
+				.y=originY + static_cast<float>(row) * frameH,
+				.w=frameW,
+				.h=frameH
 			};
 
 			frame.duration = duration;

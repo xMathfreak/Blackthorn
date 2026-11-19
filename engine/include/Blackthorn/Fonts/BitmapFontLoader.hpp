@@ -33,7 +33,7 @@ struct BLACKTHORN_API BitmapParams final : Assets::AssetLoadParams {
 		, metricsPath(std::move(metrics))
 	{}
 
-	std::unique_ptr<Assets::LoadParams> clone() const override {
+	[[nodiscard]] std::unique_ptr<Assets::LoadParams> clone() const override {
 		return std::make_unique<BitmapParams>(*this);
 	}
 };
@@ -72,7 +72,7 @@ inline std::optional<BitmapRequest> bitmapRequest(const Assets::LoadParams& para
 			return std::nullopt;
 		}
 
-		return BitmapRequest{ false, *texture, *metrics };
+		return BitmapRequest{ .singleFile=false, .primaryID=*texture, .metricsID=*metrics };
 	}
 
 	if (const auto* pp = dynamic_cast<const Assets::AssetLoadParams*>(&params)) {
@@ -82,7 +82,7 @@ inline std::optional<BitmapRequest> bitmapRequest(const Assets::LoadParams& para
 			return std::nullopt;
 		}
 
-		return BitmapRequest{ true, *id, {} };
+		return BitmapRequest{ .singleFile=true, .primaryID=*id, .metricsID={} };
 	}
 
 	BT_ERROR("BitmapFontLoader: unrecognized LoadParams type");

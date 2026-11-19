@@ -9,7 +9,7 @@ namespace Blackthorn::Assets {
 
 struct BLACKTHORN_API LoadParams {
 	virtual ~LoadParams() = default;
-	virtual std::unique_ptr<LoadParams> clone() const = 0;
+	[[nodiscard]] virtual std::unique_ptr<LoadParams> clone() const = 0;
 };
 
 struct BLACKTHORN_API AssetLoadParams : LoadParams {
@@ -23,7 +23,7 @@ struct BLACKTHORN_API AssetLoadParams : LoadParams {
 		: source(std::move(p))
 	{}
 
-	std::unique_ptr<LoadParams> clone() const override {
+	[[nodiscard]] std::unique_ptr<LoadParams> clone() const override {
 		return std::make_unique<AssetLoadParams>(*this);
 	}
 };

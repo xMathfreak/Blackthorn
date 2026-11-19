@@ -55,7 +55,7 @@ std::filesystem::path LocalFileSaveStorage::defaultPath(const SaveID& saveID) co
 std::filesystem::path LocalFileSaveStorage::resolveEffectivePath(
 	const SaveID& saveID
 ) const {
-	const std::filesystem::path canonical = resolvePath(saveID);
+	std::filesystem::path canonical = resolvePath(saveID);
 
 	if (resolver || !recoverRenamedFiles)
 		return canonical;

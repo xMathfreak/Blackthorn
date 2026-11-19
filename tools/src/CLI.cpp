@@ -48,8 +48,8 @@ Result<T> parseIntegral(std::string_view text) {
 	auto [ptr, ec] = std::from_chars(begin, end, value);
 	if (ec != std::errc{} || ptr != end) {
 		return ParseError{
-			ParseError::Code::InvalidValue,
-			"expected an integer, got '" + std::string(text) + "'"
+			.code=ParseError::Code::InvalidValue,
+			.message="expected an integer, got '" + std::string(text) + "'"
 		};
 	}
 
@@ -65,8 +65,8 @@ Result<T> parseFloatingPoint(std::string_view text) {
 	auto [ptr, ec] = std::from_chars(begin, end, value);
 	if (ec != std::errc{} || ptr != end) {
 		return ParseError{
-			ParseError::Code::InvalidValue,
-			"expected a number, got '" + std::string(text) + "'"
+			.code=ParseError::Code::InvalidValue,
+			.message="expected a number, got '" + std::string(text) + "'"
 		};
 	}
 
@@ -83,8 +83,8 @@ Result<bool> Parser<bool>::parse(std::string_view text) {
 		return false;
 
 	return ParseError{
-		ParseError::Code::InvalidValue,
-		"expected a boolean (true/false), got '" + std::string(text) + "'"
+		.code=ParseError::Code::InvalidValue,
+		.message="expected a boolean (true/false), got '" + std::string(text) + "'"
 	};
 }
 
@@ -345,7 +345,7 @@ Result<ParseResult> Command::parseArgs(std::span<const std::string_view> args) c
 
 		if (spec.rangeValidator) {
 			if (auto message = spec.rangeValidator(*parsed)) {
-				return ParseError{ParseError::Code::InvalidValue, "--" + spec.longName + " " + *message};
+				return ParseError{.code=ParseError::Code::InvalidValue, .message="--" + spec.longName + " " + *message};
 			}
 		}
 
@@ -470,16 +470,16 @@ Result<ParseResult> Command::parseArgs(std::span<const std::string_view> args) c
 			const OptionSpec* spec = findOption(name);
 			if (!spec) {
 				return ParseError{
-					ParseError::Code::UnknownOption,
-					"unknown option '--" + std::string(name) + "'"
+					.code=ParseError::Code::UnknownOption,
+					.message="unknown option '--" + std::string(name) + "'"
 				};
 			}
 
 			if (!spec->takesValue) {
 				if (inlineValue) {
 					return ParseError{
-						ParseError::Code::InvalidValue,
-						"--" + spec->longName + " does not take a value"
+						.code=ParseError::Code::InvalidValue,
+						.message="--" + spec->longName + " does not take a value"
 					};
 				}
 
@@ -494,8 +494,8 @@ Result<ParseResult> Command::parseArgs(std::span<const std::string_view> args) c
 			} else {
 				if (i + 1 >= args.size()) {
 					return ParseError{
-						ParseError::Code::MissingValue,
-						"--" + spec->longName + " requires a value"
+						.code=ParseError::Code::MissingValue,
+						.message="--" + spec->longName + " requires a value"
 					};
 				}
 
@@ -523,8 +523,8 @@ Result<ParseResult> Command::parseArgs(std::span<const std::string_view> args) c
 				const OptionSpec* spec = findShortOption(letter);
 				if (!spec) {
 					return ParseError{
-						ParseError::Code::UnknownOption,
-						"unknown option '-" + std::string(1, letter) + "'"
+						.code=ParseError::Code::UnknownOption,
+						.message="unknown option '-" + std::string(1, letter) + "'"
 					};
 				}
 
@@ -541,8 +541,8 @@ Result<ParseResult> Command::parseArgs(std::span<const std::string_view> args) c
 				} else {
 					if (i + 1 >= args.size()) {
 						return ParseError{
-							ParseError::Code::MissingValue,
-							"-" + std::string(1, letter) + " requires a value"
+							.code=ParseError::Code::MissingValue,
+							.message="-" + std::string(1, letter) + " requires a value"
 						};
 					}
 					raw = args[++i];
@@ -566,8 +566,8 @@ Result<ParseResult> Command::parseArgs(std::span<const std::string_view> args) c
 					names += subcommands_[k]->name_;
 				}
 				return ParseError{
-					ParseError::Code::UnexpectedPositional,
-					"unknown subcommand '" + std::string(arg) + "'; expected one of: " + names
+					.code=ParseError::Code::UnexpectedPositional,
+					.message="unknown subcommand '" + std::string(arg) + "'; expected one of: " + names
 				};
 			}
 
@@ -584,8 +584,8 @@ Result<ParseResult> Command::parseArgs(std::span<const std::string_view> args) c
 
 		if (positionals_.empty()) {
 			return ParseError{
-				ParseError::Code::UnexpectedPositional,
-				"unexpected positional argument '" + std::string(arg) + "'"
+				.code=ParseError::Code::UnexpectedPositional,
+				.message="unexpected positional argument '" + std::string(arg) + "'"
 			};
 		}
 
@@ -593,8 +593,8 @@ Result<ParseResult> Command::parseArgs(std::span<const std::string_view> args) c
 			const PositionalSpec& last = positionals_.back();
 			if (!last.repeatable) {
 				return ParseError{
-					ParseError::Code::TooManyPositionals,
-					"too many positional arguments (unexpected '" + std::string(arg) + "')"
+					.code=ParseError::Code::TooManyPositionals,
+					.message="too many positional arguments (unexpected '" + std::string(arg) + "')"
 				};
 			}
 			result.positionalListsByName_[last.name].emplace_back(arg);
@@ -625,8 +625,8 @@ Result<ParseResult> Command::parseArgs(std::span<const std::string_view> args) c
 		}
 
 		return ParseError{
-			ParseError::Code::MissingRequired,
-			"a subcommand is required; expected one of: " + names
+			.code=ParseError::Code::MissingRequired,
+			.message="a subcommand is required; expected one of: " + names
 		};
 	}
 
@@ -637,8 +637,8 @@ Result<ParseResult> Command::parseArgs(std::span<const std::string_view> args) c
 
 		if (spec.required && !has) {
 			return ParseError{
-				ParseError::Code::MissingRequired,
-				"missing required positional argument '" + spec.name + "'"
+				.code=ParseError::Code::MissingRequired,
+				.message="missing required positional argument '" + spec.name + "'"
 			};
 		}
 	}
@@ -650,8 +650,8 @@ Result<ParseResult> Command::parseArgs(std::span<const std::string_view> args) c
 		if (!spec.takesValue) {
 			if (spec.required) {
 				return ParseError{
-					ParseError::Code::MissingRequired,
-					"missing required option '--" + spec.longName + "'"
+					.code=ParseError::Code::MissingRequired,
+					.message="missing required option '--" + spec.longName + "'"
 				};
 			}
 			result.values_[spec.longName] = std::any(false);
@@ -665,8 +665,8 @@ Result<ParseResult> Command::parseArgs(std::span<const std::string_view> args) c
 			}
 		} else if (spec.required) {
 			return ParseError{
-				ParseError::Code::MissingRequired,
-				"missing required option '--" + spec.longName + "'"
+				.code=ParseError::Code::MissingRequired,
+				.message="missing required option '--" + spec.longName + "'"
 			};
 		}
 	}
@@ -678,8 +678,8 @@ Result<ParseResult> Command::parseArgs(std::span<const std::string_view> args) c
 		for (const std::string& other : spec.conflicts) {
 			if (result.specifiedOptions_.count(other) != 0) {
 				return ParseError{
-					ParseError::Code::ConflictingOptions,
-					"--" + spec.longName + " conflicts with --" + other
+					.code=ParseError::Code::ConflictingOptions,
+					.message="--" + spec.longName + " conflicts with --" + other
 				};
 			}
 		}
@@ -687,8 +687,8 @@ Result<ParseResult> Command::parseArgs(std::span<const std::string_view> args) c
 		for (const std::string& other : spec.requirements) {
 			if (result.specifiedOptions_.count(other) == 0) {
 				return ParseError{
-					ParseError::Code::MissingRequired,
-					"--" + spec.longName + " requires --" + other
+					.code=ParseError::Code::MissingRequired,
+					.message="--" + spec.longName + " requires --" + other
 				};
 			}
 		}

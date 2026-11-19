@@ -23,7 +23,7 @@ enum class LoopMode : U8 {
  */
 struct BLACKTHORN_API Frame {
 	/// Source rectangle within the sprite's texture, in pixels.
-	SDL_FRect sourceRect{0, 0, 0, 0};
+	SDL_FRect sourceRect{.x=0, .y=0, .w=0, .h=0};
 
 	/// How long this frame is displayed, in seconds.
 	float duration = 0.1f;
@@ -49,14 +49,14 @@ public:
 	/**
 	 * @brief Returns the number of frames in this clip.
 	 */
-	U32 frameCount() const noexcept {
+	[[nodiscard]] U32 frameCount() const noexcept {
 		return static_cast<U32>(frames.size());
 	}
 
 	/**
 	 * @brief Returns true if the clip has at least one frame.
 	 */
-	bool isValid() const noexcept {
+	[[nodiscard]] bool isValid() const noexcept {
 		return !frames.empty();
 	}
 

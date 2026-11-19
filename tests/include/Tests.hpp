@@ -101,7 +101,7 @@ struct TestCase {
 /**
  * @brief Outcome classification for a single test run.
  */
-enum class Status {
+enum class Status : uint8_t {
 	Passed, ///< Ran to completion with no failed assertions.
 	Failed, ///< A BT_ASSERT_*/BT_EXPECT_* failed, or an exception escaped.
 	Skipped, ///< The test called BT_SKIP.
@@ -356,7 +356,7 @@ inline const char* statusLabel(Status status) {
  */
 struct RunOptions {
 	/// @brief Test execution order.
-	enum class Order {
+	enum class Order : uint8_t {
 		Declared, ///< Run tests in the order BT_TEST/BT_TEST_INLINE registered them.
 		Shuffled, ///< Run tests in a randomized order (reshuffled on every repeat pass).
 	};

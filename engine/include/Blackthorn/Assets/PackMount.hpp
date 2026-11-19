@@ -22,7 +22,7 @@ namespace Blackthorn::Assets {
  */
 struct BLACKTHORN_API PackedAssetData {
 	std::vector<U8> bytes; ///< Decompressed asset bytes, ready to pass to a loader.
-	PackAssetType assetType; ///< Broad category, used to dispatch to the right loader.
+	PackAssetType assetType = PackAssetType::Unknown; ///< Broad category, used to dispatch to the right loader.
 	std::string sourcePath; ///< Original source path. Empty in release builds.
 
 	PackedAssetData() = default;

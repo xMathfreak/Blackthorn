@@ -58,7 +58,7 @@ public:
 	}
 
 	template <typename Component>
-	bool hasComponent(Entity entity) const {
+	[[nodiscard]] bool hasComponent(Entity entity) const {
 		return pool.hasComponent<Component>(entity);
 	}
 

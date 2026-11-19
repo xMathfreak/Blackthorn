@@ -45,7 +45,7 @@ struct BLACKTHORN_API SaveFilter {
 	std::optional<U64> createdBefore;
 
 	/** @brief Returns true if @p id passes all set filter criteria. */
-	bool matches(const SaveID& id) const noexcept;
+	[[nodiscard]] bool matches(const SaveID& id) const noexcept;
 
 	/** @brief Returns an empty filter that matches everything. */
 	static SaveFilter all() { return {}; }

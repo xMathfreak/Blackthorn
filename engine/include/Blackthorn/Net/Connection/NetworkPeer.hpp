@@ -139,12 +139,12 @@ struct BLACKTHORN_API NetworkPeer {
 	std::unique_ptr<Protocol::FragmentAssembler> fragmentAssembler;
 
 	/** @brief Returns true if the peer is in the Connected state. */
-	bool isConnected() const noexcept {
+	[[nodiscard]] bool isConnected() const noexcept {
 		return (tcpConnected && tcpSocket != nullptr) || udpConnected;
 	}
 
 	/** @brief Returns true if the peer has timed out. */
-	bool isTimedOut() const noexcept {
+	[[nodiscard]] bool isTimedOut() const noexcept {
 		if (!(state == PeerState::Connected || state == PeerState::Connecting))
 			return false;
 
@@ -162,7 +162,7 @@ struct BLACKTHORN_API NetworkPeer {
 	 *   - We have not already sent a heartbeat within the same interval
 	 *     (prevents flooding if the remote side stops responding entirely).
 	 */
-	bool needsHeartbeat(U32 intervalMs) const noexcept {
+	[[nodiscard]] bool needsHeartbeat(U32 intervalMs) const noexcept {
 		if (intervalMs == 0 || !tcpConnected || tcpSocket == nullptr)
 			return false;
 

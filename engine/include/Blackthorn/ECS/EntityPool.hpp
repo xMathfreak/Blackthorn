@@ -84,7 +84,7 @@ public:
 
 		U64 mask = entities[index].componentMask;
 		while (mask) {
-			const size_t i = static_cast<size_t>(std::countr_zero(mask));
+			const auto i = static_cast<size_t>(std::countr_zero(mask));
 			if (componentArrays[i])
 				componentArrays[i]->remove(entity);
 
@@ -104,7 +104,7 @@ public:
 		bumpEpoch();
 	}
 
-	bool isValid(Entity entity) const {
+	[[nodiscard]] bool isValid(Entity entity) const {
 		if (entity == INVALID_ENTITY)
 			return false;
 
@@ -116,7 +116,7 @@ public:
 		return ed.alive && ed.generation == Detail::entityGeneration(entity);
 	}
 
-	size_t aliveCount() const { return entityCount; }
+	[[nodiscard]] size_t aliveCount() const { return entityCount; }
 
 	void clear() {
 		for (auto& ca : componentArrays)
@@ -183,9 +183,9 @@ public:
 		return result;
 	}
 
-	std::span<const EntityData> getEntities() const { return entities; }
+	[[nodiscard]] std::span<const EntityData> getEntities() const { return entities; }
 
-	U64 getEpoch() const noexcept {
+	[[nodiscard]] U64 getEpoch() const noexcept {
 		return structuralEpoch.load(std::memory_order::acquire);
 	}
 
@@ -227,7 +227,7 @@ public:
 	}
 
 	template <typename Component>
-	bool hasComponent(Entity entity) const {
+	[[nodiscard]] bool hasComponent(Entity entity) const {
 		if (!isValid(entity))
 			return false;
 
@@ -253,7 +253,7 @@ public:
 	}
 
 	template <typename Component>
-	const Component* getComponent(Entity entity) const {
+	[[nodiscard]] [[nodiscard]] [[nodiscard]] [[nodiscard]] const Component* getComponent(Entity entity) const {
 		if (!isValid(entity))
 			return nullptr;
 
@@ -278,7 +278,7 @@ public:
 		return componentArrays[componentIndex]->getRaw(entity);
 	}
 
-	const void* getComponentRaw(Entity entity, size_t componentIndex) const {
+	[[nodiscard]] const void* getComponentRaw(Entity entity, size_t componentIndex) const {
 		return const_cast<EntityPool*>(this)->getComponentRaw(entity, componentIndex);
 	}
 

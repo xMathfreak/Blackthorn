@@ -133,14 +133,14 @@ public:
 	 * Useful when embedding multiple packets in a single buffer and
 	 * needing to track individual header positions.
 	 */
-	size_t headerStartOffset() const { return headerOffset; }
+	[[nodiscard]] size_t headerStartOffset() const { return headerOffset; }
 
 	/**
 	 * @brief Returns the total packet size (header + payload) in bytes.
 	 *
 	 * Only valid after @c finish() has been called.
 	 */
-	size_t totalSize() const {
+	[[nodiscard]] size_t totalSize() const {
 		assert(finished && "totalSize() called before finish()");
 		return PacketHeader::SERIALIZED_SIZE + cachedPayloadLength;
 	}

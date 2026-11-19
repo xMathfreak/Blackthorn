@@ -24,10 +24,10 @@ public:
 				: t.position;
 
 			SDL_FRect rect = {
-				interpolated.x,
-				interpolated.y,
-				s.width * t.scale,
-				s.height * t.scale
+				.x=interpolated.x,
+				.y=interpolated.y,
+				.w=s.width * t.scale,
+				.h=s.height * t.scale
 			};
 
 			const bool hasSourceRect = s.sourceRect.w > 0.0f && s.sourceRect.h > 0.0f;

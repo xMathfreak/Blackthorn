@@ -164,7 +164,7 @@ public:
 	/**
 	 * @brief Returns a const reference to the CPU-side data.
 	 */
-	const T& getData() const { return data; }
+	[[nodiscard]] const T& getData() const { return data; }
 };
 
 } // namespace Blackthorn::Graphics

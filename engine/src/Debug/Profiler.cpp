@@ -53,9 +53,9 @@ void Profiler::beginScope(const char* name) {
 
 	auto& stack = threadScopeStack();
 	stack.push_back({
-		name,
-		SDL_GetPerformanceCounter(),
-		static_cast<int>(stack.size())
+		.name=name,
+		.startTime=SDL_GetPerformanceCounter(),
+		.depth=static_cast<int>(stack.size())
 	});
 }
 

@@ -21,11 +21,11 @@ struct BLACKTHORN_API SaveResult {
 	std::string error;
 
 	static SaveResult success() {
-		return { true, {} };
+		return { .ok=true, .error={} };
 	}
 
 	static SaveResult failure(std::string reason) {
-		return { false, std::move(reason) };
+		return { .ok=false, .error=std::move(reason) };
 	}
 
 	explicit operator bool() const noexcept { return ok; }
@@ -47,7 +47,7 @@ struct BLACKTHORN_API SaveReadResult {
 	}
 
 	static SaveReadResult failure(std::string reason) {
-		return { false, std::move(reason), {} };
+		return { .ok=false, .error=std::move(reason), .data={} };
 	}
 
 	explicit operator bool() const noexcept { return ok; }

@@ -6,6 +6,7 @@
 #include <glad/gl.h>
 
 #include "Blackthorn/Core/Export.hpp"
+#include "Blackthorn/Types/Numeric.hpp"
 
 namespace Blackthorn::Graphics {
 
@@ -27,7 +28,7 @@ namespace Blackthorn::Graphics {
  *   drivers. The fallback is fully transparent, callers use the same
  *   @c updateData() / @c streamingPtr() API regardless of which path is active.
  */
-enum class BufferType {
+enum class BufferType : U8 {
 	Static,
 	Streaming
 };

@@ -35,7 +35,7 @@ namespace Blackthorn::Assets {
  * load still reports a useful error.
  */
 inline std::string defaultAssetID(const std::filesystem::path& p) {
-	const std::string generic = p.generic_string();
+	std::string generic = p.generic_string();
 
 	if (auto norm = Blackthorn::normalizeAssetPath(generic))
 		return *norm;
@@ -81,6 +81,9 @@ public:
 
 	AssetManager(const AssetManager&) = delete;
 	AssetManager& operator=(const AssetManager&) = delete;
+
+	AssetManager(AssetManager&&) = delete;
+	AssetManager& operator=(AssetManager&&) = delete;
 
 	// ---- Identity -----------------------------------------------------------
 
@@ -201,7 +204,7 @@ public:
 
 	template <typename AssetType>
 	AssetRef<AssetType> load(std::string_view id, std::string_view path) {
-		return load(get<AssetType>(id), AssetLoadParams(std::move(path)));
+		return load(get<AssetType>(id), AssetLoadParams(path));
 	}
 
 	/**
@@ -251,7 +254,7 @@ public:
 
 	template <typename AssetType>
 	AssetRef<AssetType> loadAsync(std::string_view id, std::string_view path) {
-		return loadAsync(get<AssetType>(id), AssetLoadParams(std::move(path)));
+		return loadAsync(get<AssetType>(id), AssetLoadParams(path));
 	}
 
 	template <typename AssetType>

@@ -116,10 +116,10 @@ public:
 	virtual void close() = 0;
 
 	/** @brief Returns true if @c open() has been called successfully. */
-	virtual bool isOpen() const = 0;
+	[[nodiscard]] virtual bool isOpen() const = 0;
 
 	/** @brief Returns the metadata of the open audio file. */
-	virtual AudioMetadata info() const = 0;
+	[[nodiscard]] virtual AudioMetadata info() const = 0;
 };
 
 } // namespace Blackthorn::Audio

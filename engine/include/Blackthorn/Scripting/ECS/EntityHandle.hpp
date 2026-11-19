@@ -49,7 +49,7 @@ struct LuaConverter<ECS::EntityHandle> {
 		);
 
 		if (!data)
-			return LuaError{"entity handle expected", index};
+			return LuaError{.message="entity handle expected", .argIndex=index};
 
 		return ECS::EntityHandle{data->value};
 	}

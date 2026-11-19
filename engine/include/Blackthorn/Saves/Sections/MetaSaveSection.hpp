@@ -44,16 +44,16 @@ public:
 		, playtimeTicks(playTicks)
 	{}
 
-	U64 getID() const override { return saveHash(SECTION_NAME); }
-	std::string_view getName() const override { return SECTION_NAME; }
-	U32 getVersion() const override { return CURRENT_VERSION; }
+	[[nodiscard]] U64 getID() const override { return saveHash(SECTION_NAME); }
+	[[nodiscard]] std::string_view getName() const override { return SECTION_NAME; }
+	[[nodiscard]] U32 getVersion() const override { return CURRENT_VERSION; }
 
 	void write(SectionWriteContext& ctx) override;
 	void read(SectionReadContext& ctx) override;
 
-	const std::string& getEngineVersion() const noexcept { return engineVersion; }
-	const std::string& getPlatform() const noexcept { return platform; }
-	U32 getPlaytimeTicks() const noexcept { return playtimeTicks; }
+	[[nodiscard]] const std::string& getEngineVersion() const noexcept { return engineVersion; }
+	[[nodiscard]] const std::string& getPlatform() const noexcept { return platform; }
+	[[nodiscard]] U32 getPlaytimeTicks() const noexcept { return playtimeTicks; }
 
 	void setPlaytimeTicks(U32 ticks) noexcept { playtimeTicks = ticks; }
 

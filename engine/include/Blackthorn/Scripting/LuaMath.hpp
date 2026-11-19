@@ -19,7 +19,7 @@ inline LuaResult<float> readFloatField(lua_State* L, int tableIndex, const char*
 	lua_pop(L, 1);
 
 	if (!value.ok())
-		return LuaError{ std::string(key) + ": number expected", 0 };
+		return LuaError{ .message=std::string(key) + ": number expected", .argIndex=0 };
 	return static_cast<float>(value.value());
 }
 
@@ -32,7 +32,7 @@ template <>
 struct LuaConverter<glm::vec2> {
 	static LuaResult<glm::vec2> fromLua(lua_State* L, int index) {
 		if (lua_type(L, index) != LUA_TTABLE)
-			return LuaError{ "vector table expected", index };
+			return LuaError{ .message="vector table expected", .argIndex=index };
 
 		const int table = lua_absindex(L, index);
 

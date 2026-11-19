@@ -46,7 +46,7 @@ struct BLACKTHORN_API EmitterRuntime {
 
 	/// World-space AABB of this emitter's currently-live particles,
 	/// recomputed every update(). {0,0,0,0} when count == 0.
-	SDL_FRect bounds{0.0f, 0.0f, 0.0f, 0.0f};
+	SDL_FRect bounds{.x=0.0f, .y=0.0f, .w=0.0f, .h=0.0f};
 };
 
 /**

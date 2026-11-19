@@ -129,11 +129,11 @@ public:
 	 * Peers in phase None (UDP-only) or Established never time out.
 	 * A @p timeoutMs of 0 disables the check.
 	 */
-	bool isTimedOut(const NetworkPeer& peer, U64 nowMs, U64 timeoutMs) const noexcept;
+	[[nodiscard]] bool isTimedOut(const NetworkPeer& peer, U64 nowMs, U64 timeoutMs) const noexcept;
 
 private:
 	/// Builds a fully serialized control packet with a single U16 payload.
-	IO::ByteBuffer makeControlPacket(Protocol::PacketType type, U16 value) const;
+	[[nodiscard]] IO::ByteBuffer makeControlPacket(Protocol::PacketType type, U16 value) const;
 
 	/// Transitions the peer to Failed and emits a Reject action.
 	static void reject(

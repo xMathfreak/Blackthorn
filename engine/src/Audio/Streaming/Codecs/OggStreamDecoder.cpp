@@ -128,10 +128,10 @@ long streamTell(void* datasource) {
 }
 
 const ov_callbacks kStreamCallbacks = {
-	streamRead,
-	streamSeek,
-	streamClose,
-	streamTell
+	.read_func=streamRead,
+	.seek_func=streamSeek,
+	.close_func=streamClose,
+	.tell_func=streamTell
 };
 
 } // anonymous namespace

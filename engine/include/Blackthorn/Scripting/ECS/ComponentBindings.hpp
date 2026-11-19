@@ -160,7 +160,7 @@ public:
 			try {
 				LuaConverter<Value>::push(L, fn(world, handle));
 			} catch (const std::exception& e) {
-				return LuaError{ e.what(), 0 };
+				return LuaError{ .message=e.what(), .argIndex=0 };
 			}
 			return 1;
 		};
@@ -194,7 +194,7 @@ public:
 			try {
 				fn(world, handle, std::move(value.value()));
 			} catch (const std::exception& e) {
-				return LuaError{ e.what(), 0 };
+				return LuaError{ .message=e.what(), .argIndex=0 };
 			}
 			return LuaResult<void>{};
 		};

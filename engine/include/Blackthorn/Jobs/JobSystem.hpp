@@ -82,7 +82,7 @@ public:
 	 */
 	void wait(const JobHandlePtr& handle);
 
-	size_t workerCount() const { return workers.size(); }
+	[[nodiscard]] size_t workerCount() const { return workers.size(); }
 
 	static int getWorkerIndex();
 	static void setWorkerIndex(int idx);

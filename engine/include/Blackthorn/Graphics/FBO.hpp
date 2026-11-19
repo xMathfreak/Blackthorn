@@ -114,13 +114,13 @@ public:
 	 *
 	 * The returned texture can be bound for sampling in later render passes.
 	 */
-	const Texture& getTexture() const;
+	[[nodiscard]] const Texture& getTexture() const;
 
-	GLsizei getWidth() const { return width; }
-	GLsizei getHeight() const { return height; }
+	[[nodiscard]] GLsizei getWidth() const { return width; }
+	[[nodiscard]] GLsizei getHeight() const { return height; }
 
-	GLuint getID() const { return id; }
-	bool isValid() const { return id != 0; }
+	[[nodiscard]] GLuint getID() const { return id; }
+	[[nodiscard]] bool isValid() const { return id != 0; }
 };
 
 } // namespace Blackthorn::Graphics

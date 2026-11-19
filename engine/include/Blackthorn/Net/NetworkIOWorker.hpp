@@ -80,12 +80,12 @@ public:
 	 */
 	void stop();
 
-	bool isRunning() const noexcept {
+	[[nodiscard]] bool isRunning() const noexcept {
 		return ioRunning.load(std::memory_order::relaxed);
 	}
 
 	/** @brief Returns the bound UDP socket, or nullptr if not started. */
-	Transport::Sockets::UDPSocket* udpSocketPtr() const noexcept {
+	[[nodiscard]] Transport::Sockets::UDPSocket* udpSocketPtr() const noexcept {
 		return udpSocket.get();
 	}
 

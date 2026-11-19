@@ -10,7 +10,6 @@ Camera::Camera(const glm::vec2& pos, float zoom, float rotation)
 	: position(pos)
 	, zoomFactor(zoom)
 	, rotationRad(rotation)
-	, dirty(true)
 {}
 
 void Camera::setPosition(const glm::vec2& pos) noexcept {

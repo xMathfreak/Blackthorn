@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <string>
@@ -111,7 +112,7 @@ inline bool supportsANSIColors(std::FILE* stream = stdout) {
 }
 
 /// @brief A small, terminal-portable color palette.
-enum class Color {
+enum class Color : std::uint8_t {
 	Reset,
 	Bold,
 	Red,

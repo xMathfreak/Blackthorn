@@ -21,7 +21,7 @@ struct BLACKTHORN_API Sprite {
 
 	/// Source rect within texture, in pixels. Zero size (default) means "use the full texture".
 	/// Written each fixedUpdate by Systems::AnimationSystem when a SpriteAnimation is present.
-	SDL_FRect sourceRect{0, 0, 0, 0};
+	SDL_FRect sourceRect{.x=0, .y=0, .w=0, .h=0};
 
 	Sprite() = default;
 	Sprite(Graphics::Texture* tex, float w = 64.0f, float h = 64.0f)

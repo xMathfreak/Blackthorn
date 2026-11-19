@@ -106,7 +106,7 @@ public:
 		removeAt(entry.pos, entry);
 	}
 
-	bool has(Entity entity) const override {
+	[[nodiscard]] bool has(Entity entity) const override {
 		return find(entity) != nullptr;
 	}
 
@@ -115,7 +115,7 @@ public:
 		return entry ? &components[entry->pos] : nullptr;
 	}
 
-	const T* get(Entity entity) const {
+	[[nodiscard]] const T* get(Entity entity) const {
 		const SparseEntry* entry = find(entity);
 		return entry ? &components[entry->pos] : nullptr;
 	}
@@ -124,22 +124,22 @@ public:
 		return static_cast<void*>(get(entity));
 	}
 
-	const void* getRaw(Entity entity) const override {
+	[[nodiscard]] const void* getRaw(Entity entity) const override {
 		return static_cast<const void*>(get(entity));
 	}
 
-	size_t size() const override { return components.size(); }
-	const std::vector<Entity>& entities() const override { return dense; }
+	[[nodiscard]] size_t size() const override { return components.size(); }
+	[[nodiscard]] const std::vector<Entity>& entities() const override { return dense; }
 
 	T& getByIndex(size_t i) { return components[i]; }
-	const T& getByIndex(size_t i) const { return components[i]; }
+	[[nodiscard]] const T& getByIndex(size_t i) const { return components[i]; }
 
 	T* data() noexcept { return components.data(); }
-	const T* data() const noexcept { return components.data(); }
+	[[nodiscard]] const T* data() const noexcept { return components.data(); }
 
 private:
 	/// Returns the sparse entry for @p entity if it holds a live component, else null.
-	const SparseEntry* find(Entity entity) const noexcept {
+	[[nodiscard]] const SparseEntry* find(Entity entity) const noexcept {
 		const U32 idx = Detail::entityIndex(entity);
 		if (idx >= sparse.size())
 			return nullptr;

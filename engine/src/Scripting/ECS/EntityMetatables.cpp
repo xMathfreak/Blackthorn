@@ -42,7 +42,7 @@ LuaResult<void> applyInitialValues(
 	int tableIndex
 ) {
 	if (lua_type(L, tableIndex) != LUA_TTABLE)
-		return LuaError{ "initial values must be a table", tableIndex };
+		return LuaError{ .message="initial values must be a table", .argIndex=tableIndex };
 
 	const int table = lua_absindex(L, tableIndex);
 	const int base = lua_gettop(L);
@@ -51,7 +51,7 @@ LuaResult<void> applyInitialValues(
 	while (lua_next(L, table) != 0) {
 		if (lua_type(L, -2) != LUA_TSTRING) {
 			lua_settop(L, base);
-			return LuaError{ "property names must be strings", 0 };
+			return LuaError{ .message="property names must be strings", .argIndex=0 };
 		}
 
 		size_t length = 0;
@@ -61,13 +61,13 @@ LuaResult<void> applyInitialValues(
 		const auto it = record.properties.find(name);
 		if (it == record.properties.end()) {
 			lua_settop(L, base);
-			return LuaError{ "unknown property '" + std::string(name)
-				+ "' on " + record.scriptName, 0 };
+			return LuaError{ .message="unknown property '" + std::string(name)
+				+ "' on " + record.scriptName, .argIndex=0 };
 		}
 
 		if (!it->second.setter) {
 			lua_settop(L, base);
-			return LuaError{ "property '" + std::string(name) + "' is read-only", 0 };
+			return LuaError{ .message="property '" + std::string(name) + "' is read-only", .argIndex=0 };
 		}
 
 		// The value is on top of the stack, so its absolute index is lua_gettop.
@@ -131,7 +131,7 @@ LuaResult<EntityHandle> boundEntity(lua_State* L) {
 	const auto* self = static_cast<const EntityUserdata*>(
 		luaL_testudata(L, lua_upvalueindex(1), kEntityMetatable));
 	if (!self)
-		return LuaError{ "entity expected", 0 };
+		return LuaError{ .message="entity expected", .argIndex=0 };
 	return EntityHandle{ self->value };
 }
 
@@ -205,7 +205,7 @@ int methodHasTag(lua_State* L) {
 
 LuaResult<int> indexEntity(lua_State* L, ComponentBindings& bindings) {
 	if (!entityArg(L, 1))
-		return LuaError{ "entity handle expected", 1 };
+		return LuaError{ .message="entity handle expected", .argIndex=1 };
 
 	LuaResult<std::string_view> key = stringArg(L, 2);
 	if (!key.ok())
@@ -232,7 +232,7 @@ LuaResult<int> indexEntity(lua_State* L, ComponentBindings& bindings) {
 
 	const ComponentRecord* record = bindings.findComponent(key.value());
 	if (!record)
-		return LuaError{ "unknown component '" + std::string(key.value()) + "'", 0 };
+		return LuaError{ .message="unknown component '" + std::string(key.value()) + "'", .argIndex=0 };
 
 	// A stale handle is reported when a property is read or written, not here,
 	// so both paths produce the same error.
@@ -255,8 +255,8 @@ int entityIndexMeta(lua_State* L) {
 int entityNewIndexMeta(lua_State* L) {
 	return runMetamethod(L, [&]() -> LuaResult<int> {
 		return LuaError{
-			"components cannot be assigned directly; assign a property, for example e.Transform.position = ...",
-			0
+			.message="components cannot be assigned directly; assign a property, for example e.Transform.position = ...",
+			.argIndex=0
 		};
 	});
 }
@@ -284,7 +284,7 @@ int entityToStringMeta(lua_State* L) {
 LuaResult<int> indexComponent(lua_State* L) {
 	const ComponentUserdata* self = componentArg(L, 1);
 	if (!self)
-		return LuaError{ "component expected", 1 };
+		return LuaError{ .message="component expected", .argIndex=1 };
 
 	LuaResult<std::string_view> key = stringArg(L, 2);
 	if (!key.ok())
@@ -292,11 +292,11 @@ LuaResult<int> indexComponent(lua_State* L) {
 
 	const auto it = self->record->properties.find(key.value());
 	if (it == self->record->properties.end())
-		return LuaError{ "unknown property '" + std::string(key.value())
-			+ "' on " + self->record->scriptName, 0 };
+		return LuaError{ .message="unknown property '" + std::string(key.value())
+			+ "' on " + self->record->scriptName, .argIndex=0 };
 
 	if (!it->second.getter)
-		return LuaError{ "property '" + std::string(key.value()) + "' cannot be read", 0 };
+		return LuaError{ .message="property '" + std::string(key.value()) + "' cannot be read", .argIndex=0 };
 
 	// The getter pushes its result, and failures come back as a LuaError.
 	return it->second.getter(Detail::requireWorld(), EntityHandle{ self->value }, L);
@@ -305,7 +305,7 @@ LuaResult<int> indexComponent(lua_State* L) {
 LuaResult<int> newIndexComponent(lua_State* L) {
 	const ComponentUserdata* self = componentArg(L, 1);
 	if (!self)
-		return LuaError{ "component expected", 1 };
+		return LuaError{ .message="component expected", .argIndex=1 };
 
 	LuaResult<std::string_view> key = stringArg(L, 2);
 	if (!key.ok())
@@ -313,11 +313,11 @@ LuaResult<int> newIndexComponent(lua_State* L) {
 
 	const auto it = self->record->properties.find(key.value());
 	if (it == self->record->properties.end())
-		return LuaError{ "unknown property '" + std::string(key.value())
-			+ "' on " + self->record->scriptName, 0 };
+		return LuaError{ .message="unknown property '" + std::string(key.value())
+			+ "' on " + self->record->scriptName, .argIndex=0 };
 
 	if (!it->second.setter)
-		return LuaError{ "property '" + std::string(key.value()) + "' is read-only", 0 };
+		return LuaError{ .message="property '" + std::string(key.value()) + "' is read-only", .argIndex=0 };
 
 	// __newindex(proxy, key, value): the new value is at index 3.
 	LuaResult<void> set = it->second.setter(Detail::requireWorld(),

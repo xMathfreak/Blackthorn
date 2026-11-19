@@ -37,8 +37,8 @@ public:
 
 	XChaCha20Encryptor() = default;
 
-	size_t nonceSize() const noexcept override { return NONCE_BYTES; }
-	size_t authTagSize() const noexcept override { return AUTH_TAG_BYTES; }
+	[[nodiscard]] size_t nonceSize() const noexcept override { return NONCE_BYTES; }
+	[[nodiscard]] size_t authTagSize() const noexcept override { return AUTH_TAG_BYTES; }
 
 	bool encrypt(
 		const IO::ByteBuffer& plaintext,

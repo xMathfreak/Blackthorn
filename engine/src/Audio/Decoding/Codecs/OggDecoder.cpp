@@ -163,10 +163,10 @@ long oggMemTell(void* datasource) {
 
 /// Callback table backed by OggMemoryCursor.
 constexpr ov_callbacks k_OggMemCallbacks = {
-	oggMemRead,
-	oggMemSeek,
-	oggMemClose,
-	oggMemTell,
+	.read_func=oggMemRead,
+	.seek_func=oggMemSeek,
+	.close_func=oggMemClose,
+	.tell_func=oggMemTell,
 };
 
 } // anonymous namespace
@@ -176,7 +176,7 @@ bool OggDecoder::decodeFromMemory(
 	size_t srcSize,
 	AudioData& data
 ) {
-	OggMemoryCursor cursor{ src, srcSize, 0 };
+	OggMemoryCursor cursor{ .data=src, .size=srcSize, .pos=0 };
 
 	OggVorbis_File vf;
 
@@ -233,7 +233,7 @@ bool OggDecoder::getInfoFromMemory(
 	size_t srcSize,
 	AudioMetadata& data
 ) {
-	OggMemoryCursor cursor{ src, srcSize, 0 };
+	OggMemoryCursor cursor{ .data=src, .size=srcSize, .pos=0 };
 
 	OggVorbis_File vf;
 	if (ov_open_callbacks(&cursor, &vf, nullptr, 0, k_OggMemCallbacks) != 0) {

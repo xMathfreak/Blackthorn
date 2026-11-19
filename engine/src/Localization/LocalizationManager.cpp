@@ -149,14 +149,14 @@ LoadResult LocalizationManager::loadFromFile(fs::path path, I32 priority) {
 	const auto result = parseLocaleFile(path, src);
 
 	if (result != LoadStatus::Success)
-		return {std::nullopt, result};
+		return {.handle=std::nullopt, .status=result};
 
 	src.handle = nextHandle++;
 	const auto handle = src.handle;
 	sources.emplace(handle, std::move(src));
 	insertIntoPriorityOrder(handle, priority);
 
-	return { handle, LoadStatus::Success };
+	return { .handle=handle, .status=LoadStatus::Success };
 }
 
 void LocalizationManager::insertIntoPriorityOrder(SourceHandle handle, I32 priority) {
@@ -175,14 +175,14 @@ LoadResult LocalizationManager::loadFromPack(fs::path path, I32 priority) {
 	const auto result = parsePackFile(path, src);
 
 	if (result != LoadStatus::Success)
-		return {std::nullopt, result};
+		return {.handle=std::nullopt, .status=result};
 
 	src.handle = nextHandle++;
 	const auto handle = src.handle;
 	sources.emplace(handle, std::move(src));
 	insertIntoPriorityOrder(handle, priority);
 
-	return { handle, LoadStatus::Success };
+	return { .handle=handle, .status=LoadStatus::Success };
 }
 
 LoadResult LocalizationManager::loadFromPackBytes(std::span<const U8> btlocBytes, I32 priority, std::string_view label) {
@@ -191,14 +191,14 @@ LoadResult LocalizationManager::loadFromPackBytes(std::span<const U8> btlocBytes
 
 	const auto result = parsePackBytes(btlocBytes, label, src);
 	if (result != LoadStatus::Success)
-		return { std::nullopt, result };
+		return { .handle=std::nullopt, .status=result };
 
 	src.handle = nextHandle++;
 	const auto handle = src.handle;
 	sources.emplace(handle, std::move(src));
 	insertIntoPriorityOrder(handle, priority);
 
-	return { handle, LoadStatus::Success };
+	return { .handle=handle, .status=LoadStatus::Success };
 }
 
 bool LocalizationManager::unloadSource(SourceHandle handle) {
@@ -266,20 +266,20 @@ LoadResult LocalizationManager::loadFromMemory(std::span<const U8> jsonBytes, I3
 			label, e.what()
 		);
 
-		return { std::nullopt, LoadStatus::InvalidJSON };
+		return { .handle=std::nullopt, .status=LoadStatus::InvalidJSON };
 	}
 
 	const auto result = parseLocaleJSON(data, label, src);
 
 	if (result != LoadStatus::Success)
-		return { std::nullopt, result };
+		return { .handle=std::nullopt, .status=result };
 
 	src.handle = nextHandle++;
 	const auto handle = src.handle;
 	sources.emplace(handle, std::move(src));
 	insertIntoPriorityOrder(handle, priority);
 
-	return { handle, LoadStatus::Success };
+	return { .handle=handle, .status=LoadStatus::Success };
 }
 
 LoadStatus LocalizationManager::parsePackFile(fs::path& path, Source& outSource) {

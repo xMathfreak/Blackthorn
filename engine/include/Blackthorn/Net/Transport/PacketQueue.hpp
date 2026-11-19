@@ -109,7 +109,7 @@ public:
 	}
 
 	/** @brief Returns true if no packets are queued. */
-	bool empty() const noexcept {
+	[[nodiscard]] bool empty() const noexcept {
 		return head.load(std::memory_order::acquire)
 			== tail.load(std::memory_order::acquire);
 	}
@@ -119,7 +119,7 @@ public:
 	 *
 	 * Approximate because the producer may push between the two loads.
 	 */
-	size_t size() const noexcept {
+	[[nodiscard]] size_t size() const noexcept {
 		const size_t h = head.load(std::memory_order::acquire);
 		const size_t t = tail.load(std::memory_order::acquire);
 

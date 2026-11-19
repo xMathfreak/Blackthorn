@@ -178,7 +178,7 @@ struct BLACKTHORN_API PacketHeader {
 	/**
 	 * @brief Returns true if the magic constant matches.
 	 */
-	bool isValid() const {
+	[[nodiscard]] bool isValid() const {
 		return magic == MAGIC;
 	}
 };

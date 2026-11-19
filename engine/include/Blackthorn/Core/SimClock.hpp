@@ -92,16 +92,16 @@ public:
 	void load();
 
 	/** @brief Returns the tick the clock was constructed with as its default. */
-	U64 getInitialTick() const { return initialTick; }
+	[[nodiscard]] U64 getInitialTick() const { return initialTick; }
 
 	/** @brief Returns the number of ticks elapsed since the clock epoch. */
-	U64 getCurrentTick() const { return currentTick; }
+	[[nodiscard]] U64 getCurrentTick() const { return currentTick; }
 
 	/** @brief Returns the number of seconds each tick represents. */
-	float getTickDuration() const { return tickDuration; }
+	[[nodiscard]] float getTickDuration() const { return tickDuration; }
 
 	/** @brief Returns the number of ticks per second (1.0f / tickDuration). */
-	float getTickRate() const { return tickRate; }
+	[[nodiscard]] float getTickRate() const { return tickRate; }
 
 	/**
 	 * @brief Returns the total simulated time in seconds.
@@ -109,7 +109,7 @@ public:
 	 * Equivalent to `currentTick * tickDuration` but stored explicitly
 	 * to avoid floating-point accumulation error over long sessions.
 	 */
-	double getTotalSimulatedTime() const { return totalSimulatedTime; }
+	[[nodiscard]] double getTotalSimulatedTime() const { return totalSimulatedTime; }
 
 private:
 	U64 currentTick = 0;

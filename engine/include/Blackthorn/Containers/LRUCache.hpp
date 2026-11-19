@@ -12,7 +12,7 @@ public:
 	using EvictionCallback = std::function<void(const Key&, Value&)>;
 
 	explicit LRUCache(size_t size, EvictionCallback evictCallback = nullptr)
-		: maxSize(size), onEvict(evictCallback)
+		: maxSize(size), onEvict(std::move(evictCallback))
 	{}
 
 	Value* get(const Key& key) {
@@ -65,15 +65,15 @@ public:
 		cacheMap.clear();
 	}
 
-	size_t size() const {
+	[[nodiscard]] size_t size() const {
 		return items.size();
 	}
 
-	size_t capacity() const {
+	[[nodiscard]] size_t capacity() const {
 		return maxSize;
 	}
 
-	bool isFull() const {
+	[[nodiscard]] bool isFull() const {
 		return items.size() >= maxSize;
 	}
 

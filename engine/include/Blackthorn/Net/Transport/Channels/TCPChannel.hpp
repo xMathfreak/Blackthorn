@@ -116,7 +116,7 @@ public:
 	ReceiveResult receive(Sockets::ISocket& socket, IO::ByteBuffer& outMessage);
 
 	/** @brief Returns true if the channel has unconsumed buffered bytes. */
-	bool hasPendingData() const noexcept {
+	[[nodiscard]] bool hasPendingData() const noexcept {
 		return readHead < recvBuffer.size();
 	}
 
@@ -151,7 +151,7 @@ private:
 	static constexpr size_t LENGTH_PREFIX_SIZE = sizeof(U32);
 
 	/// Number of unconsumed bytes currently in @c recvBuffer.
-	size_t available() const noexcept {
+	[[nodiscard]] size_t available() const noexcept {
 		return recvBuffer.size() - readHead;
 	}
 

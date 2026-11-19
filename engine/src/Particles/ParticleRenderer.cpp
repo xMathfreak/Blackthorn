@@ -28,10 +28,10 @@ void ParticleRenderer::initBuffers() {
 	vao.bind();
 
 	const std::vector<Vertex> vertices = {
-		{{-0.5f, -0.5f}, {0.0f, 0.0f}},
-		{{ 0.5f, -0.5f}, {1.0f, 0.0f}},
-		{{ 0.5f,  0.5f}, {1.0f, 1.0f}},
-		{{-0.5f,  0.5f}, {0.0f, 1.0f}}
+		{.position={-0.5f, -0.5f}, .uv={0.0f, 0.0f}},
+		{.position={ 0.5f, -0.5f}, .uv={1.0f, 0.0f}},
+		{.position={ 0.5f,  0.5f}, .uv={1.0f, 1.0f}},
+		{.position={-0.5f,  0.5f}, .uv={0.0f, 1.0f}}
 	};
 
 	const std::vector<GLuint> indices = {
@@ -150,7 +150,7 @@ void ParticleRenderer::submit(
 		}
 
 		pushInstance(
-			Instance{ p.position, p.color, p.size, p.rotation, uvRect },
+			Instance{ .position=p.position, .color=p.color, .size=p.size, .rotation=p.rotation, .uvRect=uvRect },
 			texture,
 			blend
 		);

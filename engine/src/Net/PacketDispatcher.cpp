@@ -129,7 +129,7 @@ void PacketDispatcher::checkTimeouts() {
 	}
 
 	for (Connection::PeerID id : timedOut)
-		eventBus->push({ ConnectionEventType::Disconnect, id, {} });
+		eventBus->push({ .type=ConnectionEventType::Disconnect, .peerID=id, .address={} });
 }
 
 void PacketDispatcher::dispatchEvents() {

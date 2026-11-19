@@ -96,19 +96,19 @@ public:
 	 * @brief Returns the 64-bit FNV-1a hash of this section's name.
 	 * This is the ID written into the section table on disk.
 	 */
-	virtual U64 getID() const = 0;
+	[[nodiscard]] virtual U64 getID() const = 0;
 
 	/**
 	 * @brief Returns the human-readable name of this section.
 	 * Used in log output and debug diagnostics.
 	 */
-	virtual std::string_view getName() const = 0;
+	[[nodiscard]] virtual std::string_view getName() const = 0;
 
 	/**
 	 * @brief Returns the current schema version of this section.
 	 * Increment this when the section's wire format changes.
 	 */
-	virtual U32 getVersion() const = 0;
+	[[nodiscard]] virtual U32 getVersion() const = 0;
 
 	/**
 	 * @brief Serializes this section's state into @p ctx.buffer.

@@ -42,10 +42,10 @@ struct BLACKTHORN_API TextureLoadParams final : Assets::AssetLoadParams {
 
 	TextureLoadParams(std::filesystem::path p, TextureParams tp = {})
 		: Assets::AssetLoadParams(std::move(p))
-		, textureParams(std::move(tp))
+		, textureParams(tp)
 	{}
 
-	std::unique_ptr<Assets::LoadParams> clone() const override {
+	[[nodiscard]] std::unique_ptr<Assets::LoadParams> clone() const override {
 		return std::make_unique<TextureLoadParams>(*this);
 	}
 };

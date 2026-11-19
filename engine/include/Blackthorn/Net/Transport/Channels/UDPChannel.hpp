@@ -168,11 +168,11 @@ public:
 	 */
 	void retransmitPending(Sockets::ISocket& socket, const Address& address);
 
-	U16 getLocalSeq() const noexcept { return localSeq; }
-	U16 getRemoteSeq() const noexcept { return remoteSeq; }
-	U32 getAckBits() const noexcept { return ackBits; }
+	[[nodiscard]] U16 getLocalSeq() const noexcept { return localSeq; }
+	[[nodiscard]] U16 getRemoteSeq() const noexcept { return remoteSeq; }
+	[[nodiscard]] U32 getAckBits() const noexcept { return ackBits; }
 
-	size_t getPendingRetransmitCount() const noexcept {
+	[[nodiscard]] size_t getPendingRetransmitCount() const noexcept {
 		size_t count = 0;
 
 		for (const auto& e : retransmitQueue)

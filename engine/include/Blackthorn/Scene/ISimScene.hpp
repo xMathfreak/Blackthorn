@@ -72,8 +72,8 @@ public:
 	virtual void onPause() {}
 	virtual void onResume() {}
 
-	virtual bool blocksUpdate() const { return true; }
-	virtual bool blocksRender() const { return true; }
+	[[nodiscard]] virtual bool blocksUpdate() const { return true; }
+	[[nodiscard]] virtual bool blocksRender() const { return true; }
 
 	void fixedUpdate(float dt) {
 		if (world)
@@ -97,10 +97,10 @@ public:
 	}
 
 	ECS::World* getWorld() { return world.get(); }
-	const ECS::World* getWorld() const { return world.get(); }
+	[[nodiscard]] const ECS::World* getWorld() const { return world.get(); }
 
 	/** @brief Human-readable scene name used for logging and debugging. */
-	virtual const char* getName() const { return ""; }
+	[[nodiscard]] virtual const char* getName() const { return ""; }
 
 	/**
 	 * @brief Returns the simulation context injected by `SceneManager`.
@@ -113,7 +113,7 @@ public:
 	 * yet set during construction.
 	 */
 	ISimContext& getContext() { return *context; }
-	const ISimContext& getContext() const { return *context; }
+	[[nodiscard]] const ISimContext& getContext() const { return *context; }
 
 	/** @brief Shortcut for `getContext().getAssetManager()`. */
 	Assets::AssetManager& assets() { return getContext().getAssetManager(); }

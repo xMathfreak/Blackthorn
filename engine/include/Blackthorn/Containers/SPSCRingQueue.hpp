@@ -163,7 +163,7 @@ private:
 		);
 	}
 
-	const T* ptr_at(size_t index) const noexcept {
+	[[nodiscard]] const T* ptr_at(size_t index) const noexcept {
 		return std::launder(
 			reinterpret_cast<const T*>(&storage[index])
 		);

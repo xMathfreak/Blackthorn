@@ -373,10 +373,10 @@ IO::ByteBuffer SaveDocument::getSectionData(
 		}
 
 		outVersion = entry.version;
-		return IO::ByteBuffer(
+		return {
 			payload.data() + entry.offset,
 			static_cast<size_t>(entry.size)
-		);
+		};
 	}
 
 	return {};

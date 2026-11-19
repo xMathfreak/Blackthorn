@@ -13,7 +13,7 @@ struct TextCacheKey {
 	Text::Alignment alignment;
 	bool markup = false;
 
-	size_t hash() const noexcept {
+	[[nodiscard]] size_t hash() const noexcept {
 		size_t h = std::hash<std::string>{}(text);
 		h ^= std::hash<float>{}(scale)    * 2654435761ULL;
 		h ^= std::hash<float>{}(maxWidth) * 2246822519ULL;

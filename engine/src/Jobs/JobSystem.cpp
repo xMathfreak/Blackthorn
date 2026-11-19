@@ -33,7 +33,7 @@ JobSystem::JobSystem(size_t workerCount) {
 		workerCount = hw > 1 ? hw - 1 : 1;
 	}
 
-	mainSentinel = new MainThreadNode();
+	mainSentinel = new MainThreadNode{};
 	mainHead.store(mainSentinel, std::memory_order::relaxed);
 	mainTail.store(mainSentinel, std::memory_order::relaxed);
 

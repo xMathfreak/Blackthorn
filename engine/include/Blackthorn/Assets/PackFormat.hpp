@@ -205,7 +205,7 @@ struct BLACKTHORN_API PackMetadata {
 	std::vector<std::string> conflicts;
 
 	/** @brief Returns true if every field is empty (no metadata was found/embedded). */
-	bool empty() const noexcept {
+	[[nodiscard]] bool empty() const noexcept {
 		return id.empty()
 			&& name.empty()
 			&& shortDescription.empty()

@@ -7,7 +7,6 @@
 #include <string_view>
 #include <thread>
 #include <type_traits>
-#include <utility>
 
 #include <lua.h>
 #include <lauxlib.h>
@@ -23,9 +22,9 @@ namespace Blackthorn::Scripting {
  * @brief Resource limits applied to a LuaScript.
  */
 struct LuaScriptConfig {
-	size_t memoryLimitBytes = 8 * 1024 * 1024;         ///< Hard cap on Lua heap usage after setup.
-	std::chrono::milliseconds timeSlice{ 16 };   ///< Wall-clock budget per outermost call.
-	unsigned int hookInterval = 10000;                 ///< VM instructions between deadline checks.
+	size_t memoryLimitBytes = static_cast<size_t>(8 * 1024 * 1024); ///< Hard cap on Lua heap usage after setup.
+	std::chrono::milliseconds timeSlice{ 16 };                ///< Wall-clock budget per outermost call.
+	unsigned int hookInterval = 10000;                              ///< VM instructions between deadline checks.
 
 	///Receives each line printed by scripts. Null writes to stdout.
 	std::function<void(std::string_view)> printSink = [](std::string_view line) {
@@ -156,7 +155,7 @@ LuaResult<R> LuaScript::call(std::string_view name, const Args&... args) {
 
 	const int top = lua_gettop(state);
 	if (!lua_checkstack(state, static_cast<int>(sizeof...(Args)) + 4))
-		return LuaError{ "Lua stack overflow", 0 };
+		return LuaError{ .message="Lua stack overflow", .argIndex=0 };
 
 	lua_pushcfunction(state, traceback);
 	const int handler = top + 1;
@@ -171,7 +170,7 @@ LuaResult<R> LuaScript::call(std::string_view name, const Args&... args) {
 
 	if (!lua_isfunction(state, -1)) {
 		lua_settop(state, top);
-		return LuaError{ "'" + std::string(name) + "' is not a function", 0 };
+		return LuaError{ .message="'" + std::string(name) + "' is not a function", .argIndex=0 };
 	}
 
 	(LuaConverter<std::decay_t<Args>>::push(state, args), ...);
@@ -180,7 +179,7 @@ LuaResult<R> LuaScript::call(std::string_view name, const Args&... args) {
 	const int status = protectedCall(static_cast<int>(sizeof...(Args)), resultCount, handler);
 
 	if (status != LUA_OK) {
-		LuaError error{ errorMessage(state), 0 };
+		LuaError error{ .message=errorMessage(state), .argIndex=0 };
 		lua_settop(state, top);
 		return error;
 	}

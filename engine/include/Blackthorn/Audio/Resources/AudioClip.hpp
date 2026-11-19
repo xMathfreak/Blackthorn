@@ -88,7 +88,7 @@ public:
 	}
 
 	void unload() noexcept {
-		clipPath = std::filesystem::path("");
+		clipPath.clear();
 		metaData = {};
 		pcmData.reset();
 		compressedBytes.reset();
@@ -96,7 +96,7 @@ public:
 		loaded = false;
 	}
 
-	bool isLoaded() const noexcept {
+	[[nodiscard]] bool isLoaded() const noexcept {
 		return loaded;
 	}
 
@@ -180,7 +180,7 @@ public:
 		unload();
 
 		clipPath = std::move(path);
-		metaData = std::move(meta);
+		metaData = meta;
 
 		pcmData = std::move(pcm);
 		compressedBytes = std::move(sourceBytes);

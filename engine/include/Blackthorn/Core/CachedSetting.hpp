@@ -103,7 +103,7 @@ public:
 	}
 
 	/// Returns the cached value. Lock-free; safe to call from a hot loop.
-	T get() const noexcept { return value.load(std::memory_order_relaxed); }
+	[[nodiscard]] T get() const noexcept { return value.load(std::memory_order_relaxed); }
 
 	/// Implicit conversion, for use as a drop-in replacement of a plain T.
 	operator T() const noexcept { return get(); }

@@ -22,10 +22,10 @@ SDL_FRect Panel::makeDestRect() const {
 	const glm::vec2 pos = getAbsolutePosition();
 
 	return SDL_FRect{
-		pos.x,
-		pos.y,
-		size.x * scale,
-		size.y * scale
+		.x=pos.x,
+		.y=pos.y,
+		.w=size.x * scale,
+		.h=size.y * scale
 	};
 }
 

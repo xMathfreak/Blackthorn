@@ -65,14 +65,14 @@ public:
 	bool setReuseAddr(bool enabled = true) override;
 	void close() override;
 
-	bool isOpen() const override { return fd != INVALID_SOCKET_HANDLE; }
-	bool isConnected() const override { return false; }
+	[[nodiscard]] bool isOpen() const override { return fd != INVALID_SOCKET_HANDLE; }
+	[[nodiscard]] bool isConnected() const override { return false; }
 
-	Transport::Address getLocalAddress() const override;
-	std::string getLastError() const override;
+	[[nodiscard]] Transport::Address getLocalAddress() const override;
+	[[nodiscard]] std::string getLastError() const override;
 
 	/** @brief Returns the raw socket handle. Used by ConnectionManager::select(). */
-	SocketHandle handle() const { return fd; }
+	[[nodiscard]] SocketHandle handle() const { return fd; }
 
 private:
 	SocketHandle fd = INVALID_SOCKET_HANDLE;

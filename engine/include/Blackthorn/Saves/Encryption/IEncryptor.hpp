@@ -23,10 +23,10 @@ public:
 	virtual ~IEncryptor() = default;
 
 	/** @brief Size in bytes of the nonce expected by this implementation. */
-	virtual size_t nonceSize() const noexcept = 0;
+	[[nodiscard]] virtual size_t nonceSize() const noexcept = 0;
 
 	/** @brief Size in bytes of the authentication tag produced by this implementation. */
-	virtual size_t authTagSize() const noexcept = 0;
+	[[nodiscard]] virtual size_t authTagSize() const noexcept = 0;
 
 	/**
 	 * @brief Encrypts @p plaintext into @p ciphertext.

@@ -80,11 +80,11 @@ LuaResult<Map> mapFromLua(lua_State* L, int index) {
 	using Value = typename Map::mapped_type;
 
 	if (lua_type(L, index) != LUA_TTABLE)
-		return LuaError{ "table expected", index };
+		return LuaError{ .message="table expected", .argIndex=index };
 
 	NestingGuard guard;
 	if (!guard.ok())
-		return LuaError{ "table nesting too deep", index };
+		return LuaError{ .message="table nesting too deep", .argIndex=index };
 
 	const int absIndex = lua_absindex(L, index);
 	const int base = lua_gettop(L);
@@ -96,7 +96,7 @@ LuaResult<Map> mapFromLua(lua_State* L, int index) {
 	while (true) {
 		if (!lua_checkstack(L, 3)) {
 			lua_settop(L, base);
-			return LuaError{ "Lua stack overflow", index };
+			return LuaError{ .message="Lua stack overflow", .argIndex=index };
 		}
 
 		if (lua_next(L, absIndex) == 0)
@@ -104,12 +104,12 @@ LuaResult<Map> mapFromLua(lua_State* L, int index) {
 
 		if (++count > kMaxContainerElements) {
 			lua_settop(L, base);
-			return LuaError{ "table too large", index };
+			return LuaError{ .message="table too large", .argIndex=index };
 		}
 
 		if (lua_type(L, -2) != LUA_TSTRING) {
 			lua_settop(L, base);
-			return LuaError{ "string keys required", index };
+			return LuaError{ .message="string keys required", .argIndex=index };
 		}
 
 		size_t keyLength = 0;
@@ -161,23 +161,23 @@ template <>
 struct LuaConverter<int> {
 	static LuaResult<int> fromLua(lua_State* L, int index) {
 		if (lua_type(L, index) != LUA_TNUMBER)
-			return LuaError{ "integer expected", index };
+			return LuaError{ .message="integer expected", .argIndex=index };
 
 		if (lua_isinteger(L, index)) {
 			const lua_Integer v = lua_tointeger(L, index);
 			if (v < std::numeric_limits<int>::min() || v > std::numeric_limits<int>::max())
-				return LuaError{ "integer out of range", index };
+				return LuaError{ .message="integer out of range", .argIndex=index };
 
 			return static_cast<int>(v);
 		}
 
 		const double d = lua_tonumber(L, index);
 		if (std::isnan(d) || d != std::floor(d))
-			return LuaError{ "integer expected", index };
+			return LuaError{ .message="integer expected", .argIndex=index };
 
 		if (d < static_cast<double>(std::numeric_limits<int>::min()) ||
 			d > static_cast<double>(std::numeric_limits<int>::max()))
-			return LuaError{ "integer out of range", index };
+			return LuaError{ .message="integer out of range", .argIndex=index };
 
 		return static_cast<int>(d);
 	}
@@ -192,7 +192,7 @@ template <>
 struct LuaConverter<double> {
 	static LuaResult<double> fromLua(lua_State* L, int index) {
 		if (lua_type(L, index) != LUA_TNUMBER)
-			return LuaError{ "number expected", index };
+			return LuaError{ .message="number expected", .argIndex=index };
 
 		return lua_tonumber(L, index);
 	}
@@ -223,7 +223,7 @@ template <>
 struct LuaConverter<bool> {
 	static LuaResult<bool> fromLua(lua_State* L, int index) {
 		if (!lua_isboolean(L, index))
-			return LuaError{ "boolean expected", index };
+			return LuaError{ .message="boolean expected", .argIndex=index };
 
 		return lua_toboolean(L, index) != 0;
 	}
@@ -238,7 +238,7 @@ template <>
 struct LuaConverter<std::string> {
 	static LuaResult<std::string> fromLua(lua_State* L, int index) {
 		if (lua_type(L, index) != LUA_TSTRING)
-			return LuaError{ "string expected", index };
+			return LuaError{ .message="string expected", .argIndex=index };
 
 		size_t length = 0;
 		const char* data = lua_tolstring(L, index, &length);
@@ -261,23 +261,23 @@ template <typename T>
 struct LuaConverter<std::vector<T>> {
 	static LuaResult<std::vector<T>> fromLua(lua_State* L, int index) {
 		if (lua_type(L, index) != LUA_TTABLE)
-			return LuaError{ "table expected", index };
+			return LuaError{ .message="table expected", .argIndex=index };
 
 		Detail::NestingGuard guard;
 		if (!guard.ok())
-			return LuaError{ "table nesting too deep", index };
+			return LuaError{ .message="table nesting too deep", .argIndex=index };
 
 		const int absIndex = lua_absindex(L, index);
 		const lua_Unsigned length = lua_rawlen(L, absIndex);
 		if (length > Detail::kMaxContainerElements)
-			return LuaError{ "sequence too long", index };
+			return LuaError{ .message="sequence too long", .argIndex=index };
 
 		std::vector<T> out;
 		out.reserve(static_cast<size_t>(length));
 
 		for (lua_Integer i = 1; i <= static_cast<lua_Integer>(length); ++i) {
 			if (!lua_checkstack(L, 1))
-				return LuaError{ "Lua stack overflow", index };
+				return LuaError{ .message="Lua stack overflow", .argIndex=index };
 
 			lua_rawgeti(L, absIndex, i);
 			LuaResult<T> element = LuaConverter<T>::fromLua(L, -1);

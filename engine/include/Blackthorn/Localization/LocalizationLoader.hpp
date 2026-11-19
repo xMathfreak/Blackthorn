@@ -61,7 +61,7 @@ struct BLACKTHORN_API LocaleLoadParams final : Assets::AssetLoadParams {
 		, priority(pr)
 	{}
 
-	std::unique_ptr<Assets::LoadParams> clone() const override {
+	[[nodiscard]] std::unique_ptr<Assets::LoadParams> clone() const override {
 		return std::make_unique<LocaleLoadParams>(*this);
 	}
 };
@@ -99,9 +99,9 @@ inline std::optional<LocaleRequest> localeRequest(const Assets::LoadParams& para
 
 	const auto* lp = dynamic_cast<const LocaleLoadParams*>(&params);
 	return LocaleRequest{
-		*id,
-		lp ? lp->priority : 0,
-		std::filesystem::path(*id).extension() == ".btloc"
+		.id=*id,
+		.priority=lp ? lp->priority : 0,
+		.compiled=std::filesystem::path(*id).extension() == ".btloc"
 	};
 }
 

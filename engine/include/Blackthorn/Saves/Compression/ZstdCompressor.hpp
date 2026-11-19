@@ -45,7 +45,7 @@ public:
 		size_t expectedSize = 0
 	) override;
 
-	int getLevel() const noexcept { return compressionLevel; }
+	[[nodiscard]] int getLevel() const noexcept { return compressionLevel; }
 
 private:
 	int compressionLevel;

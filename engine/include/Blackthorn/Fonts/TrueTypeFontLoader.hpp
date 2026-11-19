@@ -32,7 +32,7 @@ struct BLACKTHORN_API TTFParams final : Assets::AssetLoadParams {
 		, size(pointSize)
 	{}
 
-	std::unique_ptr<Assets::LoadParams> clone() const override {
+	[[nodiscard]] std::unique_ptr<Assets::LoadParams> clone() const override {
 		return std::make_unique<TTFParams>(*this);
 	}
 };
@@ -113,7 +113,7 @@ public:
 		if (!request)
 			return nullptr;
 
-		const auto bytes = resolver->resolve(request->first);
+		auto bytes = resolver->resolve(request->first);
 		if (!bytes)
 			return nullptr;
 

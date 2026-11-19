@@ -18,7 +18,7 @@ int runMetamethod(lua_State* L, Fn&& body) {
 		try {
 			return body();
 		} catch (const std::exception& e) {
-			return LuaError{e.what(), 0};
+			return LuaError{.message=e.what(), .argIndex=0};
 		}
 	}();
 
@@ -33,7 +33,7 @@ int runMetamethod(lua_State* L, Fn&& body) {
 /// A string argument. The view points into the Lua string, which stays valid while it is on the stack.
 inline LuaResult<std::string_view> stringArg(lua_State* L, int index) {
 	if (lua_type(L, index) != LUA_TSTRING)
-		return LuaError{ "name must be a string", index };
+		return LuaError{ .message="name must be a string", .argIndex=index };
 
 	size_t length = 0;
 	const char* text = lua_tolstring(L, index, &length);

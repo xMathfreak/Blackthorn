@@ -43,7 +43,7 @@ struct BLACKTHORN_API AABB {
 
 	[[nodiscard]]
 	inline AABB expanded(float amount) const {
-		return { min - glm::vec2{amount}, max + glm::vec2{amount} };
+		return { .min=min - glm::vec2{amount}, .max=max + glm::vec2{amount} };
 	}
 
 	[[nodiscard]]
@@ -65,8 +65,8 @@ struct BLACKTHORN_API AABB {
 	[[nodiscard]]
 	inline bool intersection(const AABB& other, AABB& result) const {
 		AABB r {
-			glm::vec2{ std::max(min.x, other.min.x), std::max(min.y, other.min.y) },
-			glm::vec2{ std::min(max.x, other.max.x), std::min(max.y, other.max.y) }
+			.min=glm::vec2{ std::max(min.x, other.min.x), std::max(min.y, other.min.y) },
+			.max=glm::vec2{ std::min(max.x, other.max.x), std::min(max.y, other.max.y) }
 		};
 
 		if (r.min.x >= r.max.x || r.min.y >= r.max.y)
@@ -79,15 +79,15 @@ struct BLACKTHORN_API AABB {
 	[[nodiscard]]
 	inline AABB merge(const AABB& other) const {
 		return {
-			glm::vec2{ std::min(min.x, other.min.x), std::min(min.y, other.min.y) },
-			glm::vec2{ std::max(max.x, other.max.x), std::max(max.y, other.max.y) }
+			.min=glm::vec2{ std::min(min.x, other.min.x), std::min(min.y, other.min.y) },
+			.max=glm::vec2{ std::max(max.x, other.max.x), std::max(max.y, other.max.y) }
 		};
 	}
 
 	[[nodiscard]]
 	static inline AABB fromCenterSize(const glm::vec2& center, const glm::vec2& size) {
 		glm::vec2 half = size * 0.5f;
-		return { center - half, center + half };
+		return { .min=center - half, .max=center + half };
 	}
 };
 
@@ -138,8 +138,8 @@ struct BLACKTHORN_API Circle {
 	[[nodiscard]]
 	inline AABB bounds() const {
 		return {
-			center - glm::vec2{radius},
-			center + glm::vec2{radius}
+			.min=center - glm::vec2{radius},
+			.max=center + glm::vec2{radius}
 		};
 	}
 };

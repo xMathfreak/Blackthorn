@@ -275,7 +275,7 @@ struct BLACKTHORN_API PeerRateLimiter {
 	 * @brief Returns the duration in milliseconds that the peer has been
 	 * in the current stage.
 	 */
-	U64 stageDurationMs() const {
+	[[nodiscard]] U64 stageDurationMs() const {
 		return SDL_GetTicks() - stageEnteredMs;
 	}
 

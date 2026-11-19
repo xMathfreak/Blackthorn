@@ -1,3 +1,5 @@
+#include <cstddef>
+
 #include "Blackthorn/Net/Protocol/FragmentAssembler.hpp"
 
 #include "Blackthorn/Debug/Logger.hpp"
@@ -108,7 +110,7 @@ FragmentSet& FragmentAssembler::allocateSet(
 		evictOldest();
 	}
 
-	constexpr size_t GLOBAL_CAP = 16u * 1024u * 1024u; // 16 MB
+	constexpr auto GLOBAL_CAP = 16u * 1024u * 1024u; // 16 MB
 	while (globalBytes + incomingBytes > GLOBAL_CAP) {
 		BT_DEBUG("FragmentAssembler: Global cap exceeded, evicting oldest");
 		evictOldest();
@@ -146,7 +148,7 @@ void FragmentAssembler::releaseSet(FragmentSet& set) {
 
 void FragmentAssembler::evictOldest() {
 	std::optional<FragmentSet>* oldest = nullptr;
-	U64 oldestTime = std::numeric_limits<U64>::max();
+	U64 oldestTime = U64_MAX;
 
 	for (auto& slot : pool) {
 		if (slot.has_value() && slot->firstFragmentMs < oldestTime) {

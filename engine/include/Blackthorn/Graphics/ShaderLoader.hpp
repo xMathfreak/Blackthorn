@@ -37,7 +37,7 @@ struct BLACKTHORN_API ShaderParams final : Assets::AssetLoadParams {
 		, fragmentPath(std::move(fragment))
 	{}
 
-	std::unique_ptr<Assets::LoadParams> clone() const override {
+	[[nodiscard]] std::unique_ptr<Assets::LoadParams> clone() const override {
 		return std::make_unique<ShaderParams>(*this);
 	}
 };

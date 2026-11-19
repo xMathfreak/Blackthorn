@@ -97,7 +97,7 @@ void InputManager::loadBindingsFromSettings() {
 		if (!s.hasKey("input", action))
 			continue;
 
-		const std::string name = s.get<std::string>("input", action);
+		const auto name = s.get<std::string>("input", action);
 		const SDL_Keycode key = keyFromName(name);
 
 		if (key == SDLK_UNKNOWN) {

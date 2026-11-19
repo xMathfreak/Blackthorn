@@ -24,7 +24,7 @@ namespace Blackthorn::Particles {
 /**
  * @brief Controls how a position is sampled from an EmitterShape.
  */
-enum class Distribution {
+enum class Distribution : U8 {
 	/// Uniformly sampled from the shape's interior (or its full length, for Line).
 	Random,
 	/// Sampled from the shape's edge/perimeter only.

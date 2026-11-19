@@ -27,6 +27,10 @@ struct VoiceSnapshot {
 	bool loop = false;
 	bool spatial = false;
 	bool stream = false;
+
+	VoiceSnapshot() = default;
+	VoiceSnapshot(VoiceSnapshot&&) = default;
+	VoiceSnapshot& operator=(VoiceSnapshot&&) = default;
 };
 
 } // Blackthorn::Audio

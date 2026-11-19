@@ -90,16 +90,16 @@ void AudioManager::stop(AudioHandle handle) {
 
 void AudioManager::setVolume(AudioHandle handle, float volume) {
 	if (handle.isValid())
-		audioThread.enqueue(SetVolumeCommand{handle, volume});
+		audioThread.enqueue(SetVolumeCommand{.handle=handle, .volume=volume});
 }
 
 void AudioManager::setCategoryVolume(AudioCategory category, float volume) {
-	audioThread.enqueue(SetCategoryVolumeCommand{category, volume});
+	audioThread.enqueue(SetCategoryVolumeCommand{.category=category, .volume=volume});
 }
 
 void AudioManager::setPitch(AudioHandle handle, float pitch) {
 	if (handle.isValid())
-		audioThread.enqueue(SetPitchCommand{handle, pitch});
+		audioThread.enqueue(SetPitchCommand{.handle=handle, .pitch=pitch});
 }
 
 void AudioManager::stopAll() {
@@ -111,7 +111,7 @@ void AudioManager::setPosition(
 	const glm::vec3& position
 ) {
 	if (handle.isValid())
-		audioThread.enqueue(SetPositionCommand{ handle, position });
+		audioThread.enqueue(SetPositionCommand{ .handle=handle, .position=position });
 }
 
 void AudioManager::setListenerTransform(
@@ -121,13 +121,13 @@ void AudioManager::setListenerTransform(
 	const glm::vec3& velocity
 ) {
 	audioThread.enqueue(ListenerTransformCommand{
-		position, forward, up, velocity
+		.position=position, .forward=forward, .up=up, .velocity=velocity
 	});
 }
 
 void AudioManager::seek(AudioHandle handle, float seconds) {
 	if (handle.isValid())
-		audioThread.enqueue(SeekCommand{handle, seconds});
+		audioThread.enqueue(SeekCommand{.handle=handle, .seconds=seconds});
 }
 
 void AudioManager::update() {

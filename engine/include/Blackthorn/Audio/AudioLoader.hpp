@@ -35,7 +35,7 @@ struct BLACKTHORN_API AudioParams final : Assets::AssetLoadParams {
 		, isPCM(loadPCM)
 	{}
 
-	std::unique_ptr<Assets::LoadParams> clone() const override {
+	[[nodiscard]] std::unique_ptr<Assets::LoadParams> clone() const override {
 		return std::make_unique<AudioParams>(*this);
 	}
 };

@@ -156,12 +156,12 @@ public:
 	}
 
 	/** @brief Returns the IP version, or IPv4 if the address is invalid. */
-	IPVersion version() const noexcept {
+	[[nodiscard]] IPVersion version() const noexcept {
 		return storage.ss_family == AF_INET6 ? IPVersion::IPv6 : IPVersion::IPv4;
 	}
 
 	/** @brief Returns the IP as a string. */
-	std::string ip() const {
+	[[nodiscard]] std::string ip() const {
 		char buf[INET6_ADDRSTRLEN] = {0};
 
 		if (storage.ss_family == AF_INET) {
@@ -180,7 +180,7 @@ public:
 	}
 
 	/** @brief Returns the port in host byte order. */
-	U16 port() const noexcept {
+	[[nodiscard]] U16 port() const noexcept {
 		if (storage.ss_family == AF_INET6)
 			return ntohs(reinterpret_cast<const sockaddr_in6*>(&storage)->sin6_port);
 
@@ -188,20 +188,20 @@ public:
 	}
 
 	/** @brief Returns the IP and Port. */
-	Endpoint getDetails() const {
-		return { ip(), port() };
+	[[nodiscard]] Endpoint getDetails() const {
+		return { .ip=ip(), .port=port() };
 	}
 
 	/** @brief Returns true if the address was successfully constructed. */
-	bool isValid() const noexcept { return valid; }
+	[[nodiscard]] bool isValid() const noexcept { return valid; }
 
 	/**
 	 * @brief Returns a human-readable string in the form `"ip:port"`.
 	 */
-	std::string toString() const;
+	[[nodiscard]] std::string toString() const;
 
 	/** @brief Raw pointer to the underlying `sockaddr_storage`. */
-	const sockaddr* raw() const noexcept {
+	[[nodiscard]] const sockaddr* raw() const noexcept {
 		return reinterpret_cast<const sockaddr*>(&storage);
 	}
 
@@ -210,7 +210,7 @@ public:
 	}
 
 	/** @brief Size of the active sockaddr struct in bytes. */
-	socklen_t rawSize() const noexcept {
+	[[nodiscard]] socklen_t rawSize() const noexcept {
 		return static_cast<socklen_t>(
 			storage.ss_family == AF_INET6
 				? sizeof(sockaddr_in6)
@@ -310,7 +310,7 @@ struct hash<Blackthorn::Net::Transport::Address> {
 			h ^= std::hash<Blackthorn::U32>{}(sa->sin_addr.s_addr) * 2654435761ULL;
 		} else {
 			const auto* sa = reinterpret_cast<const sockaddr_in6*>(addr.raw());
-			const Blackthorn::U8* b = reinterpret_cast<const Blackthorn::U8*>(&sa->sin6_addr);
+			const auto* b = reinterpret_cast<const Blackthorn::U8*>(&sa->sin6_addr);
 			for (int i = 0; i < 16; ++i)
 				h ^= size_t(b[i]) << (i % 8);
 		}

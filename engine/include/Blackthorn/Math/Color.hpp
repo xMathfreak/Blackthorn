@@ -60,10 +60,10 @@ inline U32 toRGBA32(const Color& c) {
 [[nodiscard]]
 inline SDL_Color toSDLColor(const Color& c) {
 	return SDL_Color{
-		static_cast<U8>(c.r * 255),
-		static_cast<U8>(c.g * 255),
-		static_cast<U8>(c.b * 255),
-		static_cast<U8>(c.a * 255)
+		.r=static_cast<U8>(c.r * 255),
+		.g=static_cast<U8>(c.g * 255),
+		.b=static_cast<U8>(c.b * 255),
+		.a=static_cast<U8>(c.a * 255)
 	};
 }
 

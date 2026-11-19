@@ -30,7 +30,7 @@ public:
 	MmcssScope(const MmcssScope&) = delete;
 	MmcssScope& operator=(const MmcssScope&) = delete;
 
-	bool isValid() const noexcept { return handle != nullptr; }
+	[[nodiscard]] bool isValid() const noexcept { return handle != nullptr; }
 
 private:
 	HANDLE handle = nullptr;

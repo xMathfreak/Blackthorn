@@ -194,7 +194,7 @@ struct SemVer {
 	}
 
 	/** @brief Canonical string form, including prerelease and build metadata. */
-	std::string toString() const {
+	[[nodiscard]] std::string toString() const {
 		std::string s = std::to_string(major) + "." + std::to_string(minor)
 			+ "." + std::to_string(patch);
 
@@ -207,7 +207,7 @@ struct SemVer {
 		return s;
 	}
 
-	bool isPrerelease() const noexcept {
+	[[nodiscard]] bool isPrerelease() const noexcept {
 		return !prerelease.empty();
 	}
 
@@ -215,7 +215,7 @@ struct SemVer {
 	 * @brief Three-way comparison by SemVer 2.0.0 precedence.
 	 * @return Negative if *this < other, 0 if equal precedence, positive if greater.
 	 */
-	int compare(const SemVer& other) const noexcept {
+	[[nodiscard]] int compare(const SemVer& other) const noexcept {
 		if (major != other.major)
 			return major < other.major ? -1 : 1;
 
@@ -337,7 +337,7 @@ public:
 	}
 
 	/** @brief Returns true if @p v satisfies this range. */
-	bool satisfiedBy(const SemVer& v) const {
+	[[nodiscard]] bool satisfiedBy(const SemVer& v) const {
 		for (const ComparatorSet& set : alternatives)
 			if (setSatisfiedBy(set, v))
 				return true;
@@ -496,7 +496,7 @@ private:
 				return true;
 
 			if (n == 3) {
-				out.push_back({ Op::Eq, make(M, m, pt, p.prerelease) });
+				out.push_back({ .op=Op::Eq, .version=make(M, m, pt, p.prerelease) });
 				return true;
 			}
 
@@ -504,16 +504,16 @@ private:
 				if (!nextMinor(hi))
 					return false;
 
-				out.push_back({ Op::Gte, make(M, m, 0) });
-				out.push_back({ Op::Lt, make(M, hi, 0) });
+				out.push_back({ .op=Op::Gte, .version=make(M, m, 0) });
+				out.push_back({ .op=Op::Lt, .version=make(M, hi, 0) });
 				return true;
 			}
 
 			if (!nextMajor(hi))
 				return false;
 
-			out.push_back({ Op::Gte, make(M, 0, 0) });
-			out.push_back({ Op::Lt, make(hi, 0, 0) });
+			out.push_back({ .op=Op::Gte, .version=make(M, 0, 0) });
+			out.push_back({ .op=Op::Lt, .version=make(hi, 0, 0) });
 			return true;
 		}
 
@@ -525,47 +525,47 @@ private:
 				if (!nextMajor(hi))
 					return false;
 
-				out.push_back({ Op::Gte, make(M, 0, 0) });
-				out.push_back({ Op::Lt, make(hi, 0, 0) });
+				out.push_back({ .op=Op::Gte, .version=make(M, 0, 0) });
+				out.push_back({ .op=Op::Lt, .version=make(hi, 0, 0) });
 				return true;
 			}
 
 			if (n == 2) {
-				out.push_back({ Op::Gte, make(M, m, 0) });
+				out.push_back({ .op=Op::Gte, .version=make(M, m, 0) });
 
 				if (M > 0) {
 					if (!nextMajor(hi))
 						return false;
 
-					out.push_back({ Op::Lt, make(hi, 0, 0) });
+					out.push_back({ .op=Op::Lt, .version=make(hi, 0, 0) });
 				} else {
 					if (!nextMinor(hi))
 						return false;
 
-					out.push_back({ Op::Lt, make(0, hi, 0) });
+					out.push_back({ .op=Op::Lt, .version=make(0, hi, 0) });
 				}
 
 				return true;
 			}
 
-			out.push_back({ Op::Gte, make(M, m, pt, p.prerelease) });
+			out.push_back({ .op=Op::Gte, .version=make(M, m, pt, p.prerelease) });
 
 			if (M > 0) {
 				if (!nextMajor(hi))
 					return false;
 
-				out.push_back({ Op::Lt, make(hi, 0, 0) });
+				out.push_back({ .op=Op::Lt, .version=make(hi, 0, 0) });
 			} else if (m > 0) {
 				if (!nextMinor(hi))
 					return false;
 
-				out.push_back({ Op::Lt, make(0, hi, 0) });
+				out.push_back({ .op=Op::Lt, .version=make(0, hi, 0) });
 			} else {
 				uint32_t nextPatch = pt;
 				if (!bump(nextPatch))
 					return false;
 
-				out.push_back({ Op::Lt, make(0, 0, nextPatch) });
+				out.push_back({ .op=Op::Lt, .version=make(0, 0, nextPatch) });
 			}
 
 			return true;
@@ -579,8 +579,8 @@ private:
 				if (!nextMajor(hi))
 					return false;
 
-				out.push_back({ Op::Gte, make(M, 0, 0) });
-				out.push_back({ Op::Lt, make(hi, 0, 0) });
+				out.push_back({ .op=Op::Gte, .version=make(M, 0, 0) });
+				out.push_back({ .op=Op::Lt, .version=make(hi, 0, 0) });
 				return true;
 			}
 
@@ -588,10 +588,10 @@ private:
 				return false;
 
 			out.push_back({
-				Op::Gte,
-				n == 3 ? make(M, m, pt, p.prerelease) : make(M, m, 0)
+				.op=Op::Gte,
+				.version=n == 3 ? make(M, m, pt, p.prerelease) : make(M, m, 0)
 			});
-			out.push_back({ Op::Lt, make(M, hi, 0) });
+			out.push_back({ .op=Op::Lt, .version=make(M, hi, 0) });
 			return true;
 		}
 
@@ -600,20 +600,20 @@ private:
 				return true;
 
 			out.push_back({
-				Op::Gte,
-				n == 3 ? make(M, m, pt, p.prerelease) : make(M, n == 2 ? m : 0, 0)
+				.op=Op::Gte,
+				.version=n == 3 ? make(M, m, pt, p.prerelease) : make(M, n == 2 ? m : 0, 0)
 			});
 			return true;
 		}
 
 		if (op == ">") {
 			if (n == 0) {
-				out.push_back({ Op::Lt, make(0, 0, 0) });
+				out.push_back({ .op=Op::Lt, .version=make(0, 0, 0) });
 				return true;
 			}
 
 			if (n == 3) {
-				out.push_back({ Op::Gt, make(M, m, pt, p.prerelease) });
+				out.push_back({ .op=Op::Gt, .version=make(M, m, pt, p.prerelease) });
 				return true;
 			}
 
@@ -621,14 +621,14 @@ private:
 				if (!nextMinor(hi))
 					return false;
 
-				out.push_back({ Op::Gte, make(M, hi, 0) });
+				out.push_back({ .op=Op::Gte, .version=make(M, hi, 0) });
 				return true;
 			}
 
 			if (!nextMajor(hi))
 				return false;
 
-			out.push_back({ Op::Gte, make(hi, 0, 0) });
+			out.push_back({ .op=Op::Gte, .version=make(hi, 0, 0) });
 			return true;
 		}
 
@@ -637,7 +637,7 @@ private:
 				return true;
 
 			if (n == 3) {
-				out.push_back({ Op::Lte, make(M, m, pt, p.prerelease) });
+				out.push_back({ .op=Op::Lte, .version=make(M, m, pt, p.prerelease) });
 				return true;
 			}
 
@@ -645,26 +645,26 @@ private:
 				if (!nextMinor(hi))
 					return false;
 
-				out.push_back({ Op::Lt, make(M, hi, 0) });
+				out.push_back({ .op=Op::Lt, .version=make(M, hi, 0) });
 				return true;
 			}
 
 			if (!nextMajor(hi))
 				return false;
 
-			out.push_back({ Op::Lt, make(hi, 0, 0) });
+			out.push_back({ .op=Op::Lt, .version=make(hi, 0, 0) });
 			return true;
 		}
 
 		if (op == "<") {
 			if (n == 0) {
-				out.push_back({ Op::Lt, make(0, 0, 0) });
+				out.push_back({ .op=Op::Lt, .version=make(0, 0, 0) });
 				return true;
 			}
 
 			out.push_back({
-				Op::Lt,
-				n == 3 ? make(M, m, pt, p.prerelease) : make(M, n == 2 ? m : 0, 0)
+				.op=Op::Lt,
+				.version=n == 3 ? make(M, m, pt, p.prerelease) : make(M, n == 2 ? m : 0, 0)
 			});
 			return true;
 		}

@@ -66,7 +66,7 @@ struct BLACKTHORN_API FragmentHeader {
 	U8 totalFrags = 1; ///< Total fragments in this message.
 	U8 fragIndex = 0; ///< 0-based index of this fragment.
 
-	bool isFragmented() const noexcept {
+	[[nodiscard]] bool isFragmented() const noexcept {
 		return (flags & FLAG_FRAGMENTED) != 0;
 	}
 

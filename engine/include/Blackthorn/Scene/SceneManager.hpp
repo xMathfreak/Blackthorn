@@ -2,6 +2,7 @@
 
 #include <functional>
 #include <memory>
+#include <ranges>
 #include <vector>
 
 #include "Blackthorn/Core/Export.hpp"
@@ -41,7 +42,7 @@ namespace Blackthorn::Scene {
  */
 class BLACKTHORN_API SceneManager {
 protected:
-	enum class TransitionPhase {
+	enum class TransitionPhase : U8 {
 		FadeOut,
 		FadeIn
 	};
@@ -170,10 +171,10 @@ public:
 		if (inTransition)
 			return;
 
-		for (auto it = scenes.rbegin(); it != scenes.rend(); ++it) {
-			(*it)->fixedUpdate(dt);
+		for (auto & scene : std::views::reverse(scenes)) {
+			scene->fixedUpdate(dt);
 
-			if ((*it)->blocksUpdate())
+			if (scene->blocksUpdate())
 				break;
 		}
 	}
@@ -184,10 +185,10 @@ public:
 			return;
 		}
 
-		for (auto it = scenes.rbegin(); it != scenes.rend(); ++it) {
-			(*it)->update(dt);
+		for (auto & scene : std::views::reverse(scenes)) {
+			scene->update(dt);
 
-			if ((*it)->blocksUpdate())
+			if (scene->blocksUpdate())
 				break;
 		}
 	}
@@ -196,10 +197,10 @@ public:
 		if (inTransition)
 			return;
 
-		for (auto it = scenes.rbegin(); it != scenes.rend(); ++it) {
-			(*it)->lateUpdate(dt);
+		for (auto & scene : std::views::reverse(scenes)) {
+			scene->lateUpdate(dt);
 
-			if ((*it)->blocksUpdate())
+			if (scene->blocksUpdate())
 				break;
 		}
 	}
@@ -208,12 +209,12 @@ public:
 		return scenes.empty() ? nullptr : scenes.back().get();
 	}
 
-	const ISimScene* getCurrentScene() const {
+	[[nodiscard]] const ISimScene* getCurrentScene() const {
 		return scenes.empty() ? nullptr : scenes.back().get();
 	}
 
-	size_t getSceneCount() const { return scenes.size(); }
-	bool isEmpty() const { return scenes.empty(); }
+	[[nodiscard]] size_t getSceneCount() const { return scenes.size(); }
+	[[nodiscard]] bool isEmpty() const { return scenes.empty(); }
 };
 
 } // namespace Blackthorn::Scene

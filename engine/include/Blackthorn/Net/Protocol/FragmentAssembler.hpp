@@ -1,6 +1,7 @@
 #pragma once
 
 #include <array>
+#include <cstddef>
 #include <optional>
 #include <vector>
 
@@ -39,11 +40,11 @@ struct BLACKTHORN_API FragmentSet {
 	/// Total bytes stored across all received fragments.
 	size_t totalBytesStored = 0;
 
-	bool isComplete() const noexcept {
+	[[nodiscard]] bool isComplete() const noexcept {
 		return receivedCount == totalFrags;
 	}
 
-	bool isExpired(U32 timeoutMs) const noexcept {
+	[[nodiscard]] bool isExpired(U32 timeoutMs) const noexcept {
 		return (SDL_GetTicks() - firstFragmentMs) > timeoutMs;
 	}
 };
@@ -109,7 +110,7 @@ public:
 	/**
 	 * @brief Bytes currently buffered in this assembler.
 	 */
-	size_t bytesBuffered() const noexcept { return localBytes; }
+	[[nodiscard]] size_t bytesBuffered() const noexcept { return localBytes; }
 
 private:
 	/// Finds the FragmentSet for @p fragmentID or nullptr;

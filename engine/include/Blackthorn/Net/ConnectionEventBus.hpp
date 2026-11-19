@@ -54,7 +54,7 @@ public:
 	 */
 	void push(ConnectionEvent event) {
 		std::lock_guard<std::mutex> lock(eventMutex);
-		pending.push_back(std::move(event));
+		pending.push_back(event);
 	}
 
 	/**

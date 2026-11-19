@@ -15,7 +15,7 @@ public:
 		: val(v)
 	{}
 
-	constexpr U64 value() const { return val; }
+	[[nodiscard]] constexpr U64 value() const { return val; }
 
 	bool operator<=>(const TextID&) const = default;
 private:

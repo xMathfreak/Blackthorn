@@ -116,7 +116,7 @@ private:
 	std::unique_ptr<Texture> whiteTexture;
 
 	/// Current view bounds in world space
-	SDL_FRect viewBounds{0, 0, 0, 0};
+	SDL_FRect viewBounds{.x=0, .y=0, .w=0, .h=0};
 
 	/// Whether view frustum culling is enabled
 	bool cullingEnabled = true;
@@ -182,15 +182,18 @@ private:
 	void flush();
 
 	/**
-	 * @brief Rebuilds the FBO and orthographic projection for a given size.
+	 * @brief Creates or resizes the renderer's framebuffer.
 	 *
-	 * Called internally by @c setProjection(int, int) and
-	 * @c onWindowResized(). In Fixed / PixelPerfect modes the FBO is only
-	 * allocated once; subsequent calls only update @c windowWidth /
-	 * @c windowHeight and the GL viewport.
+	 * Allocates or resizes the framebuffer and its attachments to the specified
+	 * dimensions. Also updates the orthographic projection matrix, view bounds
+	 * and global view-projection uniform buffer.
 	 *
-	 * @param fboW Width for the FBO in pixels.
-	 * @param fboH Height for the FBO in pixels.
+	 * The frame buffer dimensions represent the renderer's internal resolution,
+	 * which may differ from the window dimensions depending on the configured
+	 * resolution mode.
+	 *
+	 * @param fboW Framebuffer width in pixels.
+	 * @param fboH Framebuffer height in pixels.
 	 */
 	void rebuildFBO(int fboW, int fboH);
 
@@ -199,7 +202,7 @@ private:
 	 * @param rect Rectangle to test.
 	 * @param rotation Optional rotation in radians.
 	 */
-	inline bool isVisible(const SDL_FRect& rect, float rotation = 0.0f) const;
+	[[nodiscard]] inline bool isVisible(const SDL_FRect& rect, float rotation = 0.0f) const;
 
 	U32 findOrAddTexture(const Texture* texture);
 
@@ -239,16 +242,20 @@ public:
 	 */
 	void endScene();
 
+
 	/**
-	 * @brief Notifies the renderer that the window has been resized.
+	 * @brief Handles changes to the window's pixel dimensions
 	 *
-	 * Should be called from the @c SDL_EVENT_WINDOW_RESIZED handler in place
-	 * of the previous @c setProjection(w, h) call. Behavior depends on
-	 * @c RenderConfig::resolutionMode:
+	 * Updates the window dimensions used during presentation and adjusts
+	 * the renderer's viewport accordingly.
 	 *
-	 * - @c FollowWindow: resizes the FBO and rebuilds the projection matrix.
-	 * - @c Fixed / @c PixelPerfect: only updates the stored window dimensions
-	 * and the GL viewport; the FBO and projection are left unchanged.
+	 * In FollowWindow mode, the render target is resized to match the
+	 * new window dimensions, updating the projection matrix and view
+	 * bounds.
+	 *
+	 * In Fixed and PixelPerfect modes, the render target retains its
+	 * its configured render dimensions and is not recreated when the
+	 * window is resized. Only the presentation dimensions are updated.
 	 *
 	 * @param windowW New window width in pixels.
 	 * @param windowH New window height in pixels.
@@ -314,32 +321,32 @@ public:
 	/**
 	 * @brief Checks whether culling is enabled.
 	 */
-	bool isCullingEnabled() const { return cullingEnabled; }
+	[[nodiscard]] bool isCullingEnabled() const { return cullingEnabled; }
 
 	/**
 	 * @brief Returns the combined view-projection matrix.
 	 */
-	glm::mat4 getViewProjectionMatrix() const { return projectionMatrix * viewMatrix; }
+	[[nodiscard]] glm::mat4 getViewProjectionMatrix() const { return projectionMatrix * viewMatrix; }
 
 	/**
 	 * @brief Returns the current view matrix.
 	 */
-	const glm::mat4& getViewMatrix() const { return viewMatrix; }
+	[[nodiscard]] const glm::mat4& getViewMatrix() const { return viewMatrix; }
 
 	/**
 	 * @brief Returns the current projection matrix.
 	 */
-	const glm::mat4& getProjectionMatrix() const { return projectionMatrix; }
+	[[nodiscard]] const glm::mat4& getProjectionMatrix() const { return projectionMatrix; }
 
 	/**
 	 * @brief Returns the current view bounds.
 	 */
-	const SDL_FRect& getViewBounds() const { return viewBounds; }
+	[[nodiscard]] const SDL_FRect& getViewBounds() const { return viewBounds; }
 
 	/**
 	 * @brief Gets the global uniform buffer.
 	 */
-	const UBO<GlobalData>& getUniformBuffer() const { return *globalUBO; }
+	[[nodiscard]] const UBO<GlobalData>& getUniformBuffer() const { return *globalUBO; }
 
 	/**
 	 * @brief Enable or disable the fullscreen shader pass.
@@ -349,7 +356,7 @@ public:
 	 * glBlitFramebuffer call which is marginally faster but no shader effects.
 	 */
 	void setPostProcessingEnabled(bool enabled);
-	bool isPostProcessingEnabled() const { return postProcessingEnabled; }
+	[[nodiscard]] bool isPostProcessingEnabled() const { return postProcessingEnabled; }
 
 	/**
 	 * @brief Override the screen shader used for the fullscreen pass.
@@ -367,13 +374,13 @@ public:
 	 * Use this to toggle built-in effects (grayscale, invert, etc.) without
 	 * supplying a custom shader.
 	 */
-	Shader& getScreenShader() const { return *screenShader; }
+	[[nodiscard]] Shader& getScreenShader() const { return *screenShader; }
 
 	/**
 	 * @brief Returns the FBO color attachment for off-screen consumers
 	 *        (e.g. an editor viewport panel).
 	 */
-	const Texture& getSceneTexture() const { return fbo->getTexture(); }
+	[[nodiscard]] const Texture& getSceneTexture() const { return fbo->getTexture(); }
 
 	/**
 	 * @brief Draws a colored quad.

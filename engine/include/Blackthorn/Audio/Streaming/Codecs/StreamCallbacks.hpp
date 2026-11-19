@@ -9,7 +9,7 @@
 
 namespace Blackthorn::Audio::Streaming::StreamCallbacks {
 
-enum class SeekOrigin {
+enum class SeekOrigin : U8 {
 	Begin,
 	Current,
 	End

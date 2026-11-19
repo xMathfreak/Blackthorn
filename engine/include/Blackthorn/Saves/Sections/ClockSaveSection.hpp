@@ -39,9 +39,9 @@ public:
 		: clock(cl)
 	{}
 
-	U64 getID() const override { return saveHash(SECTION_NAME); }
-	std::string_view getName() const override { return SECTION_NAME; }
-	U32 getVersion() const override { return CURRENT_VERSION; }
+	[[nodiscard]] U64 getID() const override { return saveHash(SECTION_NAME); }
+	[[nodiscard]] std::string_view getName() const override { return SECTION_NAME; }
+	[[nodiscard]] U32 getVersion() const override { return CURRENT_VERSION; }
 
 	void write(SectionWriteContext& ctx) override;
 	void read(SectionReadContext& ctx) override;

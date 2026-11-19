@@ -92,9 +92,9 @@ public:
 	 */
 	void setPathResolver(PathResolver resolver);
 
-	const std::filesystem::path& getRootDir() const noexcept { return rootDir; }
+	[[nodiscard]] const std::filesystem::path& getRootDir() const noexcept { return rootDir; }
 
-	const std::string& getExtension() const noexcept { return extension; }
+	[[nodiscard]] const std::string& getExtension() const noexcept { return extension; }
 
 private:
 	std::filesystem::path rootDir;
@@ -106,7 +106,7 @@ private:
 	 * @brief Computes the full filesystem path for @p saveID using the
 	 * active resolver (or the default layout if none is set).
 	 */
-	std::filesystem::path resolvePath(const SaveID& saveID) const;
+	[[nodiscard]] std::filesystem::path resolvePath(const SaveID& saveID) const;
 
 	/**
 	 * @brief Resolves the path @c read()/@c exists()/@c remove()/@c write()
@@ -120,7 +120,7 @@ private:
 	 * found, so a renamed save keeps resolving to the same file it was
 	 * renamed to, including on the next @c write().
 	 */
-	std::filesystem::path resolveEffectivePath(const SaveID& saveID) const;
+	[[nodiscard]] std::filesystem::path resolveEffectivePath(const SaveID& saveID) const;
 
 	/**
 	 * @brief Scans @p dir (non-recursive) for a save file with the configured
@@ -137,7 +137,7 @@ private:
 	 * @param saveID Identity being searched for.
 	 * @return The matching file's path, or an empty path if none was found.
 	 */
-	std::filesystem::path findRenamedFile(
+	[[nodiscard]] std::filesystem::path findRenamedFile(
 		const std::filesystem::path& dir,
 		const SaveID& saveID
 	) const;
@@ -167,7 +167,7 @@ private:
 	 * @endcode
 	 * with empty worldID/playerID segments omitted.
 	 */
-	std::filesystem::path defaultPath(const SaveID& saveID) const;
+	[[nodiscard]] std::filesystem::path defaultPath(const SaveID& saveID) const;
 
 	/**
 	 * @brief Writes @p data atomically to @p destination.

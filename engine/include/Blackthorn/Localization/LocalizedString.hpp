@@ -133,7 +133,7 @@ private:
 	bool heapActive = false;
 
 	char* data() noexcept { return heapActive ? storage.heap.data : storage.inlineBuf; }
-	const char* data() const noexcept { return heapActive ? storage.heap.data : storage.inlineBuf; }
+	[[nodiscard]] const char* data() const noexcept { return heapActive ? storage.heap.data : storage.inlineBuf; }
 
 	void moveFrom(LocalizedString& other) noexcept {
 		heapActive = other.heapActive;

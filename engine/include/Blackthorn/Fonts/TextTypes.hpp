@@ -8,7 +8,7 @@
 
 namespace Blackthorn::Text {
 
-enum class Alignment {
+enum class Alignment : U8 {
 	Left,
 	Center,
 	Right

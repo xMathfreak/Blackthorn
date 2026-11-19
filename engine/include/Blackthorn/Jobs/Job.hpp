@@ -187,9 +187,9 @@ public:
 			invoker(inlineStorage);
 	}
 
-	const JobHandlePtr& getCompletionHandle() const { return completionHandle; }
-	const JobHandlePtr& getDependencyHandle() const { return dependencyHandle; }
-	ThreadAffinity getAffinity() const { return affinity; }
+	[[nodiscard]] const JobHandlePtr& getCompletionHandle() const { return completionHandle; }
+	[[nodiscard]] const JobHandlePtr& getDependencyHandle() const { return dependencyHandle; }
+	[[nodiscard]] ThreadAffinity getAffinity() const { return affinity; }
 
 private:
 	alignas(std::max_align_t) std::byte inlineStorage[INLINE_SIZE] {};

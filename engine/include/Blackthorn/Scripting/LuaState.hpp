@@ -117,8 +117,8 @@ LuaResult<int> invokeRegistered(lua_State* L) {
 	const int given = lua_gettop(L);
 	if (given != static_cast<int>(N)) {
 		return LuaError{
-			"expected " + std::to_string(N) + " arguments, got " + std::to_string(given),
-			0
+			.message="expected " + std::to_string(N) + " arguments, got " + std::to_string(given),
+			.argIndex=0
 		};
 	}
 
@@ -139,7 +139,7 @@ LuaResult<int> invokeRegistered(lua_State* L) {
 			return 1;
 		}
 	} catch (const std::exception& e) {
-		return LuaError{ e.what(), 0 };
+		return LuaError{ .message=e.what(), .argIndex=0 };
 	}
 }
 

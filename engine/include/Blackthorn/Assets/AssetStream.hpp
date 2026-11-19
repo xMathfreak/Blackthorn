@@ -31,10 +31,10 @@ public:
 	virtual ~AssetStream() = default;
 
 	/// Total uncompressed size of the asset, in bytes.
-	virtual U64 size() const = 0;
+	[[nodiscard]] virtual U64 size() const = 0;
 
 	/// Current read position.
-	virtual U64 tell() const = 0;
+	[[nodiscard]] virtual U64 tell() const = 0;
 
 	/**
 	 * @brief Moves the read position to @p offset, from the start of the asset.
@@ -49,7 +49,7 @@ public:
 	virtual size_t read(std::span<U8> dst) = 0;
 
 	/// False once an I/O error has occurred. Stays false for the rest of the stream's life.
-	virtual bool ok() const = 0;
+	[[nodiscard]] virtual bool ok() const = 0;
 };
 
 namespace Detail {
@@ -91,8 +91,8 @@ public:
 		);
 	}
 
-	U64 size() const override { return fileSize; }
-	U64 tell() const override { return position; }
+	[[nodiscard]] U64 size() const override { return fileSize; }
+	[[nodiscard]] U64 tell() const override { return position; }
 
 	bool seek(U64 offset) override {
 		if (offset > fileSize || !Blackthorn::seekTo(file.get(), offset)) {
@@ -119,7 +119,7 @@ public:
 		return got;
 	}
 
-	bool ok() const override { return !failed; }
+	[[nodiscard]] bool ok() const override { return !failed; }
 
 private:
 	LooseAssetStream(Detail::FilePtr f, U64 sz)
@@ -174,8 +174,8 @@ public:
 		);
 	}
 
-	U64 size() const override { return length; }
-	U64 tell() const override { return position; }
+	[[nodiscard]] U64 size() const override { return length; }
+	[[nodiscard]] U64 tell() const override { return position; }
 
 	bool seek(U64 offset) override {
 		if (offset > length || !Blackthorn::seekTo(file.get(), dataOffset + offset)) {
@@ -202,7 +202,7 @@ public:
 		return got;
 	}
 
-	bool ok() const override { return !failed; }
+	[[nodiscard]] bool ok() const override { return !failed; }
 
 private:
 	PackedAssetStream(Detail::FilePtr f, U64 offset, U64 len)
@@ -236,8 +236,8 @@ public:
 		, length(byteCount)
 	{}
 
-	U64 size() const override { return length; }
-	U64 tell() const override { return position; }
+	[[nodiscard]] U64 size() const override { return length; }
+	[[nodiscard]] U64 tell() const override { return position; }
 
 	bool seek(U64 offset) override {
 		if (offset > length) {
@@ -260,7 +260,7 @@ public:
 		return want;
 	}
 
-	bool ok() const override { return !failed; }
+	[[nodiscard]] bool ok() const override { return !failed; }
 
 private:
 	const U8* bytes = nullptr;

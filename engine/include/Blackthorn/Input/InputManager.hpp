@@ -12,7 +12,7 @@
 
 namespace Blackthorn::Input {
 
-enum class ButtonState {
+enum class ButtonState : U8 {
 	Up,
 	Pressed,
 	Down,
@@ -117,7 +117,7 @@ public:
 	}
 
 	void registerAction(const std::string& action, SDL_Keycode key, SDL_Keycode altKey = SDLK_UNKNOWN) {
-		actions[action] = {key, altKey};
+		actions[action] = {.primary=key, .alternative=altKey};
 	}
 
 	void registerAction(const std::string& action, const std::string& primaryKey, const std::string& altKey = "");

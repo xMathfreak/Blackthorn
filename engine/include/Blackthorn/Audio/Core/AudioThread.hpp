@@ -53,7 +53,7 @@ public:
 	bool start(const AudioConfig& cfg);
 	void stop();
 
-	bool isRunning() const noexcept {
+	[[nodiscard]] bool isRunning() const noexcept {
 		return state.load() != AudioThreadState::Stopped;
 	}
 
@@ -105,7 +105,7 @@ private:
 	void restoreVoices();
 	void attemptReconnect(AudioThreadState returnStateOnFailure);
 	void enterRecovery(AudioThreadState reason);
-	bool defaultDeviceChanged() const noexcept;
+	[[nodiscard]] bool defaultDeviceChanged() const noexcept;
 	void tickDeviceHealth();
 	void updatePlaybackTimes();
 	void performStreamingSeek(Voice& voice, float seconds);

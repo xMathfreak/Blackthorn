@@ -9,7 +9,7 @@ JobHandle::Continuation* const JobHandle::COMPLETE_SENTINEL =
 	reinterpret_cast<Continuation*>(static_cast<uintptr_t>(1));
 
 std::shared_ptr<JobHandle> JobHandle::create() {
-	return std::shared_ptr<JobHandle>(new JobHandle());
+	return std::shared_ptr<JobHandle>(new JobHandle{});
 }
 
 JobHandle::~JobHandle() {
@@ -27,7 +27,7 @@ JobHandle::~JobHandle() {
 
 std::shared_ptr<JobHandle> JobHandle::createComplete() {
 	auto h = create();
-	h->signal([](std::function<void()>, bool) {});
+	h->signal([](const std::function<void()>&, bool) {});
 	return h;
 }
 
@@ -76,7 +76,7 @@ void JobHandle::addContinuation(
 		if (head == COMPLETE_SENTINEL) {
 			runImmediately = true;
 		} else {
-			auto* node = new Continuation{ std::move(fn), mainThread, head };
+			auto* node = new Continuation{ .fn=std::move(fn), .mainThread=mainThread, .next=head };
 			continuationHead.store(node, std::memory_order::relaxed);
 		}
 	}

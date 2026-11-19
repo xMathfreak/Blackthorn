@@ -150,16 +150,16 @@ public:
 	virtual void close() = 0;
 
 	/** @brief Returns true if the socket is open (not closed). */
-	virtual bool isOpen() const = 0;
+	[[nodiscard]] virtual bool isOpen() const = 0;
 
 	/** @brief Returns true if a TCP connection has been established. */
-	virtual bool isConnected() const = 0;
+	[[nodiscard]] virtual bool isConnected() const = 0;
 
 	/** @brief Returns the local address the socket is bound to. */
-	virtual Address getLocalAddress() const = 0;
+	[[nodiscard]] virtual Address getLocalAddress() const = 0;
 
 	/** @brief Returns a human-readable description of the last error. */
-	virtual std::string getLastError() const = 0;
+	[[nodiscard]] virtual std::string getLastError() const = 0;
 };
 
 } // namespace Blackthorn::Net::Transport::Sockets

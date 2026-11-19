@@ -6,13 +6,14 @@
 #include <SDL3/SDL.h>
 
 #include "Blackthorn/Core/Export.hpp"
+#include "Blackthorn/Types/Numeric.hpp"
 
 namespace Blackthorn::Graphics {
 
 /**
  * @brief Texture filtering modes.
  */
-enum class TextureFilter {
+enum class TextureFilter : U8 {
 	/// Nearest-neighbor sampling
 	Nearest,
 	/// Linear Filtering
@@ -22,7 +23,7 @@ enum class TextureFilter {
 /**
  * @brief Texture wrapping modes.
  */
-enum class TextureWrap {
+enum class TextureWrap : U8 {
 	/// Repeat texture coordinates
 	Repeat,
 	/// Mirrored repeat
@@ -215,32 +216,32 @@ public:
 	/**
 	 * @brief Checks whether the texture has been created.
 	 */
-	bool isValid() const noexcept { return id != 0; }
+	[[nodiscard]] bool isValid() const noexcept { return id != 0; }
 
 	/**
 	 * @brief Returns the OpenGL texture handle.
 	 */
-	GLuint getID() const noexcept { return id; }
+	[[nodiscard]] GLuint getID() const noexcept { return id; }
 
 	/**
 	 * @brief Returns the texture width in pixels.
 	 */
-	int getWidth() const noexcept { return width; }
+	[[nodiscard]] int getWidth() const noexcept { return width; }
 
 	/**
 	 * @brief Returns the texture height in pixels.
 	 */
-	int getHeight() const noexcept { return height; }
+	[[nodiscard]] int getHeight() const noexcept { return height; }
 
 	/**
 	 * @brief Returns the number of color channels.
 	 */
-	int getChannels() const noexcept { return channels; }
+	[[nodiscard]] int getChannels() const noexcept { return channels; }
 
 	/**
 	 * @brief Returns the texture parameters.
 	 */
-	const TextureParams& getParams() const noexcept { return params; }
+	[[nodiscard]] const TextureParams& getParams() const noexcept { return params; }
 
 	/**
 	 * @brief Creates a default texture.

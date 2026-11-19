@@ -40,14 +40,14 @@ struct Edges {
 		return Edges{T{0}, T{0}, v, v};
 	}
 
-	constexpr bool isZero() const {
+	[[nodiscard]] constexpr bool isZero() const {
 		return left == T{0}
 			&& right == T{0}
 			&& top == T{0}
 			&& bottom == T{0};
 	}
 
-	constexpr bool hasAny() const {
+	[[nodiscard]] constexpr bool hasAny() const {
 		return !isZero();
 	}
 
@@ -114,18 +114,18 @@ struct Edges {
 		return *this;
 	}
 
-	constexpr T horizontal() const { return left + right; }
-	constexpr T vertical() const { return top + bottom; }
+	[[nodiscard]] constexpr T horizontal() const { return left + right; }
+	[[nodiscard]] constexpr T vertical() const { return top + bottom; }
 
-	constexpr T max() const {
+	[[nodiscard]] constexpr T max() const {
 		return std::max(std::max(left, right), std::max(top, bottom));
 	}
 
-	constexpr T min() const {
+	[[nodiscard]] constexpr T min() const {
 		return std::min(std::min(left, right), std::min(top, bottom));
 	}
 
-	constexpr Edges abs() const {
+	[[nodiscard]] constexpr Edges abs() const {
 		using std::abs;
 
 		return Edges{
@@ -136,15 +136,15 @@ struct Edges {
 		};
 	}
 
-	constexpr Edges horizontalOnly() const {
+	[[nodiscard]] constexpr Edges horizontalOnly() const {
 		return Edges{left, right, T{0}, T{0}};
 	}
 
-	constexpr Edges verticalOnly() const {
+	[[nodiscard]] constexpr Edges verticalOnly() const {
 		return Edges{T{0}, T{0}, top, bottom};
 	}
 
-	constexpr Edges clamp(const Edges& minE, const Edges& maxE) const {
+	[[nodiscard]] constexpr Edges clamp(const Edges& minE, const Edges& maxE) const {
 		return Edges{
 			std::clamp(left, minE.left, maxE.left),
 			std::clamp(right, minE.right, maxE.right),
