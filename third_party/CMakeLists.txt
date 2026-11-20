@@ -93,6 +93,8 @@ set(LUA_SOURCE_DIR
 )
 include("${CMAKE_SOURCE_DIR}/cmake/lua.cmake")
 
+add_subdirectory(tomlplusplus)
+
 # Restore the original state
 if(_had_original_pic)
 	set(CMAKE_POSITION_INDEPENDENT_CODE "${_saved_pic}")

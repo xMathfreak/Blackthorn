@@ -211,6 +211,7 @@ target_link_libraries(BlackthornCore
 		libzstd_static
 		sodium
 		lua::lua
+		tomlplusplus_tomlplusplus
 		BlackthornShared
 )
 
