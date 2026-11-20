@@ -44,12 +44,10 @@ public:
 		return cacheMap.find(key) != cacheMap.end();
 	}
 
+	/// @brief Removes an entry explicitly. Does not invoke the eviction callback.
 	void remove(const Key& key) {
 		auto it = cacheMap.find(key);
 		if (it != cacheMap.end()) {
-			if (onEvict)
-				onEvict(it->second->first, it->second->second);
-
 			items.erase(it->second);
 			cacheMap.erase(it);
 		}
