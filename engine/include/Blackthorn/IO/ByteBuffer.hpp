@@ -367,7 +367,7 @@ private:
 	size_t readCursor = 0;
 
 	void checkAvailable(size_t needed) const {
-		if (readCursor + needed > buffer.size()) {
+		if (readCursor > buffer.size() || needed > buffer.size() - readCursor) {
 			throw std::out_of_range(
 				"ByteBuffer: read past end of buffer ("
 				+ std::to_string(readCursor + needed)
