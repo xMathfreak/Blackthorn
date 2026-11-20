@@ -19,3 +19,6 @@
 [submodule "third_party/lua"]
 	path = third_party/lua
 	url = https://github.com/lua/lua
+[submodule "third_party/tomlplusplus"]
+	path = third_party/tomlplusplus
+	url = https://github.com/marzer/tomlplusplus
