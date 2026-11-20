@@ -132,41 +132,29 @@ inline Color fromHex(std::string_view hex) {
 
 [[nodiscard]]
 inline Color fromHSV(float h, float s, float v, float a = 1.0f) {
-	while (h >= 360.0f)
-		h -= 360.0f;
-
-	while (h < 0.0f)
+	h = std::fmod(h, 360.0f);
+	if (h < 0.0f)
 		h += 360.0f;
 
 	const float c = v * s;
 	const float hh = h / 60.0f;
-	const int i = static_cast<int>(hh);
-	const float f = hh - static_cast<float>(i);
-
-	const float x =  c * (1.0f - (f < 0.5f ? (1.0f - 2.0f * f) : (2.0f * f - 1.0f)));
+	const float x = c * (1.0f - std::abs(std::fmod(hh, 2.0f) - 1.0f));
 	const float m = v - c;
 
 	float r{}, g{}, b{};
 
-	switch (i) {
-		case 0:
-			r = c; g = x; b = 0;
-			break;
-		case 1:
-			r = x; g = c; b = 0;
-			break;
-		case 2:
-			r = 0; g = c; b = x;
-			break;
-		case 3:
-			r = 0; g = x; b = c;
-			break;
-		case 4:
-			r = x; g = 0; b = c;
-			break;
-		default:
-			r = c; g = 0; b = x;
-			break;
+	if (hh < 1.0f) {
+		r = c; g = x; b = 0.0f;
+	} else if (hh < 2.0f) {
+		r = x; g = c; b = 0.0f;
+	} else if (hh < 3.0f) {
+		r = 0.0f; g = c; b = x;
+	} else if (hh < 4.0f) {
+		r = 0.0f; g = x; b = c;
+	} else if (hh < 5.0f) {
+		r = x; g = 0.0f; b = c;
+	} else {
+		r = c; g = 0.0f; b = x;
 	}
 
 	return Color{ r + m, g + m, b + m, a };
@@ -174,37 +162,30 @@ inline Color fromHSV(float h, float s, float v, float a = 1.0f) {
 
 [[nodiscard]]
 inline glm::vec3 toHSV(const Color& c) {
-	const float max = (c.r > c.g ?
-		(c.r > c.b ? c.r : c.b)
-	:	(c.g > c.b ? c.g : c.b));
-
-	const float min = (c.r < c.g ?
-		(c.r < c.b ? c.r : c.b)
-	: 	(c.g < c.b ? c.g : c.b));
-
-	float delta = max - min;
+	const float maxC = std::max({ c.r, c.g, c.b });
+	const float minC = std::min({ c.r, c.g, c.b });
+	const float delta = maxC - minC;
 
 	float h = 0.0f;
 
 	if (delta > 0.0f) {
-		if (max == c.r) {
-			h = 60.0f * ((c.g - c.b) / delta);
-			if (h < 0.0f)
-				h += 360.0f;
-
-		} else if (max == c.g) {
+		if (maxC == c.r) {
+			h = 60.0f * std::fmod((c.g - c.b) / delta, 6.0f);
+		} else if (maxC == c.g) {
 			h = 60.0f * ((c.b - c.r) / delta + 2.0f);
 		} else {
 			h = 60.0f * ((c.r - c.g) / delta + 4.0f);
 		}
+
+		if (h < 0.0f)
+			h += 360.0f;
 	}
 
-	if (h < 0.0f)
-		h += 360.0f;
+	const float s = maxC > 0.0f ? delta / maxC : 0.0f;
 
-	float s = max > 0.0f ? delta / max : 0.0f;
-	return glm::vec3{ h, s, max };
+	return glm::vec3{ h, s, maxC };
 }
+
 
 [[nodiscard]]
 inline Color lerp(const Color& a, const Color& b, float t) {
