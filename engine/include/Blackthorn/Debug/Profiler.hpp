@@ -118,11 +118,14 @@ private:
 
 #ifdef BLACKTHORN_DEBUG
 	#define PROFILE_SCOPE(name) \
-		do { \
-			Blackthorn::Debug::Profiler::ProfileScope _profile_scope(name); \
-		} while (0)
+		::Blackthorn::Debug::Profiler::ProfileScope \
+			BT_PROFILE_CONCAT(_profile_scope_, __LINE__)(name)
+
 	#define PROFILE_FUNCTION() PROFILE_SCOPE(__FUNCTION__)
 #else
-	#define PROFILE_SCOPE(name) do {} while (0)
-	#define PROFILE_FUNCTION() do {} while (0)
+	#define PROFILE_SCOPE(name)
+	#define PROFILE_FUNCTION()
 #endif
+
+#define BT_PROFILE_CONCAT_IMPL(a, b) a##b
+#define BT_PROFILE_CONCAT(a, b) BT_PROFILE_CONCAT_IMPL(a, b)
