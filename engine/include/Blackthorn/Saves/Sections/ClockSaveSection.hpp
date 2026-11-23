@@ -14,7 +14,7 @@ namespace Blackthorn::Saves::Sections {
  *
  * Persists the current tick counter and tick duration so a loaded session
  * resumes from exactly where it left off. This supersedes the legacy
- * @c SimClock::save() / @c SimClock::load() path that wrote to the INI
+ * @c SimClock::save() / @c SimClock::load() path that wrote to the TOML
  * settings file.
  *
  * @par Wire layout (payload)

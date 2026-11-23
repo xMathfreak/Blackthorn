@@ -6,16 +6,16 @@ logs/
 saves/
 
 !assets/shaders/
+!engine/include/Blackthorn/saves/
 !engine/include/assets/
 !engine/src/assets/
-!engine/include/Blackthorn/saves/
 !engine/src/saves/
 
 *.cfg
 *.dll
-*.ini
-*.sublime-workspace
 *.sublime-project
+*.sublime-workspace
+*.toml
 .clang-tidy
 .clangd
 compile_commands.json

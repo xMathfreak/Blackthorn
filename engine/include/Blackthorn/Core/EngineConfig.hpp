@@ -52,7 +52,7 @@ struct BLACKTHORN_API EngineConfig {
 	ThreadingConfig threading;
 	Assets::AssetConfig assets;
 
-	std::filesystem::path settingsFilePath = "settings.ini";
+	std::filesystem::path settingsFilePath = "settings.toml";
 };
 
 }

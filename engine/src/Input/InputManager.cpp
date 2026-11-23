@@ -98,12 +98,12 @@ void InputManager::loadBindingsFromSettings() {
 			continue;
 
 		const auto name = s.get<std::string>("input", action);
-		const SDL_Keycode key = keyFromName(name);
+		const SDL_Keycode key = keyFromName(*name);
 
 		if (key == SDLK_UNKNOWN) {
 			BT_WARN(
 				"InputManager: unknown key name '{}' for action '{}', keeping default.",
-				name, action
+				*name, action
 			);
 			continue;
 		}

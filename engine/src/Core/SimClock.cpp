@@ -50,21 +50,21 @@ void SimClock::resetTo(U64 tick) {
 }
 
 void SimClock::save() const {
-	auto& s = Settings::instance();
-	s.set<U64>("simulation", "tick", currentTick);
-	BT_DEBUG("SimClock: saved tick {} to INI", currentTick);
+	// auto& s = Settings::instance();
+	// s.set<U64>("simulation", "tick", currentTick);
+	BT_DEBUG("SimClock: saved tick {} to TOML", currentTick);
 }
 
 void SimClock::load() {
-	auto& s = Settings::instance();
+	// auto& s = Settings::instance();
 
-	const U64 saved = s.get<U64>(
-		"simulation", "tick",
-		static_cast<U64>(initialTick)
-	);
+	// const U64 saved = s.get<U64>(
+	// 	"simulation", "tick",
+	// 	static_cast<U64>(initialTick)
+	// );
 
-	resetTo(saved);
-	BT_DEBUG("SimClock: loaded tick {} from INI", currentTick);
+	// resetTo(saved);
+	BT_DEBUG("SimClock: loaded tick {} from TOML", currentTick);
 }
 
 } // namespace Blackthorn::Core

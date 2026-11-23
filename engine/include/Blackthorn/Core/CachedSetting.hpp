@@ -95,10 +95,10 @@ public:
 	 * called exactly once during initialization.
 	 */
 	void attach() {
-		value.store(Settings::instance().get<T>(section, key, fallback), std::memory_order_relaxed);
+		value.store(Settings::instance().getOr<T>(section, key, fallback), std::memory_order_relaxed);
 
-		Settings::instance().onChange(section, key, [this](const std::string&) {
-			value.store(Settings::instance().get<T>(this->section, this->key), std::memory_order_relaxed);
+		Settings::instance().onChange<T>(section, key, [this](const T&) {
+			value.store(*Settings::instance().get<T>(this->section, this->key), std::memory_order_relaxed);
 		});
 	}
 

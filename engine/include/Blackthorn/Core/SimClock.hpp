@@ -21,8 +21,8 @@ namespace Blackthorn::Core {
  *   @c initialTick is used as the starting value on first launch before
  *   any shutdown save exists.
  *
- * - @b INI fallback path (headless / dedicated server builds):
- *   @c save() writes @c currentTick to @c [simulation] tick in the INI
+ * - @b TOML fallback path (headless / dedicated server builds):
+ *   @c save() writes @c currentTick to @c [simulation] tick in the TOML
  *   settings file. @c load() restores it. @c Runtime calls both when
  *   @c BLACKTHORN_HEADLESS is defined and no @c SaveManager is active.
  *
@@ -76,7 +76,7 @@ public:
 	void resetTo(U64 tick);
 
 	/**
-	 * @brief Persist the current tick to the Settings INI store.
+	 * @brief Persist the current tick to the Settings TOML store.
 	 *
 	 * Writes `currentTick` to `[simulation] tick`.
 	 * Call this at engine shutdown or at scene transition checkpoints.
@@ -84,7 +84,7 @@ public:
 	void save() const;
 
 	/**
-	 * @brief Restore the tick counter from the Settings INI store.
+	 * @brief Restore the tick counter from the Settings TOML store.
 	 *
 	 * Reads `[simulation] tick` and restores `currentTick` and
 	 * `totalSimulatedTime`. Call this after `Settings::loadFromFile()`.

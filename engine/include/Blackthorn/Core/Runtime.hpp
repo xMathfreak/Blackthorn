@@ -35,7 +35,7 @@ namespace Scene {
  *
  * @details
  * Owns and drives all non-graphics engine systems, including:
- * @li Settings (INI persistence)
+ * @li Settings (TOML persistence)
  * @li Logger
  * @li SimClock (tick counter, persistence)
  * @li AssetManager (synchronous and asynchronous loading)

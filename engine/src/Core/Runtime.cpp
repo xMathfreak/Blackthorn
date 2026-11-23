@@ -287,11 +287,11 @@ void Runtime::fixedUpdate(float dt) {
 }
 
 void Runtime::update(float dt) {
-	auto& settings = Core::Settings::instance();
-	settings.update(dt);
+	// auto& settings = Core::Settings::instance();
+	// settings.update(dt);
 
-	if (settings.isSaveTimerElapsed())
-		settings.saveToFile(config.settingsFilePath);
+	// if (settings.isSaveTimerElapsed())
+	// 	settings.saveToFile(config.settingsFilePath);
 
 	assetManager->flushPendingUploads();
 	connectionManager->poll(jobSystem.get());
@@ -304,7 +304,7 @@ void Runtime::lateUpdate(float dt) {
 
 void Runtime::registerDefaultSettings(Core::Settings& s) {
 	#ifdef BLACKTHORN_HEADLESS
-		s.setDefault<U64>("simulation", "tick", static_cast<U64>(0));
+		// s.setDefault<U64>("simulation", "tick", static_cast<U64>(0));
 		s.setDefault("graphics", "frame_cap", true);
 		s.setDefault("graphics", "target_fps", 60);
 	#endif
@@ -321,19 +321,19 @@ void Runtime::registerEngineCallbacks(Core::Settings& s) {
 	frameCapEnabled.attach();
 	targetFPS.attach();
 
-	#ifdef BLACKTHORN_DEBUG
-		s.onChange("developer", "log_level", [](const std::string& val) {
-			try {
-				Debug::Logger::instance().setLevel(
-					static_cast<Debug::LogLevel>(std::stoi(val)));
-			} catch (...) {}
-		});
-	#endif
+	// #ifdef BLACKTHORN_DEBUG
+	// 	s.onChange("developer", "log_level", [](const std::string& val) {
+	// 		try {
+	// 			Debug::Logger::instance().setLevel(
+	// 				static_cast<Debug::LogLevel>(std::stoi(val)));
+	// 		} catch (...) {}
+	// 	});
+	// #endif
 
-	s.onChange("saves", "make_backups", [this](const std::string& val) {
-		if (saveManager)
-			saveManager->setBackupsEnabled(val == "true" || val == "1");
-	});
+	// s.onChange("saves", "make_backups", [this](const std::string& val) {
+	// 	if (saveManager)
+	// 		saveManager->setBackupsEnabled(val == "true" || val == "1");
+	// });
 }
 
 Saves::SaveID Runtime::getShutdownSaveID() const {
@@ -349,7 +349,7 @@ void Runtime::applyCoreSettings() {
 		auto& s = Core::Settings::instance();
 
 		Debug::Logger::instance().setLevel(
-			static_cast<Debug::LogLevel>(s.get<int>("developer", "log_level", 3))
+			static_cast<Debug::LogLevel>(s.getOr<int>("developer", "log_level", 3))
 		);
 	#endif
 }
@@ -376,7 +376,7 @@ void Runtime::initSaveManager() {
 		)
 	);
 
-	const bool makeBackups = Core::Settings::instance().get<bool>(
+	const bool makeBackups = Core::Settings::instance().getOr<bool>(
 		"saves", "make_backups", true
 	);
 

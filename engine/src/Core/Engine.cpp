@@ -110,7 +110,7 @@ Particles::ParticleRenderer& Engine::getParticleRenderer() {
 }
 
 bool Engine::init(const EngineConfig& cfg) {
-	if (!Runtime::init(cfg)) // AssetManager is created here
+	if (!Runtime::init(cfg))
 		return false;
 
 	Fonts::FontConfig::setCurrent(cfg.fonts);
@@ -139,7 +139,7 @@ bool Engine::init(const EngineConfig& cfg) {
 	try {
 		renderer = std::make_unique<Graphics::Renderer>(cfg.render);
 		renderer->setPostProcessingEnabled(
-			Core::Settings::instance().get<bool>("graphics", "post_processing")
+			*Core::Settings::instance().get<bool>("graphics", "post_processing")
 		);
 
 		particleRenderer = std::make_unique<Particles::ParticleRenderer>();
@@ -199,7 +199,7 @@ void Engine::initGraphics(const EngineConfig& cfg) {
 
 	auto& settings = Core::Settings::instance();
 
-	int msaaSamples = settings.get<int>("graphics", "msaa_samples");
+	int msaaSamples = *settings.get<int>("graphics", "msaa_samples");
 	if (msaaSamples > 0) {
 		SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
 		SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, msaaSamples);
@@ -503,7 +503,7 @@ void Engine::processEvents() {
 			}
 
 			case SDL_EVENT_WINDOW_FOCUS_GAINED:
-				if (settings.get<bool>("window", "fullscreen"))
+				if (*settings.get<bool>("window", "fullscreen"))
 					SDL_SetWindowFullscreen(window, true);
 
 				windowFocused = true;
@@ -583,15 +583,15 @@ void Engine::applyEngineSettings() {
 
 	auto& s = Core::Settings::instance();
 
-	UI::UIManager::setGlobalUIScale(s.get<float>("ui", "scale", 1.0f));
+	UI::UIManager::setGlobalUIScale(s.getOr<float>("ui", "scale", 1.0f));
 
-	bool fullscreen = s.get<bool>("window", "fullscreen", false);
-	bool maximized = s.get<bool>("window", "maximized", false);
+	bool fullscreen = s.getOr<bool>("window", "fullscreen", false);
+	bool maximized = s.getOr<bool>("window", "maximized", false);
 
-	int width = s.get<int>("window", "width");
-	int height = s.get<int>("window", "height");
-	int posX = s.get<int>("window", "pos_x", SDL_WINDOWPOS_CENTERED);
-	int posY = s.get<int>("window", "pos_y", SDL_WINDOWPOS_CENTERED);
+	int width = *s.get<int>("window", "width");
+	int height = *s.get<int>("window", "height");
+	int posX = s.getOr<int>("window", "pos_x", SDL_WINDOWPOS_CENTERED);
+	int posY = s.getOr<int>("window", "pos_y", SDL_WINDOWPOS_CENTERED);
 
 	if (posX != SDL_WINDOWPOS_CENTERED && posY != SDL_WINDOWPOS_CENTERED) {
 		int numDisplays;
@@ -633,14 +633,14 @@ void Engine::applyEngineSettings() {
 		SDL_MaximizeWindow(window);
 	}
 
-	SDL_GL_SetSwapInterval(s.get<bool>("window", "vsync") ? 1 : 0);
+	SDL_GL_SetSwapInterval(*s.get<bool>("window", "vsync") ? 1 : 0);
 
 	audioManager->setCategoryVolume(Audio::AudioCategory::Master,
-		s.get<float>("audio", "master_volume"));
+		*s.get<float>("audio", "master_volume"));
 	audioManager->setCategoryVolume(Audio::AudioCategory::Music,
-		s.get<float>("audio", "music_volume"));
+		*s.get<float>("audio", "music_volume"));
 	audioManager->setCategoryVolume(Audio::AudioCategory::SFX,
-		s.get<float>("audio", "sfx_volume"));
+		*s.get<float>("audio", "sfx_volume"));
 
 	inputManager.loadBindingsFromSettings();
 }
@@ -652,16 +652,16 @@ void Engine::applyPostProcessing() {
 	auto& s = Core::Settings::instance();
 
 	renderer->setPostProcessingEnabled(
-		s.get<bool>("graphics", "post_processing", true)
+		s.getOr<bool>("graphics", "post_processing", true)
 	);
 
 	auto& shader = renderer->getScreenShader();
-	shader.setFloat("u_Brightness", s.get<float>("graphics", "brightness", 1.0f));
-	shader.setFloat("u_Contrast", s.get<float>("graphics", "contrast", 1.0f));
-	shader.setFloat("u_Saturation", s.get<float>("graphics", "saturation", 1.0f));
-	shader.setFloat("u_GammaCorrect", s.get<float>("graphics", "gamma", 1.0f));
-	shader.setBool ("u_Vignette", s.get<bool> ("graphics", "vignette", false));
-	shader.setFloat("u_VignetteIntensity", s.get<float>("graphics", "vignette_intensity", 0.5f));
+	shader.setFloat("u_Brightness", s.getOr<float>("graphics", "brightness", 1.0f));
+	shader.setFloat("u_Contrast", s.getOr<float>("graphics", "contrast", 1.0f));
+	shader.setFloat("u_Saturation", s.getOr<float>("graphics", "saturation", 1.0f));
+	shader.setFloat("u_GammaCorrect", s.getOr<float>("graphics", "gamma", 1.0f));
+	shader.setBool ("u_Vignette", s.getOr<bool> ("graphics", "vignette", false));
+	shader.setFloat("u_VignetteIntensity", s.getOr<float>("graphics", "vignette_intensity", 0.5f));
 }
 
 void Engine::registerEngineCallbacks(Core::Settings& s) {
@@ -671,36 +671,32 @@ void Engine::registerEngineCallbacks(Core::Settings& s) {
 	minimizedFPS.attach();
 	unfocusedFPS.attach();
 
-	s.onChange("ui", "scale", [](const std::string& val) {
-			try { UI::UIManager::setGlobalUIScale(std::stof(val)); }
-		catch (...) {}
+	s.onChange<float>("ui", "scale", [](float v) {
+		UI::UIManager::setGlobalUIScale(v);
 	});
 
-	s.onChange("window", "vsync", [](const std::string& val) {
-		SDL_GL_SetSwapInterval(val == "true" ? 1 : 0);
+	s.onChange<bool>("window", "vsync", [](bool val) {
+		SDL_GL_SetSwapInterval(val);
 	});
 
-	s.onChange("audio", "master_volume", [this](const std::string& val) {
-		try { audioManager->setCategoryVolume(Audio::AudioCategory::Master, std::stof(val)); }
-		catch (...) {}
+	s.onChange<float>("audio", "master_volume", [this](float val) {
+		audioManager->setCategoryVolume(Audio::AudioCategory::Master, val);
 	});
 
-	s.onChange("audio", "music_volume", [this](const std::string& val) {
-		try { audioManager->setCategoryVolume(Audio::AudioCategory::Music, std::stof(val)); }
-		catch (...) {}
+	s.onChange<float>("audio", "music_volume", [this](float val) {
+		audioManager->setCategoryVolume(Audio::AudioCategory::Music, val);
 	});
 
-	s.onChange("audio", "sfx_volume", [this](const std::string& val) {
-		try { audioManager->setCategoryVolume(Audio::AudioCategory::SFX, std::stof(val)); }
-		catch (...) {}
+	s.onChange<float>("audio", "sfx_volume", [this](float val) {
+		audioManager->setCategoryVolume(Audio::AudioCategory::SFX, val);
 	});
 
-	auto applyPP = [this](const std::string&) { applyPostProcessing(); };
+	auto applyPP = [this](bool) { applyPostProcessing(); };
 	for (const char* key : {
 		"post_processing", "brightness", "contrast",
 		"saturation", "gamma", "vignette", "vignette_intensity"
 	}) {
-		s.onChange("graphics", key, applyPP);
+		s.onChange<bool>("graphics", key, applyPP);
 	}
 }
 

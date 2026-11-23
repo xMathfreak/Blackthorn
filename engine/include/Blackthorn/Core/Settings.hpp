@@ -1,355 +1,203 @@
 #pragma once
 
-#include <array>
-#include <algorithm>
-#include <charconv>
 #include <concepts>
 #include <filesystem>
+#include <flat_map>
 #include <functional>
-#include <mutex>
-#include <optional>
-#include <string>
-#include <unordered_map>
+#include <string_view>
 #include <vector>
 
+#include <toml++/toml.hpp>
+
 #include "Blackthorn/Core/Export.hpp"
-#include "StringHelper.hpp"
 
 namespace Blackthorn::Core {
 
 template <typename T>
-concept SupportedSettingType =
-	std::same_as<T, bool> ||
-	std::integral<T> ||
-	std::floating_point<T> ||
-	std::convertible_to<T, std::string>;
+concept StringLike =
+	std::is_convertible_v<T, std::string_view> &&
+	!std::is_same_v<std::remove_cvref_t<T>, bool>;
 
-/**
- * @brief Thread-safe singleton for INI-style key/value settings.
- *
- * Provides a centralized configuration system with automatic parsing,
- * case-insensitive lookup, and lazy key initialization.
- *
- * @section case_insensitivity Case Insensitivity
- * Section and key names are case-insensitive. For example, "Vsync",
- * "vsync", and "VSYNC" all resolve to the same entry.
- *
- * Names are normalized to lowercase on every read, write, and parse,
- * ensuring that both the in-memory representation and saved file remain
- * consistent.
- *
- * @section auto_create Auto-create Behavior
- * Calling `get()` for a key that does not exist will:
- *   - Insert the default value into the in-memory store
- *   - Return that value to the caller
- *
- * This means the first read of any key automatically bootstraps a valid
- * entry. Calling saveToFile() afterward will persist all accessed keys.
- *
- * @section usage Typical Usage
- * @code
- * auto& cfg = Settings::instance();
- * cfg.loadFromFile("settings.ini");
- *
- * bool fs   = cfg.get<bool>("Window", "Fullscreen");
- * int  w    = cfg.get<int>("Window", "Width", 1280);
- * float vol = cfg.get<float>("Audio", "MasterVolume", 1.0f);
- *
- * cfg.set("Window", "Width", 1920);
- * cfg.saveToFile("settings.ini");
- * @endcode
- */
+template <typename T>
+concept SettingData =
+	std::same_as<T, bool> ||
+	std::is_arithmetic_v<T> ||
+	StringLike<T>;
+
+template <typename T>
+constexpr auto map_to_toml_scalar_type() {
+	using U = std::decay_t<T>;
+
+	if constexpr (std::is_same_v<U, bool>) {
+		return bool{};
+	} else if constexpr (std::is_integral_v<U>) {
+		// Note: uint64_t values > INT64_MAX will overflow int64_t
+		return int64_t{};
+	} else if constexpr (std::is_floating_point_v<U>) {
+		return double{};
+	} else if constexpr (std::is_convertible_v<U, std::string_view>) {
+		return std::string{};
+	} else if constexpr (std::is_same_v<U, toml::date> ||
+						 std::is_same_v<U, toml::time> ||
+						 std::is_same_v<U, toml::date_time>) {
+		return U{};
+	} else {
+		static_assert(sizeof(U) == 0, "Unsupported type for toml::value scalar");
+	}
+}
+
+template <typename T>
+using to_toml_scalar_t = decltype(map_to_toml_scalar_type<T>());
+
+template <typename T>
+auto make_toml_value(T&& val) {
+	using ScalarT = to_toml_scalar_t<T>;
+	return toml::value<ScalarT>{ScalarT(std::forward<T>(val))};
+}
+
 class BLACKTHORN_API Settings {
+	using ChangeCallback = std::function<void(
+		const toml::node*,
+		const toml::node&
+	)>;
+
 public:
+	[[nodiscard]]
 	static Settings& instance();
 
 	Settings(const Settings&) = delete;
 	Settings& operator=(const Settings&) = delete;
 
-	/**
-	 * @brief Loads settings from an INI file, replacing all in-memory state.
-	 *
-	 * Lines beginning with '#' or ';' (after trimming) are comments.
-	 * Whitespace is stripped from section names, keys, and values.
-	 * Casing is preserved exactly as it appears in the file.
-	 *
-	 * @param path  Path to the INI file.
-	 * @return true if the file was opened and read successfully.
-	 */
-	bool loadFromFile(const std::filesystem::path& path);
+	bool loadFromFile(const std::filesystem::path& file);
+	bool saveToFile(const std::filesystem::path& file);
 
-	/**
-	 * @brief Saves all in-memory settings to an INI file.
-	 *
-	 * Sections and keys are written in insertion order.
-	 *
-	 * @param path  Path to write. Created if absent, overwritten if present.
-	 * @return true on success.
-	 */
-	bool saveToFile(const std::filesystem::path& path);
-
-	/**
-	 * @brief Returns the value of a key, creating it with a default if absent.
-	 *
-	 * Lookup is case-insensitive. Section and key names are normalized to
-	 * lowercase before any map operation.
-	 *
-	 * @tparam T       Value type (bool, integral, float, double, std::string).
-	 * @param section  Section name.
-	 * @param key      Key name.
-	 * @param fallback Value used when the key is absent or its stored string
-	 *                 cannot be parsed. Defaults to `T{}` if omitted.
-	 * @return T       The resolved value.
-	 */
-	template <SupportedSettingType T>
-	T get(const std::string& section, const std::string& key, std::optional<T> fallback = std::nullopt) {
-		const std::string sec = this->normalize(section);
-		const std::string k = this->normalize(key);
-		T def = fallback.value_or(T{});
-
-		std::string rawValue;
-		bool found = false;
-
-		{
-			std::scoped_lock lock(mutex);
-			ensureSectionOrder(sec);
-
-			auto& sd = groupedValues[sec];
-			auto it = sd.values.find(k);
-
-			if (it != sd.values.end()) {
-				rawValue = it->second;
-				found = true;
-			}
-		}
-
-		if (found) {
-			if constexpr (std::is_same_v<T, bool>) {
-				const auto v = String::toLower(rawValue);
-
-				if (v == "true" || v == "1" || v == "yes" || v == "on")
-					return true;
-
-				if (v == "false"|| v == "0" || v == "no" || v == "off")
-					return false;
-			} else if constexpr (std::is_integral_v<T>) {
-				if (auto parsedInt = parseInt<T>(rawValue))
-					return *parsedInt;
-			} else if constexpr (std::is_floating_point_v<T>) {
-				if (auto parsedFloat = parseFloat<T>(rawValue))
-					return *parsedFloat;
-			} else if constexpr (std::is_convertible_v<T, std::string>) {
-				return rawValue;
-			} else {
-				static_assert(Detail::dependentFalse<T>, "Unsupported type for Settings::get");
-			}
-		}
-
-		writeRaw(sec, k, serialize(def));
-		return def;
+	template <SettingData T>
+	[[nodiscard]]
+	std::optional<T> get(std::string_view section, std::string_view key) const noexcept {
+		return data[section][key].value<T>();
 	}
 
-	/**
-	 * @brief Sets the value of a key, creating the section/key if absent.
-	 *
-	 * @tparam T Value type.
-	 * @param section Section name (case-insensitive, whitespace trimmed).
-	 * @param key Key name (case-insensitive, whitespace trimmed).
-	 * @param value Value to store.
-	 */
-	template <SupportedSettingType T>
-	void set(const std::string& section, const std::string& key, const T& value) {
-		writeRaw(section, key, serialize(value));
+	template <SettingData T>
+	[[nodiscard]]
+	auto getOr(std::string_view section, std::string_view key, const T& fallback) noexcept {
+		auto [secIt, secInserted] = data.insert(section, toml::table{});
+
+		if (auto* secTable = secIt->second.as_table()) {
+			auto [keyIt, keyInserted] = secTable->insert(key, fallback);
+			return keyIt->second.value_or(fallback);
+		}
+
+		return fallback;
 	}
 
-	/**
-	 * @brief Writes a default value only if the key does not exist.
-	 */
-	template <SupportedSettingType T>
-	void setDefault(const std::string& section, const std::string& key, const T& value) {
-		const std::string sec = normalize(section);
-		const std::string k = normalize(key);
+	template <SettingData T>
+	void set(std::string_view section, std::string_view key, const T& value) {
+		auto [it, inserted] = data.insert(section, toml::table{});
 
-		{
-			std::lock_guard lock(mutex);
-			auto secIt = groupedValues.find(sec);
+		if (auto* sec = it->second.as_table()) {
+			auto* existing = sec->get(key);
 
-			if (secIt != groupedValues.end() && secIt->second.values.count(k))
+			if (existing && *existing->value<T>() == make_toml_value(value))
 				return;
+
+			toml::node* oldValue = data[section][key].node();
+
+			sec->insert_or_assign(key, value);
+			dirty = true;
+
+			if (auto* updated = sec->get(key))
+				fireCallbacks(section, key, oldValue, *updated);
 		}
-
-		writeRaw(sec, k, serialize(value));
 	}
 
-	/**
-	 * @brief Registers a callback for when a key's value changes.
-	 *
-	 * @param section Section name (case-insensitive).
-	 * @param key Key name (case insensitive).
-	 * @param callback Called with the new raw string value on each `set()`.
-	 */
-	void onChange(const std::string& section, const std::string& key, std::function<void(const std::string&)> callback);
+	template <SettingData T>
+	void setDefault(std::string_view section, std::string_view key, const T& value) {
+		auto [it, inserted] = data.insert(section, toml::table{});
 
-	/** Returns true if the section exists in memory (case-insensitive). */
-	bool hasSection(const std::string& section) const;
-
-	/** Returns true if the key exists under section (case-insensitive). */
-	bool hasKey(const std::string& section, const std::string& key) const;
-
-	/** Removes a single key. No-op if not present. */
-	void remove(const std::string& section, const std::string& key);
-
-	/** Removes an entire section and all its keys. No-op if not present. */
-	void removeSection(const std::string& section);
-
-	/** Clears all in-memory settings. */
-	void clear();
-
-	/**
-	 * @brief Returns true if any value has been modified since the
-	 * last `saveToFile()` or `markClean()` call.
-	 *
-	 * @return True if dirty, False otherwise.
-	 */
-	bool isDirty() const;
-
-	/** Resets the dirty flag without saving */
-	void markClean();
-
-	void update(float dt);
-
-	bool isSaveTimerElapsed() const {
-		return (timeSinceDirty >= saveDelay);
+		if (auto* sec = it->second.as_table()) {
+			sec->insert(key, value);
+			dirty = true;
+		}
 	}
 
+	void onChange(
+		std::string_view section,
+		std::string_view key,
+		std::function<void()> callback
+	) {
+		onChangeCallbacks[makeCallbackKey(section, key)].emplace_back(
+			[callback = std::move(callback)]
+			(const toml::node*, const toml::node&) {
+				callback();
+			}
+		);
+	}
+
+	template <SettingData T>
+	void onChange(
+		std::string_view section,
+		std::string_view key,
+		std::function<void(const T&)> callback
+	) {
+		onChangeCallbacks[makeCallbackKey(section, key)].emplace_back(
+			[callback = std::move(callback)](
+				const toml::node*,
+				const toml::node& newNode
+			) {
+				if (auto value = newNode.value<T>())
+					callback(*value);
+			}
+		);
+	}
+
+	template <SettingData T, SettingData U>
+	void onChange(
+		std::string_view section,
+		std::string_view key,
+		std::function<void(const T&, const U&)> callback
+	) {
+		onChangeCallbacks[makeCallbackKey(section, key)].emplace_back(
+			[callback = std::move(callback)](
+				const toml::node* oldNode,
+				const toml::node& newNode
+			) {
+				if (!oldNode)
+					return;
+
+				auto oldValue = oldNode->value<T>();
+				auto newValue = newNode.value<U>();
+
+				if (oldValue && newValue)
+					callback(*oldValue, *newValue);
+			}
+		);
+	}
+
+	void clear() noexcept;
+
+	[[nodiscard]]
+	bool hasSection(std::string_view section) const noexcept;
+
+	[[nodiscard]]
+	bool hasKey(std::string_view section, std::string_view key) const noexcept;
+
+	bool remove(std::string_view section, std::string_view key) noexcept;
+
+	bool removeSection(std::string_view section) noexcept;
+
+	[[nodiscard]]
+	bool isDirty() const noexcept;
 private:
 	Settings() = default;
 
-	struct SectionData {
-		std::unordered_map<std::string, std::string> values;
-		std::vector<std::string> keyOrder;
-	};
+	void fireCallbacks(std::string_view section, std::string_view key, const toml::node* oldValue, const toml::node& newValue) const;
 
-	using ChangeCallback = std::function<void(const std::string&)>;
+	[[nodiscard]]
+	std::string makeCallbackKey(std::string_view section, std::string_view key) const noexcept;
 
-	// Key: normalize(secton) + "|" + normalize(key)
-	std::unordered_map<std::string, std::vector<ChangeCallback>> changeCallbacks;
-
-	std::unordered_map<std::string, SectionData> groupedValues;
-	std::vector<std::string> sectionOrder;
-	mutable std::recursive_mutex mutex;
+	toml::table data;
+	std::flat_map<std::string, std::vector<ChangeCallback>> onChangeCallbacks;
 	bool dirty = false;
-	float timeSinceDirty = 0.0f;
-	float saveDelay = 1.0f;
-
-	void writeRaw(const std::string& sec, const std::string& k, const std::string& rawValue) {
-		bool changed = false;
-
-		{
-			std::lock_guard lock(mutex);
-			ensureSectionOrder(sec);
-
-			auto& sd = groupedValues[sec];
-			auto it = sd.values.find(k);
-
-			if (it == sd.values.end()) {
-				sd.keyOrder.push_back(k);
-				sd.values[k] = rawValue;
-				dirty = true;
-				changed = true;
-			} else if (it->second != rawValue) {
-				it->second = rawValue;
-				dirty = true;
-				changed = true;
-			}
-		}
-
-		if (changed) {
-			const std::string cbKey = sec + "|" + k;
-			std::vector<std::function<void(const std::string&)>> toFire;
-
-			{
-				std::lock_guard<std::recursive_mutex> lock(mutex);
-				auto it = changeCallbacks.find(cbKey);
-				if (it != changeCallbacks.end())
-					toFire = it->second;
-			}
-
-			for (auto& cb : toFire)
-				cb(rawValue);
-		}
-	}
-
-	void ensureSectionOrder(const std::string& sec) {
-		for (const auto& s : sectionOrder) {
-			if (s == sec)
-				return;
-		}
-
-		sectionOrder.push_back(sec);
-	}
-
-	/// Strips leading/trailing whitespace and lowercases
-	static std::string normalize(const std::string& s) {
-		return String::toLower(String::trim(s));
-	}
-
-	template <typename T>
-	requires std::is_integral_v<T> && (!std::is_same_v<T, bool>)
-	static std::optional<T> parseInt(const std::string& s) {
-		T result{};
-		auto [ptr, ec] = std::from_chars(s.data(), s.data() + s.size(), result);
-
-		if (ec == std::errc{} && ptr == s.data() + s.size())
-			return result;
-
-		return std::nullopt;
-	}
-
-	template <typename T>
-	requires std::is_floating_point_v<T>
-	static std::optional<T> parseFloat(const std::string& s) {
-		T result{};
-		const char* begin = s.data();
-		const char* end = s.data() + s.size();
-
-		auto [ptr, ec] = std::from_chars(begin, end, result, std::chars_format::general);
-
-		if (ec == std::errc{} && ptr == end)
-			return result;
-
-		return std::nullopt;
-	}
-
-	template <typename T>
-	static std::string serialize(const T& value) {
-		using U = std::remove_cvref_t<T>;
-
-		if constexpr (std::is_same_v<U, bool>) {
-			return value ? "true" : "false";
-		} else if constexpr (std::is_integral_v<U> || std::is_floating_point_v<U>) {
-			std::array<char, 64> buffer;
-			auto [ptr, ec] =  std::to_chars(
-				buffer.data(),
-				buffer.data() + buffer.size(),
-				value
-			);
-
-			if (ec != std::errc{})
-				throw std::runtime_error("Settings::serialize: to_chars failed");
-
-			return {buffer.data(), ptr};
-
-		} else if constexpr (std::is_convertible_v<U, std::string>) {
-			return std::string(value);
-		} else {
-			static_assert(Detail::dependentFalse<U>, "Settings::serialize: unsupported type");
-		}
-	}
-
-	struct Detail {
-		template <typename> static constexpr bool dependentFalse = false;
-	};
 };
 
 } // namespace Blackthorn::Core
