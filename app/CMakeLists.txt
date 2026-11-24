@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.20.0)
+cmake_minimum_required(VERSION 3.21.0)
 project(App VERSION 0.1.0 LANGUAGES CXX)
 
 # C++ Standard
@@ -113,3 +113,8 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
 set_target_properties(${PROJECT_NAME} PROPERTIES
 	OUTPUT_NAME "Game"
 )
+
+include("${CMAKE_SOURCE_DIR}/cmake/InstallDeployment.cmake")
+blackthorn_deploy(App)
+blackthorn_install_assets("${CMAKE_SOURCE_DIR}/assets")
+blackthorn_install_runtime_dependencies()

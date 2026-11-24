@@ -1,7 +1,14 @@
-cmake_minimum_required(VERSION 3.20.0)
+cmake_minimum_required(VERSION 3.21.0)
 project(Blackthorn VERSION 0.1.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_SCAN_FOR_MODULES OFF)
+
+if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
+	set(CMAKE_INSTALL_PREFIX
+		"${CMAKE_BINARY_DIR}/install"
+		CACHE PATH "Installation directory" FORCE
+	)
+endif()
 
 # Platform metadata / packaging system
 include(${CMAKE_SOURCE_DIR}/cmake/PlatformResources.cmake)

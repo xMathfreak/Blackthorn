@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.20.0)
+cmake_minimum_required(VERSION 3.21.0)
 
 project(BlackthornEngine
 	VERSION 0.1.0
@@ -262,37 +262,6 @@ if(WIN32)
 			VERBATIM
 		)
 	endforeach()
-
-	# MinGW runtime dependencies.
-	if(NOT MSVC)
-		set(MINGW_RUNTIME_DLLS
-			libstdc++-6.dll
-			libgcc_s_seh-1.dll
-			libwinpthread-1.dll
-		)
-
-		get_filename_component(MINGW_BIN_DIR
-			"${CMAKE_CXX_COMPILER}"
-			DIRECTORY
-		)
-
-		foreach(DLL IN LISTS MINGW_RUNTIME_DLLS)
-			set(DLL_PATH "${MINGW_BIN_DIR}/${DLL}")
-
-			if(EXISTS "${DLL_PATH}")
-				add_custom_command(TARGET BlackthornEngine POST_BUILD
-					COMMAND ${CMAKE_COMMAND} -E copy_if_different
-						"${DLL_PATH}"
-						"$<TARGET_FILE_DIR:BlackthornEngine>"
-					VERBATIM
-				)
-			else()
-				message(WARNING
-					"MinGW runtime DLL not found: ${DLL_PATH}"
-				)
-			endif()
-		endforeach()
-	endif()
 endif()
 
 target_set_metadata(BlackthornEngine
@@ -333,3 +302,11 @@ foreach(SHADER IN LISTS ENGINE_SHADER_RESOURCES)
 endforeach()
 
 generate_resource_registry(BlackthornEngine)
+
+include("${CMAKE_SOURCE_DIR}/cmake/InstallDeployment.cmake")
+
+blackthorn_deploy(OpenAL)
+blackthorn_deploy(BlackthornCore)
+blackthorn_deploy(BlackthornEngine)
+
+blackthorn_install_runtime_dependencies()

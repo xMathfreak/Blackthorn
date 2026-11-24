@@ -1,6 +1,7 @@
 .cache/
 assets/*
 build/
+dist/
 lib/
 logs/
 saves/
