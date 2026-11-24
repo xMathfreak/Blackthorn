@@ -1,5 +1,7 @@
 #pragma once
 
+#include <type_traits>
+#include <utility>
 #include <concepts>
 #include <filesystem>
 #include <flat_map>
@@ -10,13 +12,15 @@
 #include <toml++/toml.hpp>
 
 #include "Blackthorn/Core/Export.hpp"
+#include "Blackthorn/Core/TOMLUtils.hpp"
+#include "Blackthorn/Types/Numeric.hpp"
 
 namespace Blackthorn::Core {
 
 template <typename T>
 concept StringLike =
-	std::is_convertible_v<T, std::string_view> &&
-	!std::is_same_v<std::remove_cvref_t<T>, bool>;
+    std::convertible_to<T, std::string_view> &&
+    !std::same_as<std::remove_cvref_t<T>, bool>;
 
 template <typename T>
 concept SettingData =
@@ -24,39 +28,8 @@ concept SettingData =
 	std::is_arithmetic_v<T> ||
 	StringLike<T>;
 
-template <typename T>
-constexpr auto map_to_toml_scalar_type() {
-	using U = std::decay_t<T>;
-
-	if constexpr (std::is_same_v<U, bool>) {
-		return bool{};
-	} else if constexpr (std::is_integral_v<U>) {
-		// Note: uint64_t values > INT64_MAX will overflow int64_t
-		return int64_t{};
-	} else if constexpr (std::is_floating_point_v<U>) {
-		return double{};
-	} else if constexpr (std::is_convertible_v<U, std::string_view>) {
-		return std::string{};
-	} else if constexpr (std::is_same_v<U, toml::date> ||
-						 std::is_same_v<U, toml::time> ||
-						 std::is_same_v<U, toml::date_time>) {
-		return U{};
-	} else {
-		static_assert(sizeof(U) == 0, "Unsupported type for toml::value scalar");
-	}
-}
-
-template <typename T>
-using to_toml_scalar_t = decltype(map_to_toml_scalar_type<T>());
-
-template <typename T>
-auto make_toml_value(T&& val) {
-	using ScalarT = to_toml_scalar_t<T>;
-	return toml::value<ScalarT>{ScalarT(std::forward<T>(val))};
-}
-
 class BLACKTHORN_API Settings {
-	using ChangeCallback = std::function<void(
+	using SettingChangedCallback = std::function<void(
 		const toml::node*,
 		const toml::node&
 	)>;
@@ -74,49 +47,82 @@ public:
 	template <SettingData T>
 	[[nodiscard]]
 	std::optional<T> get(std::string_view section, std::string_view key) const noexcept {
-		return data[section][key].value<T>();
+		const auto& node = data[section][key].node();
+
+		if (!node)
+			return std::nullopt;
+
+		return fromTOMLValue<T>(*node);
 	}
 
 	template <SettingData T>
 	[[nodiscard]]
-	auto getOr(std::string_view section, std::string_view key, const T& fallback) noexcept {
-		auto [secIt, secInserted] = data.insert(section, toml::table{});
+	auto getOr(
+		std::string_view section,
+		std::string_view key,
+		const T& fallback
+	) {
+		auto secIt = data.insert(section, toml::table{}).first;
 
-		if (auto* secTable = secIt->second.as_table()) {
-			auto [keyIt, keyInserted] = secTable->insert(key, fallback);
-			return keyIt->second.value_or(fallback);
+		if (auto* sec = secIt->second.as_table()) {
+			if (auto* existing = sec->get(key)) {
+				if (auto value = fromTOMLValue<T>(*existing))
+					return *value;
+
+				return fallback;
+			}
+
+			insertDefaultTOMLValue(*sec, key, fallback);
+			dirty = true;
 		}
 
 		return fallback;
-	}
+}
 
 	template <SettingData T>
-	void set(std::string_view section, std::string_view key, const T& value) {
-		auto [it, inserted] = data.insert(section, toml::table{});
+	void set(
+		std::string_view section,
+		std::string_view key,
+		const T& value
+	) {
+		auto it = data.insert(section, toml::table{}).first;
 
 		if (auto* sec = it->second.as_table()) {
 			auto* existing = sec->get(key);
 
-			if (existing && *existing->value<T>() == make_toml_value(value))
-				return;
+			if (existing) {
+				if (auto oldValue = fromTOMLValue<T>(*existing)) {
+					if (*oldValue == value)
+						return;
+				}
+			}
 
-			toml::node* oldValue = data[section][key].node();
+			toml::node* oldValue = sec->get(key);
+			auto cloned = cloneNode(oldValue);
 
-			sec->insert_or_assign(key, value);
+			insertTOMLValue(*sec, key, value);
 			dirty = true;
 
 			if (auto* updated = sec->get(key))
-				fireCallbacks(section, key, oldValue, *updated);
+				fireCallbacks(section, key, cloned.get(), *updated);
 		}
 	}
 
 	template <SettingData T>
-	void setDefault(std::string_view section, std::string_view key, const T& value) {
-		auto [it, inserted] = data.insert(section, toml::table{});
+	void setDefault(
+		std::string_view section,
+		std::string_view key,
+		const T& value
+	) {
+		auto it = data.insert(section, toml::table{}).first;
 
 		if (auto* sec = it->second.as_table()) {
-			sec->insert(key, value);
-			dirty = true;
+			const auto existing = sec->contains(key);
+
+			if (!existing) {
+				insertDefaultTOMLValue(*sec, key, value);
+				dirty = true;
+			}
 		}
 	}
 
@@ -144,7 +150,7 @@ public:
 				const toml::node*,
 				const toml::node& newNode
 			) {
-				if (auto value = newNode.value<T>())
+				if (auto value = fromTOMLValue<T>(newNode))
 					callback(*value);
 			}
 		);
@@ -164,8 +170,8 @@ public:
 				if (!oldNode)
 					return;
 
-				auto oldValue = oldNode->value<T>();
-				auto newValue = newNode.value<U>();
+				auto oldValue = fromTOMLValue<T>(*oldNode);
+				auto newValue = fromTOMLValue<U>(newNode);
 
 				if (oldValue && newValue)
 					callback(*oldValue, *newValue);
@@ -196,7 +202,7 @@ private:
 	std::string makeCallbackKey(std::string_view section, std::string_view key) const noexcept;
 
 	toml::table data;
-	std::flat_map<std::string, std::vector<ChangeCallback>> onChangeCallbacks;
+	std::flat_map<std::string, std::vector<SettingChangedCallback>> onChangeCallbacks;
 	bool dirty = false;
 };
 
